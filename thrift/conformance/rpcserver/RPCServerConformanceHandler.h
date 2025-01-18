@@ -62,6 +62,15 @@ class RPCServerConformanceHandler
   apache::thrift::SinkConsumer<Request, Response> sinkChunkTimeout(
       std::unique_ptr<Request> req) override;
 
+  apache::thrift::ResponseAndSinkConsumer<Response, Request, Response>
+  sinkInitialResponse(std::unique_ptr<Request> req) override;
+
+  apache::thrift::SinkConsumer<Request, Response> sinkDeclaredException(
+      std::unique_ptr<Request> req) override;
+
+  apache::thrift::SinkConsumer<Request, Response> sinkUndeclaredException(
+      std::unique_ptr<Request> req) override;
+
   // =================== Interactions ===================
   class BasicInteraction : public BasicInteractionIf {
    public:

@@ -16,34 +16,39 @@
   ],
   "innerclass": [
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1AssignPatch",
-      "prot": "public",
-      "text_html": "apache::thrift::op::detail::AssignPatch"
-    },
-    {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BoolPatch",
       "prot": "public",
-      "text_html": "apache::thrift::op::detail::BoolPatch"
+      "text_html": "apache::thrift::op::detail::BoolPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BoolPatch",
+      "is_transitive_innerclass": false
     },
     {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1NumberPatch",
       "prot": "public",
-      "text_html": "apache::thrift::op::detail::NumberPatch"
+      "text_html": "apache::thrift::op::detail::NumberPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/NumberPatch",
+      "is_transitive_innerclass": false
     },
     {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BaseStringPatch",
       "prot": "public",
-      "text_html": "apache::thrift::op::detail::BaseStringPatch"
+      "text_html": "apache::thrift::op::detail::BaseStringPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseStringPatch",
+      "is_transitive_innerclass": false
     },
     {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1StringPatch",
       "prot": "public",
-      "text_html": "apache::thrift::op::detail::StringPatch"
+      "text_html": "apache::thrift::op::detail::StringPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/StringPatch",
+      "is_transitive_innerclass": false
     },
     {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BinaryPatch",
       "prot": "public",
-      "text_html": "apache::thrift::op::detail::BinaryPatch"
+      "text_html": "apache::thrift::op::detail::BinaryPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BinaryPatch",
+      "is_transitive_innerclass": false
     }
   ],
   "innernamespace": [

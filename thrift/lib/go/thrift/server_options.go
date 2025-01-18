@@ -17,89 +17,128 @@
 package thrift
 
 import (
+	"context"
+	"crypto/tls"
 	"log"
+	"net"
 	"os"
+	"runtime"
+	"time"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/stats"
 )
 
-// ServerOptions is options needed to run a thrift server
-type ServerOptions struct {
-	quit        chan struct{}
-	log         *log.Logger
-	interceptor Interceptor
+const (
+	defaultStatsPeriod = 1 * time.Minute
+	// GoroutinePerRequest is a special value to use in SetNumWorkers to enable
+	// a goroutine per request (instead of a worker pool of goroutines)
+	GoroutinePerRequest = -1
+)
 
-	serverTransport        ServerTransport
-	inputTransportFactory  TransportFactory
-	outputTransportFactory TransportFactory
-	inputProtocolFactory   ProtocolFactory
-	outputProtocolFactory  ProtocolFactory
+// ServerOption is the option for the thrift server.
+type ServerOption func(*serverOptions)
+
+// ConnContextFunc is the type for connection context modifier functions.
+type ConnContextFunc func(context.Context, net.Conn) context.Context
+
+// serverOptions is options needed to run a thrift server
+type serverOptions struct {
+	pipeliningEnabled bool
+	numWorkers        int
+	log               func(format string, args ...interface{})
+	connContext       ConnContextFunc
+	serverStats       *stats.ServerStats
+	processorStats    map[string]*stats.TimingSeries
 }
 
-// TransportFactories sets both input and output transport factories
-func TransportFactories(factory TransportFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.inputTransportFactory = factory
-		server.outputTransportFactory = factory
+func defaultServerOptions() *serverOptions {
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	return &serverOptions{
+		pipeliningEnabled: true,
+		numWorkers:        runtime.NumCPU(),
+		log:               logger.Printf,
+		connContext:       WithConnInfo,
+		processorStats:    make(map[string]*stats.TimingSeries),
+		serverStats:       stats.NewServerStats(stats.NewTimingConfig(defaultStatsPeriod), defaultStatsPeriod),
 	}
 }
 
-// InputTransportFactory sets the input transport factory
-func InputTransportFactory(factory TransportFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.inputTransportFactory = factory
+func newServerOptions(options ...ServerOption) *serverOptions {
+	opts := defaultServerOptions()
+	for _, option := range options {
+		option(opts)
+	}
+	return opts
+}
+
+// WithoutPipelining disables pipelining for the thrift server.
+func WithoutPipelining() ServerOption {
+	return func(server *serverOptions) {
+		server.pipeliningEnabled = false
 	}
 }
 
-// OutputTransportFactory sets the output transport factory
-func OutputTransportFactory(factory TransportFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.outputTransportFactory = factory
+// WithNumWorkers sets the number of concurrent workers for the thrift server.
+// These workers are responsible for executing client requests.
+// This should be tuned based on the nature of the application using the framework.
+// if special value of thrift.GoroutinePerRequest (-1) is passed, thrift will not use
+// a pool of workers and instead launch a goroutine per request.
+func WithNumWorkers(num int) ServerOption {
+	return func(server *serverOptions) {
+		server.numWorkers = num
 	}
 }
 
-// ProtocolFactories sets both input and output protocol factories
-func ProtocolFactories(factory ProtocolFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.inputProtocolFactory = factory
-		server.outputProtocolFactory = factory
+// WithConnContext adds connContext option
+// that specifies a function that modifies the context passed to procedures per connection.
+func WithConnContext(connContext ConnContextFunc) ServerOption {
+	return func(server *serverOptions) {
+		server.connContext = func(ctx context.Context, conn net.Conn) context.Context {
+			ctx = WithConnInfo(ctx, conn)
+			return connContext(ctx, conn)
+		}
 	}
 }
 
-// InputProtocolFactory sets the input protocol factory
-func InputProtocolFactory(factory ProtocolFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.inputProtocolFactory = factory
-	}
-}
-
-// OutputProtocolFactory sets the output protocol factory
-func OutputProtocolFactory(factory ProtocolFactory) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.outputProtocolFactory = factory
-	}
-}
-
-// Logger sets the logger used for the server
-func Logger(log *log.Logger) func(*ServerOptions) {
-	return func(server *ServerOptions) {
+// WithLog allows you to over-ride the location that exceptional server events are logged.
+// The default is stderr.
+func WithLog(log func(format string, args ...interface{})) ServerOption {
+	return func(server *serverOptions) {
 		server.log = log
 	}
 }
 
-// WithInterceptor sets the interceptor for the server
-func WithInterceptor(interceptor Interceptor) func(*ServerOptions) {
-	return func(server *ServerOptions) {
-		server.interceptor = interceptor
+// WithServerStats allows the user to provide stats for the server to update.
+func WithServerStats(serverStats *stats.ServerStats) ServerOption {
+	return func(server *serverOptions) {
+		server.serverStats = serverStats
 	}
 }
 
-func defaultServerOptions(serverTransport ServerTransport) *ServerOptions {
-	return &ServerOptions{
-		serverTransport:        serverTransport,
-		inputTransportFactory:  NewTransportFactory(),
-		outputTransportFactory: NewTransportFactory(),
-		inputProtocolFactory:   NewBinaryProtocolFactoryDefault(),
-		outputProtocolFactory:  NewBinaryProtocolFactoryDefault(),
-		quit:                   make(chan struct{}, 1),
-		log:                    log.New(os.Stderr, "", log.LstdFlags),
+// WithProcessorStats allows the user to provide stats for the server to update for each processor function.
+func WithProcessorStats(processorStats map[string]*stats.TimingSeries) ServerOption {
+	return func(server *serverOptions) {
+		server.processorStats = processorStats
+	}
+}
+
+// WithALPNHeader adds the ALPN value "thrift" to the provided tls.Config
+func WithALPNHeader() func(*tls.Config) {
+	return func(tlsConfig *tls.Config) {
+		tlsConfig.NextProtos = []string{"thrift"}
+	}
+}
+
+// WithALPNRocket adds the ALPN value "rs" to the provided tls.Config
+func WithALPNRocket() func(*tls.Config) {
+	return func(tlsConfig *tls.Config) {
+		tlsConfig.NextProtos = []string{"rs"}
+	}
+}
+
+// WithALPNUpgradeToRocket adds the ALPN value "rs" and "thrift" to the provided tls.Config
+func WithALPNUpgradeToRocket() func(*tls.Config) {
+	return func(tlsConfig *tls.Config) {
+		tlsConfig.NextProtos = []string{"rs" /* preferred */, "thrift" /* fallback */}
 	}
 }

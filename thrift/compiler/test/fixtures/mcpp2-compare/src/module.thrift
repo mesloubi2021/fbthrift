@@ -16,15 +16,15 @@
 
 include "includes.thrift"
 include "thrift/annotation/cpp.thrift"
+include "thrift/annotation/thrift.thrift"
 cpp_include "<folly/small_vector.h>"
 
 namespace cpp2 some.valid.ns
 
 typedef includes.AStruct AStruct
 
-@cpp.Type{name = "::folly::IOBuf"}
 @cpp.Adapter{name = '::CustomProtocolAdapter'}
-typedef binary CustomProtocolType
+typedef IOBuf CustomProtocolType
 
 // Generate base consts
 const bool aBool = true;
@@ -142,8 +142,10 @@ union ComplexUnion {
   21: binary MyBinaryField2;
   23: list<binary> MyBinaryListField4;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   24: MyStruct ref_field;
   @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   25: MyStruct ref_field2;
   26: AnException excp_field;
   27: CustomProtocolType MyCustomField;
@@ -152,6 +154,7 @@ union ComplexUnion {
 exception AnException {
   1: i32 code;
   101: required i32 req_code;
+  @thrift.ExceptionMessage
   2: string message2;
   102: required string req_message;
   3: list<i32> exception_list = [1, 2, 3];
@@ -167,7 +170,7 @@ exception AnException {
   19: list<unionTypeDef> a_union_typedef_list;
   20: CustomProtocolType MyCustomField;
   21: optional CustomProtocolType MyOptCustomField;
-} (message = "message2")
+}
 
 exception AnotherException {
   1: i32 code;
@@ -248,6 +251,7 @@ struct MyIncludedStruct {
   1: includes.IncludedInt64 MyIncludedInt = includes.IncludedConstant;
   2: AStruct MyIncludedStruct;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   3: AStruct ARefField;
   4: required AStruct ARequiredField;
 } (cpp2.declare_hash = 1, cpp2.declare_equal_to)
@@ -274,16 +278,22 @@ typedef map<i64, string> folly_map
 struct AnnotatedStruct {
   1: containerStruct no_annotation;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   2: containerStruct cpp_unique_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   3: containerStruct cpp2_unique_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   4: map<i32, list<string>> container_with_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   5: required containerStruct req_cpp_unique_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   6: required containerStruct req_cpp2_unique_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   7: required list<string> req_container_with_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
   8: optional containerStruct opt_cpp_unique_ref;
@@ -292,16 +302,22 @@ struct AnnotatedStruct {
   @cpp.Ref{type = cpp.RefType.Unique}
   10: optional set<i32> opt_container_with_ref;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   11: containerStruct ref_type_unique;
   @cpp.Ref{type = cpp.RefType.SharedMutable}
+  @cpp.AllowLegacyNonOptionalRef
   12: containerStruct ref_type_shared;
   @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   13: map<i32, list<string>> ref_type_const;
   @cpp.Ref{type = cpp.RefType.SharedMutable}
+  @cpp.AllowLegacyNonOptionalRef
   14: required containerStruct req_ref_type_shared;
   @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   15: required containerStruct req_ref_type_const;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   16: required list<string> req_ref_type_unique;
   @cpp.Ref{type = cpp.RefType.Shared}
   17: optional containerStruct opt_ref_type_const;
@@ -354,31 +370,38 @@ service EmptyService {
 }
 
 service ReturnService {
-  void noReturn() (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  void noReturn();
   bool boolReturn();
   i16 i16Return();
   i32 i32Return();
   i64 i64Return();
   float floatReturn();
   double doubleReturn();
-  string stringReturn() (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  string stringReturn();
   binary binaryReturn();
   map<string, i64> mapReturn();
   simpleTypeDef simpleTypedefReturn();
   complexStructTypeDef complexTypedefReturn();
   list<mostComplexTypeDef> list_mostComplexTypedefReturn();
-  MyEnumA enumReturn() (thread = "eb");
-  list<MyEnumA> list_EnumReturn() (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  MyEnumA enumReturn();
+  @cpp.ProcessInEbThreadUnsafe
+  list<MyEnumA> list_EnumReturn();
   MyStruct structReturn();
   set<MyStruct> set_StructReturn();
-  ComplexUnion unionReturn() (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  ComplexUnion unionReturn();
   list<ComplexUnion> list_UnionReturn();
-  IOBuf readDataEb(1: i64 size) (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  IOBuf readDataEb(1: i64 size);
   IOBufPtr readData(1: i64 size);
 }
 
 service ParamService {
-  void void_ret_i16_param(1: i16 param1) (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  void void_ret_i16_param(1: i16 param1);
   void void_ret_byte_i16_param(1: byte param1, 2: i16 param2);
   void void_ret_map_param(1: map<string, i64> param1);
   void void_ret_map_setlist_param(
@@ -397,13 +420,14 @@ service ParamService {
     1: string param1,
     3: set<mostComplexTypeDef> param2,
   );
+  @cpp.ProcessInEbThreadUnsafe
   i64 i64_ret_i32_i32_i32_i32_i32_param(
     1: i32 param1,
     2: i32 param2,
     3: i32 param3,
     4: i32 param4,
     5: i32 param5,
-  ) (thread = "eb");
+  );
   double double_ret_setstruct_param(4: set<MyStruct> param1);
   string string_ret_string_param(1: string param1);
   binary binary_ret_binary_param(1: binary param1);
@@ -419,13 +443,15 @@ service ParamService {
     1: list<list<list<list<i32>>>> param1,
   );
   simpleTypeDef typedef_ret_i32_param(1: i32 param1);
+  @cpp.ProcessInEbThreadUnsafe
   list<simpleTypeDef> listtypedef_ret_typedef_param(
     1: complexStructTypeDef param1,
-  ) (thread = "eb");
+  );
   MyEnumA enum_ret_double_param(3: double param1);
   MyEnumA enum_ret_double_enum_param(3: double param1, 5: MyEnumA param2);
   list<MyEnumA> listenum_ret_map_param(1: map<string, i64> param1);
-  MyStruct struct_ret_i16_param(1: i16 param1) (thread = "eb");
+  @cpp.ProcessInEbThreadUnsafe
+  MyStruct struct_ret_i16_param(1: i16 param1);
   set<MyStruct> setstruct_ret_set_param(8: set<string> param1);
   ComplexUnion union_ret_i32_i32_param(4: i32 param1, 2: i32 param2);
   list<ComplexUnion> listunion_string_param(1: string param1);

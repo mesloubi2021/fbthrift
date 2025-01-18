@@ -83,7 +83,9 @@ final class ThreadPoolScheduler extends AtomicBoolean implements StatsScheduler 
     threadPoolExecutor.prestartAllCoreThreads();
 
     this.worker = new ThreadPoolSchedulerWorker();
-    this.scheduler = Schedulers.newElastic("thrift-offloop-scheduler", 60, true);
+    this.scheduler =
+        Schedulers.newBoundedElastic(
+            Integer.MAX_VALUE, Integer.MAX_VALUE, "thrift-offloop-scheduler", 60, true);
 
     scheduler.schedulePeriodically(this::captureThreadPoolExecutorMetrics, 1, 1, TimeUnit.SECONDS);
   }
@@ -123,7 +125,13 @@ final class ThreadPoolScheduler extends AtomicBoolean implements StatsScheduler 
 
   @Override
   public Disposable schedule(Runnable task) {
-    DisposableExecutionMeasuringRunnable runnable = new DisposableExecutionMeasuringRunnable(task);
+    // If ContextPropagation is enabled, wrap the runnable with ContextPropRunnable
+    Runnable wrappedTask = task;
+    if (ContextPropagationRegistry.isContextPropEnabled()) {
+      wrappedTask = new ContextPropRunnable(task);
+    }
+    DisposableExecutionMeasuringRunnable runnable =
+        new DisposableExecutionMeasuringRunnable(wrappedTask);
     threadPoolExecutor.submit(runnable);
     return runnable;
   }

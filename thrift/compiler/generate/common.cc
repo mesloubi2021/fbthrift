@@ -16,8 +16,6 @@
 
 #include <thrift/compiler/generate/common.h>
 
-#include <boost/algorithm/string/replace.hpp>
-
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -26,11 +24,9 @@
 #include <thrift/compiler/ast/t_list.h>
 #include <thrift/compiler/ast/t_map.h>
 #include <thrift/compiler/ast/t_set.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/ast/uri.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 std::vector<std::string> split_namespace(const std::string& s) {
   std::string token = ".";
@@ -48,30 +44,6 @@ std::vector<std::string> split_namespace(const std::string& s) {
   }
 
   return output;
-}
-
-void strip_cpp_comments_and_newlines(std::string& s) {
-  // strip c-style comments
-  auto fr = s.find("/*");
-  while (fr != std::string::npos) {
-    auto to = s.find("*/", fr + 2);
-    if (to == std::string::npos) {
-      throw std::runtime_error{"no matching */ for annotation comments"};
-    }
-    s.erase(fr, to - fr + 2);
-    fr = s.find("/*", fr);
-  }
-  // strip cpp-style comments
-  s.replace(
-      s.begin(),
-      s.end(),
-      std::regex_replace(
-          s,
-          std::regex("//.*(?=$|\\n)"), /* simulate multiline regex */
-          ""));
-
-  // strip newlines
-  boost::algorithm::replace_all(s, "\n", " ");
 }
 
 namespace {
@@ -102,22 +74,4 @@ std::unordered_set<const t_type*> collect_types(const t_structured* strct) {
   return types;
 }
 
-bool generate_legacy_api(const t_program& p) {
-  return p.find_structured_annotation_or_null(kNoLegacyUri) == nullptr;
-}
-
-bool generate_legacy_api(const t_structured& s) {
-  return s.program()->inherit_annotation_or_null(s, kNoLegacyUri) == nullptr;
-}
-
-bool generate_legacy_api(const t_enum& e) {
-  return e.program()->inherit_annotation_or_null(e, kNoLegacyUri) == nullptr;
-}
-
-bool generate_legacy_api(const t_service& s) {
-  return s.program()->inherit_annotation_or_null(s, kNoLegacyUri) == nullptr;
-}
-
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

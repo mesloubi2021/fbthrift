@@ -18,8 +18,7 @@
 
 #include <thrift/lib/cpp2/async/Interaction.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace {
 const transport::THeader::StringToStringMap& kEmptyMap() {
   static const transport::THeader::StringToStringMap& map =
@@ -196,6 +195,11 @@ int64_t RpcOptions::getInteractionId() const {
   return interactionId_;
 }
 
+RpcOptions& RpcOptions::copyInteractionIdFrom(const RpcOptions& other) {
+  interactionId_ = other.getInteractionId();
+  return *this;
+}
+
 RpcOptions& RpcOptions::setLoggingContext(std::string loggingContext) {
   loggingContext_ = std::move(loggingContext);
   return *this;
@@ -212,15 +216,6 @@ RpcOptions& RpcOptions::setRoutingData(std::shared_ptr<void> data) {
 
 const std::shared_ptr<void>& RpcOptions::getRoutingData() const {
   return routingData_;
-}
-
-RpcOptions& RpcOptions::setRoutingHint(uint64_t hint) {
-  routingHint_ = hint;
-  return *this;
-}
-
-uint64_t RpcOptions::getRoutingHint() const {
-  return routingHint_;
 }
 
 RpcOptions& RpcOptions::setContextPropMask(uint8_t mask) {
@@ -261,15 +256,6 @@ const std::optional<RpcOptions::DefconPriority>& RpcOptions::getDefconPriority()
   return defconPriority_;
 }
 
-RpcOptions& RpcOptions::setRequestDeadlineMs(uint32_t requestDeadlineMs) {
-  requestDeadlineMs_ = requestDeadlineMs;
-  return *this;
-}
-
-const std::optional<uint32_t>& RpcOptions::getRequestDeadlineMs() const {
-  return requestDeadlineMs_;
-}
-
 RpcOptions& RpcOptions::setFdsToSend(folly::SocketFds::ToSend fdsToSend) {
   fdsToSend_ = std::move(fdsToSend);
   return *this;
@@ -282,5 +268,22 @@ folly::SocketFds RpcOptions::copySocketFdsToSend() const {
   return folly::SocketFds{fdsToSend_};
 }
 
-} // namespace thrift
-} // namespace apache
+RpcOptions& RpcOptions::setConnectionKey(std::string key) {
+  connectionKey_ = std::move(key);
+  return *this;
+}
+
+std::string_view RpcOptions::getConnectionKey() const {
+  return connectionKey_;
+}
+
+RpcOptions& RpcOptions::setChecksum(RpcOptions::Checksum checksum) {
+  checksum_ = checksum;
+  return *this;
+}
+
+RpcOptions::Checksum RpcOptions::getChecksum() const {
+  return checksum_;
+}
+
+} // namespace apache::thrift

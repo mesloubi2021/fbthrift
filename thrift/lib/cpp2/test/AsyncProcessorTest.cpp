@@ -29,7 +29,6 @@
 #include <thrift/lib/cpp2/async/HTTPClientChannel.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
-#include <thrift/lib/cpp2/server/BaseThriftServer.h>
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
 #include <thrift/lib/cpp2/server/MonitoringServerInterface.h>
@@ -41,9 +40,11 @@
 #include <thrift/lib/cpp2/util/ScopedServerInterfaceThread.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
+#include <thrift/lib/cpp2/test/gen-cpp2/Calculator.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/Child.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/DummyControl.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/DummyMonitor.h>
+#include <thrift/lib/cpp2/test/gen-cpp2/DummySecurity.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/DummyStatus.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/Parent.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/SchemaService.h>
@@ -86,6 +87,25 @@ std::unique_ptr<HTTP2RoutingHandler> createHTTP2RoutingHandler(
 
 } // namespace
 
+TEST(AsyncProcessorMetadataTest, MethodMetadataDescribe) {
+  apache::thrift::ServiceHandler<Parent> service;
+  auto createMethodMetadataResult = service.createMethodMetadata();
+  auto desc = AsyncProcessorFactory::describe(createMethodMetadataResult);
+
+  auto beg = "CreateMethodMetadataResult(MethodMetadataMap(";
+  auto par1 =
+      "parentMethod1=MethodMetadata(executorType=ANY interactionType=NONE rpcKind=SINGLE_REQUEST_SINGLE_RESPONSE priority=NORMAL interactionName=NONE createsInteraction=false isWildcard=false)";
+  auto par2 =
+      "parentMethod2=MethodMetadata(executorType=ANY interactionType=NONE rpcKind=SINGLE_REQUEST_STREAMING_RESPONSE priority=NORMAL interactionName=NONE createsInteraction=false isWildcard=false)";
+  auto par3 =
+      "parentMethod3=MethodMetadata(executorType=ANY interactionType=NONE rpcKind=SINGLE_REQUEST_SINGLE_RESPONSE priority=NORMAL interactionName=NONE createsInteraction=false isWildcard=false)";
+
+  EXPECT_THAT(desc, ::testing::StartsWith(beg));
+  EXPECT_THAT(desc, ::testing::HasSubstr(par1));
+  EXPECT_THAT(desc, ::testing::HasSubstr(par2));
+  EXPECT_THAT(desc, ::testing::HasSubstr(par3));
+}
+
 TEST(AsyncProcessorMetadataTest, ParentMetadata) {
   apache::thrift::ServiceHandler<Parent> service;
   auto createMethodMetadataResult = service.createMethodMetadata();
@@ -96,19 +116,6 @@ TEST(AsyncProcessorMetadataTest, ParentMetadata) {
   EXPECT_NE(metadataMap.find("parentMethod2"), metadataMap.end());
   EXPECT_NE(metadataMap.find("parentMethod3"), metadataMap.end());
 }
-
-#if defined(THRIFT_SCHEMA_AVAILABLE)
-TEST(AsyncProcessorMetadataTest, Schema) {
-  apache::thrift::ServiceHandler<SchemaService> service;
-  auto schemas = service.getServiceMetadataV1();
-  EXPECT_TRUE(schemas);
-  EXPECT_EQ(schemas->size(), 1);
-  auto schema = schemas->at(0);
-  EXPECT_EQ(schema.definitions()->size(), 1);
-  auto svc_schema_0 = schema.definitions()->at(0).get_serviceDef();
-  EXPECT_EQ(svc_schema_0.functions()->size(), 1);
-}
-#endif
 
 TEST(AsyncProcessorMetadataTest, ChildMetadata) {
   ChildHandler service;
@@ -123,6 +130,88 @@ TEST(AsyncProcessorMetadataTest, ChildMetadata) {
   EXPECT_NE(metadataMap.find("childMethod2"), metadataMap.end());
   EXPECT_NE(
       metadataMap.find("Interaction.interactionMethod"), metadataMap.end());
+}
+
+void EXPECT_METHOD_METADATA(
+    const MethodMetadata& expected, const MethodMetadata& actual) {
+  EXPECT_EQ(expected.executorType, actual.executorType);
+  EXPECT_EQ(expected.interactionType, actual.interactionType);
+  EXPECT_EQ(expected.rpcKind, actual.rpcKind);
+  EXPECT_EQ(expected.priority, actual.priority);
+  EXPECT_EQ(expected.interactionName, actual.interactionName);
+  EXPECT_EQ(expected.createsInteraction, actual.createsInteraction);
+}
+
+TEST(AsyncProcessorMetadataTest, InteractionMetadata) {
+  ServiceHandler<Calculator> service;
+  auto createMethodMetadataResult = service.createMethodMetadata();
+  auto& metadataMap = expectMethodMetadataMap(createMethodMetadataResult);
+
+  // Factory function
+  auto metadata = metadataMap.at("newAddition");
+  EXPECT_METHOD_METADATA(
+      MethodMetadata(
+          MethodMetadata::ExecutorType::ANY,
+          MethodMetadata::InteractionType::NONE,
+          RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+          concurrency::PRIORITY::NORMAL,
+          "Addition",
+          /*createsInteract=*/true),
+      *metadata);
+
+  // EB-mode factory function
+  metadata = metadataMap.at("veryFastAddition");
+  EXPECT_METHOD_METADATA(
+      MethodMetadata(
+          MethodMetadata::ExecutorType::EVB,
+          MethodMetadata::InteractionType::NONE,
+          RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+          concurrency::PRIORITY::NORMAL,
+          "AdditionFast",
+          /*createsInteract=*/true),
+      *metadata);
+
+  // Method inside interaction
+  metadata = metadataMap.at("Addition.accumulatePrimitive");
+  EXPECT_METHOD_METADATA(
+      MethodMetadata(
+          MethodMetadata::ExecutorType::ANY,
+          MethodMetadata::InteractionType::INTERACTION_V1,
+          RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+          concurrency::PRIORITY::NORMAL,
+          "Addition",
+          /*createsInteract=*/false),
+      *metadata);
+
+  // Method inside EB-mode interaction
+  metadata = metadataMap.at("AdditionFast.accumulatePrimitive");
+  EXPECT_METHOD_METADATA(
+      MethodMetadata(
+          MethodMetadata::ExecutorType::EVB,
+          MethodMetadata::InteractionType::INTERACTION_V1,
+          RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+          concurrency::PRIORITY::NORMAL,
+          "AdditionFast",
+          /*createsInteract=*/false),
+      *metadata);
+}
+
+TEST(AsyncProcessorMetadataTest, NonInteractionMetadata) {
+  ChildHandler service;
+  auto createMethodMetadataResult = service.createMethodMetadata();
+  auto& metadataMap = expectMethodMetadataMap(createMethodMetadataResult);
+
+  // non-Interaction method
+  auto metadata = metadataMap.at("childMethod2");
+  EXPECT_METHOD_METADATA(
+      MethodMetadata(
+          MethodMetadata::ExecutorType::ANY,
+          MethodMetadata::InteractionType::NONE,
+          RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+          concurrency::PRIORITY::NORMAL,
+          std::nullopt,
+          /*createsInteract=*/false),
+      *metadata);
 }
 
 namespace {
@@ -153,8 +242,7 @@ class AsyncProcessorMethodResolutionTestP
     auto runner = std::make_unique<ScopedServerInterfaceThread>(
         std::move(service), std::move(configureServer));
     if (transportType() == TransportType::HTTP2) {
-      auto& thriftServer =
-          dynamic_cast<ThriftServer&>(runner->getThriftServer());
+      auto& thriftServer = runner->getThriftServer();
       thriftServer.addRoutingHandler(createHTTP2RoutingHandler(thriftServer));
     }
     return runner;
@@ -363,13 +451,17 @@ TEST_P(
   class Status : public apache::thrift::ServiceHandler<DummyStatus>,
                  public StatusServerInterface {
     void async_eb_getStatus(
-        std::unique_ptr<HandlerCallback<std::int64_t>> callback) override {
+        HandlerCallbackPtr<std::int64_t> callback) override {
       callback->result(360);
     }
   };
   class Control : public apache::thrift::ServiceHandler<DummyControl>,
                   public ControlServerInterface {
     std::int64_t getOption() override { return 42; }
+  };
+  class Security : public apache::thrift::ServiceHandler<DummySecurity>,
+                   public SecurityServerInterface {
+    std::int64_t getState() override { return 4200; }
   };
   auto service =
       std::make_shared<ChildHandlerWithMetadata>([](auto defaultResult) {
@@ -382,12 +474,14 @@ TEST_P(
     server.setStatusInterface(std::make_shared<Status>());
     server.setMonitoringInterface(std::make_shared<Monitor>());
     server.setControlInterface(std::make_shared<Control>());
+    server.setSecurityInterface(std::make_shared<Security>());
   });
 
   auto client = makeClientFor<ChildAsyncClient>(*runner);
   auto monitoringClient = makeClientFor<DummyMonitorAsyncClient>(*runner);
   auto statusClient = makeClientFor<DummyStatusAsyncClient>(*runner);
   auto controlClient = makeClientFor<DummyControlAsyncClient>(*runner);
+  auto securityClient = makeClientFor<DummySecurityAsyncClient>(*runner);
 
   EXPECT_EQ(client->semifuture_parentMethod1().get(), 42);
   // The monitoring interface should be invoked if the user interface doesn't
@@ -399,6 +493,9 @@ TEST_P(
   // The control interface should be invoked if no handler with higher
   // precedence has the method.
   EXPECT_EQ(controlClient->semifuture_getOption().get(), 42);
+  // The security interface should be invoked if no handler with higher
+  // precedence has the method.
+  EXPECT_EQ(securityClient->semifuture_getState().get(), 4200);
   // If the method is in neither user, status, or monitoring interfaces, we
   // expect an error.
   EXPECT_THROW(client->semifuture_parentMethod3().get(), TApplicationException);
@@ -433,13 +530,17 @@ TEST_P(
   class Status : public apache::thrift::ServiceHandler<DummyStatus>,
                  public StatusServerInterface {
     void async_eb_getStatus(
-        std::unique_ptr<HandlerCallback<std::int64_t>> callback) override {
+        HandlerCallbackPtr<std::int64_t> callback) override {
       callback->result(360);
     }
   };
   class Control : public apache::thrift::ServiceHandler<DummyControl>,
                   public ControlServerInterface {
     std::int64_t getOption() override { return 42; }
+  };
+  class Security : public apache::thrift::ServiceHandler<DummySecurity>,
+                   public SecurityServerInterface {
+    std::int64_t getState() override { return 4200; }
   };
   class ChildHandlerWithWildcard : public ChildHandlerWithMetadata {
    public:
@@ -494,6 +595,12 @@ TEST_P(
           processor_->executeRequest(std::move(request), methodMetadata);
         }
 
+        void processInteraction(apache::thrift::ServerRequest&&) override {
+          LOG(FATAL)
+              << "This AsyncProcessor doesn't support Thrift interactions. "
+              << "Please implement processInteraction to support interactions.";
+        }
+
         explicit Processor(std::unique_ptr<AsyncProcessor> processor)
             : processor_(std::move(processor)) {}
 
@@ -510,12 +617,14 @@ TEST_P(
     server.setStatusInterface(std::make_shared<Status>());
     server.setMonitoringInterface(std::make_shared<Monitor>());
     server.setControlInterface(std::make_shared<Control>());
+    server.setSecurityInterface(std::make_shared<Security>());
   });
 
   auto client = makeClientFor<ChildAsyncClient>(*runner);
   auto monitoringClient = makeClientFor<DummyMonitorAsyncClient>(*runner);
   auto statusClient = makeClientFor<DummyStatusAsyncClient>(*runner);
   auto controlClient = makeClientFor<DummyControlAsyncClient>(*runner);
+  auto securityClient = makeClientFor<DummySecurityAsyncClient>(*runner);
 
   EXPECT_EQ(client->semifuture_parentMethod1().get(), 42);
   // The monitoring interface should not be available
@@ -527,6 +636,9 @@ TEST_P(
   // The control interface should not be available
   EXPECT_THROW(
       controlClient->semifuture_getOption().get(), TApplicationException);
+  // The security interface should not be available
+  EXPECT_THROW(
+      securityClient->semifuture_getState().get(), TApplicationException);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -557,7 +669,6 @@ THRIFT_PLUGGABLE_FUNC_SET(
             *processorFactory,
             std::make_shared<concurrency::ThreadManagerExecutorAdapter>(
                 folly::getGlobalCPUExecutor()),
-            server_,
             nullptr /* requestsRegistry */
         };
       }
@@ -603,6 +714,15 @@ TEST(AsyncProcessorMethodResolutionTest, MultipleService) {
   EXPECT_EQ(monitoringClient->semifuture_parentMethod1().get(), 84);
   EXPECT_EQ(
       monitoringClient->semifuture_childMethod2().get(), "hello from Monitor");
+}
+
+TEST(AsyncProcessorFactoryTest, ThriftGenerated) {
+  std::shared_ptr<ServiceHandler<Parent>> generated =
+      std::make_shared<ServiceHandler<Parent>>();
+  ThriftServerAsyncProcessorFactory<ServiceHandler<Parent>> notGenerated =
+      ThriftServerAsyncProcessorFactory<ServiceHandler<Parent>>(generated);
+  EXPECT_TRUE(generated->isThriftGenerated());
+  EXPECT_FALSE(notGenerated.isThriftGenerated());
 }
 
 } // namespace apache::thrift::test

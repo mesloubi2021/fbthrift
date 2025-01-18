@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 # This starts up a bunch of servers, one for each of the server type
 # and socket typecombinations we have. It then runs through the tests
 # for each server, which entails connecting to calling a method on the
@@ -40,20 +42,23 @@ from thrift.transport import TSocket, TSSLSocket, TTransport
 from thrift.transport.THeaderTransport import CLIENT_TYPE, THeaderTransport, TRANSFORM
 from ThriftTest import SecondService, ThriftTest
 from ThriftTest.ttypes import *
-from libfb.py import parutil
+import importlib.resources
 
 
 _servers = []
 _ports = {}
 
 try:
+    # pyre-fixme[21]: Could not find name `fastproto` in `thrift.protocol`.
     from thrift.protocol import fastproto
 except ImportError:
     fastproto = None
 
 
 def start_server(server_type, ssl, server_header, server_context, multiple, port):
-    server_bin = parutil.get_file_path("python_test_server")
+    server_bin = str(
+        importlib.resources.files(__package__).joinpath("python_test_server")
+    )
 
     args = [server_bin, "--port", str(port)]
     if ssl:
@@ -140,7 +145,7 @@ class AbstractTest:
             seq1 = seq1.encode("utf-8")
         if not isinstance(seq2, bytes):
             seq2 = seq2.encode("utf-8")
-        self.assertEquals(seq1, seq2)
+        self.assertEqual(seq1, seq2)
 
     def setUp(self):
         if self.ssl:
@@ -280,7 +285,7 @@ class HeaderTest(HeaderBase):
             self.client.testString("test")
             headers = htrans.get_headers()
             self.assertTrue("permanent" in headers)
-            self.assertEquals(headers["permanent"], "true")
+            self.assertEqual(headers["permanent"], "true")
 
             # Try with two transient headers
             htrans.set_header("transient1", "true")
@@ -288,11 +293,11 @@ class HeaderTest(HeaderBase):
             self.client.testString("test")
             headers = htrans.get_headers()
             self.assertTrue("permanent" in headers)
-            self.assertEquals(headers["permanent"], "true")
+            self.assertEqual(headers["permanent"], "true")
             self.assertTrue("transient1" in headers)
-            self.assertEquals(headers["transient1"], "true")
+            self.assertEqual(headers["transient1"], "true")
             self.assertTrue("transient2" in headers)
-            self.assertEquals(headers["transient2"], "true")
+            self.assertEqual(headers["transient2"], "true")
 
             # Add one, update one and delete one transient header
             htrans.set_header("transient2", "false")
@@ -300,12 +305,12 @@ class HeaderTest(HeaderBase):
             self.client.testString("test")
             headers = htrans.get_headers()
             self.assertTrue("permanent" in headers)
-            self.assertEquals(headers["permanent"], "true")
+            self.assertEqual(headers["permanent"], "true")
             self.assertTrue("transient1" not in headers)
             self.assertTrue("transient2" in headers)
-            self.assertEquals(headers["transient2"], "false")
+            self.assertEqual(headers["transient2"], "false")
             self.assertTrue("transient3" in headers)
-            self.assertEquals(headers["transient3"], "true")
+            self.assertEqual(headers["transient3"], "true")
 
 
 class HeaderAcceleratedCompactTest(HeaderBase):

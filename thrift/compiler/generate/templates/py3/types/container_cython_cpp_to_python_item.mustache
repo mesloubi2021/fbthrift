@@ -33,7 +33,7 @@ citem.
 }}{{#type:flexibleBinary?}}{{!
   }}(<const char*>citem.data())[:citem.size()]{{!
 }}{{/type:flexibleBinary?}}{{!
-}}{{^type:hasCustomTypeBehavior?}}{{!
+}}{{^type:customBinaryType?}}{{!
 }}{{#type:bool?}}citem{{/type:bool?}}{{!
 }}{{#type:byte?}}citem{{/type:byte?}}{{!
 }}{{#type:i16?}}citem{{/type:i16?}}{{!
@@ -43,9 +43,13 @@ citem.
 }}{{#type:float?}}citem{{/type:float?}}{{!
 }}{{#type:string?}}bytes(citem).decode('UTF-8'){{/type:string?}}{{!
 }}{{#type:binary?}}bytes(citem){{/type:binary?}}{{!
-}}{{^type:base?}}{{^type:enum?}}{{!
-    }}{{> types/cython_python_type}}._fbthrift_create(citem){{!
-}}{{/type:enum?}}{{/type:base?}}{{!
+}}{{#type:struct?}}{{!
+    }}{{> types/cython_python_type}}._create_FBTHRIFT_ONLY_DO_NOT_USE(citem){{!
+}}{{/type:struct?}}{{#type:map?}}{{!
+    }}{{> types/cython_python_type}}._create_FBTHRIFT_ONLY_DO_NOT_USE(citem){{!
+}}{{/type:map?}}{{!
+}}{{#type:list?}}{{> types/container_from_cpp }}(citem){{/type:list?}}{{!
+}}{{#type:set?}}{{> types/container_from_cpp }}(citem){{/type:set?}}{{!
 }}{{#type:enum}}translate_cpp_enum_to_python({{!
-    }}{{> types/cython_python_type}}, <int> citem){{/type:enum}}{{!
-}}{{/type:hasCustomTypeBehavior?}}
+    }}{{> types/python_type }}, <int> citem){{/type:enum}}{{!
+}}{{/type:customBinaryType?}}

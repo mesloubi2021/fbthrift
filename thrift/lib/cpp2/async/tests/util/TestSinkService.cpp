@@ -17,15 +17,13 @@
 #include <thrift/lib/cpp2/async/tests/util/TestSinkService.h>
 
 #include <folly/ScopeGuard.h>
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/Sleep.h>
 #include <folly/portability/GTest.h>
 
-namespace testutil {
-namespace testservice {
+namespace apache::thrift::detail::test {
 
-apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::range(
-    int32_t from, int32_t to) {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::range(int32_t from, int32_t to) {
+  return SinkConsumer<int32_t, bool>{
       [from, to](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         int32_t i = from;
@@ -39,9 +37,8 @@ apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::range(
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::rangeThrow(
-    int32_t from, int32_t) {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::rangeThrow(int32_t from, int32_t) {
+  return SinkConsumer<int32_t, bool>{
       [from](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         bool throwed = false;
@@ -61,9 +58,9 @@ apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::rangeThrow(
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, bool>
-TestSinkService::rangeFinalResponseThrow(int32_t from, int32_t) {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::rangeFinalResponseThrow(
+    int32_t from, int32_t) {
+  return SinkConsumer<int32_t, bool>{
       [from](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         int32_t i = from;
@@ -80,9 +77,9 @@ TestSinkService::rangeFinalResponseThrow(int32_t from, int32_t) {
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, int32_t>
-TestSinkService::rangeEarlyResponse(int32_t from, int32_t, int32_t early) {
-  return apache::thrift::SinkConsumer<int32_t, int32_t>{
+SinkConsumer<int32_t, int32_t> TestSinkService::rangeEarlyResponse(
+    int32_t from, int32_t, int32_t early) {
+  return SinkConsumer<int32_t, int32_t>{
       [from, early](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<int32_t> {
         int32_t i = from;
@@ -99,26 +96,24 @@ TestSinkService::rangeEarlyResponse(int32_t from, int32_t, int32_t early) {
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, bool>
-TestSinkService::unSubscribedSink() {
+SinkConsumer<int32_t, bool> TestSinkService::unSubscribedSink() {
   activeSinks_++;
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+  return SinkConsumer<int32_t, bool>{
       [g = folly::makeGuard([this]() { activeSinks_--; })](
           folly::coro::AsyncGenerator<int32_t&&> gen) mutable
       -> folly::coro::Task<bool> {
-        EXPECT_THROW(
-            co_await gen.next(), apache::thrift::TApplicationException);
+        EXPECT_THROW(co_await gen.next(), TApplicationException);
         co_return true;
       },
       10 /* buffer size */
   };
 }
 
-folly::SemiFuture<apache::thrift::SinkConsumer<int32_t, bool>>
+folly::SemiFuture<SinkConsumer<int32_t, bool>>
 TestSinkService::semifuture_unSubscribedSinkSlowReturn() {
   return folly::futures::sleep(std::chrono::seconds(1)).deferValue([=](auto&&) {
     activeSinks_++;
-    return apache::thrift::SinkConsumer<int32_t, bool>{
+    return SinkConsumer<int32_t, bool>{
         [g = folly::makeGuard([this]() { activeSinks_--; })](
             folly::coro::AsyncGenerator<int32_t&&> gen) mutable
         -> folly::coro::Task<bool> {
@@ -134,16 +129,14 @@ bool TestSinkService::isSinkUnSubscribed() {
   return activeSinks_ == 0;
 }
 
-apache::thrift::ResponseAndSinkConsumer<bool, int32_t, bool>
-TestSinkService::initialThrow() {
+ResponseAndSinkConsumer<bool, int32_t, bool> TestSinkService::initialThrow() {
   MyException ex;
   *ex.reason_ref() = "reason";
   throw ex;
 }
 
-apache::thrift::SinkConsumer<int32_t, bool>
-TestSinkService::rangeChunkTimeout() {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::rangeChunkTimeout() {
+  return SinkConsumer<int32_t, bool>{
       [](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         EXPECT_THROW(
@@ -153,7 +146,7 @@ TestSinkService::rangeChunkTimeout() {
                 EXPECT_EQ(i++, *item);
               }
             }(),
-            apache::thrift::TApplicationException);
+            TApplicationException);
         co_return true;
       },
       10 /* buffer size */
@@ -161,8 +154,8 @@ TestSinkService::rangeChunkTimeout() {
       .setChunkTimeout(std::chrono::milliseconds(200));
 }
 
-apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::sinkThrow() {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::sinkThrow() {
+  return SinkConsumer<int32_t, bool>{
       [](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         bool throwed = false;
@@ -182,8 +175,8 @@ apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::sinkThrow() {
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::sinkFinalThrow() {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::sinkFinalThrow() {
+  return SinkConsumer<int32_t, bool>{
       [](folly::coro::AsyncGenerator<int32_t&&>) -> folly::coro::Task<bool> {
         FinalException ex;
         *ex.reason_ref() = "test";
@@ -195,9 +188,9 @@ apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::sinkFinalThrow() {
 
 void TestSinkService::purge() {}
 
-apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::rangeCancelAt(
+SinkConsumer<int32_t, bool> TestSinkService::rangeCancelAt(
     int32_t from, int32_t to, int32_t cancelAt) {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+  return SinkConsumer<int32_t, bool>{
       [from, to, cancelAt](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         // create custom CancellationSource
@@ -235,9 +228,9 @@ apache::thrift::SinkConsumer<int32_t, bool> TestSinkService::rangeCancelAt(
   };
 }
 
-apache::thrift::SinkConsumer<int32_t, bool>
-TestSinkService::rangeSlowFinalResponse(int32_t from, int32_t to) {
-  return apache::thrift::SinkConsumer<int32_t, bool>{
+SinkConsumer<int32_t, bool> TestSinkService::rangeSlowFinalResponse(
+    int32_t from, int32_t to) {
+  return SinkConsumer<int32_t, bool>{
       [from, to](folly::coro::AsyncGenerator<int32_t&&> gen)
           -> folly::coro::Task<bool> {
         int32_t i = from;
@@ -251,5 +244,4 @@ TestSinkService::rangeSlowFinalResponse(int32_t from, int32_t to) {
       10 /* buffer size */
   };
 }
-} // namespace testservice
-} // namespace testutil
+} // namespace apache::thrift::detail::test

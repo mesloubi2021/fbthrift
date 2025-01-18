@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import unittest
 from unittest import mock
 
@@ -28,4 +30,4 @@ class TestAsyncioRpcConnectionContext(unittest.TestCase):
 
         ret = context.getSockName()
 
-        self.assertEquals(ret, test_sock_laddr)
+        self.assertEqual(ret, test_sock_laddr)

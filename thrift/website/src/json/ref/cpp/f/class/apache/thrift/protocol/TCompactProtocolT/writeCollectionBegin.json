@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::writeCollectionBegin",
       "argsstring_html": "(int8_t elemType, int32_t size)",
       "name_html": "writeCollectionBegin",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::writeCollectionBegin",
       "param": [
         {
           "type_html": "int8_t",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "200",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "343",
         "bodyend": "353"
@@ -56,5 +57,11 @@
   "brief_html": "<p>Abstract method for writing the start of lists and sets. List and sets on the wire differ only by the type indicator. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeCollectionBegin",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeCollectionBegin"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeCollectionBegin",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

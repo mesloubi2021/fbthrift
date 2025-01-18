@@ -21,6 +21,7 @@
       "definition_html": "static bool apache::thrift::op::detail::ListOp&lt; VTag, Tag &gt;::add",
       "argsstring_html": "(T &amp;, V &amp;&amp;)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::ListOp::add",
       "param": [
         {
           "type_html": "<code>T</code> &amp;"
@@ -32,7 +33,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "95",
-        "column": "1",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "95",
         "bodyend": "97"
@@ -62,6 +63,7 @@
       "definition_html": "static bool apache::thrift::op::detail::ListOp&lt; VTag, Tag &gt;::add",
       "argsstring_html": "(void *s, const Dyn &amp;v)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::ListOp::add",
       "param": [
         {
           "type_html": "void *",
@@ -75,7 +77,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "98",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "98",
         "bodyend": "98"
@@ -100,5 +102,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1list_3_01VTag_01_4_01_4/add",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1list_3_01VTag_01_4_01_4/add"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1list_3_01VTag_01_4_01_4/add",
+  "parent_links": [
+    {
+      "text_html": "AnyOp&lt; type::list&lt; VTag &gt; &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1list_3_01VTag_01_4_01_4"
+    }
+  ]
 }

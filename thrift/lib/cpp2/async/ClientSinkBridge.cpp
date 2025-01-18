@@ -18,9 +18,7 @@
 
 #include <folly/Overload.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 // Explicitly instantiate the base of ClientSinkBridge
 template class TwoWayBridge<
@@ -83,7 +81,9 @@ folly::coro::Task<folly::Try<StreamPayload>> ClientSinkBridge::sink(
           }
         }};
   };
-  SCOPE_EXIT { evb_.reset(); };
+  SCOPE_EXIT {
+    evb_.reset();
+  };
 
   for (uint64_t credits = 0; !serverCancelSource_.isCancellationRequested();
        credits--) {
@@ -252,6 +252,4 @@ bool ClientSinkBridge::hasServerCancelled() {
   return serverCancelSource_.isCancellationRequested();
 }
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

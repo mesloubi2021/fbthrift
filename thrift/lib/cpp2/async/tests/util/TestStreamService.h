@@ -20,8 +20,7 @@
 #include <thrift/lib/cpp2/async/ServerStreamMultiPublisher.h>
 #include <thrift/lib/cpp2/async/tests/util/gen-cpp2/TestStreamService.h>
 
-namespace testutil {
-namespace testservice {
+namespace apache::thrift::detail::test {
 
 class TestStreamGeneratorService
     : public apache::thrift::ServiceHandler<TestStreamService> {
@@ -145,5 +144,29 @@ class TestStreamMultiPublisherWithHeaderService
   std::atomic<size_t> activeStreams_{0};
 };
 
-} // namespace testservice
-} // namespace testutil
+class TestStreamProducerCallbackService
+    : public apache::thrift::ServiceHandler<TestStreamService> {
+ public:
+  folly::coro::Task<::std::int32_t> co_test() override { co_return 42; }
+
+  apache::thrift::ServerStream<int32_t> range(
+      int32_t from, int32_t to) override;
+
+  apache::thrift::ServerStream<int32_t> rangeThrow(
+      int32_t from, int32_t to) override;
+
+  apache::thrift::ServerStream<int32_t> rangeThrowUDE(
+      int32_t from, int32_t to) override;
+};
+
+class TestStreamClientCallbackService
+    : public ServiceHandler<TestStreamService> {
+ public:
+  ServerStream<int32_t> range(int32_t from, int32_t to) override;
+  folly::coro::Task<int32_t> co_test() override;
+
+ private:
+  std::optional<ServerStreamPublisher<int32_t>> streamPublisher_;
+};
+
+} // namespace apache::thrift::detail::test

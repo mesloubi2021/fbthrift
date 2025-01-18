@@ -15,20 +15,21 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, Value &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
-          "type_html": "Value &amp;",
+          "type_html": "<code>Value</code> &amp;",
           "declname_html": "value"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "31",
-        "column": "1"
+        "line": "42",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, Value&amp; value) const",
@@ -55,9 +56,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, bool &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -67,8 +69,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "32",
-        "column": "1"
+        "line": "43",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, bool&amp; value) const",
@@ -95,9 +97,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, int8_t &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -107,8 +110,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "33",
-        "column": "1"
+        "line": "44",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, int8_t&amp; value) const",
@@ -135,9 +138,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, int16_t &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -147,8 +151,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "34",
-        "column": "1"
+        "line": "45",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, int16_t&amp; value) const",
@@ -175,9 +179,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, int32_t &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -187,8 +192,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "35",
-        "column": "1"
+        "line": "46",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, int32_t&amp; value) const",
@@ -215,9 +220,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, int64_t &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -227,8 +233,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "36",
-        "column": "1"
+        "line": "47",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, int64_t&amp; value) const",
@@ -255,9 +261,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, float &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -267,8 +274,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "37",
-        "column": "1"
+        "line": "48",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, float&amp; value) const",
@@ -295,9 +302,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, double &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -307,8 +315,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "38",
-        "column": "1"
+        "line": "49",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, double&amp; value) const",
@@ -335,9 +343,10 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, folly::IOBuf &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
@@ -347,8 +356,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "39",
-        "column": "1"
+        "line": "50",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, folly::IOBuf&amp; value) const",
@@ -375,20 +384,21 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, std::vector&lt; Value &gt; &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
-          "type_html": "std::vector&lt; Value &gt; &amp;",
+          "type_html": "std::vector&lt; <code>Value</code> &gt; &amp;",
           "declname_html": "value"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "40",
-        "column": "1"
+        "line": "51",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, std::vector&lt;Value&gt;&amp; value) const",
@@ -415,20 +425,21 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, folly::F14FastSet&lt; Value &gt; &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
-          "type_html": "folly::F14FastSet&lt; Value &gt; &amp;",
+          "type_html": "folly::F14FastSet&lt; <code>Value</code> &gt; &amp;",
           "declname_html": "value"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "41",
-        "column": "1"
+        "line": "52",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, folly::F14FastSet&lt;Value&gt;&amp; value) const",
@@ -455,20 +466,21 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, folly::F14FastMap&lt; Value, Value &gt; &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
-          "type_html": "folly::F14FastMap&lt; Value, Value &gt; &amp;",
+          "type_html": "folly::F14FastMap&lt; <code>Value</code>, <code>Value</code> &gt; &amp;",
           "declname_html": "value"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "42",
-        "column": "1"
+        "line": "53",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(\n    const Object&amp; patch, folly::F14FastMap&lt;Value, Value&gt;&amp; value) const",
@@ -495,20 +507,21 @@
       "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
       "argsstring_html": "(const Object &amp;patch, Object &amp;value) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
       "param": [
         {
-          "type_html": "const Object &amp;",
+          "type_html": "const <code>Object</code> &amp;",
           "declname_html": "patch"
         },
         {
-          "type_html": "Object &amp;",
+          "type_html": "<code>Object</code> &amp;",
           "declname_html": "value"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
-        "line": "44",
-        "column": "1"
+        "line": "55",
+        "column": "8"
       },
       "definition": {
         "simple_html": "void operator()(const Object&amp; patch, Object&amp; value) const",
@@ -522,6 +535,47 @@
       "href": "/ref/cpp/fns/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
       "parentid": "structapache_1_1thrift_1_1protocol_1_1detail_1_1ApplyPatch",
       "compoundname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1protocol_1_1detail_1_1ApplyPatch_1a4bb387cf9d673649d4fee6e88d5e2c0c",
+      "prot": "public",
+      "static": "no",
+      "const": "yes",
+      "explicit": "no",
+      "inline": "no",
+      "virtual": "non-virtual",
+      "type_html": "void",
+      "definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
+      "argsstring_html": "(Object &amp;&amp;patch, Object &amp;value) const",
+      "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()",
+      "param": [
+        {
+          "type_html": "<code>Object</code> &amp;&amp;",
+          "declname_html": "patch"
+        },
+        {
+          "type_html": "<code>Object</code> &amp;",
+          "declname_html": "value"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/protocol/Patch.h",
+        "line": "56",
+        "column": "8"
+      },
+      "definition": {
+        "simple_html": "void operator()(Object&amp;&amp; patch, Object&amp; value) const",
+        "simple_raw": "void operator()(Object&& patch, Object& value) const",
+        "detailed_html": "void operator()(Object&amp;&amp; patch, Object&amp; value) const",
+        "detailed_raw": "void operator()(Object&& patch, Object& value) const",
+        "original_definition_html": "void apache::thrift::protocol::detail::ApplyPatch::operator()",
+        "original_argsstring_html": "(Object &amp;&amp;patch, Object &amp;value) const"
+      },
+      "filepath": "fns/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
+      "href": "/ref/cpp/fns/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
+      "parentid": "structapache_1_1thrift_1_1protocol_1_1detail_1_1ApplyPatch",
+      "compoundname_html": "apache::thrift::protocol::detail::ApplyPatch::operator()"
     }
   ],
   "filepath": "f/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
@@ -530,5 +584,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/protocol/detail/ApplyPatch/operator.call",
+  "parent_links": [
+    {
+      "text_html": "ApplyPatch",
+      "href": "/ref/cpp/struct/apache/thrift/protocol/detail/ApplyPatch"
+    }
+  ]
 }

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import os
 import shutil
 import tempfile
@@ -137,7 +139,6 @@ class ThriftPackage(unittest.TestCase):
         )
 
     def test_with_common_namespace(self):
-
         # When domain is present but not in the common package, correctly uses the domain present in file
         self.write_and_test(
             "foo.thrift",
@@ -210,7 +211,6 @@ class ThriftPackage(unittest.TestCase):
         )
 
     def test_with_longest_pkg(self):
-
         # When minimum length is not met, use the longest path.
         self.write_and_test(
             "foo.thrift",
@@ -272,7 +272,6 @@ class ThriftPackage(unittest.TestCase):
         )
 
     def test_empty_namespace(self):
-
         self.write_and_test(
             "foo.thrift",
             """\

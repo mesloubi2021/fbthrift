@@ -39,11 +39,13 @@ struct HasInt {
 
 struct BasicRefs {
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   1: HasInt def_field;
 }
 
 struct BasicRefsShared {
   @cpp.Ref{type = cpp.RefType.SharedMutable}
+  @cpp.AllowLegacyNonOptionalRef
   1: HasInt def_field;
 }
 
@@ -66,7 +68,7 @@ struct HasSmallSortedVector {
   @cpp.Type{template = "SmallSortedVectorSet"}
   1: set<i32> set_field;
   @cpp.Type{template = "SmallSortedVectorMap"}
-  2: map<i32, i32> map_field;
+  2: i32_map map_field;
 }
 
 struct NoexceptMoveStruct {
@@ -101,3 +103,10 @@ struct OptionalFieldsStruct {
   @thrift.Box
   6: optional HasInt boxed_field;
 }
+
+struct NotEligibleForConstexpr {
+  @cpp.Ref{type = cpp.RefType.Unique}
+  1: optional i32 swap;
+}
+
+typedef map<i32, i32> i32_map

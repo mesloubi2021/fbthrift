@@ -21,9 +21,7 @@
 
 #include <thrift/compiler/ast/t_service.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_program;
 
@@ -36,13 +34,7 @@ class t_program;
 class t_interaction : public t_service {
  public:
   using t_service::t_service;
-
-  // TODO(afuller): Remove everything below this comment. It is only provided
-  // for backwards compatibility.
- public:
-  bool is_serial() const { return has_annotation("serial"); }
+  ~t_interaction() override;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -15,6 +15,7 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::TCompactProtocolT",
       "argsstring_html": "(std::shared_ptr&lt; Transport_ &gt; trans)",
       "name_html": "TCompactProtocolT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::TCompactProtocolT",
       "param": [
         {
           "type_html": "std::shared_ptr&lt; Transport_ &gt;",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "80",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "80",
         "bodyend": "89"
@@ -55,6 +56,7 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::TCompactProtocolT",
       "argsstring_html": "(std::shared_ptr&lt; Transport_ &gt; trans, int32_t string_limit, int32_t container_limit)",
       "name_html": "TCompactProtocolT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::TCompactProtocolT",
       "param": [
         {
           "type_html": "std::shared_ptr&lt; Transport_ &gt;",
@@ -72,7 +74,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "91",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "91",
         "bodyend": "103"
@@ -103,6 +105,7 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::TCompactProtocolT",
       "argsstring_html": "(Transport_ *trans)",
       "name_html": "TCompactProtocolT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::TCompactProtocolT",
       "param": [
         {
           "type_html": "Transport_ *",
@@ -112,7 +115,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "111",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "111",
         "bodyend": "120"
@@ -126,7 +129,7 @@
         "original_argsstring_html": "(Transport_ *trans)"
       },
       "description": {
-        "detailed_html": "<p>Construct a <code>TCompactProtocolT</code> using a raw pointer to the transport.</p><p>The caller is responsible for ensuring that the transport remains valid for the lifetime of the protocol. </p>"
+        "detailed_html": "<p>Construct a <code>TCompactProtocolT</code> using a raw pointer to the transport.</p>\n<p>The caller is responsible for ensuring that the transport remains valid for the lifetime of the protocol. </p>"
       },
       "filepath": "fns/class/apache/thrift/protocol/TCompactProtocolT/TCompactProtocolT",
       "href": "/ref/cpp/fns/class/apache/thrift/protocol/TCompactProtocolT/TCompactProtocolT",
@@ -141,5 +144,11 @@
   "brief_html": "Constructs the TCompactProtocolT.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/TCompactProtocolT",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/TCompactProtocolT"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/TCompactProtocolT",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

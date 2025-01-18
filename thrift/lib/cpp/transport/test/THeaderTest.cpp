@@ -34,7 +34,7 @@ namespace transport {
 
 TEST(THeaderTest, largetransform) {
   THeader header;
-  header.setTransform(THeader::ZLIB_TRANSFORM); // ZLib flag
+  header.setTTransform(TTransform::ZLIB); // ZLib flag
 
   size_t buf_size = 10000000;
   std::unique_ptr<IOBuf> buf(IOBuf::create(buf_size));
@@ -79,12 +79,6 @@ TEST(THeaderTest, http_clear_header) {
   buf = header.addHeader(std::move(buf));
 
   EXPECT_TRUE(header.isWriteHeadersEmpty());
-}
-
-TEST(THeaderTest, transform) {
-  // Simple test for TRANSFORMS enum to string conversion
-  EXPECT_EQ(
-      THeader::getStringTransform(THeader::TRANSFORMS::ZLIB_TRANSFORM), "zlib");
 }
 
 TEST(THeaderTest, eraseReadHeader) {
@@ -198,6 +192,33 @@ TEST(THeaderTest, asciiData3) {
       "Header transport frame is too large: 1918987876 "
       "(hex 0x72616e64, ascii 'rand')";
   testAsciiHeaderData("random data", expected);
+}
+
+TEST(THeaderTest, clientLoggingEnabled0) {
+  THeader header;
+  ASSERT_FALSE(header.isClientLoggingEnabled());
+}
+
+TEST(THeaderTest, clientLoggingEnabled1) {
+  THeader header;
+  auto& ctx = header.loggingContext().emplace();
+  ctx.logSampleRatio() = 1000;
+  ASSERT_TRUE(header.isClientLoggingEnabled());
+}
+
+TEST(THeaderTest, clientLoggingEnabled2) {
+  THeader header;
+  auto& ctx = header.loggingContext().emplace();
+  ctx.logErrorSampleRatio() = 1000;
+  ASSERT_TRUE(header.isClientLoggingEnabled());
+}
+
+TEST(THeaderTest, clientLoggingEnabled3) {
+  THeader header;
+  auto& ctx = header.loggingContext().emplace();
+  ctx.logSampleRatio() = 0;
+  ctx.logErrorSampleRatio() = 0;
+  ASSERT_FALSE(header.isClientLoggingEnabled());
 }
 
 } // namespace transport

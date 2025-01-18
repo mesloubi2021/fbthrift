@@ -15,6 +15,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::clear",
       "argsstring_html": "(void *ptr)",
       "name_html": "clear",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::clear",
       "param": [
         {
           "type_html": "void *",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "79",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "79",
         "bodyend": "79"
@@ -49,5 +50,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/clear",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/clear"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/clear",
+  "parent_links": [
+    {
+      "text_html": "SetOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/SetOp"
+    }
+  ]
 }

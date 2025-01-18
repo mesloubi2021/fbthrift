@@ -15,13 +15,14 @@
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_intern_boxed_field_ref&lt; T &gt;::operator*",
       "argsstring_html": "()",
       "name_html": "operator*",
+      "qualifiedname_html": "apache::thrift::terse_intern_boxed_field_ref::operator*",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1474",
-        "column": "1",
+        "line": "1489",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1474",
-        "bodyend": "1474"
+        "bodystart": "1489",
+        "bodyend": "1489"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type operator*()",
@@ -48,13 +49,14 @@
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_intern_boxed_field_ref&lt; T &gt;::operator*",
       "argsstring_html": "() const",
       "name_html": "operator*",
+      "qualifiedname_html": "apache::thrift::terse_intern_boxed_field_ref::operator*",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1475",
-        "column": "1",
+        "line": "1490",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1475",
-        "bodyend": "1475"
+        "bodystart": "1490",
+        "bodyend": "1490"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type operator*() const",
@@ -76,5 +78,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/operator.mul",
-  "refid": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/operator.mul"
+  "refid": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/operator.mul",
+  "parent_links": [
+    {
+      "text_html": "terse_intern_boxed_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/terse_intern_boxed_field_ref"
+    }
+  ]
 }

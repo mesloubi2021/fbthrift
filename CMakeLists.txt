@@ -61,9 +61,18 @@ find_package(Boost REQUIRED filesystem)
 find_package(fmt CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  message(STATUS "setting C++ standard to C++${CMAKE_CXX_STANDARD}")
+endif()
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Explicitly enable coroutine support, since GCC does not enable it
+# by default when targeting C++17.
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+endif()
 
 # Enable modular builds.
 option(THRIFT_COMPILER_ONLY "Build the Thrift compiler only" OFF)
@@ -103,6 +112,7 @@ if (THRIFT_LIB_ONLY OR build_all)
   find_package(wangle CONFIG REQUIRED)
   find_package(ZLIB REQUIRED)
   find_package(Zstd REQUIRED)
+  find_package(Xxhash REQUIRED)
   find_package(mvfst CONFIG REQUIRED)
   # https://cmake.org/cmake/help/v3.9/module/FindThreads.html
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -112,6 +122,7 @@ if (THRIFT_LIB_ONLY OR build_all)
     ${GLOG_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIR}
     ${ZSTD_INCLUDE_DIRS}
+    ${Xxhash_INCLUDE_DIR}
   )
   add_definitions("-DTHRIFT_HAVE_LIBSNAPPY=0")
   if (THRIFT_LIB_ONLY)
@@ -119,23 +130,6 @@ if (THRIFT_LIB_ONLY OR build_all)
     include(${THRIFT_COMPILER_INCLUDE}/thrift/ThriftLibrary.cmake)
   endif ()
 
-  find_package(python-six)
-  if("${thriftpy}" STREQUAL "AUTO")
-    if(python-six_FOUND)
-      message(STATUS
-        "Python dependencies found, enabling build of thrift/lib/py"
-      )
-    else()
-      message(STATUS
-        "Python dependencies not found, will not build thrift/lib/py"
-      )
-    endif()
-    set(thriftpy "${python-six_FOUND}")
-  elseif(thriftpy AND NOT python-six_FOUND)
-    message(FATAL_ERROR
-        "Unable to find python-six, but building thrift/lib/py was requested"
-    )
-  endif()
 endif ()
 
 if(thriftpy3)

@@ -20,6 +20,11 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
+use base64::alphabet::STANDARD;
+use base64::engine::general_purpose::GeneralPurpose;
+use base64::engine::general_purpose::NO_PAD;
+use base64::engine::DecodePaddingMode;
+use base64::Engine;
 use bufsize::SizeCounter;
 use bytes::buf::Writer;
 use bytes::Buf;
@@ -48,6 +53,12 @@ use crate::thrift_protocol::MessageType;
 use crate::thrift_protocol::ProtocolID;
 use crate::ttype::TType;
 
+// Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
+const STANDARD_NO_PAD_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
+    &STANDARD,
+    NO_PAD.with_decode_padding_mode(DecodePaddingMode::Indifferent),
+);
+
 #[phantom]
 #[derive(Copy, Clone)]
 pub struct SimpleJsonProtocol<F = Bytes>;
@@ -72,7 +83,7 @@ where
     type Deserializer = SimpleJsonProtocolDeserializer<F::DecBuf>;
 
     const PROTOCOL_ID: ProtocolID = ProtocolID::SimpleJSONProtocol;
-
+    #[inline]
     fn serializer<SZ, SER>(size: SZ, ser: SER) -> <Self::Serializer as ProtocolWriter>::Final
     where
         SZ: FnOnce(&mut Self::Sizer),
@@ -96,17 +107,18 @@ where
         // Done
         buf.finish()
     }
-
+    #[inline]
     fn deserializer(buf: F::DecBuf) -> Self::Deserializer {
         SimpleJsonProtocolDeserializer::new(buf)
     }
-
+    #[inline]
     fn into_buffer(deser: Self::Deserializer) -> F::DecBuf {
         deser.into_inner()
     }
 }
 
 impl<B: BufMutExt> SimpleJsonProtocolSerializer<B> {
+    #[inline]
     fn possibly_write_comma(&mut self) {
         match self
             .state
@@ -130,7 +142,7 @@ impl<B: BufMutExt> SimpleJsonProtocolSerializer<B> {
                 .expect("Somehow failed to do \"io\" on a buffer"),
         }
     }
-
+    #[inline]
     fn writing_key(&mut self) -> bool {
         match self
             .state
@@ -155,6 +167,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
     type Final = B::Final; // Our final form is whatever the buffer produces
 
     // TODO what to do here
+    #[inline]
     fn write_message_begin(&mut self, name: &str, msgtype: MessageType, seqid: u32) {
         self.write_list_begin(TType::Stop, 0);
         self.write_list_value_begin();
@@ -203,14 +216,14 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
 
     #[inline]
     fn write_field_stop(&mut self) {}
-
+    #[inline]
     fn write_map_begin(&mut self, _key_type: TType, _value_type: TType, _size: usize) {
         self.state.push(SerializationState::JustEnteredContainer);
         CompactFormatter
             .begin_object(&mut self.buffer)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_map_key_begin(&mut self) {
         self.possibly_write_comma();
         *self
@@ -218,7 +231,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .last_mut()
             .expect("Invariant of encoding state violated") = SerializationState::InContainerKey;
     }
-
+    #[inline]
     fn write_map_value_begin(&mut self) {
         CompactFormatter
             .end_object_key(&mut self.buffer)
@@ -239,14 +252,14 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .expect("Somehow failed to do \"io\" on a buffer");
         self.state.pop();
     }
-
+    #[inline]
     fn write_list_begin(&mut self, _elem_type: TType, _size: usize) {
         CompactFormatter
             .begin_array(&mut self.buffer)
             .expect("Somehow failed to do \"io\" on a buffer");
         self.state.push(SerializationState::JustEnteredContainer);
     }
-
+    #[inline]
     fn write_list_value_begin(&mut self) {
         self.possibly_write_comma();
     }
@@ -258,25 +271,25 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .expect("Somehow failed to do \"io\" on a buffer");
         self.state.pop();
     }
-
+    #[inline]
     fn write_set_begin(&mut self, elem_type: TType, size: usize) {
         self.write_list_begin(elem_type, size);
     }
-
+    #[inline]
     fn write_set_value_begin(&mut self) {
         self.write_list_value_begin();
     }
-
+    #[inline]
     fn write_set_end(&mut self) {
         self.write_list_end();
     }
-
+    #[inline]
     fn write_bool(&mut self, value: bool) {
         CompactFormatter
             .write_bool(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_byte(&mut self, value: i8) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -286,7 +299,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_i8(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_i16(&mut self, value: i16) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -296,7 +309,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_i16(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_i32(&mut self, value: i32) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -306,7 +319,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_i32(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_i64(&mut self, value: i64) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -316,7 +329,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_i64(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_double(&mut self, value: f64) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -326,7 +339,7 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_f64(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_float(&mut self, value: f32) {
         if self.writing_key() {
             self.write_string(&value.to_string());
@@ -336,27 +349,24 @@ impl<B: BufMutExt> ProtocolWriter for SimpleJsonProtocolSerializer<B> {
             .write_f32(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_string(&mut self, value: &str) {
         serde_json::to_writer(&mut self.buffer, value)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn write_binary(&mut self, value: &[u8]) {
         CompactFormatter
             .begin_string(&mut self.buffer)
             .expect("Somehow failed to do \"io\" on a buffer");
         CompactFormatter
-            .write_raw_fragment(
-                &mut self.buffer,
-                &base64::encode_config(value, base64::STANDARD_NO_PAD),
-            )
+            .write_raw_fragment(&mut self.buffer, &STANDARD_NO_PAD_INDIFFERENT.encode(value))
             .expect("Somehow failed to do \"io\" on a buffer");
         CompactFormatter
             .end_string(&mut self.buffer)
             .expect("Somehow failed to do \"io\" on a buffer");
     }
-
+    #[inline]
     fn finish(self) -> B::Final {
         self.buffer.into_inner().finalize()
     }
@@ -371,11 +381,13 @@ enum CommaState {
 }
 
 impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
+    #[inline]
     pub fn new(buffer: B) -> Self {
         let remaining = buffer.remaining();
         SimpleJsonProtocolDeserializer { buffer, remaining }
     }
 
+    #[inline]
     pub fn into_inner(self) -> B {
         self.buffer
     }
@@ -384,6 +396,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
     // `bytes` (named `chunks` in bytes1.0) does not represent a contiguous slice
     // of the remaining bytes. All we can do is check if there is a byte to return
     /// Returns a byte from the underly buffer if there is enough remaining
+    #[inline]
     pub fn peek(&self) -> Option<u8> {
         // fast path like https://docs.rs/bytes/1.0.1/src/bytes/buf/buf_impl.rs.html#18
         if !self.buffer.chunk().is_empty() {
@@ -394,10 +407,11 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
     }
 
     /// Like peek but panics if there is none remaining
+    #[inline]
     fn peek_can_panic(&self) -> u8 {
         self.buffer.chunk()[0]
     }
-
+    #[inline]
     fn strip_whitespace(&mut self) {
         while let Some(b) = self.peek() {
             if !&[b' ', b'\t', b'\n', b'\r'].contains(&b) {
@@ -407,6 +421,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
         }
     }
     // Validates that next chars is `val`
+    #[inline]
     fn eat_only(&mut self, val: &[u8]) -> Result<()> {
         if self.remaining < val.len() {
             bail!(
@@ -418,8 +433,11 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
         for to_check in val {
             let b = self.peek_can_panic();
             if b != *to_check {
-                // TODO(azw): better error messages
-                bail!("Expected {} got {}", to_check, b)
+                bail!(
+                    "Expected '{}' got '{}'",
+                    char::from(*to_check),
+                    char::from(b)
+                )
             }
             self.advance(1);
         }
@@ -427,13 +445,14 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
     }
 
     // Validates that next chars is `val`. Strip whitespace before and after
+    #[inline]
     fn eat(&mut self, val: &[u8]) -> Result<()> {
         self.strip_whitespace();
         self.eat_only(val)?;
         self.strip_whitespace();
         Ok(())
     }
-
+    #[inline]
     fn advance(&mut self, len: usize) {
         self.buffer.advance(len);
 
@@ -447,6 +466,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
     // NonTrailing if its read a comma that isn't trailing
     // NoComma if it found no comma in the middle of the container
     // End if it correctly found no comma at the end of the container
+    #[inline]
     fn possibly_read_comma(&mut self, trailing: u8) -> CommaState {
         match self.eat(b",") {
             Ok(()) => match self.peek() {
@@ -459,7 +479,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
             },
         }
     }
-
+    #[inline]
     fn read_json_number(&mut self) -> Result<serde_json::Number> {
         self.strip_whitespace();
         let mut ret = Vec::new();
@@ -490,10 +510,10 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
         let v: std::result::Result<serde_json::Value, _> = serde_json::from_slice(&ret);
         match v {
             Ok(serde_json::Value::Number(n)) => Ok(n),
-            _ => bail!("invalid number"),
+            _ => bail!("Invalid number"),
         }
     }
-
+    #[inline]
     fn read_json_value(&mut self, max_depth: i32) -> Result<serde_json::Value> {
         if max_depth <= 0 {
             bail_err!(ProtocolError::SkipDepthExceeded)
@@ -532,8 +552,9 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
                 let mut map = serde_json::Map::new();
                 self.read_struct_begin(|_| ())?;
                 while let Some(b'"') = self.peek() {
-                    let key = self.read_string()?;
-                    self.eat(b":")?;
+                    let key = self.read_string().context("Expected a object key")?;
+                    self.eat(b":")
+                        .context("Expected a colon between object key and value")?;
                     let value = self.read_json_value(max_depth - 1)?;
                     map.insert(key, value);
                     self.read_field_end()?;
@@ -543,7 +564,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
             }
         }
     }
-
+    #[inline]
     fn skip_inner(&mut self, field_type: TType, max_depth: i32) -> Result<()> {
         if max_depth <= 0 {
             bail_err!(ProtocolError::SkipDepthExceeded)
@@ -623,6 +644,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
 
     // Fallback to guessing what "type" of structure we are parsing and mark
     // the field_id as something impossible so we skip everything underneath this string
+    #[inline]
     fn guess_type(&mut self) -> Result<TType> {
         match self.guess_kind()? {
             ValueKind::Object => Ok(TType::Struct),
@@ -633,7 +655,7 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
             ValueKind::Number => Ok(TType::Double),
         }
     }
-
+    #[inline]
     fn guess_kind(&mut self) -> Result<ValueKind> {
         match self.peek() {
             Some(b'{') => Ok(ValueKind::Object),
@@ -649,11 +671,11 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
             ),
         }
     }
-
+    #[inline]
     fn read_null(&mut self) -> Result<()> {
-        self.eat(b"null")
+        self.eat(b"null").context("Expected null")
     }
-
+    #[inline]
     fn check_null(&mut self) -> bool {
         self.strip_whitespace();
         match self.peek() {
@@ -664,30 +686,31 @@ impl<B: Buf> SimpleJsonProtocolDeserializer<B> {
 }
 
 impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
+    #[inline]
     fn read_message_begin<F, T>(&mut self, _msgfn: F) -> Result<(T, MessageType, u32)>
     where
         F: FnOnce(&[u8]) -> T,
     {
         bail!("Not implemented")
     }
-
+    #[inline]
     fn read_message_end(&mut self) -> Result<()> {
         bail!("Not implemented")
     }
-
+    #[inline]
     fn read_struct_begin<F, T>(&mut self, namefn: F) -> Result<T>
     where
         F: FnOnce(&[u8]) -> T,
     {
-        self.eat(b"{")?;
+        self.eat(b"{").context("Expected a start of a struct")?;
         Ok(namefn(&[]))
     }
-
+    #[inline]
     fn read_struct_end(&mut self) -> Result<()> {
-        self.eat(b"}")?;
+        self.eat(b"}").context("Expected an end of a struct")?;
         Ok(())
     }
-
+    #[inline]
     fn read_field_begin<F, T>(&mut self, fieldfn: F, fields: &[Field]) -> Result<(T, TType, i16)>
     where
         F: FnOnce(&[u8]) -> T,
@@ -700,8 +723,9 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         }
 
         // Something went wrong if we dont find a string
-        let field_name = self.read_string()?;
-        self.eat(b":")?;
+        let field_name = self.read_string().context("Expected a field name")?;
+        self.eat(b":")
+            .context("Expected a colon between struct key and value")?;
 
         // Did we find a field we know about?
         if let Ok(idx) = fields.binary_search_by_key(&field_name.as_str(), |f| f.name) {
@@ -716,7 +740,7 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         // -1 means we fallthrough to start skipping
         Ok((fieldfn(field_name.as_bytes()), elem_type, -1))
     }
-
+    #[inline]
     fn read_field_end(&mut self) -> Result<()> {
         match self.possibly_read_comma(b'}') {
             CommaState::Trailing => bail!("Found trailing comma"),
@@ -725,13 +749,13 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         }
         Ok(())
     }
-
+    #[inline]
     fn read_map_begin(&mut self) -> Result<(TType, TType, Option<usize>)> {
-        self.eat(b"{")?;
+        self.eat(b"{").context("Expected a start of a list")?;
         // Meaningless type, self.skip_inner and deserialize do not depend on it
         Ok((TType::Stop, TType::Stop, None))
     }
-
+    #[inline]
     fn read_map_key_begin(&mut self) -> Result<bool> {
         self.strip_whitespace();
         match self.peek() {
@@ -743,9 +767,10 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         }
         Ok(true)
     }
-
+    #[inline]
     fn read_map_value_begin(&mut self) -> Result<()> {
-        self.eat(b":")?;
+        self.eat(b":")
+            .context("Expected a colon between map key and value")?;
         Ok(())
     }
 
@@ -758,17 +783,17 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         }
         Ok(())
     }
-
+    #[inline]
     fn read_map_end(&mut self) -> Result<()> {
-        self.eat(b"}")?;
+        self.eat(b"}").context("Expected an end of a map")?;
         Ok(())
     }
-
+    #[inline]
     fn read_list_begin(&mut self) -> Result<(TType, Option<usize>)> {
-        self.eat(b"[")?;
+        self.eat(b"[").context("Expected a start of a list")?;
         Ok((TType::Stop, None))
     }
-
+    #[inline]
     fn read_list_value_begin(&mut self) -> Result<bool> {
         match self.peek() {
             Some(b']') => return Ok(false),
@@ -786,16 +811,16 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         }
         Ok(())
     }
-
+    #[inline]
     fn read_list_end(&mut self) -> Result<()> {
-        self.eat(b"]")?;
+        self.eat(b"]").context("Expected an end of a list")?;
         Ok(())
     }
-
+    #[inline]
     fn read_set_begin(&mut self) -> Result<(TType, Option<usize>)> {
         self.read_list_begin()
     }
-
+    #[inline]
     fn read_set_value_begin(&mut self) -> Result<bool> {
         self.read_list_value_begin()
     }
@@ -804,11 +829,11 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
     fn read_set_value_end(&mut self) -> Result<()> {
         self.read_list_value_end()
     }
-
+    #[inline]
     fn read_set_end(&mut self) -> Result<()> {
         self.read_list_end()
     }
-
+    #[inline]
     fn read_bool(&mut self) -> Result<bool> {
         match self.eat(b"true") {
             Ok(_) => Ok(true),
@@ -818,38 +843,39 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
             },
         }
     }
-
+    #[inline]
     fn read_byte(&mut self) -> Result<i8> {
         Ok(self.read_i64()? as i8)
     }
-
+    #[inline]
     fn read_i16(&mut self) -> Result<i16> {
         Ok(self.read_i64()? as i16)
     }
-
+    #[inline]
     fn read_i32(&mut self) -> Result<i32> {
         Ok(self.read_i64()? as i32)
     }
-
+    #[inline]
     fn read_i64(&mut self) -> Result<i64> {
         self.read_json_number()?
             .as_i64()
             .ok_or_else(|| anyhow!("Invalid number"))
     }
-
+    #[inline]
     fn read_double(&mut self) -> Result<f64> {
         self.read_json_number()?
             .as_f64()
             .ok_or_else(|| anyhow!("Invalid number"))
     }
-
+    #[inline]
     fn read_float(&mut self) -> Result<f32> {
         Ok(self.read_double()? as f32)
     }
-
+    #[inline]
     fn read_string(&mut self) -> Result<String> {
         self.strip_whitespace();
-        self.eat_only(b"\"")?;
+        self.eat_only(b"\"")
+            .context("Expected a start of a string")?;
         let mut ret = Vec::new();
         ret.push(b'"');
         loop {
@@ -877,7 +903,7 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
                     self.advance(1);
                     ret.push(b);
                 }
-                None => bail!("Expected some char"),
+                None => bail!("Expected the string to continue"),
             }
         }
         ret.push(b'"');
@@ -885,12 +911,12 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
         let v: std::result::Result<serde_json::Value, _> = serde_json::from_slice(&ret);
         match v {
             Ok(serde_json::Value::String(s)) => Ok(s),
-            _ => bail!("invalid string  "),
+            _ => bail!("Invalid string"),
         }
     }
-
+    #[inline]
     fn read_binary<V: CopyFromBuf>(&mut self) -> Result<V> {
-        self.eat(b"\"")?;
+        self.eat(b"\"").context("Expected a start of a string")?;
         let mut ret = Vec::new();
         loop {
             match self.peek() {
@@ -902,15 +928,17 @@ impl<B: Buf> ProtocolReader for SimpleJsonProtocolDeserializer<B> {
                     self.advance(1);
                     ret.push(b);
                 }
-                None => bail!("Expected some char"),
+                None => bail!("Expected the string to continue"),
             }
         }
-        let bin = base64::decode_config(&ret, base64::STANDARD_NO_PAD)
-            .context("the `binary` data in JSON string does not contain valid base64")?;
+        let bin = STANDARD_NO_PAD_INDIFFERENT
+            .decode(&ret)
+            .context("The `binary` data in JSON string does not contain valid base64")?;
         Ok(V::from_vec(bin))
     }
 
     /// Override the default skip impl to handle random JSON noise
+    #[inline]
     fn skip(&mut self, field_type: TType) -> Result<()> {
         self.skip_inner(field_type, DEFAULT_RECURSION_DEPTH)
     }
@@ -947,6 +975,7 @@ impl<T> Serializable for T where
 }
 
 /// Serialize a Thrift value using the simple JSON protocol.
+#[inline]
 pub fn serialize<T>(v: T) -> Bytes
 where
     T: Serializable,
@@ -981,6 +1010,7 @@ impl<T> DeserializeSlice for T where
 }
 
 /// Deserialize a Thrift blob using the compact protocol.
+#[inline]
 pub fn deserialize<T, B, C>(b: B) -> Result<T>
 where
     B: Into<DeserializeSource<C>>,
@@ -1007,6 +1037,7 @@ enum ValueKind {
 }
 
 impl<B: Buf> Deserialize<SimpleJsonProtocolDeserializer<B>> for serde_json::Value {
+    #[inline]
     fn read(p: &mut SimpleJsonProtocolDeserializer<B>) -> Result<Self> {
         p.read_json_value(DEFAULT_RECURSION_DEPTH)
     }

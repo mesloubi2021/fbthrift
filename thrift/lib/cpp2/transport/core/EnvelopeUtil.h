@@ -16,13 +16,13 @@
 
 #pragma once
 
+#include <folly/Optional.h>
 #include <folly/Utility.h>
 #include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class EnvelopeUtil {
  public:
@@ -105,5 +105,4 @@ class EnvelopeUtil {
   }
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

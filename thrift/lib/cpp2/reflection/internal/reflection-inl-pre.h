@@ -58,7 +58,7 @@ struct thru_field_ref_fn {
     return static_cast<T&&>(ref);
   }
 };
-FOLLY_INLINE_VARIABLE constexpr thru_field_ref_fn thru_field_ref{};
+inline constexpr thru_field_ref_fn thru_field_ref{};
 
 template <typename Tag>
 struct invoke_reffer_thru {
@@ -191,8 +191,8 @@ struct chained_data_member_accessor<V, A...> {
   template <typename T>
   FOLLY_ERASE constexpr auto operator()(T&& t) const noexcept(
       noexcept(chained_data_member_accessor<A...>{}(V{}(static_cast<T&&>(t)))))
-      -> decltype(
-          chained_data_member_accessor<A...>{}(V{}(static_cast<T&&>(t)))) {
+      -> decltype(chained_data_member_accessor<A...>{}(
+          V{}(static_cast<T&&>(t)))) {
     return chained_data_member_accessor<A...>{}(V{}(static_cast<T&&>(t)));
   }
 };
@@ -210,12 +210,6 @@ using getter_direct_getter_t = folly::_t<getter_direct_getter<G>>;
 
 } // namespace reflection_impl
 } // namespace detail
-
-#define THRIFT_REGISTER_REFLECTION_METADATA(Tag, Traits) \
-  FATAL_REGISTER_TYPE(                                   \
-      ::apache::thrift::detail::reflection_metadata_tag, \
-      Tag,                                               \
-      ::apache::thrift::reflected_module<Traits>)
 
 #define THRIFT_REGISTER_STRUCT_TRAITS(Struct, Traits)       \
   FATAL_REGISTER_TYPE(                                      \

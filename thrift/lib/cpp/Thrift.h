@@ -77,12 +77,11 @@ struct TEnumTraits {
   //
   //      static constexpr std::size_t const size = /*...*/;
   //      static folly::Range<type const*> const values;
-  //      static folly::Range<folly::StringPiece const*> const names;
-  //
-  //      static bool findName(type value, folly::StringPiece* out) noexcept;
-  //      static bool findValue(folly::StringPiece name, type* out) noexcept;
+  //      static folly::Range<std::string_view const*> const names;
   //
   //      static bool findName(type value, std::string_view* out) noexcept;
+  //      static bool findValue(std::string_view name, type* out) noexcept;
+  //
   //      static char const* findName(type value) noexcept;
   //
   //  When instantiated with an enum type T which is not empty, includes:
@@ -161,8 +160,6 @@ class FOLLY_EXPORT TLibraryException : public virtual TException {
   explicit TLibraryException(const std::string& message) : message_(message) {}
 
   TLibraryException(const char* message, int errnoValue);
-
-  ~TLibraryException() noexcept override {}
 
   const char* what() const noexcept override {
     if (message_.empty()) {

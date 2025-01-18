@@ -18,14 +18,16 @@ package thrift
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
 )
 
 func TestHeaderZstd(t *testing.T) {
 	n := 1
-	tmb := NewMemoryBuffer()
-	trans := NewHeaderTransport(tmb)
+	tmb := newMockSocket()
+	trans := newHeaderTransport(tmb, types.ProtocolIDCompact)
 	data := []byte("ASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDF")
 	uncompressedlen := 30
 
@@ -53,7 +55,7 @@ func TestHeaderZstd(t *testing.T) {
 		t.Fatalf("failed to reset proto for frame %d: %s", n, err)
 	}
 
-	frame, err := ioutil.ReadAll(trans)
+	frame, err := io.ReadAll(trans)
 	if err != nil {
 		t.Fatalf("failed to read frame %d: %s", n, err)
 	}
@@ -66,5 +68,23 @@ func TestHeaderZstd(t *testing.T) {
 	// got changed somehow
 	if len(frame) == uncompressedlen {
 		t.Fatalf("data sent was not compressed on frame %d", n)
+	}
+}
+
+func TestZstd(t *testing.T) {
+	want := []byte{0x28, 0xb5, 0x2f, 0xfd}
+	compressed, err := compressZstd(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(compressed, want) {
+		t.Fatal("zstd compression failed")
+	}
+	got, err := decompressZstd(compressed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("zstd roundtrip failed: got %v, want %v", got, want)
 	}
 }

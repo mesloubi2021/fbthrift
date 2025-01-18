@@ -17,80 +17,80 @@
 package thrift
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
 )
 
 var errFakeResponseRead = errors.New("error reading from FakeResponse")
 var errFakeRequestWrite = errors.New("error writing FakeRequest")
-var errFakeIprotoReadMessageBegin = errors.New("error reading message begin from FakeIproto")
-var errFakeOprotoWriteMessageBegin = errors.New("error writing message begin from FakeIproto")
-var errFakeOprotoWriteMessageEnd = errors.New("error writing message end from FakeOproto")
-var errFakeOprotoFlush = errors.New("error flushing FakeOproto")
+var errFakeProtoReadMessageBegin = errors.New("error reading message begin from FakeProto")
+var errFakeProtoWriteMessageBegin = errors.New("error writing message begin from FakeProto")
+var errFakeProtoWriteMessageEnd = errors.New("error writing message end from FakeProto")
+var errFakeProtoFlush = errors.New("error flushing FakeProto")
 
 type fakeResponse struct {
-	IResponse
+	types.IResponse
 	shouldReturnError bool
 }
 
 type fakeRequest struct {
-	IRequest
+	types.IRequest
 	shouldReturnError bool
 }
 
-type fakeIproto struct {
-	Protocol
+type fakeProto struct {
+	types.Protocol
 	method            string
-	typeID            MessageType
+	typeID            types.MessageType
 	seqID             int32
 	shouldReturnError bool
-}
-
-type fakeOproto struct {
-	Protocol
 	errOnMessageBegin bool
 	errOnMessageEnd   bool
 	errOnFlush        bool
 }
 
-func (f *fakeRequest) Write(oproto Protocol) error {
+func (f *fakeRequest) Write(proto types.Encoder) error {
 	if f.shouldReturnError {
 		return errFakeRequestWrite
 	}
 	return nil
 }
 
-func (f *fakeOproto) WriteMessageBegin(method string, typeID MessageType, seqID int32) error {
+func (f *fakeProto) WriteMessageBegin(method string, typeID types.MessageType, seqID int32) error {
 	if f.errOnMessageBegin {
-		return errFakeOprotoWriteMessageBegin
+		return errFakeProtoWriteMessageBegin
 	}
 	return nil
 }
 
-func (f *fakeOproto) WriteMessageEnd() error {
+func (f *fakeProto) WriteMessageEnd() error {
 	if f.errOnMessageEnd {
-		return errFakeOprotoWriteMessageEnd
+		return errFakeProtoWriteMessageEnd
 	}
 	return nil
 }
 
-func (f *fakeOproto) Flush() error {
+func (f *fakeProto) Flush() error {
 	if f.errOnFlush {
-		return errFakeOprotoFlush
+		return errFakeProtoFlush
 	}
 	return nil
 }
 
-func (f *fakeIproto) ReadMessageBegin() (method string, typeID MessageType, seqID int32, err error) {
+func (f *fakeProto) ReadMessageBegin() (method string, typeID types.MessageType, seqID int32, err error) {
 	if f.shouldReturnError {
-		err = errFakeIprotoReadMessageBegin
+		err = errFakeProtoReadMessageBegin
 		return
 	}
 
 	return f.method, f.typeID, f.seqID, nil
 }
 
-func (f *fakeResponse) Read(proto Protocol) error {
+func (f *fakeResponse) Read(proto types.Decoder) error {
 	if f.shouldReturnError {
 		return errFakeResponseRead
 	}
@@ -99,39 +99,41 @@ func (f *fakeResponse) Read(proto Protocol) error {
 
 func TestSendMsgError(t *testing.T) {
 	testCases := []struct {
-		oproto   Protocol
-		request  IRequest
+		proto    types.Protocol
+		request  types.IRequest
 		expected error
 	}{
 		// Bad WriteMessageBegin
 		{
-			oproto:   &fakeOproto{errOnMessageBegin: true},
-			expected: errFakeOprotoWriteMessageBegin,
+			proto:    &fakeProto{errOnMessageBegin: true},
+			expected: fmt.Errorf("Failed to write message preamble: %w", errFakeProtoWriteMessageBegin),
 		},
 		// Bad request.Write
 		{
-			oproto:   &fakeOproto{errOnMessageBegin: true},
+			proto:    &fakeProto{errOnMessageBegin: true},
 			request:  &fakeRequest{shouldReturnError: true},
-			expected: errFakeOprotoWriteMessageBegin,
+			expected: fmt.Errorf("Failed to write message preamble: %w", errFakeProtoWriteMessageBegin),
 		},
 		// Bad WriteMessageEnd
 		{
-			oproto:   &fakeOproto{errOnMessageEnd: true},
+			proto:    &fakeProto{errOnMessageEnd: true},
 			request:  &fakeRequest{shouldReturnError: false},
-			expected: errFakeOprotoWriteMessageEnd,
+			expected: fmt.Errorf("Failed to write message epilogue: %w", errFakeProtoWriteMessageEnd),
 		},
 		// Bad Flush
 		{
-			oproto:   &fakeOproto{errOnFlush: true},
+			proto:    &fakeProto{errOnFlush: true},
 			request:  &fakeRequest{shouldReturnError: false},
-			expected: errFakeOprotoFlush,
+			expected: errFakeProtoFlush,
 		},
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	for i, testCase := range testCases {
-		cc := ClientConn{oproto: testCase.oproto}
+		cc := ClientConn{proto: testCase.proto}
 
-		if err := cc.SendMsg("foobar", testCase.request, CALL); err.Error() != testCase.expected.Error() {
+		if err := cc.SendMsg(ctx, "foobar", testCase.request, types.CALL); err.Error() != testCase.expected.Error() {
 			t.Errorf("#%d: expected call to SendMsg to return \"%+v\"; got \"%+v\"", i, testCase.expected, err)
 		}
 	}
@@ -140,47 +142,50 @@ func TestSendMsgError(t *testing.T) {
 
 func TestRecvMsgError(t *testing.T) {
 	testCases := []struct {
-		iproto   Protocol
-		response IResponse
+		proto    types.Protocol
+		response types.IResponse
 		expected error
 	}{
 		// Error reading message begin
 		{
-			iproto:   &fakeIproto{shouldReturnError: true},
-			expected: errFakeIprotoReadMessageBegin,
+			proto:    &fakeProto{shouldReturnError: true},
+			expected: fmt.Errorf("Failed to read message preamble: %w", errFakeProtoReadMessageBegin),
 		},
 
 		// Bad method name in response
 		{
-			iproto:   &fakeIproto{method: "foobar2"},
-			expected: NewApplicationException(WRONG_METHOD_NAME, "foobar failed: wrong method name"),
+			proto:    &fakeProto{method: "foobar2"},
+			expected: types.NewApplicationException(types.WRONG_METHOD_NAME, "foobar failed: wrong method name"),
 		},
 
 		// Bad seqID in response
 		{
-			iproto:   &fakeIproto{method: "foobar", seqID: -1},
-			expected: NewApplicationException(WRONG_METHOD_NAME, "foobar failed: out of sequence response"),
+			proto:    &fakeProto{method: "foobar", seqID: -1},
+			expected: types.NewApplicationException(types.WRONG_METHOD_NAME, "foobar failed: out of sequence response"),
 		},
 
 		// Bad typeID in response
 		{
-			iproto:   &fakeIproto{method: "foobar", seqID: 0, typeID: -1},
-			expected: NewApplicationException(WRONG_METHOD_NAME, "foobar failed: invalid message type"),
+			proto:    &fakeProto{method: "foobar", seqID: 0, typeID: -1},
+			expected: types.NewApplicationException(types.WRONG_METHOD_NAME, "foobar failed: invalid message type"),
 		},
 
 		// Bad REPLY response body read
 		{
-			iproto:   &fakeIproto{method: "foobar", seqID: 0, typeID: REPLY},
+			proto:    &fakeProto{method: "foobar", seqID: 0, typeID: types.REPLY},
 			response: &fakeResponse{shouldReturnError: true},
-			expected: errFakeResponseRead,
+			expected: fmt.Errorf("Failed to read message body: %w", errFakeResponseRead),
 		},
 	}
 
-	for i, testCase := range testCases {
-		cc := ClientConn{iproto: testCase.iproto}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		if err := cc.RecvMsg("foobar", testCase.response); err.Error() != testCase.expected.Error() {
-			t.Errorf("#%d: expected call to RecvMsg to return \"%+v\"; got \"%+v\"", i, testCase.expected, err)
+	for i, testCase := range testCases {
+		cc := ClientConn{proto: testCase.proto}
+
+		if err := cc.RecvMsg(ctx, "foobar", testCase.response); err.Error() != testCase.expected.Error() {
+			t.Errorf("#%d: expected call to RecvMsg to return \"%+v\"; got \"%+v\"", i, testCase.expected.Error(), err.Error())
 		}
 	}
 }

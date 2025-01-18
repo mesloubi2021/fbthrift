@@ -33,21 +33,14 @@ class EventHandlerBase {
  public:
   virtual void addEventHandler(
       const std::shared_ptr<TProcessorEventHandler>& handler);
-  void addNotNullEventHandler(
-      const folly::not_null_shared_ptr<TProcessorEventHandler>& handler);
 
   void clearEventHandlers() { handlers_.reset(); }
 
   folly::Range<std::shared_ptr<TProcessorEventHandler>*> getEventHandlers()
       const;
 
-  ContextStack::UniquePtr getContextStack(
-      const char* service_name,
-      const char* fn_name,
-      server::TConnectionContext* connectionContext) {
-    return ContextStack::create(
-        handlers_, service_name, fn_name, connectionContext);
-  }
+  const std::shared_ptr<std::vector<std::shared_ptr<TProcessorEventHandler>>>&
+  getEventHandlersSharedPtr() const;
 
  protected:
   virtual ~EventHandlerBase() = default;
@@ -61,6 +54,15 @@ class EventHandlerBase {
  * handlers to processors at creation time.
  */
 class TProcessorBase : public EventHandlerBase {
+ protected:
+  /**
+   * This constructor ignores the global registry (see
+   * addProcessorEventHandler). This is useful for "wrapper" implementations
+   * that delegate to underlying processors.
+   */
+  struct IgnoreGlobalEventHandlers {};
+  explicit TProcessorBase(IgnoreGlobalEventHandlers) {}
+
  public:
   TProcessorBase();
 
@@ -70,14 +72,13 @@ class TProcessorBase : public EventHandlerBase {
   static void removeProcessorEventHandler(
       std::shared_ptr<TProcessorEventHandler> handler);
 
- protected:
-  ~TProcessorBase() override = default;
-
- private:
-  static folly::SharedMutex& getRWMutex();
-
   static std::vector<folly::not_null_shared_ptr<TProcessorEventHandler>>&
   getHandlers();
+
+  static folly::SharedMutex& getRWMutex();
+
+ protected:
+  ~TProcessorBase() override = default;
 };
 
 /**
@@ -88,13 +89,12 @@ class TClientBase : public EventHandlerBase {
  protected:
   struct Options {
     /**
-     * If set to true (default), newly constructed objects automatically include
-     * all event handlers returned by getHandlers() and getFactories().
-     *
-     * If set to false, the initial list of handlers is empty but new handlers
-     * may be added by calling addEventHandler.
+     * If set, newly constructed client objects automatically include
+     * all event handlers returned by getHandlers(). Otherwise, the initial
+     * list of handlers is empty but new handlers may be added by calling
+     * addEventHandler.
      */
-    bool includeGlobalEventHandlers = true;
+    bool includeGlobalLegacyClientHandlers = true;
   };
   explicit TClientBase(Options options);
 

@@ -50,6 +50,8 @@ except ImportError:
                 TTransportException.INVALID_TRANSFORM, "snappy module not available"
             )
 
+    # pyre-fixme[31]: Expression `thrift.transport.THeaderTransport.DummySnappy()`
+    #  is not a valid type.
     snappy = DummySnappy()
 
 # Import the zstd module if it is available
@@ -70,6 +72,8 @@ except ImportError:
                 TTransportException.INVALID_TRANSFORM, "zstd module not available"
             )
 
+    # pyre-fixme[31]: Expression `thrift.transport.THeaderTransport.DummyZstd()` is
+    #  not a valid type.
     zstd = DummyZstd()
 
 
@@ -457,9 +461,9 @@ class THeaderTransport(TTransportBase, CReadableTransport):
 
         if self.__first_request:
             self.__first_request = False
-            self.__write_headers[
-                self.CLIENT_METADATA_HEADER
-            ] = '{"agent":"THeaderTransport.py"}'
+            self.__write_headers[self.CLIENT_METADATA_HEADER] = (
+                '{"agent":"THeaderTransport.py"}'
+            )
 
         info_data = StringIO()
 
@@ -620,7 +624,6 @@ def _frame_size_check(sz, set_max_size, header: bool = True) -> None:
 
 
 class RequestHandler(http_server.BaseHTTPRequestHandler):
-
     # Same as superclass function, but append 'POST' because we
     # stripped it in the calling function.  Would be nice if
     # we had an ungetch instead

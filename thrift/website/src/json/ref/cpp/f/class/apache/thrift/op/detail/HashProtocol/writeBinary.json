@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(folly::StringPiece val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "folly::StringPiece",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "151",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "151",
         "bodyend": "151"
@@ -54,6 +55,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(folly::ByteRange val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "folly::ByteRange",
@@ -63,7 +65,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "152",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "152",
         "bodyend": "152"
@@ -93,6 +95,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(const std::unique_ptr&lt; folly::IOBuf &gt; &amp;val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "const std::unique_ptr&lt; folly::IOBuf &gt; &amp;",
@@ -102,7 +105,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "153",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "153",
         "bodyend": "155"
@@ -132,6 +135,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(const folly::IOBuf &amp;val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "const folly::IOBuf &amp;",
@@ -141,7 +145,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "156",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "156",
         "bodyend": "158"
@@ -166,5 +170,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary",
+  "parent_links": [
+    {
+      "text_html": "HashProtocol",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+    }
+  ]
 }

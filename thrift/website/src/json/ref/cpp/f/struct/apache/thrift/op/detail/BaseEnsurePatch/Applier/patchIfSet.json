@@ -23,6 +23,7 @@
       "definition_html": "void apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::Applier::patchIfSet",
       "argsstring_html": "(const FieldPatch &amp;patch)",
       "name_html": "patchIfSet",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::Applier::patchIfSet",
       "param": [
         {
           "type_html": "const <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/op/detail/FieldPatch\">FieldPatch</a> &amp;",
@@ -31,11 +32,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "111",
-        "column": "1",
+        "line": "121",
+        "column": "10",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "111",
-        "bodyend": "113"
+        "bodystart": "121",
+        "bodyend": "123"
       },
       "definition": {
         "simple_html": "template &lt;class Id, class FieldPatch&gt;\nvoid patchIfSet(const FieldPatch&amp; patch)",
@@ -57,5 +58,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/patchIfSet",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/patchIfSet"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/patchIfSet",
+  "parent_links": [
+    {
+      "text_html": "Applier",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier"
+    }
+  ]
 }

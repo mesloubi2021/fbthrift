@@ -16,12 +16,27 @@
 
 #include <thrift/lib/python/client/ssl.h>
 
+#include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
-#include <thrift/lib/python/client/RequestChannel.h>
 
-namespace thrift {
-namespace python {
-namespace client {
+namespace thrift::python::client {
+
+apache::thrift::RequestChannel::Ptr createHeaderChannel(
+    folly::AsyncTransport::UniquePtr sock,
+    CLIENT_TYPE client,
+    apache::thrift::protocol::PROTOCOL_TYPES proto,
+    folly::Optional<std::string> host,
+    folly::Optional<std::string> endpoint) {
+  apache::thrift::HeaderClientChannel::Options options;
+  if (client == THRIFT_HTTP_CLIENT_TYPE) {
+    options.useAsHttpClient(*host, *endpoint);
+  } else {
+    options.setClientType(client);
+  }
+  options.setProtocolId(proto);
+  return apache::thrift::HeaderClientChannel::newChannel(
+      std::move(sock), std::move(options));
+}
 
 ConnectHandler::ConnectHandler(
     const std::shared_ptr<folly::SSLContext>& ctx,
@@ -33,7 +48,7 @@ ConnectHandler::ConnectHandler(
     CLIENT_TYPE client_t,
     apache::thrift::protocol::PROTOCOL_TYPES proto,
     const std::string& endpoint)
-    : socket_{new apache::thrift::async::TAsyncSSLSocket(ctx, evb)},
+    : socket_{folly::AsyncSSLSocket::newSocket(ctx, evb)},
       host_(host),
       port_(port),
       connect_timeout_(connect_timeout),
@@ -42,7 +57,7 @@ ConnectHandler::ConnectHandler(
       proto_(proto),
       endpoint_(endpoint) {}
 
-folly::Future<RequestChannel_ptr> ConnectHandler::connect() {
+folly::Future<apache::thrift::RequestChannel::Ptr> ConnectHandler::connect() {
   folly::DelayedDestruction::DestructorGuard dg(this);
   socket_->connect(
       this,
@@ -59,7 +74,7 @@ void ConnectHandler::setSupportedApplicationProtocols(
 
 void ConnectHandler::connectSuccess() noexcept {
   UniquePtr p(this);
-  promise_.setValue([this]() mutable -> RequestChannel_ptr {
+  promise_.setValue([this]() mutable -> apache::thrift::RequestChannel::Ptr {
     if (client_t_ == CLIENT_TYPE::THRIFT_ROCKET_CLIENT_TYPE) {
       auto chan =
           apache::thrift::RocketClientChannel::newChannel(std::move(socket_));
@@ -78,64 +93,4 @@ void ConnectHandler::connectErr(
   promise_.setException(TTransportException(ex));
 }
 
-/**
- * Create a thrift channel by connecting to a host:port over TCP then SSL.
- */
-folly::Future<RequestChannel_ptr> createThriftChannelTCP(
-    const std::shared_ptr<folly::SSLContext>& ctx,
-    const std::string& host,
-    const uint16_t port,
-    const uint32_t connect_timeout,
-    const uint32_t ssl_timeout,
-    CLIENT_TYPE client_t,
-    apache::thrift::protocol::PROTOCOL_TYPES proto,
-    const std::string& endpoint) {
-  auto eb = folly::getGlobalIOExecutor()->getEventBase();
-  return folly::via(
-      eb,
-      [=,
-       ctx = ctx,
-       host = host,
-       port = port,
-       connect_timeout = connect_timeout,
-       ssl_timeout = ssl_timeout,
-       endpoint = endpoint]() mutable {
-        ConnectHandler::UniquePtr handler{new ConnectHandler(
-            ctx,
-            eb,
-            host,
-            port,
-            connect_timeout,
-            ssl_timeout,
-            client_t,
-            proto,
-            endpoint)};
-
-        if (client_t == CLIENT_TYPE::THRIFT_ROCKET_CLIENT_TYPE) {
-          handler->setSupportedApplicationProtocols({"rs"});
-        } else if (client_t == CLIENT_TYPE::THRIFT_HEADER_CLIENT_TYPE) {
-          handler->setSupportedApplicationProtocols({"thrift"});
-        }
-        auto future = handler->connect();
-        handler.release();
-        return future;
-      });
-}
-
-RequestChannel_ptr sync_createThriftChannelTCP(
-    const std::shared_ptr<folly::SSLContext>& ctx,
-    const std::string& host,
-    const uint16_t port,
-    const uint32_t connect_timeout,
-    const uint32_t ssl_timeout,
-    CLIENT_TYPE client_t,
-    apache::thrift::protocol::PROTOCOL_TYPES proto,
-    const std::string& endpoint) {
-  auto future = createThriftChannelTCP(
-      ctx, host, port, connect_timeout, ssl_timeout, client_t, proto, endpoint);
-  return std::move(future.wait().value());
-}
-
-} // namespace client
-} // namespace python
-} // namespace thrift
+} // namespace thrift::python::client

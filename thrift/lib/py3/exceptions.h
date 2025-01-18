@@ -19,13 +19,9 @@
 #include <exception>
 #include <vector>
 
-#include <Python.h>
-
 #include <folly/ExceptionWrapper.h>
 
-namespace thrift {
-namespace py3 {
-namespace exception {
+namespace thrift::py3::exception {
 
 // The only place this function is used it needs a shared_ptr, so may as
 // well just return one instead of a unique_ptr
@@ -36,6 +32,4 @@ std::shared_ptr<T> try_make_shared_exception(
   return e ? std::make_shared<T>(*e) : std::shared_ptr<T>();
 }
 
-} // namespace exception
-} // namespace py3
-} // namespace thrift
+} // namespace thrift::py3::exception

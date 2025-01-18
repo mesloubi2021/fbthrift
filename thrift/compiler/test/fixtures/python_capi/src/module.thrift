@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+include "thrift/annotation/scope.thrift"
 include "thrift/annotation/cpp.thrift"
-include "thrift/lib/thrift/patch.thrift"
+include "thrift/annotation/thrift.thrift"
 include "thrift/compiler/test/fixtures/python_capi/src/thrift_dep.thrift"
 include "thrift/compiler/test/fixtures/python_capi/src/serialized_dep.thrift"
 include "thrift/lib/thrift/id.thrift"
@@ -42,24 +43,26 @@ enum MyEnum {
   MyValue2 = 1,
 }
 
+@cpp.Name{value = "NormalDecentEnum"}
 enum AnnoyingEnum {
-  FOO = 1 (cpp.name = "l0O1"),
-  BAR = 2 (cpp.name = "FuBaR"),
-} (cpp.name = "NormalDecentEnum")
+  @cpp.Name{value = "l0O1"}
+  FOO = 1,
+  @cpp.Name{value = "FuBaR"}
+  BAR = 2,
+}
 
-@patch.GeneratePatch
 struct MyStruct {
   1: i64 inty;
   2: string stringy;
   3: MyDataItem myItemy;
   4: MyEnum myEnumy;
-  5: bool booly (cpp.name = "boulet");
+  @cpp.Name{value = "boulet"}
+  5: bool booly;
   6: list<float> floatListy;
   7: map<binary, string> strMappy;
   8: set<i32> intSetty;
 }
 
-@patch.GeneratePatch
 struct MyDataItem {
   1: string s;
 }
@@ -80,7 +83,8 @@ struct StringPair {
   2: string doubled;
 }
 
-struct EmptyStruct {} (cpp.name = "VapidStruct")
+@cpp.Name{value = "VapidStruct"}
+struct EmptyStruct {}
 
 typedef byte signed_byte
 @cpp.Type{name = "folly::IOBuf"}
@@ -91,8 +95,9 @@ typedef binary IOBufPtr
 struct PrimitiveStruct {
   1: bool booly;
   2: signed_byte charry;
+  @cpp.Name{value = "shortay"}
   @cpp.Type{name = "uint16_t"}
-  3: i16 shorty (cpp.name = "shortay");
+  3: i16 shorty;
   5: i32 inty;
   @cpp.Type{name = "uint64_t"}
   7: i64 longy;
@@ -178,6 +183,7 @@ struct ComposeStruct {
   2: AnnoyingEnum renamed_;
   3: PrimitiveStruct primitive;
   @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   4: ListAlias aliased;
   6: thrift_dep.DepStruct xstruct;
   5: thrift_dep.DepEnum xenum;
@@ -187,12 +193,18 @@ struct ComposeStruct {
   10: serialized_dep.SerializedError serial_error;
 } (cpp.noncopyable)
 
+@cpp.Name{value = "Shallot"}
 union Onion {
   1: MyEnum myEnum;
   2: PrimitiveStruct myStruct;
+  @thrift.Box
   6: set<i64> intSet;
   4: string myString;
+  @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   8: list<double> doubleList;
+  @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   9: map<binary, string> strMap;
-  10: id.ProtocolId adaptedInt;
-} (cpp.name = "Shallot")
+  10: id.ProtocolId adapted_int;
+}

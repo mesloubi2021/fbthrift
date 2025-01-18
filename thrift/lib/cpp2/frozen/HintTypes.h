@@ -23,9 +23,7 @@
 #include <thrift/lib/cpp2/frozen/FixedSizeStringHash.h>
 #include <thrift/lib/cpp2/frozen/Traits.h>
 
-namespace apache {
-namespace thrift {
-namespace frozen {
+namespace apache::thrift::frozen {
 
 /*
  * For representing sequences of unpacked integral types.
@@ -43,7 +41,7 @@ namespace frozen {
 template <class T>
 class VectorUnpacked : public std::vector<T> {
   static_assert(
-      std::is_arithmetic<T>::value || std::is_enum<T>::value,
+      std::is_arithmetic_v<T> || std::is_enum_v<T>,
       "Unpacked storage is only available for simple item types");
   using std::vector<T>::vector;
 };
@@ -81,9 +79,8 @@ class FixedSizeString : public std::string {
   }
 };
 
-} // namespace frozen
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::frozen
+
 THRIFT_DECLARE_TRAIT_TEMPLATE(IsString, apache::thrift::frozen::VectorUnpacked)
 
 namespace std {

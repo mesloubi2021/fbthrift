@@ -28,9 +28,7 @@
 #include <thrift/compiler/ast/t_typedef.h>
 #include <thrift/compiler/source_location.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * This represents a scope used for looking up types, services and other
@@ -48,25 +46,13 @@ class t_scope {
 
   // Returns the definition with the given name or nullptr if there is no such
   // definition.
-  const t_named* find(std::string_view name) const {
+  template <typename Node = t_named>
+  const Node* find(std::string_view name) const {
     auto it = definitions_.find(name);
-    return it != definitions_.end() ? it->second : nullptr;
-  }
-
-  const t_type* find_type(std::string_view name) const {
-    return dynamic_cast<const t_type*>(find(name));
-  }
-
-  const t_service* find_service(std::string_view name) const {
-    return dynamic_cast<const t_service*>(find(name));
-  }
-
-  const t_interaction* find_interaction(std::string_view name) const {
-    return dynamic_cast<const t_interaction*>(find(name));
-  }
-
-  const t_const* find_constant(std::string_view name) const {
-    return dynamic_cast<const t_const*>(find(name));
+    if (it == definitions_.end()) {
+      return nullptr;
+    }
+    return dynamic_cast<const Node*>(it->second);
   }
 
   // Returns an existing def, if one is already registered with the same uri, or
@@ -85,14 +71,13 @@ class t_scope {
         redefined_enum_values_.end();
   }
 
-  std::string get_fully_qualified_enum_value_names(const std::string& name);
+  std::string get_fully_qualified_enum_value_names(
+      const std::string& name) const;
 
   // Get a (poetically unresolved) reference to given type, declared in the
   // given program.
   t_type_ref ref_type(
-      const t_program& program,
-      const std::string& name,
-      const source_range& range);
+      t_program& program, const std::string& name, const source_range& range);
 
   node_list_view<t_placeholder_typedef> placeholder_typedefs() {
     return placeholder_typedefs_;
@@ -126,6 +111,4 @@ class t_scope {
   std::unordered_map<std::string, std::unordered_set<std::string>> enum_values_;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

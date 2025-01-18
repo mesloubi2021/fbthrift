@@ -15,6 +15,7 @@
       "definition_html": "void apache::thrift::test::MultiSerializer::checkAndResetInt",
       "argsstring_html": "(size_t enc, size_t dec) const",
       "name_html": "checkAndResetInt",
+      "qualifiedname_html": "apache::thrift::test::MultiSerializer::checkAndResetInt",
       "param": [
         {
           "type_html": "size_t",
@@ -27,8 +28,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "257",
-        "column": "1",
+        "line": "256",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.cpp",
         "bodystart": "121",
         "bodyend": "126"
@@ -53,5 +54,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAndResetInt",
-  "refid": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAndResetInt"
+  "refid": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAndResetInt",
+  "parent_links": [
+    {
+      "text_html": "MultiSerializer",
+      "href": "/ref/cpp/class/apache/thrift/test/MultiSerializer"
+    }
+  ]
 }

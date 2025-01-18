@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
+#include <thrift/compiler/detail/system.h>
 #include <thrift/compiler/source_location.h>
 
-#include <boost/filesystem.hpp>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <algorithm>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
@@ -63,28 +63,42 @@ class file {
   }
 };
 
+std::vector<uint_least32_t> get_line_offsets(std::string_view sv) {
+  std::vector<uint_least32_t> line_offsets;
+  line_offsets.push_back(0);
+
+  const char* const begin = sv.data();
+  const char* const end = begin + sv.size() - 1;
+  const char* ptr = begin;
+  for (;;) {
+    ptr = static_cast<const char*>(memchr(ptr, '\n', end - ptr));
+    if (ptr == nullptr) {
+      break;
+    }
+    ++ptr;
+    line_offsets.push_back(ptr - begin);
+  }
+  return line_offsets;
+}
+
 } // namespace
 
 source source_manager::add_source(
     const std::string& file_name, std::vector<char> text) {
   assert(text.back() == '\0');
-  auto sv = std::string_view(text.data(), text.size());
-  auto src = source_info{file_name, std::move(text), {}};
+  std::string_view sv(text.data(), text.size());
+  sources_.push_back(
+      source_info{file_name, std::move(text), get_line_offsets(sv)});
+  return {/* .start = */
+          source_location(/* source_id= */ sources_.size(), /** offset= */ 0),
+          /* .text = */ sv};
+}
 
-  src.line_offsets.push_back(0);
-  auto begin = sv.data(), end = begin + sv.size() - 1;
-  const char* ptr = begin;
-  for (;;) {
-    ptr = static_cast<const char*>(memchr(ptr, '\n', end - ptr));
-    if (!ptr) {
-      break;
-    }
-    ++ptr;
-    src.line_offsets.push_back(ptr - begin);
+std::string source_manager::get_file_path(const std::string& file_name) const {
+  if (file_source_map_.find(file_name) != file_source_map_.end()) {
+    return file_name;
   }
-
-  sources_.push_back(std::move(src));
-  return {source_location(sources_.size(), 0), sv};
+  return std::filesystem::absolute(file_name).string();
 }
 
 std::optional<source> source_manager::get_file(const std::string& file_name) {
@@ -99,6 +113,22 @@ std::optional<source> source_manager::get_file(const std::string& file_name) {
     path = itr->second;
   } else {
     path = file_name;
+  }
+
+  if (auto source = file_source_map_.find(std::string(path));
+      source != file_source_map_.end()) {
+    return source->second;
+  }
+
+  std::string absPath;
+  if (detail::platform_is_windows()) {
+    // Without the "\\?\" prefix, path in Windows can not exceed 260 characters.
+    // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
+    constexpr auto kPrefix = R"(\\?\)";
+    if (path.substr(0, std::strlen(kPrefix)) != kPrefix) {
+      absPath = kPrefix + std::filesystem::absolute(path).string();
+      path = absPath;
+    }
   }
 
   // Read the file.
@@ -142,6 +172,16 @@ const char* source_manager::get_text(source_location loc) const {
   return source ? &source->text[loc.offset_] : nullptr;
 }
 
+std::string_view source_manager::get_text_range(
+    const source_range& range) const {
+  assert(range.begin.source_id_ == range.end.source_id_);
+  const char* first = get_text(range.begin);
+  assert(first != nullptr);
+  const char* last = get_text(range.end);
+  assert(last != nullptr);
+  return std::string_view(first, /* count= */ last - first);
+}
+
 resolved_location::resolved_location(
     source_location loc, const source_manager& sm) {
   if (loc == source_location()) {
@@ -174,12 +214,17 @@ source_manager::path_or_error source_manager::find_include_file(
     return source_manager::path_or_error{
         std::in_place_index<0>, std::move(path)};
   };
+
+  if (file_source_map_.find(filename) != file_source_map_.end()) {
+    return found(filename);
+  }
+
   // Absolute path? Just try that.
-  boost::filesystem::path path(filename);
+  std::filesystem::path path(filename);
   if (path.has_root_directory()) {
     try {
-      return found(boost::filesystem::canonical(path).string());
-    } catch (const boost::filesystem::filesystem_error& e) {
+      return found(std::filesystem::canonical(path).string());
+    } catch (const std::filesystem::filesystem_error& e) {
       return source_manager::path_or_error{
           std::in_place_index<1>,
           fmt::format(
@@ -193,28 +238,28 @@ source_manager::path_or_error source_manager::find_include_file(
   auto itr = found_includes_.find(parent_path);
   const std::string& resolved_parent_path =
       itr != found_includes_.end() ? itr->second : parent_path;
-  auto dir =
-      boost::filesystem::path(resolved_parent_path).parent_path().string();
+  auto dir = std::filesystem::path(resolved_parent_path).parent_path().string();
   dir = dir.empty() ? "." : dir;
   sp.insert(sp.begin(), std::move(dir));
   // Iterate through paths.
   std::vector<std::string>::iterator it;
   for (it = sp.begin(); it != sp.end(); it++) {
-    boost::filesystem::path sfilename = filename;
+    std::filesystem::path sfilename = filename;
     if ((*it) != "." && (*it) != "") {
-      sfilename = boost::filesystem::path(*(it)) / filename;
+      sfilename = std::filesystem::path(*(it)) / filename;
     }
-    if (boost::filesystem::exists(sfilename)) {
+    if (std::filesystem::exists(sfilename) ||
+        file_source_map_.find(sfilename.string()) != file_source_map_.end()) {
       return found(sfilename.string());
     }
 #ifdef _WIN32
     // On Windows, handle files found at potentially long paths.
     sfilename = R"(\\?\)" +
-        boost::filesystem::absolute(sfilename)
+        std::filesystem::absolute(sfilename)
             .make_preferred()
             .lexically_normal()
             .string();
-    if (boost::filesystem::exists(sfilename)) {
+    if (std::filesystem::exists(sfilename)) {
       return found(sfilename.string());
     }
 #endif
@@ -233,6 +278,4 @@ std::optional<std::string> source_manager::found_include_file(
   return {};
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

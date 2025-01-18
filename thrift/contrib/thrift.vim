@@ -9,6 +9,8 @@
 "
 " $Id: $
 "
+" Copyright (c) Meta Platforms, Inc. and affiliates.
+"
 " Licensed to the Apache Software Foundation (ASF) under one
 " or more contributor license agreements. See the NOTICE file
 " distributed with this work for additional information
@@ -49,6 +51,7 @@ syn region thriftString start=+'+ skip=+\\'+ end=+'+
 syn match thriftNumber "-\=\<\d\+\>" contained
 
 " Keywords
+syn keyword thriftBool true false
 syn keyword thriftKeyword namespace
 syn keyword thriftKeyword xsd_all xsd_optional xsd_nillable xsd_attrs
 syn keyword thriftKeyword include cpp_include cpp_type const optional required
@@ -83,6 +86,7 @@ if version >= 508 || !exists("did_thrift_syn_inits")
   HiLink thriftTodo Todo
   HiLink thriftString String
   HiLink thriftNumber Number
+  HiLink thriftBool Boolean
   HiLink thriftSpecial Special
   HiLink thriftStructure Structure
 

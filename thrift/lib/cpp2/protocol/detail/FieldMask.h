@@ -17,10 +17,9 @@
 #pragma once
 
 #include <functional>
-#include <map>
-#include <string_view>
 
 #include <folly/CppAttributes.h>
+#include <folly/container/F14Set.h>
 #include <thrift/lib/cpp2/op/Get.h>
 #include <thrift/lib/thrift/gen-cpp2/field_mask_constants.h>
 #include <thrift/lib/thrift/gen-cpp2/field_mask_types.h>
@@ -37,6 +36,14 @@ enum class ArrayKey {
   Integer = 0,
   String = 1,
 };
+
+inline bool isInclusive(const Mask& mask) {
+  return folly::to_underlying(mask.getType()) % 2 == 0;
+}
+
+inline bool isExclusive(const Mask& mask) {
+  return folly::to_underlying(mask.getType()) % 2 == 1;
+}
 
 // Returns mask == allMask() but faster
 inline bool isAllMask(const Mask& mask) {
@@ -84,6 +91,12 @@ getIntegerMapMask(const Mask& mask);
 [[nodiscard]] const MapStringToMask* FOLLY_NULLABLE
 getStringMapMask(const Mask& mask);
 
+// If mask is an AnyMask, return it, otherwise return nullptr
+[[nodiscard]] const MapTypeToMask* FOLLY_NULLABLE getTypeMask(const Mask& mask);
+
+// If mask is an any-mask, return it, otherwise return nullptr
+// TODO
+
 // Moves the given object to the field (can be field ref or smart pointer).
 template <typename T, typename U>
 void moveObject(T& field, U&& object) {
@@ -99,10 +112,9 @@ void moveObject(T& field, U&& object) {
 // Throws a runtime error if the mask contains a map mask.
 void throwIfContainsMapMask(const Mask& mask);
 
-template <typename Struct>
-void compare_impl(
-    const Struct& original, const Struct& modified, FieldIdToMask& mask) {
-  op::for_each_field_id<Struct>([&](auto id) {
+template <typename T>
+void compare_impl(const T& original, const T& modified, FieldIdToMask& mask) {
+  op::for_each_field_id<T>([&](auto id) {
     using Id = decltype(id);
     int16_t fieldId = folly::to_underlying(id());
     auto&& original_field = op::get<Id>(original);
@@ -121,8 +133,8 @@ void compare_impl(
       return;
     }
     // check if nested fields need to be added to mask
-    using FieldType = op::get_native_type<Struct, Id>;
-    if constexpr (is_thrift_struct_v<FieldType>) {
+    using FieldType = op::get_native_type<T, Id>;
+    if constexpr (is_thrift_class_v<FieldType>) {
       compare_impl(
           *original_ptr, *modified_ptr, mask[fieldId].includes_ref().emplace());
       return;
@@ -137,15 +149,43 @@ void compare_impl(
 ArrayKey getArrayKeyFromValue(const Value& v);
 
 // Returns the MapId of the given Value key. If the Value key
-// contains a non-integer valie, it throws.
+// contains a non-integer value, it throws.
 MapId getMapIdFromValue(const Value& v);
 
 // Returns the string of the given Value key. If the Value key contains a
 // non-string value, it throws.
 std::string getStringFromValue(const Value& v);
 
+// Returns the Value of the given MapId with the corresponding type. If the
+// given type contains a non-integer value, it throws.
+Value getValueAs(MapId id, const Value& as);
+
+// Returns the Value of the given string with the corresponding type. If the
+// given type contains a non-integer value, it throws.
+Value getValueAs(std::string key, const Value& as);
+
 // Returns the MapId in map mask of the given Value key.
 // If it doesn't exist, it returns the new MapId (pointer to the key).
 // Assumes the map mask uses pointers to keys.
 MapId findMapIdByValueAddress(const Mask& mask, const Value& key);
+
+using ValueIndex = folly::F14FastSet<
+    std::reference_wrapper<const Value>,
+    std::hash<Value>,
+    std::equal_to<Value>>;
+
+// Indexes the values referred to by the given mask by their value. The address
+// of the value is preserved by the index.
+ValueIndex buildValueIndex(const Mask& mask);
+
+// Returns the MapId in value index of the given Value key.
+// If it isn't indexed, it returns the new MapId (pointer to the key).
+// Assumes the map mask uses pointers to keys.
+MapId getMapIdValueAddressFromIndex(
+    const ValueIndex& index, const Value& newKey);
+
+// Validate if a given mask expresses a single path to a field, map entry, or
+// type entry. The terminal field is indicated with allMask.
+void validateSinglePath(const Mask& mask);
+
 } // namespace apache::thrift::protocol::detail

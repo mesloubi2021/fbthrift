@@ -18,9 +18,7 @@
 
 #include <thrift/compiler/ast/t_struct.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 enum class t_error_kind {
   unspecified = 0, // The kind of error was not specified and the associated RPC
@@ -63,6 +61,18 @@ class t_exception : public t_struct {
   t_error_safety safety() const { return safety_; }
   void set_safety(t_error_safety safety) { safety_ = safety; }
 
+  const t_field* get_message_field() const {
+    for (const auto* field : get_members()) {
+      if (field->find_structured_annotation_or_null(kExceptionMessageUri)) {
+        return field;
+      }
+    }
+    const auto* value = find_annotation_or_null("message");
+    return value ? get_field_by_name(*value) : nullptr;
+  }
+
+  ~t_exception() override;
+
  private:
   t_error_kind kind_{};
   t_error_blame blame_{};
@@ -85,6 +95,4 @@ class t_exception : public t_struct {
   }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

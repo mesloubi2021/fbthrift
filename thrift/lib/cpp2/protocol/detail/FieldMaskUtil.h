@@ -28,17 +28,28 @@
 #include <thrift/lib/cpp2/op/Get.h>
 #include <thrift/lib/cpp2/protocol/FieldMaskRef.h>
 #include <thrift/lib/cpp2/protocol/detail/FieldMask.h>
+#include <thrift/lib/cpp2/protocol/detail/Object.h>
 
-namespace apache::thrift::protocol::detail {
+namespace apache::thrift::protocol {
+
+// This is the return value of parseObject with mask.
+// Masked fields are deserialized to included Object, and the other fields are
+// are stored in excluded MaskedProtocolData.
+struct MaskedDecodeResult {
+  Object included;
+  MaskedProtocolData excluded;
+};
+
+namespace detail {
 // Validates the mask with the given Struct. Ensures that mask doesn't contain
 // fields not in the Struct.
-template <typename Struct>
+template <typename T>
 bool validate_mask(MaskRef ref) {
   // Get the field ids in the thrift struct type.
   std::unordered_set<FieldId> ids;
-  ids.reserve(op::size_v<Struct>);
-  op::for_each_ordinal<Struct>(
-      [&](auto ord) { ids.insert(op::get_field_id<Struct, decltype(ord)>()); });
+  ids.reserve(op::size_v<T>);
+  op::for_each_ordinal<T>(
+      [&](auto ord) { ids.insert(op::get_field_id<T, decltype(ord)>()); });
   const FieldIdToMask& map = ref.mask.includes_ref()
       ? ref.mask.includes_ref().value()
       : ref.mask.excludes_ref().value();
@@ -51,36 +62,6 @@ bool validate_mask(MaskRef ref) {
   return true;
 }
 
-// Validates the fields in the Struct with the MaskRef.
-template <typename Struct>
-bool validate_fields(MaskRef ref) {
-  if (!validate_mask<Struct>(ref)) {
-    return false;
-  }
-  // Validates each field in the struct.
-  bool isValid = true;
-  op::for_each_ordinal<Struct>([&](auto ord) {
-    if (!isValid) { // short circuit
-      return;
-    }
-    using Ord = decltype(ord);
-    MaskRef next = ref.get(op::get_field_id<Struct, Ord>());
-    if (next.isAllMask() || next.isNoneMask()) {
-      return;
-    }
-    // Check if the field is a thrift struct type. It uses native_type
-    // as we don't support adapted struct fields in field mask.
-    using FieldType = op::get_native_type<Struct, Ord>;
-    if constexpr (is_thrift_struct_v<FieldType>) {
-      // Need to validate the struct type.
-      isValid &= validate_fields<FieldType>(next);
-      return;
-    }
-    isValid = false;
-  });
-  return isValid;
-}
-
 template <typename Tag>
 bool is_compatible_with(const Mask&);
 
@@ -88,10 +69,60 @@ template <typename Tag>
 bool is_compatible_with_impl(Tag, const Mask&) {
   return false;
 }
+template <typename T>
+bool is_compatible_with_structured(const Mask& mask) {
+  MaskRef ref{mask};
+  if (!validate_mask<T>(ref)) {
+    return false;
+  }
+  // Validates each field in the struct/union
+  bool isValid = true;
+  op::for_each_ordinal<T>([&](auto ord) {
+    if (!isValid) { // short circuit
+      return;
+    }
+    using Ord = decltype(ord);
+    MaskRef next = ref.get(op::get_field_id<T, Ord>());
+    if (next.isAllMask() || next.isNoneMask()) {
+      return;
+    }
+    // Recurse
+    isValid &= is_compatible_with<op::get_type_tag<T, Ord>>(next.mask);
+  });
+  return isValid;
+}
+
+inline bool is_compatible_with_any(const Mask& mask) {
+  MaskRef ref{mask};
+  if (ref.isTypeMask()) {
+    return true;
+  } else {
+    // Backwards compatibility
+    return is_compatible_with_structured<type::AnyStruct>(mask);
+  }
+}
 
 template <typename T>
 bool is_compatible_with_impl(type::struct_t<T>, const Mask& mask) {
-  return validate_fields<T>({mask});
+  return is_compatible_with_structured<T>(mask);
+}
+
+inline bool is_compatible_with_impl(
+    type::struct_t<type::AnyStruct>, const Mask& mask) {
+  return is_compatible_with_any(mask);
+}
+
+inline bool is_compatible_with_impl(
+    type::adapted<
+        apache::thrift::InlineAdapter<::apache::thrift::type::AnyData>,
+        type::struct_t<type::AnyStruct>>,
+    const Mask& mask) {
+  return is_compatible_with_any(mask);
+}
+
+template <typename T>
+bool is_compatible_with_impl(type::union_t<T>, const Mask& mask) {
+  return is_compatible_with_structured<T>(mask);
 }
 
 template <typename Key, typename Value>
@@ -138,13 +169,13 @@ Mask path(const Mask& other) {
 
 template <typename Tag, typename Id, typename... Ids>
 Mask path(const Mask& other) {
-  using Struct = type::native_type<Tag>;
-  static_assert(is_thrift_struct_v<Struct>);
+  using T = type::native_type<Tag>;
+  static_assert(is_thrift_class_v<T>);
   Mask mask;
-  using fieldId = op::get_field_id<Struct, Id>;
+  using fieldId = op::get_field_id<T, Id>;
   static_assert(fieldId::value != FieldId{});
   mask.includes_ref().emplace()[static_cast<int16_t>(fieldId::value)] =
-      path<op::get_type_tag<Struct, Id>, Ids...>(other);
+      path<op::get_type_tag<T, Id>, Ids...>(other);
   return mask;
 }
 
@@ -160,17 +191,17 @@ Mask path(
     return other;
   }
   // static_assert doesn't work as it compiles this code for every field.
-  using Struct = type::native_type<Tag>;
-  if constexpr (is_thrift_struct_v<Struct>) {
+  using T = type::native_type<Tag>;
+  if constexpr (is_thrift_class_v<T>) {
     Mask mask;
-    op::for_each_field_id<Struct>([&](auto id) {
+    op::for_each_field_id<T>([&](auto id) {
       using Id = decltype(id);
       if (mask.includes_ref()) { // already set
         return;
       }
-      if (op::get_name_v<Struct, Id> == fieldNames[index]) {
+      if (op::get_name_v<T, Id> == fieldNames[index]) {
         mask.includes_ref().emplace()[folly::to_underlying(id())] =
-            path<op::get_type_tag<Struct, Id>>(fieldNames, index + 1, other);
+            path<op::get_type_tag<T, Id>>(fieldNames, index + 1, other);
       }
     });
     if (!mask.includes_ref()) { // field not found
@@ -179,29 +210,35 @@ Mask path(
     return mask;
   }
   folly::throw_exception<std::runtime_error>(
-      "Path contains a non thrift struct field.");
+      "Path contains a non thrift struct/union field.");
 }
 
+void ensure_fields(MaskRef ref, type::AnyStruct&);
+
 // Ensures the masked fields in the given thrift struct.
-template <typename Struct>
-void ensure_fields(MaskRef ref, Struct& t) {
-  if (!validate_mask<Struct>(ref)) {
+template <typename T>
+void ensure_fields(MaskRef ref, T& t) {
+  if (!validate_mask<T>(ref)) {
     folly::throw_exception<std::runtime_error>(
         "The mask and struct are incompatible.");
   }
-  if constexpr (!std::is_const_v<std::remove_reference_t<Struct>>) {
-    op::for_each_ordinal<Struct>([&](auto ord) {
+  if (is_thrift_union_v<T> && ref.numFieldsSet<T>() > 1) {
+    folly::throw_exception<std::runtime_error>(
+        "Ensuring more than one field in union");
+  }
+  if constexpr (!std::is_const_v<std::remove_reference_t<T>>) {
+    op::for_each_ordinal<T>([&](auto ord) {
       using Ord = decltype(ord);
-      MaskRef next = ref.get(op::get_field_id<Struct, Ord>());
+      MaskRef next = ref.get(op::get_field_id<T, Ord>());
       if (next.isNoneMask()) {
         return;
       }
-      using FieldTag = op::get_field_tag<Struct, Ord>;
+      using FieldTag = op::get_field_tag<T, Ord>;
       auto&& field_ref = op::get<Ord>(t);
       op::ensure<FieldTag>(field_ref, t);
       // Need to ensure the struct object.
-      using FieldType = op::get_native_type<Struct, Ord>;
-      if constexpr (is_thrift_struct_v<FieldType>) {
+      using FieldType = op::get_native_type<T, Ord>;
+      if constexpr (is_thrift_class_v<FieldType>) {
         auto& value = *op::getValueOrNull(field_ref);
         ensure_fields(next, value);
         return;
@@ -216,34 +253,41 @@ void ensure_fields(MaskRef ref, Struct& t) {
   }
 }
 
+void clear_fields(MaskRef ref, type::AnyStruct& t);
+
+inline void clear_fields(MaskRef ref, type::AnyData& t) {
+  static_assert(std::is_same_v<type::AnyStruct&, decltype(t.toThrift())>);
+  clear_fields(std::move(ref), t.toThrift());
+}
+
 // Clears the masked fields in the given thrift struct.
-template <typename Struct>
-void clear_fields(MaskRef ref, Struct& t) {
-  if (!validate_mask<Struct>(ref)) {
+template <typename T>
+void clear_fields(MaskRef ref, T& t) {
+  if (!validate_mask<T>(ref)) {
     folly::throw_exception<std::runtime_error>(
         "The mask and struct are incompatible.");
   }
-  if constexpr (!std::is_const_v<std::remove_reference_t<Struct>>) {
-    op::for_each_ordinal<Struct>([&](auto ord) {
+  if constexpr (!std::is_const_v<std::remove_reference_t<T>>) {
+    op::for_each_ordinal<T>([&](auto ord) {
       using Ord = decltype(ord);
-      MaskRef next = ref.get(op::get_field_id<Struct, Ord>());
+      MaskRef next = ref.get(op::get_field_id<T, Ord>());
       if (next.isNoneMask()) {
         return;
       }
-      using FieldTag = op::get_field_tag<Struct, Ord>;
+      using FieldTag = op::get_field_tag<T, Ord>;
       auto&& field_ref = op::get<Ord>(t);
       if (next.isAllMask()) {
         op::clear_field<FieldTag>(field_ref, t);
         return;
       }
-      using FieldType = op::get_native_type<Struct, Ord>;
+      using FieldType = op::get_native_type<T, Ord>;
       auto* field_value = op::getValueOrNull(field_ref);
       if (!field_value) {
-        errorIfNotCompatible<op::get_type_tag<Struct, Ord>>(next.mask);
+        errorIfNotCompatible<op::get_type_tag<T, Ord>>(next.mask);
         return;
       }
-      // Need to clear the struct object.
-      if constexpr (is_thrift_struct_v<FieldType>) {
+      // Need to clear the struct/union object.
+      if constexpr (is_thrift_class_v<FieldType>) {
         clear_fields(next, *field_value);
         return;
       }
@@ -255,75 +299,235 @@ void clear_fields(MaskRef ref, Struct& t) {
   }
 }
 
-// Copies the masked fields from src thrift struct to dst.
-// Returns true if it copied a field from src to dst.
-template <typename SrcStruct, typename DstStruct>
-bool copy_fields(MaskRef ref, SrcStruct& src, DstStruct& dst) {
-  static_assert(std::is_same_v<
-                folly::remove_cvref_t<SrcStruct>,
-                folly::remove_cvref_t<DstStruct>>);
-  if (!validate_mask<DstStruct>(ref)) {
+bool filter_fields(MaskRef ref, const type::AnyStruct& t, type::AnyStruct& ret);
+
+inline bool filter_fields(
+    MaskRef ref, const type::AnyData& t, type::AnyData& ret) {
+  static_assert(std::is_same_v<type::AnyStruct&, decltype(ret.toThrift())>);
+  return filter_fields(ref, t.toThrift(), ret.toThrift());
+}
+
+// Writes masked fields from src (as specified by ref) into ret (ret must be
+// empty). Returns true if any masked field was written into ret.
+template <typename T>
+bool filter_fields(MaskRef ref, const T& src, T& ret) {
+  if (!validate_mask<T>(ref)) {
     folly::throw_exception<std::runtime_error>(
         "The mask and struct are incompatible.");
   }
-  if constexpr (!std::is_const_v<std::remove_reference_t<DstStruct>>) {
-    bool copied = false;
-    op::for_each_ordinal<DstStruct>([&](auto ord) {
-      using Ord = decltype(ord);
-      MaskRef next = ref.get(op::get_field_id<DstStruct, Ord>());
-      // Id doesn't exist in field mask, skip.
-      if (next.isNoneMask()) {
-        return;
+  bool retained = false;
+  op::for_each_ordinal<T>([&](auto ord) {
+    using Ord = decltype(ord);
+    MaskRef next = ref.get(op::get_field_id<T, Ord>());
+    // Id doesn't exist in field mask, skip.
+    if (next.isNoneMask()) {
+      return;
+    }
+    using FieldType = op::get_native_type<T, Ord>;
+    auto&& src_ref = op::get<Ord>(src);
+    auto&& ret_ref = op::get<Ord>(ret);
+    bool srcHasValue = bool(op::getValueOrNull(src_ref));
+    if (!srcHasValue) { // skip
+      errorIfNotCompatible<op::get_type_tag<T, Ord>>(next.mask);
+    } else if (next.isAllMask()) {
+      if constexpr (is_thrift_union_v<T>) {
+        // Simply copy the entire union over
+        ret = src;
+      } else {
+        op::copy(src_ref, ret_ref);
       }
-      using FieldTag = op::get_field_tag<DstStruct, Ord>;
-      using FieldType = op::get_native_type<DstStruct, Ord>;
-      auto&& src_ref = op::get<Ord>(src);
-      auto&& dst_ref = op::get<Ord>(dst);
-      bool srcHasValue = bool(op::getValueOrNull(src_ref));
-      bool dstHasValue = bool(op::getValueOrNull(dst_ref));
-      if (!srcHasValue && !dstHasValue) { // skip
-        errorIfNotCompatible<op::get_type_tag<DstStruct, Ord>>(next.mask);
-        return;
+      retained = true;
+    } else if constexpr (is_thrift_class_v<FieldType>) {
+      FieldType nested;
+      // If no masked fields are retained, leave this field unset (will leave
+      // optional fields unset)
+      if (filter_fields(next, *src_ref, nested)) {
+        moveObject(ret_ref, std::move(nested));
+        retained = true;
       }
-      // Id that we want to copy.
-      if (next.isAllMask()) {
-        if (srcHasValue) {
-          op::copy(src_ref, dst_ref);
-          copied = true;
-        } else {
-          op::clear_field<FieldTag>(dst_ref, dst);
-        }
-        return;
-      }
-      if constexpr (is_thrift_struct_v<FieldType>) {
-        // Field doesn't exist in src, so just clear dst with the mask.
-        if (!srcHasValue) {
-          clear_fields(next, *op::getValueOrNull(dst_ref));
-          return;
-        }
-        // Field exists in both src and dst, so call copy recursively.
-        if (dstHasValue) {
-          copied |= copy_fields(
-              next, *op::getValueOrNull(src_ref), *op::getValueOrNull(dst_ref));
-          return;
-        }
-        // Field only exists in src. Need to construct object only if there's
-        // a field to add.
-        FieldType newObject;
-        bool constructObject =
-            copy_fields(next, *op::getValueOrNull(src_ref), newObject);
-        if (constructObject) {
-          moveObject(dst_ref, std::move(newObject));
-          copied = true;
-        }
-        return;
-      }
+    } else {
       folly::throw_exception<std::runtime_error>(
           "The mask and struct are incompatible.");
-    });
-    return copied;
-  } else {
-    folly::throw_exception<std::runtime_error>("Cannot copy to a const field");
+    }
+  });
+  return retained;
+}
+
+struct MaskedDecodeResultValue {
+  Value included;
+  MaskedData excluded;
+};
+
+// Stores the serialized data of the given type in maskedData and protocolData.
+template <typename Protocol>
+void setMaskedDataFull(
+    Protocol& prot,
+    TType arg_type,
+    MaskedData& maskedData,
+    MaskedProtocolData& protocolData) {
+  auto& values = protocolData.values().ensure();
+  auto& encodedValue = values.emplace_back();
+  encodedValue.wireType() = type::toBaseType(arg_type);
+  // get the serialized data from cursor
+  auto cursor = prot.getCursor();
+  apache::thrift::skip(prot, arg_type);
+  cursor.clone(encodedValue.data().emplace(), prot.getCursor() - cursor);
+  const auto pos = folly::to<int32_t>(values.size() - 1);
+  maskedData.full_ref() = type::ValueId{apache::thrift::util::i32ToZigzag(pos)};
+}
+
+// parseValue with readMaskRef and writeMaskRef
+template <bool KeepExcludedData, typename Protocol>
+MaskedDecodeResultValue parseValueWithMask(
+    Protocol& prot,
+    TType arg_type,
+    MaskRef readMaskRef,
+    MaskRef writeMaskRef,
+    MaskedProtocolData& protocolData,
+    bool string_to_binary = true) {
+  MaskedDecodeResultValue result;
+  if (arg_type == protocol::T_BOOL) {
+    // For Compact protocol, Bool field values are encoded directly in the field
+    // header, in which case the encoded value will be empty.
+    //
+    // https://github.com/apache/thrift/blob/master/doc/specs/thrift-compact-protocol.md#boolean-encoding
+    //
+    // Given that the bool field is cheap to decode, we can just decode it
+    // unconditionally.
+    prot.readBool(result.included.emplace_bool());
+    return result;
+  }
+  if (readMaskRef.isAllMask()) { // serialize all
+    parseValueInplace(prot, arg_type, result.included, string_to_binary);
+    return result;
+  }
+  if (readMaskRef.isNoneMask()) { // do not deserialize
+    if constexpr (!KeepExcludedData) { // no need to store
+      apache::thrift::skip(prot, arg_type);
+      return result;
+    }
+    if (writeMaskRef.isNoneMask()) { // store the serialized data
+      setMaskedDataFull(prot, arg_type, result.excluded, protocolData);
+      return result;
+    }
+    if (writeMaskRef.isAllMask()) { // no need to store
+      apache::thrift::skip(prot, arg_type);
+      return result;
+    }
+    // Need to recursively store the result not in writeMaskRef.
+  }
+  switch (arg_type) {
+    case protocol::T_STRUCT: {
+      auto& object = result.included.ensure_object();
+      std::string name;
+      int16_t fid;
+      TType ftype;
+      prot.readStructBegin(name);
+      while (true) {
+        prot.readFieldBegin(name, ftype, fid);
+        if (ftype == protocol::T_STOP) {
+          break;
+        }
+        MaskRef nextRead = readMaskRef.get(FieldId{fid});
+        MaskRef nextWrite = writeMaskRef.get(FieldId{fid});
+        MaskedDecodeResultValue nestedResult =
+            parseValueWithMask<KeepExcludedData>(
+                prot,
+                ftype,
+                nextRead,
+                nextWrite,
+                protocolData,
+                string_to_binary);
+        // Set nested MaskedDecodeResult if not empty.
+        if (!apache::thrift::empty(nestedResult.included)) {
+          object[FieldId{fid}] = std::move(nestedResult.included);
+        }
+        if constexpr (KeepExcludedData) {
+          if (!apache::thrift::empty(nestedResult.excluded)) {
+            result.excluded.fields_ref().ensure()[FieldId{fid}] =
+                std::move(nestedResult.excluded);
+          }
+        }
+        prot.readFieldEnd();
+      }
+      prot.readStructEnd();
+      return result;
+    }
+    case protocol::T_MAP: {
+      auto& map = result.included.ensure_map();
+      TType keyType;
+      TType valType;
+      uint32_t size;
+      prot.readMapBegin(keyType, valType, size);
+      if (!size) {
+        prot.readMapEnd();
+        return result;
+      }
+      auto readValueIndex = buildValueIndex(readMaskRef.mask);
+      auto writeValueIndex = buildValueIndex(writeMaskRef.mask);
+      for (uint32_t i = 0; i < size; i++) {
+        auto keyValue = parseValue(prot, keyType, string_to_binary);
+        MaskRef nextRead = readMaskRef.get(
+            getMapIdValueAddressFromIndex(readValueIndex, keyValue));
+        MaskRef nextWrite = writeMaskRef.get(
+            getMapIdValueAddressFromIndex(writeValueIndex, keyValue));
+        MaskedDecodeResultValue nestedResult =
+            parseValueWithMask<KeepExcludedData>(
+                prot,
+                valType,
+                nextRead,
+                nextWrite,
+                protocolData,
+                string_to_binary);
+        // Set nested MaskedDecodeResult if not empty.
+        if (!apache::thrift::empty(nestedResult.included)) {
+          map[keyValue] = std::move(nestedResult.included);
+        }
+        if constexpr (KeepExcludedData) {
+          if (!apache::thrift::empty(nestedResult.excluded)) {
+            auto& keys = protocolData.keys().ensure();
+            keys.push_back(keyValue);
+            const auto pos = folly::to<int32_t>(keys.size() - 1);
+            type::ValueId id =
+                type::ValueId{apache::thrift::util::i32ToZigzag(pos)};
+            result.excluded.values_ref().ensure()[id] =
+                std::move(nestedResult.excluded);
+          }
+        }
+      }
+      prot.readMapEnd();
+      return result;
+    }
+    default: {
+      parseValueInplace(prot, arg_type, result.included, string_to_binary);
+      return result;
+    }
   }
 }
-} // namespace apache::thrift::protocol::detail
+
+template <typename Protocol, bool KeepExcludedData>
+MaskedDecodeResult parseObject(
+    const folly::IOBuf& buf,
+    const Mask& readMask,
+    const Mask& writeMask,
+    bool string_to_binary = true) {
+  Protocol prot;
+  prot.setInput(&buf);
+  MaskedDecodeResult result;
+  MaskedProtocolData& protocolData = result.excluded;
+  protocolData.protocol() = get_standard_protocol<Protocol>;
+  MaskedDecodeResultValue parseValueResult =
+      parseValueWithMask<KeepExcludedData>(
+          prot,
+          T_STRUCT,
+          MaskRef{readMask, false},
+          MaskRef{writeMask, false},
+          protocolData,
+          string_to_binary);
+  protocolData.data() = std::move(parseValueResult.excluded);
+  // Calling ensure as it is possible that the value is not set.
+  result.included = std::move(parseValueResult.included.ensure_object());
+  return result;
+}
+} // namespace detail
+} // namespace apache::thrift::protocol

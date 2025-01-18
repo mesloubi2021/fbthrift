@@ -21,6 +21,7 @@
       "definition_html": "static FOLLY_NODISCARD Derived apache::thrift::op::detail::BaseAssignPatch&lt; Patch, Derived &gt;::createAssign",
       "argsstring_html": "(U &amp;&amp;val)",
       "name_html": "createAssign",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseAssignPatch::createAssign",
       "param": [
         {
           "type_html": "U &amp;&amp;",
@@ -29,11 +30,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "147",
-        "column": "1",
+        "line": "169",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "147",
-        "bodyend": "151"
+        "bodystart": "169",
+        "bodyend": "173"
       },
       "definition": {
         "simple_html": "template &lt;typename U = value_type&gt;\nstatic FOLLY_NODISCARD Derived createAssign(U&amp;&amp; val)",
@@ -58,5 +59,11 @@
   "brief_html": "<p>Creates a new patch that replaces the existing value. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/createAssign",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/createAssign"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/createAssign",
+  "parent_links": [
+    {
+      "text_html": "MapPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/MapPatch"
+    }
+  ]
 }

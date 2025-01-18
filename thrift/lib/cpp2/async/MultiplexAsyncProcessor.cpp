@@ -301,7 +301,8 @@ class MultiplexAsyncProcessor final : public AsyncProcessor {
       std::vector<std::unique_ptr<AsyncProcessor>>&& processors,
       const MultiplexAsyncProcessorFactory::CompositionMetadata&
           compositionMetadata)
-      : processors_(std::move(processors)),
+      : AsyncProcessor(IgnoreGlobalEventHandlers{}),
+        processors_(std::move(processors)),
         compositionMetadata_(compositionMetadata) {
     DCHECK(!processors_.empty());
   }
@@ -311,6 +312,13 @@ class MultiplexAsyncProcessor final : public AsyncProcessor {
     auto [processor, metadata] = derefProcessor(methodMetadata);
     processor->executeRequest(std::move(request), *metadata);
     return;
+  }
+
+  void addEventHandler(
+      const std::shared_ptr<TProcessorEventHandler>& eventHandler) override {
+    for (auto& processor : processors_) {
+      processor->addEventHandler(eventHandler);
+    }
   }
 
  private:
@@ -394,16 +402,26 @@ MultiplexAsyncProcessorFactory::flattenProcessorFactories(
 }
 
 #if defined(THRIFT_SCHEMA_AVAILABLE)
-std::optional<std::vector<schema::SchemaV1>>
-MultiplexAsyncProcessorFactory::getServiceMetadataV1() {
-  std::vector<schema::SchemaV1> allSchemas;
+std::optional<schema::DefinitionsSchema>
+MultiplexAsyncProcessorFactory::getServiceSchema() {
+  std::vector<type::Schema> allSchemas;
+  std::set<type::DefinitionKey> allKeys;
   for (auto& processorFactory : processorFactories_) {
-    auto schemas = processorFactory->getServiceMetadataV1();
-    if (schemas.has_value()) {
-      allSchemas.insert(allSchemas.end(), schemas->begin(), schemas->end());
+    auto schema = processorFactory->getServiceSchema();
+    if (schema.has_value()) {
+      allSchemas.insert(allSchemas.end(), std::move(schema->schema));
+      allKeys.insert(
+          std::make_move_iterator(schema->definitions.begin()),
+          std::make_move_iterator(schema->definitions.end()));
     }
   }
-  return allSchemas;
+  schema::DefinitionsSchema result;
+  result.schema = SchemaRegistry::mergeSchemas(std::move(allSchemas));
+  result.definitions.insert(
+      result.definitions.end(),
+      std::make_move_iterator(allKeys.begin()),
+      std::make_move_iterator(allKeys.end()));
+  return result;
 }
 #endif
 
@@ -451,6 +469,28 @@ MultiplexAsyncProcessorFactory::getBaseContextForRequest(
       wildcardMethodMetadata);
 }
 
+SelectPoolResult MultiplexAsyncProcessorFactory::selectResourcePool(
+    const ServerRequest& request) const {
+  const auto* methodMetadata = request.methodMetadata();
+  if (!methodMetadata) {
+    return std::monostate{};
+  }
+
+  std::size_t index;
+  if (methodMetadata->isWildcard()) {
+    auto wildcardIndex = compositionMetadata_.wildcardIndex();
+    DCHECK(wildcardIndex.has_value())
+        << "Received WildcardMethodMetadata but expected no WildcardMethodMetadataMap was composed";
+    index = *wildcardIndex;
+  } else {
+    index = AsyncProcessorHelper::expectMetadataOfType<MetadataImpl>(
+                *methodMetadata)
+                .sourceIndex;
+  }
+
+  return processorFactories_[index]->selectResourcePool(request);
+}
+
 std::vector<ServiceHandlerBase*>
 MultiplexAsyncProcessorFactory::getServiceHandlers() {
   std::vector<ServiceHandlerBase*> result;
@@ -468,6 +508,13 @@ MultiplexAsyncProcessorFactory::CompositionMetadata::wildcardIndex() const {
       firstWildcardLike,
       [](std::monostate) -> Result { return std::nullopt; },
       [](auto&& wildcard) -> Result { return wildcard.index; });
+}
+
+bool MultiplexAsyncProcessorFactory::isThriftGenerated() const {
+  return std::all_of(
+      processorFactories_.begin(),
+      processorFactories_.end(),
+      [](const auto& fac) { return fac->isThriftGenerated(); });
 }
 
 } // namespace apache::thrift

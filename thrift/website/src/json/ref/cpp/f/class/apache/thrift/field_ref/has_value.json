@@ -10,17 +10,19 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE bool",
       "definition_html": "FOLLY_ERASE bool apache::thrift::field_ref&lt; T &gt;::has_value",
       "argsstring_html": "() const noexcept",
       "name_html": "has_value",
+      "qualifiedname_html": "apache::thrift::field_ref::has_value",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "327",
-        "column": "1",
+        "line": "328",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "327",
+        "bodystart": "328",
         "bodyend": "330"
       },
       "definition": {
@@ -43,5 +45,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/field_ref/has_value",
-  "refid": "/ref/cpp/f/class/apache/thrift/field_ref/has_value"
+  "refid": "/ref/cpp/f/class/apache/thrift/field_ref/has_value",
+  "parent_links": [
+    {
+      "text_html": "field_ref",
+      "href": "/ref/cpp/class/apache/thrift/field_ref"
+    }
+  ]
 }

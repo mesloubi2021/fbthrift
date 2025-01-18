@@ -32,8 +32,7 @@
 #include <thrift/lib/cpp2/protocol/Traits.h>
 #include <thrift/lib/cpp2/protocol/detail/ReservedId.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class VirtualReaderBase;
 
@@ -394,7 +393,7 @@ constexpr auto hasIndexSupport(long) {
 template <class Protocol>
 constexpr auto hasIndexSupport(int)
     -> decltype(Protocol::ProtocolWriter::kHasIndexSupport()) {
-  return !std::is_base_of<VirtualReaderBase, Protocol>::value &&
+  return !std::is_base_of_v<VirtualReaderBase, Protocol> &&
       Protocol::ProtocolWriter::kHasIndexSupport();
 }
 
@@ -405,5 +404,4 @@ using ProtocolReaderStructReadStateWithIndex = std::conditional_t<
     ProtocolReaderStructReadState<Protocol>>;
 
 } // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

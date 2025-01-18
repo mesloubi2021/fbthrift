@@ -28,7 +28,7 @@
 #include <fmt/core.h>
 #include <folly/Traits.h>
 #include <folly/Utility.h>
-#include <folly/experimental/coro/FutureUtil.h>
+#include <folly/coro/FutureUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/io/Cursor.h>
 #include <thrift/lib/cpp/protocol/TBase64Utils.h>
@@ -40,6 +40,7 @@
 #include <thrift/lib/cpp2/async/ClientBufferedStream.h>
 #include <thrift/lib/cpp2/async/ClientSinkBridge.h>
 #include <thrift/lib/cpp2/async/RequestChannel.h>
+#include <thrift/lib/cpp2/async/ServiceInfoHolder.h>
 #include <thrift/lib/cpp2/async/Sink.h>
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
 #include <thrift/lib/cpp2/detail/meta.h>
@@ -51,8 +52,7 @@
 #include <thrift/lib/cpp2/util/Frozen2ViewHelpers.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class BinaryProtocolReader;
 class CompactProtocolReader;
@@ -128,7 +128,7 @@ struct FieldData {
   static const constexpr protocol::TType ttype = protocol_type_v<TC, T>;
   typedef TC type_class;
   typedef T type;
-  typedef typename std::remove_pointer<T>::type value_type;
+  typedef std::remove_pointer_t<T> value_type;
   using Ops = Cpp2Ops<value_type>;
   T value;
   static_assert(std::is_pointer_v<T> != std::is_base_of_v<TException, T>, "");
@@ -192,7 +192,7 @@ struct FieldData {
     if constexpr (std::is_void_v<Tag>) {
       return Ops::thriftType();
     } else {
-      return op::detail::typeTagToTType<Tag>;
+      return op::typeTagToTType<Tag>;
     }
   }
 };
@@ -350,8 +350,8 @@ class Cpp2Ops<ThriftPresult<hasIsSet, Args...>> {
 };
 
 // Forward declaration
-namespace detail {
-namespace ap {
+
+namespace detail::ap {
 
 template <
     ErrorBlame Blame,
@@ -399,12 +399,11 @@ struct EmptyExMapType {
   }
 };
 
-} // namespace ap
-} // namespace detail
+} // namespace detail::ap
 
 //  AsyncClient helpers
-namespace detail {
-namespace ac {
+
+namespace detail::ac {
 
 template <bool HasReturnType, typename PResult>
 folly::exception_wrapper extract_exn(PResult& result) {
@@ -478,7 +477,7 @@ folly::exception_wrapper recv_wrapped_helper(
     }
     return folly::exception_wrapper();
   } catch (...) {
-    return folly::exception_wrapper(std::current_exception());
+    return folly::exception_wrapper(folly::current_exception());
   }
 }
 
@@ -689,12 +688,30 @@ folly::exception_wrapper recv_wrapped(
 }
 
 [[noreturn]] void throw_app_exn(const char* msg);
-} // namespace ac
-} // namespace detail
+
+template <typename Func>
+decltype(auto) withProtocolWriter(
+    std::underlying_type_t<apache::thrift::protocol::PROTOCOL_TYPES>
+        protocolType,
+    Func&& func) {
+  switch (protocolType) {
+    case apache::thrift::protocol::T_BINARY_PROTOCOL: {
+      apache::thrift::BinaryProtocolWriter writer;
+      return std::forward<Func>(func)(writer);
+    }
+    case apache::thrift::protocol::T_COMPACT_PROTOCOL: {
+      apache::thrift::CompactProtocolWriter writer;
+      return std::forward<Func>(func)(writer);
+    }
+    default:
+      throw_app_exn("Could not find Protocol");
+  }
+}
+} // namespace detail::ac
 
 //  AsyncProcessor helpers
-namespace detail {
-namespace ap {
+
+namespace detail::ap {
 
 //  Everything templated on only protocol goes here. The corresponding .cpp file
 //  explicitly instantiates this struct for each supported protocol.
@@ -956,9 +973,11 @@ inline void processViaExecuteRequest(
     // mark oneway
     if (notOnewayOrWildcard &&
         !serverRequest.request()->getShouldStartProcessing()) {
+      // eventBase declared here to ensure computed before std::move below
+      auto eventBase = detail::ServerRequestHelper::eventBase(serverRequest);
       HandlerCallbackBase::releaseRequest(
           detail::ServerRequestHelper::request(std::move(serverRequest)),
-          detail::ServerRequestHelper::eventBase(serverRequest));
+          eventBase);
       return;
     }
 
@@ -1233,8 +1252,7 @@ void populateMethodMetadataMap(
   for (const auto& [methodName, processFuncs] :
        CurrentProcessor::getOwnProcessMap()) {
     const auto& requestInfo = requestInfoMap.at(methodName);
-    std::optional<std::string_view> interactionName =
-        requestInfo.interactionName;
+    std::optional<std::string> interactionName = requestInfo.interactionName;
     if (!interactionName) {
       // If this is a normal RPC that creates an interaction
       interactionName = requestInfo.createdInteraction;
@@ -1314,13 +1332,14 @@ EncodedStreamError encode_stream_exception(folly::exception_wrapper ew) {
     constexpr size_t kQueueAppenderGrowth = 4096;
     prot.setOutput(&queue, kQueueAppenderGrowth);
     TApplicationException ex(ew.what().toStdString());
-    exceptionMetadataBase.what_utf8() = ex.what();
     apache::thrift::detail::serializeExceptionBody(&prot, &ex);
     PayloadAppUnknownExceptionMetdata aue;
     aue.errorClassification().ensure().blame() = Blame;
     exceptionMetadata.appUnknownException_ref() = std::move(aue);
   }
 
+  exceptionMetadataBase.name_utf8() = ew.class_name();
+  exceptionMetadataBase.what_utf8() = ew.what();
   exceptionMetadataBase.metadata() = std::move(exceptionMetadata);
   StreamPayloadMetadata streamPayloadMetadata;
   PayloadMetadata payloadMetadata;
@@ -1453,10 +1472,14 @@ folly::exception_wrapper decode_stream_exception(folly::exception_wrapper ew) {
         TApplicationException::TApplicationExceptionType exType{
             TApplicationException::UNKNOWN};
         auto code = streamRpcError.code();
-        if (code &&
-            (code.value() == StreamRpcErrorCode::CREDIT_TIMEOUT ||
-             code.value() == StreamRpcErrorCode::CHUNK_TIMEOUT)) {
-          exType = TApplicationException::TIMEOUT;
+        if (code) {
+          if (code.value() == StreamRpcErrorCode::CREDIT_TIMEOUT ||
+              code.value() == StreamRpcErrorCode::CHUNK_TIMEOUT) {
+            exType = TApplicationException::TIMEOUT;
+          } else if (
+              code.value() == StreamRpcErrorCode::SERVER_CLOSING_CONNECTION) {
+            exType = TApplicationException::INTERRUPTION;
+          }
         }
         hijacked = TApplicationException(
             exType, streamRpcError.what_utf8().value_or(""));
@@ -1520,8 +1543,8 @@ template <
     typename SinkType,
     typename FinalResponseType>
 apache::thrift::detail::SinkConsumerImpl toSinkConsumerImpl(
-    FOLLY_MAYBE_UNUSED SinkConsumer<SinkType, FinalResponseType>&& sinkConsumer,
-    FOLLY_MAYBE_UNUSED folly::Executor::KeepAlive<> executor) {
+    [[maybe_unused]] SinkConsumer<SinkType, FinalResponseType>&& sinkConsumer,
+    [[maybe_unused]] folly::Executor::KeepAlive<> executor) {
 #if FOLLY_HAS_COROUTINES
   auto consumer =
       [innerConsumer = std::move(sinkConsumer.consumer)](
@@ -1545,7 +1568,7 @@ apache::thrift::detail::SinkConsumerImpl toSinkConsumerImpl(
               std::move(finalResponse)),
           {}));
     } catch (...) {
-      ew = folly::exception_wrapper(std::current_exception());
+      ew = folly::exception_wrapper(folly::current_exception());
     }
     co_return folly::Try<StreamPayload>(ap::encode_stream_exception<
                                         ErrorBlame::SERVER,
@@ -1563,12 +1586,11 @@ apache::thrift::detail::SinkConsumerImpl toSinkConsumerImpl(
 #endif
 }
 
-} // namespace ap
-} // namespace detail
+} // namespace detail::ap
 
 //  ServerInterface helpers
-namespace detail {
-namespace si {
+
+namespace detail::si {
 template <typename T>
 folly::Future<T> future(
     folly::SemiFuture<T>&& future, folly::Executor::KeepAlive<> keepAlive) {
@@ -1579,11 +1601,12 @@ folly::Future<T> future(
 }
 
 using CallbackBase = HandlerCallbackBase;
-using CallbackBasePtr = std::unique_ptr<CallbackBase>;
+using CallbackOneWay = HandlerCallbackOneWay;
+using CallbackOneWayPtr = CallbackOneWay::Ptr;
 template <typename T>
 using Callback = HandlerCallback<T>;
 template <typename T>
-using CallbackPtr = std::unique_ptr<Callback<T>>;
+using CallbackPtr = HandlerCallbackPtr<T>;
 
 class AsyncTmPrep {
   ServerInterface* si_;
@@ -1602,69 +1625,56 @@ class AsyncTmPrep {
   ~AsyncTmPrep() { si_->clearRequestParams(); }
 };
 
-inline void async_tm_future_oneway(
-    CallbackBasePtr callback, folly::Future<folly::Unit>&& fut) {
+template <typename T, typename CallbackPtr>
+void async_tm_future_impl(CallbackPtr callback, folly::Future<T>&& fut) {
   if (!fut.isReady()) {
     auto ka = callback->getInternalKeepAlive();
     std::move(fut)
         .via(std::move(ka))
-        .thenValueInline([cb = std::move(callback)](auto&&) {});
+        .thenTryInline([cb = std::move(callback)](folly::Try<T>&& ret) {
+          cb->complete(std::move(ret));
+        });
+  } else {
+    callback->complete(std::move(fut).result());
   }
 }
-
 template <typename T>
 void async_tm_future(
     CallbackPtr<T> callback, folly::Future<folly::lift_unit_t<T>>&& fut) {
+  async_tm_future_impl(std::move(callback), std::move(fut));
+}
+inline void async_tm_future(
+    CallbackOneWayPtr callback, folly::Future<folly::Unit>&& fut) {
+  async_tm_future_impl(std::move(callback), std::move(fut));
+}
+
+template <typename T, typename CallbackPtr>
+void async_tm_semifuture_impl(
+    CallbackPtr callback, folly::SemiFuture<T>&& fut) {
   if (!fut.isReady()) {
     auto ka = callback->getInternalKeepAlive();
     std::move(fut)
         .via(std::move(ka))
-        .thenTryInline([cb = std::move(callback)](
-                           folly::Try<folly::lift_unit_t<T>>&& ret) {
+        .thenTryInline([cb = std::move(callback)](folly::Try<T>&& ret) {
           cb->complete(std::move(ret));
         });
   } else {
     callback->complete(std::move(fut).result());
   }
 }
-
-inline void async_tm_semifuture_oneway(
-    CallbackBasePtr callback, folly::SemiFuture<folly::Unit>&& fut) {
-  if (!fut.isReady()) {
-    auto ka = callback->getInternalKeepAlive();
-    std::move(fut)
-        .via(std::move(ka))
-        .thenValueInline([cb = std::move(callback)](auto&&) {});
-  }
-}
-
 template <typename T>
 void async_tm_semifuture(
     CallbackPtr<T> callback, folly::SemiFuture<folly::lift_unit_t<T>>&& fut) {
-  if (!fut.isReady()) {
-    auto ka = callback->getInternalKeepAlive();
-    std::move(fut)
-        .via(std::move(ka))
-        .thenTryInline([cb = std::move(callback)](
-                           folly::Try<folly::lift_unit_t<T>>&& ret) {
-          cb->complete(std::move(ret));
-        });
-  } else {
-    callback->complete(std::move(fut).result());
-  }
+  async_tm_semifuture_impl(std::move(callback), std::move(fut));
+}
+inline void async_tm_semifuture(
+    CallbackOneWayPtr callback, folly::SemiFuture<folly::Unit>&& fut) {
+  async_tm_semifuture_impl(std::move(callback), std::move(fut));
 }
 
 #if FOLLY_HAS_COROUTINES
-inline void async_tm_coro_oneway(
-    CallbackBasePtr callback, folly::coro::Task<void>&& task) {
-  auto ka = callback->getInternalKeepAlive();
-  std::move(task)
-      .scheduleOn(std::move(ka))
-      .startInlineUnsafe([callback = std::move(callback)](auto&&) {});
-}
-
-template <typename T>
-void async_tm_coro(CallbackPtr<T> callback, folly::coro::Task<T>&& task) {
+template <typename T, typename CallbackPtr>
+void async_tm_coro_impl(CallbackPtr callback, folly::coro::Task<T>&& task) {
   auto ka = callback->getInternalKeepAlive();
   std::move(task)
       .scheduleOn(std::move(ka))
@@ -1672,6 +1682,14 @@ void async_tm_coro(CallbackPtr<T> callback, folly::coro::Task<T>&& task) {
                              folly::Try<folly::lift_unit_t<T>>&& tryResult) {
         callback->complete(std::move(tryResult));
       });
+}
+template <typename T>
+void async_tm_coro(CallbackPtr<T> callback, folly::coro::Task<T>&& task) {
+  async_tm_coro_impl(std::move(callback), std::move(task));
+}
+inline void async_tm_coro(
+    CallbackOneWayPtr callback, folly::coro::Task<void>&& task) {
+  async_tm_coro_impl(std::move(callback), std::move(task));
 }
 #endif
 
@@ -1741,16 +1759,7 @@ class UnimplementedCoroMethod : public std::exception {
 template <typename... Ignore>
 void ignore(Ignore&&...) {}
 
-#if defined(THRIFT_SCHEMA_AVAILABLE)
-inline std::optional<std::vector<schema::SchemaV1>> schemaAsOptionalVector(
-    const schema::SchemaV1& schema) {
-  std::vector<schema::SchemaV1> vec = {};
-  vec.insert(vec.end(), schema);
-  return std::optional<std::vector<schema::SchemaV1>>(vec);
-}
-#endif
-} // namespace si
-} // namespace detail
+} // namespace detail::si
 
 namespace util {
 
@@ -1850,5 +1859,4 @@ bool includeInRecentRequestsCount(const std::string_view methodName);
 
 } // namespace util
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

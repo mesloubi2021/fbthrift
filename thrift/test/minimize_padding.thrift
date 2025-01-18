@@ -20,11 +20,13 @@ cpp_include "thrift/test/AdapterTest.h"
 
 namespace cpp2 apache.thrift.test
 
+@cpp.MinimizePadding
 struct out_of_order_struct {
   1: empty field;
-} (cpp.minimize_padding)
+}
 
-struct empty {} (cpp.minimize_padding)
+@cpp.MinimizePadding
+struct empty {}
 
 enum test_enum {
   foo = 0,
@@ -42,6 +44,7 @@ enum short_enum {
 enum unsigned_int_enum {
 }
 
+@cpp.MinimizePadding
 struct nonoptimal {
   1: required i16 a;
   2: required bool b;
@@ -63,7 +66,7 @@ struct nonoptimal {
   // containers' alignment is 8) and reducing the room for reordering error.
   16: required byte p;
   17: required i32 q;
-} (cpp.minimize_padding)
+}
 
 struct small_align {
   1: required byte a;
@@ -75,11 +78,12 @@ struct big_align {
   2: required i32 b;
 }
 
+@cpp.MinimizePadding
 struct nonoptimal_struct {
   1: required byte small;
   2: required big_align big;
   3: required small_align medium;
-} (cpp.minimize_padding)
+}
 
 @cpp.MinimizePadding
 struct nonoptimal_struct_with_structured_annotation {
@@ -96,35 +100,41 @@ struct nonoptimal_struct_with_custom_type {
   3: required small_align medium;
 }
 
+@cpp.MinimizePadding
 struct same_sizes {
   1: required i32 a;
   2: required i32 b;
   3: required i32 c;
   4: required i32 d;
-} (cpp.minimize_padding)
+}
 
+@cpp.MinimizePadding
 struct ref_type {
   1: required byte a;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   2: required byte b;
   3: required byte c;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   4: required byte d;
-} (cpp.minimize_padding)
+}
 
+@cpp.MinimizePadding
 struct nonoptimal_struct_noexcept_move {
   1: required byte small;
   2: required big_align big;
   3: required small_align medium;
-} (cpp.minimize_padding)
+}
 
+@cpp.MinimizePadding
 struct nonoptimal_large_struct_noexcept_move {
   1: required byte small;
   2: required big_align big;
   3: required small_align medium;
   4: required string mystring;
   5: required i32 a;
-} (cpp.minimize_padding)
+}
 
 @thrift.Experimental
 @thrift.TerseWrite

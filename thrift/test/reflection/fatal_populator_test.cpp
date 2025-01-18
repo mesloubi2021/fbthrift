@@ -18,7 +18,6 @@
 
 #include <thrift/lib/cpp2/reflection/internal/test_helpers.h>
 #include <thrift/lib/cpp2/reflection/populator.h>
-#include <thrift/lib/cpp2/reflection/serializer.h>
 #include <thrift/test/reflection/fatal_serialization_common.h>
 #include <thrift/test/reflection/gen-cpp2/simple_reflection_fatal_types.h>
 #include <thrift/test/reflection/gen-cpp2/simple_reflection_types.h>
@@ -40,10 +39,10 @@ TYPED_TEST(MultiProtocolTest, test_structs_populate) {
   for (int i = 0; i < 100; i++) {
     struct7 a, b;
     populator::populate(a, opts, rng);
-    serializer_write(a, this->writer);
+    a.write(&this->writer);
     this->prep_read();
     this->debug_buffer();
-    serializer_read(b, this->reader);
+    b.read(&this->reader);
 
     ASSERT_EQ(*a.field1(), *b.field1());
     ASSERT_EQ(*a.field2(), *b.field2());
@@ -70,7 +69,8 @@ TYPED_TEST(MultiProtocolTest, test_structs_populate) {
     }
     ASSERT_EQ(*(a.field14_ref()), *(b.field14_ref()));
     ASSERT_EQ(*(a.field15_ref()), *(b.field15_ref()));
-    ASSERT_EQ(a.field16_ref(), b.field16_ref());
+    ASSERT_EQ(*a.field16_ref(), *b.field16_ref());
+    ASSERT_EQ(*a.field17_ref(), *b.field17_ref());
   }
 }
 
@@ -81,10 +81,10 @@ TYPED_TEST(MultiProtocolTest, test_unions_populate) {
   for (int i = 0; i < 100; i++) {
     union1 a, b;
     populator::populate(a, opts, rng);
-    serializer_write(a, this->writer);
+    a.write(&this->writer);
     this->prep_read();
     this->debug_buffer();
-    serializer_read(b, this->reader);
+    b.read(&this->reader);
 
     ASSERT_EQ(a, b);
   }

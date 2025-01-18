@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%><% > Autogen%>
+}}
+{{> Autogen}}
 #pragma once
 
-<%#program%>
-#include "<%program:include_prefix%><%program:name%>_handlers.h"
-<%/program%>
+{{#program}}
+#include "{{program:include_prefix}}{{program:name}}_handlers.h"
+{{/program}}
 
 #include <thrift/lib/cpp2/gen/service_tcc.h>
 
-<%#services%>
-<% > service_cpp/service_inl%>
+{{#services}}
+{{> service_cpp/service_inl}}
 
 
-<%/services%>
+{{/services}}

@@ -21,15 +21,20 @@
 #include <stdexcept>
 
 #include <folly/ExceptionString.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Sleep.h>
 #include <thrift/conformance/RpcStructComparator.h>
 #include <thrift/conformance/Utils.h>
 #include <thrift/conformance/if/gen-cpp2/rpc_types.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 namespace apache::thrift::conformance {
+template <typename ClientType>
+using RPCRequestParam = std::conditional_t<
+    std::is_same_v<ClientType, apache::thrift::Client<RPCConformanceService>>,
+    Request,
+    ServerInstruction>;
 
 testing::AssertionResult runRoundTripTest(
     Client<ConformanceService>& client, const RoundTripTestCase& roundTrip) {
@@ -126,91 +131,59 @@ RequestResponseBasicClientTestResult runRequestResponseBasic(
 }
 
 ServerTestResult runRequestResponseBasic(
-    Client<BasicRPCConformanceService>& client,
+    Client<RPCStatelessConformanceService>& client,
     const RequestResponseBasicClientInstruction& instruction) {
   ServerTestResult result;
   client.sync_requestResponseBasic(result, *instruction.request());
   return result;
 }
 
+template <typename ClientType>
 RequestResponseDeclaredExceptionClientTestResult
 runRequestResponseDeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const RequestResponseDeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   RequestResponseDeclaredExceptionClientTestResult result;
   try {
-    client.sync_requestResponseDeclaredException(*instruction.request());
+    client.sync_requestResponseDeclaredException(request);
   } catch (const UserException& ue) {
     result.userException() = ue;
   }
   return result;
 }
 
-RequestResponseDeclaredExceptionClientTestResult
-runRequestResponseDeclaredException(
-    BasicRPCConformanceServiceAsyncClient& client,
-    const ServerInstruction& serverInstruction) {
-  RequestResponseDeclaredExceptionClientTestResult result;
-  try {
-    client.sync_requestResponseDeclaredException(serverInstruction);
-  } catch (const UserException& ue) {
-    result.userException() = ue;
-  }
-  return result;
-}
-
+template <typename ClientType>
 RequestResponseUndeclaredExceptionClientTestResult
 runRequestResponseUndeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const RequestResponseUndeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   RequestResponseUndeclaredExceptionClientTestResult result;
   try {
-    client.sync_requestResponseUndeclaredException(*instruction.request());
+    client.sync_requestResponseUndeclaredException(request);
   } catch (const TApplicationException& e) {
     result.exceptionMessage() = e.getMessage();
   }
   return result;
 }
-
-RequestResponseUndeclaredExceptionClientTestResult
-runRequestResponseUndeclaredException(
-    BasicRPCConformanceServiceAsyncClient& client,
-    const ServerInstruction& serverInstruction) {
-  RequestResponseUndeclaredExceptionClientTestResult result;
-  try {
-    client.sync_requestResponseUndeclaredException(serverInstruction);
-  } catch (const TApplicationException& e) {
-    result.exceptionMessage() = e.getMessage();
-  }
-  return result;
-}
-
+template <typename ClientType>
 RequestResponseNoArgVoidResponseClientTestResult
-runRequestResponseNoArgVoidResponse(RPCConformanceServiceAsyncClient& client) {
-  RequestResponseNoArgVoidResponseClientTestResult result;
-  client.sync_requestResponseNoArgVoidResponse();
-  return result;
-}
-
-RequestResponseNoArgVoidResponseClientTestResult
-runRequestResponseNoArgVoidResponse(
-    BasicRPCConformanceServiceAsyncClient& client) {
+runRequestResponseNoArgVoidResponse(ClientType& client) {
   RequestResponseNoArgVoidResponseClientTestResult result;
   client.sync_requestResponseNoArgVoidResponse();
   return result;
 }
 
 // =================== Stream ===================
+
+template <typename ClientType>
 StreamBasicClientTestResult runStreamBasic(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamBasicClientInstruction& instruction) {
+    ClientType& client,
+    const StreamBasicClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
   apache::thrift::RpcOptions rpcOptions{};
   rpcOptions.setChunkBufferSize(*instruction.bufferSize());
   return folly::coro::blockingWait(
       [&]() -> folly::coro::Task<StreamBasicClientTestResult> {
-        auto gen =
-            (co_await client.co_streamBasic(rpcOptions, *instruction.request()))
-                .toAsyncGenerator();
+        auto gen = (co_await client.co_streamBasic(rpcOptions, request))
+                       .toAsyncGenerator();
         StreamBasicClientTestResult result;
         while (auto val = co_await gen.next()) {
           result.streamPayloads()->push_back(std::move(*val));
@@ -219,13 +192,12 @@ StreamBasicClientTestResult runStreamBasic(
       }());
 }
 
+template <typename ClientType>
 StreamInitialResponseClientTestResult runStreamInitialResponse(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamInitialResponseClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   StreamInitialResponseClientTestResult testResult;
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
-    auto result =
-        co_await client.co_streamInitialResponse(*instruction.request());
+    auto result = co_await client.co_streamInitialResponse(request);
     testResult.initialResponse() = std::move(result.response);
     auto gen = std::move(result.stream).toAsyncGenerator();
     while (auto val = co_await gen.next()) {
@@ -235,14 +207,13 @@ StreamInitialResponseClientTestResult runStreamInitialResponse(
   return testResult;
 }
 
+template <typename ClientType>
 StreamDeclaredExceptionClientTestResult runStreamDeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamDeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   StreamDeclaredExceptionClientTestResult testResult;
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
-    auto gen =
-        (co_await client.co_streamDeclaredException(*instruction.request()))
-            .toAsyncGenerator();
+    auto gen = (co_await client.co_streamDeclaredException(request))
+                   .toAsyncGenerator();
     try {
       co_await gen.next();
     } catch (const UserException& e) {
@@ -252,14 +223,13 @@ StreamDeclaredExceptionClientTestResult runStreamDeclaredException(
   return testResult;
 }
 
+template <typename ClientType>
 StreamUndeclaredExceptionClientTestResult runStreamUndeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamUndeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   StreamUndeclaredExceptionClientTestResult testResult;
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
-    auto gen =
-        (co_await client.co_streamUndeclaredException(*instruction.request()))
-            .toAsyncGenerator();
+    auto gen = (co_await client.co_streamUndeclaredException(request))
+                   .toAsyncGenerator();
     try {
       co_await gen.next();
     } catch (const TApplicationException& e) {
@@ -269,14 +239,14 @@ StreamUndeclaredExceptionClientTestResult runStreamUndeclaredException(
   return testResult;
 }
 
+template <typename ClientType>
 StreamInitialDeclaredExceptionClientTestResult
 runStreamInitialDeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamInitialDeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   StreamInitialDeclaredExceptionClientTestResult testResult;
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
     try {
-      co_await client.co_streamInitialDeclaredException(*instruction.request());
+      co_await client.co_streamInitialDeclaredException(request);
     } catch (const UserException& e) {
       testResult.userException() = e;
     }
@@ -284,15 +254,14 @@ runStreamInitialDeclaredException(
   return testResult;
 }
 
+template <typename ClientType>
 StreamInitialUndeclaredExceptionClientTestResult
 runStreamInitialUndeclaredException(
-    RPCConformanceServiceAsyncClient& client,
-    const StreamInitialUndeclaredExceptionClientInstruction& instruction) {
+    ClientType& client, const RPCRequestParam<ClientType>& request) {
   StreamInitialUndeclaredExceptionClientTestResult testResult;
   folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
     try {
-      co_await client.co_streamInitialUndeclaredException(
-          *instruction.request());
+      co_await client.co_streamInitialUndeclaredException(request);
     } catch (const TApplicationException& e) {
       testResult.exceptionMessage() = e.getMessage();
     }
@@ -301,12 +270,14 @@ runStreamInitialUndeclaredException(
 }
 
 // =================== Sink ===================
+template <typename ClientType>
 SinkBasicClientTestResult runSinkBasic(
-    RPCConformanceServiceAsyncClient& client,
-    const SinkBasicClientInstruction& instruction) {
+    ClientType& client,
+    const SinkBasicClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
   return folly::coro::blockingWait(
       [&]() -> folly::coro::Task<SinkBasicClientTestResult> {
-        auto sink = co_await client.co_sinkBasic(*instruction.request());
+        auto sink = co_await client.co_sinkBasic(request);
         auto finalResponse =
             co_await sink.sink([&]() -> folly::coro::AsyncGenerator<Request&&> {
               for (auto payload : *instruction.sinkPayloads()) {
@@ -319,13 +290,15 @@ SinkBasicClientTestResult runSinkBasic(
       }());
 }
 
+template <typename ClientType>
 SinkChunkTimeoutClientTestResult runSinkChunkTimeout(
-    RPCConformanceServiceAsyncClient& client,
-    const SinkChunkTimeoutClientInstruction& instruction) {
+    ClientType& client,
+    const SinkChunkTimeoutClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
   SinkChunkTimeoutClientTestResult result;
   try {
     folly::coro::blockingWait([&]() -> folly::coro::Task<void> {
-      auto sink = co_await client.co_sinkChunkTimeout(*instruction.request());
+      auto sink = co_await client.co_sinkChunkTimeout(request);
       auto finalResponse =
           co_await sink.sink([&]() -> folly::coro::AsyncGenerator<Request&&> {
             for (auto payload : *instruction.sinkPayloads()) {
@@ -342,6 +315,65 @@ SinkChunkTimeoutClientTestResult runSinkChunkTimeout(
     }
   }
   return result;
+}
+
+template <typename ClientType>
+SinkInitialResponseClientTestResult runSinkInitialResponse(
+    ClientType& client,
+    const SinkInitialResponseClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
+  return folly::coro::blockingWait(
+      [&]() -> folly::coro::Task<SinkInitialResponseClientTestResult> {
+        SinkInitialResponseClientTestResult result;
+        auto sinkAndResponse = co_await client.co_sinkInitialResponse(request);
+        result.initialResponse() = sinkAndResponse.response;
+        auto finalResponse = co_await sinkAndResponse.sink.sink(
+            [&]() -> folly::coro::AsyncGenerator<Request&&> {
+              for (auto payload : *instruction.sinkPayloads()) {
+                co_yield std::move(payload);
+              }
+            }());
+        result.finalResponse() = std::move(finalResponse);
+        co_return result;
+      }());
+}
+
+template <typename ClientType>
+SinkDeclaredExceptionClientTestResult runSinkDeclaredException(
+    ClientType& client,
+    const SinkDeclaredExceptionClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
+  return folly::coro::blockingWait(
+      [&]() -> folly::coro::Task<SinkDeclaredExceptionClientTestResult> {
+        auto sink = co_await client.co_sinkDeclaredException(request);
+        auto finalResponse = co_await folly::coro::co_awaitTry(
+            sink.sink([&]() -> folly::coro::AsyncGenerator<Request&&> {
+              throw *instruction.userException();
+              co_return;
+            }()));
+        SinkDeclaredExceptionClientTestResult result;
+        result.sinkThrew() = finalResponse.template hasException<SinkThrew>();
+        co_return result;
+      }());
+}
+
+template <typename ClientType>
+SinkUndeclaredExceptionClientTestResult runSinkUndeclaredException(
+    ClientType& client,
+    const SinkUndeclaredExceptionClientInstruction& instruction,
+    const RPCRequestParam<ClientType>& request) {
+  return folly::coro::blockingWait(
+      [&]() -> folly::coro::Task<SinkUndeclaredExceptionClientTestResult> {
+        auto sink = co_await client.co_sinkUndeclaredException(request);
+        auto finalResponse = co_await folly::coro::co_awaitTry(
+            sink.sink([&]() -> folly::coro::AsyncGenerator<Request&&> {
+              throw std::runtime_error(*instruction.exceptionMessage());
+              co_return;
+            }()));
+        SinkUndeclaredExceptionClientTestResult result;
+        result.sinkThrew() = finalResponse.template hasException<SinkThrew>();
+        co_return result;
+      }());
 }
 
 // =================== Interactions ===================
@@ -417,53 +449,88 @@ ClientTestResult runClientSteps(
       result.requestResponseDeclaredException_ref() =
           runRequestResponseDeclaredException(
               client,
-              *clientInstruction.requestResponseDeclaredException_ref());
+              *clientInstruction.requestResponseDeclaredException_ref()
+                   ->request());
       break;
     case ClientInstruction::Type::requestResponseUndeclaredException:
       result.requestResponseUndeclaredException_ref() =
           runRequestResponseUndeclaredException(
               client,
-              *clientInstruction.requestResponseUndeclaredException_ref());
+              *clientInstruction.requestResponseUndeclaredException_ref()
+                   ->request());
       break;
     case ClientInstruction::Type::requestResponseNoArgVoidResponse:
       result.requestResponseNoArgVoidResponse_ref() =
           runRequestResponseNoArgVoidResponse(client);
       break;
-    case ClientInstruction::Type::streamBasic:
+    case ClientInstruction::Type::streamBasic: {
+      auto instruction = *clientInstruction.streamBasic_ref();
       result.streamBasic_ref() =
-          runStreamBasic(client, *clientInstruction.streamBasic_ref());
+          runStreamBasic(client, instruction, *instruction.request());
       break;
-    case ClientInstruction::Type::streamInitialResponse:
-      result.streamInitialResponse_ref() = runStreamInitialResponse(
-          client, *clientInstruction.streamInitialResponse_ref());
+    }
+    case ClientInstruction::Type::streamInitialResponse: {
+      auto instruction = *clientInstruction.streamInitialResponse_ref();
+      result.streamInitialResponse_ref() =
+          runStreamInitialResponse(client, *instruction.request());
       break;
-    case ClientInstruction::Type::streamDeclaredException:
-      result.streamDeclaredException_ref() = runStreamDeclaredException(
-          client, *clientInstruction.streamDeclaredException_ref());
+    }
+    case ClientInstruction::Type::streamDeclaredException: {
+      auto instruction = *clientInstruction.streamDeclaredException_ref();
+      result.streamDeclaredException_ref() =
+          runStreamDeclaredException(client, *instruction.request());
       break;
-    case ClientInstruction::Type::streamUndeclaredException:
-      result.streamUndeclaredException_ref() = runStreamUndeclaredException(
-          client, *clientInstruction.streamUndeclaredException_ref());
+    }
+    case ClientInstruction::Type::streamUndeclaredException: {
+      auto instruction = *clientInstruction.streamUndeclaredException_ref();
+      result.streamUndeclaredException_ref() =
+          runStreamUndeclaredException(client, *instruction.request());
       break;
-    case ClientInstruction::Type::streamInitialDeclaredException:
+    }
+    case ClientInstruction::Type::streamInitialDeclaredException: {
+      auto instruction =
+          *clientInstruction.streamInitialDeclaredException_ref();
       result.streamInitialDeclaredException_ref() =
-          runStreamInitialDeclaredException(
-              client, *clientInstruction.streamInitialDeclaredException_ref());
+          runStreamInitialDeclaredException(client, *instruction.request());
       break;
-    case ClientInstruction::Type::streamInitialUndeclaredException:
+    }
+    case ClientInstruction::Type::streamInitialUndeclaredException: {
+      auto instruction =
+          *clientInstruction.streamInitialUndeclaredException_ref();
       result.streamInitialUndeclaredException_ref() =
-          runStreamInitialUndeclaredException(
-              client,
-              *clientInstruction.streamInitialUndeclaredException_ref());
+          runStreamInitialUndeclaredException(client, *instruction.request());
       break;
-    case ClientInstruction::Type::sinkBasic:
+    }
+    case ClientInstruction::Type::sinkBasic: {
+      auto instruction = *clientInstruction.sinkBasic_ref();
       result.sinkBasic_ref() =
-          runSinkBasic(client, *clientInstruction.sinkBasic_ref());
+          runSinkBasic(client, instruction, *instruction.request());
       break;
-    case ClientInstruction::Type::sinkChunkTimeout:
-      result.sinkChunkTimeout_ref() = runSinkChunkTimeout(
-          client, *clientInstruction.sinkChunkTimeout_ref());
+    }
+    case ClientInstruction::Type::sinkChunkTimeout: {
+      auto instruction = *clientInstruction.sinkChunkTimeout_ref();
+      result.sinkChunkTimeout_ref() =
+          runSinkChunkTimeout(client, instruction, *instruction.request());
       break;
+    }
+    case ClientInstruction::Type::sinkInitialResponse: {
+      auto instruction = *clientInstruction.sinkInitialResponse_ref();
+      result.sinkInitialResponse_ref() =
+          runSinkInitialResponse(client, instruction, *instruction.request());
+      break;
+    }
+    case ClientInstruction::Type::sinkDeclaredException: {
+      auto instruction = *clientInstruction.sinkDeclaredException_ref();
+      result.sinkDeclaredException_ref() =
+          runSinkDeclaredException(client, instruction, *instruction.request());
+      break;
+    }
+    case ClientInstruction::Type::sinkUndeclaredException: {
+      auto instruction = *clientInstruction.sinkUndeclaredException_ref();
+      result.sinkUndeclaredException_ref() = runSinkUndeclaredException(
+          client, instruction, *instruction.request());
+      break;
+    }
     case ClientInstruction::Type::interactionConstructor:
       result.interactionConstructor_ref() = runInteractionConstructor(
           client, *clientInstruction.interactionConstructor_ref());
@@ -518,7 +585,7 @@ testing::AssertionResult runRpcTest(
         << "\nFailed to receive RPC server result: " << e.what();
   }
 
-  if (actualServerResult != *rpc.serverTestResult()) {
+  if (!equal(actualServerResult, *rpc.serverTestResult())) {
     return testing::AssertionFailure()
         << "\nExpected server result: " << jsonify(*rpc.serverTestResult())
         << "\nActual server result: " << jsonify(actualServerResult);
@@ -526,8 +593,8 @@ testing::AssertionResult runRpcTest(
   return testing::AssertionSuccess();
 }
 
-testing::AssertionResult runBasicRpcTest(
-    Client<BasicRPCConformanceService>& client, const RpcTestCase& rpc) {
+testing::AssertionResult runStatelessRpcTest(
+    Client<RPCStatelessConformanceService>& client, const RpcTestCase& rpc) {
   ClientTestResult result;
   ServerTestResult actualServerTestResult;
   const auto& clientInstruction = *rpc.clientInstruction();
@@ -556,6 +623,80 @@ testing::AssertionResult runBasicRpcTest(
         result.requestResponseNoArgVoidResponse_ref() =
             runRequestResponseNoArgVoidResponse(client);
         break;
+      case ClientInstruction::Type::streamBasic: {
+        auto instruction = *clientInstruction.streamBasic_ref();
+        result.streamBasic_ref() =
+            runStreamBasic(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::streamInitialResponse: {
+        auto instruction = *clientInstruction.streamInitialResponse_ref();
+        result.streamInitialResponse_ref() =
+            runStreamInitialResponse(client, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::streamDeclaredException: {
+        auto instruction = *clientInstruction.streamDeclaredException_ref();
+        result.streamDeclaredException_ref() =
+            runStreamDeclaredException(client, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::streamUndeclaredException: {
+        auto instruction = *clientInstruction.streamUndeclaredException_ref();
+        result.streamUndeclaredException_ref() =
+            runStreamUndeclaredException(client, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::streamInitialDeclaredException: {
+        auto instruction =
+            *clientInstruction.streamInitialDeclaredException_ref();
+        result.streamInitialDeclaredException_ref() =
+            runStreamInitialDeclaredException(client, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::streamInitialUndeclaredException: {
+        auto instruction =
+            *clientInstruction.streamInitialUndeclaredException_ref();
+        result.streamInitialUndeclaredException_ref() =
+            runStreamInitialUndeclaredException(client, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::sinkBasic: {
+        auto instruction = *clientInstruction.sinkBasic_ref();
+        result.sinkBasic_ref() =
+            runSinkBasic(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::sinkChunkTimeout: {
+        auto instruction = *clientInstruction.sinkChunkTimeout_ref();
+        result.sinkChunkTimeout_ref() =
+            runSinkChunkTimeout(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::sinkInitialResponse: {
+        auto instruction = *clientInstruction.sinkInitialResponse_ref();
+        result.sinkInitialResponse_ref() =
+            runSinkInitialResponse(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::sinkDeclaredException: {
+        auto instruction = *clientInstruction.sinkDeclaredException_ref();
+        result.sinkDeclaredException_ref() =
+            runSinkDeclaredException(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::sinkUndeclaredException: {
+        auto instruction = *clientInstruction.sinkUndeclaredException_ref();
+        result.sinkUndeclaredException_ref() =
+            runSinkUndeclaredException(client, instruction, serverInstruction);
+        break;
+      }
+      case ClientInstruction::Type::interactionConstructor:
+      case ClientInstruction::Type::interactionFactoryFunction:
+      case ClientInstruction::Type::interactionPersistsState:
+      case ClientInstruction::Type::interactionTermination:
+        return testing::AssertionFailure()
+            << "Interaction Tests are not supported in Stateless RPC";
       default:
         throw std::runtime_error("Invalid TestCase Type.");
     }
@@ -565,8 +706,8 @@ testing::AssertionResult runBasicRpcTest(
     }
     return testing::AssertionSuccess();
 
-  } catch (...) {
-    return testing::AssertionFailure();
+  } catch (const std::exception& e) {
+    return testing::AssertionFailure() << "\nUnexpected Error : " << e.what();
   }
 }
 

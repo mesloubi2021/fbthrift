@@ -62,6 +62,7 @@ struct TestHeaderClientChannelFactory {
   apache::thrift::ClientChannel::Ptr create(
       folly::AsyncTransport::UniquePtr socket) {
     auto channel = apache::thrift::HeaderClientChannel::newChannel(
+        HeaderClientChannel::WithoutRocketUpgrade{},
         std::move(socket),
         apache::thrift::HeaderClientChannel::Options().setProtocolId(
             protocol_));
@@ -169,7 +170,7 @@ class SharedServerTests
   std::unique_ptr<TestServerFactory> serverFactory{nullptr};
   std::shared_ptr<TestHeaderClientChannelFactory> channelFactory{nullptr};
 
-  std::shared_ptr<BaseThriftServer> server{nullptr};
+  std::shared_ptr<ThriftServer> server{nullptr};
   std::unique_ptr<ScopedServerThread> sst{nullptr};
 
   folly::AsyncTransport::UniquePtr socket{nullptr};
@@ -349,9 +350,9 @@ class FiberExecutor : public folly::Executor {
 } // namespace
 
 TEST_P(SharedServerTests, FiberExecutorTest) {
-  serverFactory->setServerSetupFunction([](BaseThriftServer& server) {
+  serverFactory->setServerSetupFunction([](ThriftServer& server) {
     server.setThreadManagerType(
-        apache::thrift::BaseThriftServer::ThreadManagerType::EXECUTOR_ADAPTER);
+        apache::thrift::ThriftServer::ThreadManagerType::EXECUTOR_ADAPTER);
     server.setThreadManagerExecutor(std::make_shared<FiberExecutor>());
   });
 

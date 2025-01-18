@@ -15,8 +15,8 @@
  */
 
 #include <folly/Benchmark.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/DetachOnCancel.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/DetachOnCancel.h>
 #include <folly/init/Init.h>
 #include <folly/synchronization/Baton.h>
 #include <thrift/lib/cpp2/async/RequestCallback.h>
@@ -67,7 +67,7 @@ class DummyChannel : public apache::thrift::RequestChannel {
         SerializedResponse(staticState.serializedResponse().buffer->clone()),
         nullptr,
         nullptr,
-        RpcSizeStats()));
+        RpcTransportStats()));
   }
   void sendRequestNoResponse(
       const RpcOptions&,

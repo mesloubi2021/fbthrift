@@ -34,6 +34,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::SerializedSize&lt; ZeroCopy, type::double_t &gt;::operator()",
       "argsstring_html": "(Protocol &amp;prot, double i) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::SerializedSize&lt; ZeroCopy, type::double_t &gt;::operator()",
       "param": [
         {
           "type_html": "Protocol &amp;",
@@ -46,11 +47,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "182",
-        "column": "1",
+        "line": "205",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "182",
-        "bodyend": "184"
+        "bodystart": "205",
+        "bodyend": "207"
       },
       "definition": {
         "simple_html": "template &lt;typename Protocol&gt;\nuint32_t operator()(Protocol&amp; prot, double i) const",
@@ -66,11 +67,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "line": "180",
+    "line": "203",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "bodystart": "180",
-    "bodyend": "185"
+    "bodystart": "203",
+    "bodyend": "208"
   },
   "namespacednames_html": [
     "apache",
@@ -87,7 +88,6 @@
   "declaration_html": "template &lt; bool ZeroCopy &gt;\nstruct SerializedSize&lt; ZeroCopy, type::double_t &gt;;",
   "filepath": "struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4",
   "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4",
-  "specializes": "structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize",
   "overloadgroups": [
     {
       "groupname_html": "",
@@ -114,6 +114,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::SerializedSize&lt; ZeroCopy, type::double_t &gt;::operator()",
               "argsstring_html": "(Protocol &amp;prot, double i) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::SerializedSize&lt; ZeroCopy, type::double_t &gt;::operator()",
               "param": [
                 {
                   "type_html": "Protocol &amp;",
@@ -126,11 +127,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "line": "182",
-                "column": "1",
+                "line": "205",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "bodystart": "182",
-                "bodyend": "184"
+                "bodystart": "205",
+                "bodyend": "207"
               },
               "definition": {
                 "simple_html": "template &lt;typename Protocol&gt;\nuint32_t operator()(Protocol&amp; prot, double i) const",
@@ -152,7 +153,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4/operator.call",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4/operator.call"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4/operator.call",
+          "parent_links": [
+            {
+              "text_html": "SerializedSize&lt; ZeroCopy, type::double_t &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1SerializedSize_3_01ZeroCopy_00_01type_1_1double__t_01_4"
+            }
+          ]
         }
       ]
     }

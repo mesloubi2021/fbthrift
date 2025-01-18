@@ -29,14 +29,13 @@
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 #include <thrift/lib/cpp2/protocol/SimpleJSONProtocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 template <typename Reader, typename Writer>
 struct Serializer {
  private:
   template <typename T>
-  using is_thrift_class = folly::bool_constant<is_thrift_class_v<T>>;
+  using is_thrift_class = std::bool_constant<is_thrift_class_v<T>>;
 
   template <typename T>
   static void warn_unless(folly::tag_t<T>, const char* which, std::false_type) {
@@ -316,7 +315,7 @@ std::unique_ptr<folly::IOBuf> serializeError(
   return nullptr;
 }
 
-// For places where we can't currently invoke the templated version directly,
+//  For places where we can't currently invoke the templated version directly,
 inline std::unique_ptr<folly::IOBuf> serializeErrorWithEnvelope(
     int protId,
     const TApplicationException& obj,
@@ -337,6 +336,6 @@ inline std::unique_ptr<folly::IOBuf> serializeErrorWithoutEnvelope(
 std::unique_ptr<folly::IOBuf> serializeErrorStruct(
     protocol::PROTOCOL_TYPES protId, const TApplicationException& obj);
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
+
 #endif

@@ -15,10 +15,11 @@
       "definition_html": "virtual std::string apache::thrift::TProcessorEventHandler::getName",
       "argsstring_html": "() const",
       "name_html": "getName",
+      "qualifiedname_html": "apache::thrift::TProcessorEventHandler::getName",
       "location": {
         "file": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
         "line": "47",
-        "column": "1",
+        "column": "23",
         "bodyfile": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
         "bodystart": "47",
         "bodyend": "49"
@@ -46,5 +47,11 @@
   "brief_html": "<p>Returns the name of the <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/TProcessorEventHandler\">TProcessorEventHandler</a> implementation </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/getName",
-  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/getName"
+  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/getName",
+  "parent_links": [
+    {
+      "text_html": "TProcessorEventHandlerNoUserExnCallbacks",
+      "href": "/ref/cpp/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks"
+    }
+  ]
 }

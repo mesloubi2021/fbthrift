@@ -16,6 +16,7 @@
 
 #include <folly/portability/GTest.h>
 
+#include <thrift/lib/cpp2/protocol/Object.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <thrift/test/gen-cpp2/ProtocolTruncatedData_types.h>
 
@@ -23,11 +24,14 @@ using namespace apache::thrift;
 using namespace thrift::test;
 
 template <class Serializer, class T>
-void testPartialDataHandling(const T& val, size_t bytesToPassTheCheck) {
+void testPartialDataHandling(
+    const T& val, size_t bytesToPassTheCheck, bool isStringOrBinary = false) {
   auto buf = Serializer::template serialize<folly::IOBufQueue>(val).move();
   buf->coalesce();
 
   // Check that deserializing doesn't throw.
+  EXPECT_NO_THROW(
+      protocol::parseObject<typename Serializer::ProtocolReader>(*buf));
   EXPECT_NO_THROW(Serializer::template deserialize<T>(buf.get()));
 
   // Trim the buffer to the point that is *just enough* to pass the check for
@@ -35,18 +39,42 @@ void testPartialDataHandling(const T& val, size_t bytesToPassTheCheck) {
   buf->trimEnd(buf->length() - bytesToPassTheCheck);
   // We'll hit underflow exception when pulling yet another element.
   EXPECT_THROW(
+      protocol::parseObject<typename Serializer::ProtocolReader>(*buf),
+      std::out_of_range);
+  EXPECT_THROW(
       Serializer::template deserialize<T>(buf.get()), std::out_of_range);
 
   // Trim one more byte.
   buf->trimEnd(1);
   // We'll fail the deserialization straight when we read the length.
+
+  // We don't check remaining bytes in buffer for binary type during
+  // deserialization for both Compact and Binary Protocol. Since `parseObject`
+  // always treat string fields as binary type by default, there is no check.
+  // TODO(dokwon): Consider checking remaining bytes in buffer for binary type
+  // during dersialization for both Compact and Binary Protocol instead of
+  // throwing std::out_of_range.
+  if (isStringOrBinary) {
+    EXPECT_THROW(
+        protocol::parseObject<typename Serializer::ProtocolReader>(*buf),
+        std::out_of_range);
+  } else {
+    EXPECT_THROW(
+        protocol::parseObject<typename Serializer::ProtocolReader>(*buf),
+        protocol::TProtocolException);
+  }
   EXPECT_THROW(
       Serializer::template deserialize<T>(buf.get()),
-      apache::thrift::protocol::TProtocolException);
+      protocol::TProtocolException);
 }
 
-TEST(ProtocolTruncatedDataTest, TruncatedList) {
-  TestStruct s;
+template <class Adapter>
+struct ProtocolTruncatedDataTest : ::testing::Test {};
+using ProtocolTruncatedDataTestTypes =
+    ::testing::Types<TestStruct, OpEncodeTestStruct>;
+TYPED_TEST_CASE(ProtocolTruncatedDataTest, ProtocolTruncatedDataTestTypes);
+TYPED_TEST(ProtocolTruncatedDataTest, TruncatedList) {
+  TypeParam s;
   s.i64_list() = {};
   for (size_t i = 0; i < 30; ++i) {
     s.i64_list()->emplace_back((1ull << i));
@@ -56,8 +84,8 @@ TEST(ProtocolTruncatedDataTest, TruncatedList) {
       s, 3 /* headers */ + 30 /* 1b / element */);
 }
 
-TEST(ProtocolTruncatedDataTest, TruncatedSet) {
-  TestStruct s;
+TYPED_TEST(ProtocolTruncatedDataTest, TruncatedSet) {
+  TypeParam s;
   s.i32_set() = {};
   for (size_t i = 0; i < 30; ++i) {
     s.i32_set()->emplace((1ull << i));
@@ -67,8 +95,8 @@ TEST(ProtocolTruncatedDataTest, TruncatedSet) {
       s, 3 /* headers */ + 30 /* 1b / element */);
 }
 
-TEST(ProtocolTruncatedDataTest, TruncatedMap) {
-  TestStruct s;
+TYPED_TEST(ProtocolTruncatedDataTest, TruncatedMap) {
+  TypeParam s;
   s.i32_i16_map() = {};
   for (size_t i = 0; i < 30; ++i) {
     s.i32_i16_map()->emplace((1ull << i), i);
@@ -78,18 +106,22 @@ TEST(ProtocolTruncatedDataTest, TruncatedMap) {
       s, 3 /* headers */ + 30 * 2 /* 2b / kv pair */);
 }
 
-TEST(ProtocolTruncatedDataTest, TuncatedString_Compact) {
-  TestStruct s;
+TYPED_TEST(ProtocolTruncatedDataTest, TuncatedString_Compact) {
+  TypeParam s;
   s.a_string() = "foobarbazstring";
 
   testPartialDataHandling<CompactSerializer>(
-      s, 2 /* field & length header */ + s.a_string()->size());
+      s,
+      2 /* field & length header */ + s.a_string()->size(),
+      true /* isStringOrBinary */);
 }
 
-TEST(ProtocolTruncatedDataTest, TuncatedString_Binary) {
-  TestStruct s;
+TYPED_TEST(ProtocolTruncatedDataTest, TuncatedString_Binary) {
+  TypeParam s;
   s.a_string() = "foobarbazstring";
 
   testPartialDataHandling<BinarySerializer>(
-      s, 7 /* field & length header */ + s.a_string()->size());
+      s,
+      7 /* field & length header */ + s.a_string()->size(),
+      true /* isStringOrBinary */);
 }

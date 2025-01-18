@@ -16,19 +16,19 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <iosfwd>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include <fmt/core.h>
 #include <thrift/compiler/source_location.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 // A diagnostic level.
 enum class diagnostic_level {
@@ -36,6 +36,61 @@ enum class diagnostic_level {
   warning,
   info,
   debug,
+};
+
+const char* level_to_string(diagnostic_level level);
+
+class fixit {
+ public:
+  /**
+   * @param original   - original text to be fixed
+   * @param replacement - replacement text to replace the original
+   * @param loc         - location of the fixit in the source code, if left
+   * blank will be populated with the location of the diagnostic
+   */
+  fixit(std::string original, std::string replacement, source_location loc = {})
+      : original_(std::move(original)),
+        replacement_(std::move(replacement)),
+        loc_(std::move(loc)) {}
+
+  fixit(std::string original, std::string replacement, int line, int column)
+      : original_(std::move(original)),
+        replacement_(std::move(replacement)),
+        line_(line),
+        column_(column) {}
+
+  const std::string& original() const { return original_; }
+  const std::string& replacement() const { return replacement_; }
+  int lineno() const { return line_; }
+  int column() const { return column_; }
+
+  // Resolve the location of the fixit in the source code, or use the provided
+  // diagonstic location
+  void resolve_location(
+      source_manager& sm, source_location diagnostic_location) {
+    source_location fixit_location =
+        loc_ != source_location() ? loc_ : diagnostic_location;
+    if (fixit_location != source_location()) {
+      auto resolved_loc = resolved_location(fixit_location, sm);
+      this->line_ = resolved_loc.line();
+      this->column_ = resolved_loc.column();
+    }
+  }
+
+ private:
+  std::string original_;
+  std::string replacement_;
+  int line_ = 0;
+  int column_ = 0;
+  source_location loc_;
+
+  // Comparing two fixit hints, not including the source_location since that
+  // is an optional param that ultimately just gets resolved into line and
+  // column
+  friend bool operator==(const fixit& lhs, const fixit& rhs) {
+    return std::tie(lhs.original_, lhs.replacement_, lhs.line_, lhs.column_) ==
+        std::tie(rhs.original_, rhs.replacement_, rhs.line_, rhs.column_);
+  }
 };
 
 /**
@@ -51,25 +106,31 @@ class diagnostic {
    * @param file       - file path location of diagnostic
    * @param line       - line location of diagnostic in the file, if known
    * @param name       - name given to this diagnostic, if any
+   * @param fixit      - an optional fix to apply to the source code
    */
   diagnostic(
       diagnostic_level level,
       std::string message,
       std::string file,
       int line = 0,
-      std::string name = "")
+      std::string name = "",
+      std::optional<fixit> fixit_hint = {})
       : level_(level),
         message_(std::move(message)),
         file_(std::move(file)),
         line_(line),
-        name_(std::move(name)) {}
+        name_(std::move(name)),
+        fixit_hint_(std::move(fixit_hint)) {}
 
   diagnostic_level level() const { return level_; }
   const std::string& message() const { return message_; }
   const std::string& file() const { return file_; }
   int lineno() const { return line_; }
   const std::string& name() const { return name_; }
+  const std::optional<fixit>& fixit_hint() const { return fixit_hint_; }
   std::string str() const;
+
+  void set_name(std::string&& name) { name_ = std::move(name); }
 
  private:
   diagnostic_level level_;
@@ -77,18 +138,28 @@ class diagnostic {
   std::string file_;
   int line_;
   std::string name_;
+  std::optional<fixit> fixit_hint_;
 
   friend bool operator==(const diagnostic& lhs, const diagnostic& rhs) {
-    return lhs.level_ == rhs.level_ && lhs.line_ == rhs.line_ &&
-        lhs.message_ == rhs.message_ && lhs.file_ == rhs.file_ &&
-        lhs.name_ == rhs.name_;
+    return std::tie(
+               lhs.level_,
+               lhs.line_,
+               lhs.message_,
+               lhs.file_,
+               lhs.name_,
+               lhs.fixit_hint_) ==
+        std::tie(
+               rhs.level_,
+               rhs.line_,
+               rhs.message_,
+               rhs.file_,
+               rhs.name_,
+               rhs.fixit_hint_);
   }
   friend bool operator!=(const diagnostic& lhs, const diagnostic& rhs) {
     return !(lhs == rhs);
   }
 };
-
-std::ostream& operator<<(std::ostream& os, const diagnostic& e);
 
 // A container of diagnostic results.
 class diagnostic_results {
@@ -111,12 +182,32 @@ class diagnostic_results {
     return counts_.at(static_cast<size_t>(level));
   }
 
+  template <typename F>
+  void retain_if(F&& f) {
+    diagnostics_.erase(
+        std::remove_if(
+            diagnostics_.begin(),
+            diagnostics_.end(),
+            [&](const diagnostic& diag) {
+              if (!f(diag)) {
+                decrement(diag.level());
+                return true;
+              }
+              return false;
+            }),
+        diagnostics_.end());
+  }
+
  private:
   std::vector<diagnostic> diagnostics_;
   std::array<int, static_cast<size_t>(diagnostic_level::debug) + 1> counts_{};
 
   void increment(diagnostic_level level) {
     ++counts_.at(static_cast<size_t>(level));
+  }
+
+  void decrement(diagnostic_level level) {
+    --counts_.at(static_cast<size_t>(level));
   }
 };
 
@@ -174,6 +265,11 @@ class diagnostics_engine {
             [&results](diagnostic diag) { results.add(std::move(diag)); },
             std::move(params)) {}
 
+  static diagnostics_engine ignore_all(source_manager& sm) {
+    return diagnostics_engine(
+        sm, [](const diagnostic&) {}, diagnostic_params::only_errors());
+  }
+
   diagnostic_params& params() { return params_; }
   const diagnostic_params& params() const { return params_; }
 
@@ -183,6 +279,9 @@ class diagnostics_engine {
   bool has_errors() const { return has_errors_; }
 
   void report(diagnostic diag) {
+    if (diag.level() == diagnostic_level::error) {
+      has_errors_ = true;
+    }
     if (params_.should_report(diag.level())) {
       report_cb_(std::move(diag));
     }
@@ -194,7 +293,28 @@ class diagnostics_engine {
       diagnostic_level level,
       fmt::format_string<T...> msg,
       T&&... args) {
-    do_report(loc.loc, {}, level, fmt::format(msg, std::forward<T>(args)...));
+    do_report(
+        loc.loc,
+        {}, /* name */
+        {}, /* fixit_hint */
+        level,
+        fmt::format(msg, std::forward<T>(args)...));
+  }
+
+  template <typename... T>
+  void report(
+      diagnostic_location loc,
+      std::string name,
+      std::optional<fixit> fixit_hint,
+      diagnostic_level level,
+      fmt::format_string<T...> msg,
+      T&&... args) {
+    do_report(
+        loc.loc,
+        std::move(name),
+        std::move(fixit_hint),
+        level,
+        fmt::format(msg, std::forward<T>(args)...));
   }
 
   template <typename... T>
@@ -207,6 +327,7 @@ class diagnostics_engine {
     do_report(
         loc.loc,
         std::move(name),
+        {}, /* fixit_hint */
         level,
         fmt::format(msg, std::forward<T>(args)...));
   }
@@ -248,6 +369,7 @@ class diagnostics_engine {
   void do_report(
       source_location loc,
       std::string name,
+      std::optional<fixit> fixit_hint,
       diagnostic_level level,
       std::string msg);
 
@@ -257,6 +379,13 @@ class diagnostics_engine {
   bool has_errors_ = false;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+std::ostream& operator<<(std::ostream& out, const diagnostic&);
+
+} // namespace apache::thrift::compiler
+
+template <>
+struct fmt::formatter<apache::thrift::compiler::diagnostic> {
+  constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+  format_context::iterator format(
+      const apache::thrift::compiler::diagnostic& d, format_context& ctx) const;
+};

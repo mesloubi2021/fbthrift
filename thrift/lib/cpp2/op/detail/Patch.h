@@ -20,47 +20,12 @@
 #include <type_traits>
 #include <utility>
 
+#include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/Adapt.h>
 #include <thrift/lib/cpp2/Adapter.h>
 #include <thrift/lib/cpp2/op/detail/BasePatch.h>
 #include <thrift/lib/cpp2/op/detail/ContainerPatch.h>
+#include <thrift/lib/cpp2/op/detail/PatchTraits.h>
 #include <thrift/lib/cpp2/op/detail/StructPatch.h>
 #include <thrift/lib/cpp2/op/detail/ValuePatch.h>
-
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
-
-// Adapter for all base types.
-template <typename T>
-using AssignPatchAdapter = InlineAdapter<AssignPatch<T>>;
-template <typename T>
-using BoolPatchAdapter = InlineAdapter<BoolPatch<T>>;
-template <typename T>
-using NumberPatchAdapter = InlineAdapter<NumberPatch<T>>;
-template <typename T>
-using StringPatchAdapter = InlineAdapter<StringPatch<T>>;
-template <typename T>
-using BinaryPatchAdapter = InlineAdapter<BinaryPatch<T>>;
-
-// Adapters for structred types.
-template <typename T>
-using FieldPatchAdapter = InlineAdapter<FieldPatch<T>>;
-template <typename T>
-using StructPatchAdapter = InlineAdapter<StructPatch<T>>;
-template <typename T>
-using UnionPatchAdapter = InlineAdapter<UnionPatch<T>>;
-
-// Adapters for containers.
-template <typename T>
-using ListPatchAdapter = InlineAdapter<ListPatch<T>>;
-template <typename T>
-using SetPatchAdapter = InlineAdapter<SetPatch<T>>;
-template <typename T>
-using MapPatchAdapter = InlineAdapter<MapPatch<T>>;
-
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+#include <thrift/lib/thrift/gen-cpp2/patch_op_types.h>

@@ -16,12 +16,7 @@ from libcpp.string cimport string
 from libcpp.memory cimport shared_ptr
 from libc.stdint cimport uint64_t, uint32_t, uint16_t
 from folly cimport cFollyFuture
-from thrift.python.client.request_channel cimport cRequestChannel_ptr, ClientType
-from thrift.python.serializer cimport Protocol as cProtocol
-
-
-cdef extern from "folly/ssl/Init.h" namespace "folly::ssl" nogil:
-    void init()
+from thrift.python.protocol cimport Protocol as cProtocol
 
 
 cdef extern from "folly/io/async/SSLContext.h":
@@ -46,28 +41,9 @@ cdef extern from "folly/io/async/SSLContext.h":
         void authenticate(bint checkPeerCert, bint checkPeerName)
 
 
-cdef extern from "thrift/lib/python/client/ssl.h" namespace "::thrift::python::client":
-    cdef cFollyFuture[cRequestChannel_ptr] createThriftChannelTCP(
-        shared_ptr[cSSLContext]& ctx,
-        const string& host,
-        const uint16_t port,
-        const uint32_t connect_timeout,
-        const uint32_t ssl_timeout,
-        ClientType,
-        cProtocol,
-        const string& endpoint,
-    )
+cdef extern from "<utility>" namespace "std" nogil:
+    cdef shared_ptr[cSSLContext] move(shared_ptr[cSSLContext])
 
-    cdef cRequestChannel_ptr sync_createThriftChannelTCP(
-        shared_ptr[cSSLContext]& ctx,
-        const string& host,
-        const uint16_t port,
-        const uint32_t connect_timeout,
-        const uint32_t ssl_timeout,
-        ClientType,
-        cProtocol,
-        const string& endpoint,
-    ) except +
 
 
 cdef class SSLContext:

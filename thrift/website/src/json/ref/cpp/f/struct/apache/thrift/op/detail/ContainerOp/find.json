@@ -15,6 +15,7 @@
       "definition_html": "static auto apache::thrift::op::detail::ContainerOp&lt; Tag &gt;::find",
       "argsstring_html": "(T &amp;self, size_t pos)",
       "name_html": "find",
+      "qualifiedname_html": "apache::thrift::op::detail::ContainerOp::find",
       "param": [
         {
           "type_html": "<code>T</code> &amp;",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "46",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "46",
         "bodyend": "51"
@@ -53,5 +54,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/find",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/find"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/find",
+  "parent_links": [
+    {
+      "text_html": "ContainerOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/ContainerOp"
+    }
+  ]
 }

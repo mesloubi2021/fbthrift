@@ -13,159 +13,359 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
 import unittest
 
+from collections.abc import ItemsView, KeysView, ValuesView
+
 from enum import Enum
+from typing import Dict, Type, TypeVar
+
+import python_test.containers.thrift_mutable_types as mutable_containers_types
+import python_test.containers.thrift_types as immutable_containers_types
+
+import python_test.maps.thrift_mutable_types as mutable_maps_types
+import python_test.maps.thrift_types as immutable_maps_types
 
 from folly.iobuf import IOBuf
 
-from testing.thrift_types import (
-    easy,
-    F14MapFollyString,
-    LocationMap,
-    StrEasyMap,
-    StrI32ListMap,
-    StrIntMap,
-    StrStrIntListMapMap,
-    StrStrMap,
+from parameterized import parameterized_class
+
+from python_test.containers.thrift_types import (
+    Color as ColorType,
+    Foo as FooType,
+    Maps as MapsType,
 )
-from thrift.python.test.containers.thrift_types import Foo, Maps
+from python_test.maps.thrift_types import (
+    easy as easyType,
+    F14MapFollyString as F14MapFollyStringType,
+    StrAtoIValueMap as StrAtoIValueMapType,
+    StrEasyMap as StrEasyMapType,
+    StrI32ListMap as StrI32ListMapType,
+    StrIntMap as StrIntMapType,
+    StrStrIntListMapMap as StrStrIntListMapMapType,
+    StrStrMap as StrStrMapType,
+)
+from thrift.python.mutable_types import (
+    _ThriftListWrapper,
+    _ThriftMapWrapper,
+    to_thrift_list,
+    to_thrift_map,
+)
+
+ListT = TypeVar("ListT")
+MapKey = TypeVar("MapKey")
+MapValue = TypeVar("MapValue")
 
 
 class MyStringEnum(str, Enum):
     test = "test"
 
 
+class ImmutableMapTests(unittest.TestCase):
+    def test_hashability(self) -> None:
+        hash(immutable_maps_types.StrI32ListMap())
+        x = immutable_maps_types.StrStrIntListMapMap(
+            {"foo": immutable_maps_types.StrI32ListMap()}
+        )
+        hash(x["foo"])
+
+
+@parameterized_class(
+    ("containers_types", "maps_types"),
+    [
+        (immutable_containers_types, immutable_maps_types),
+        (mutable_containers_types, mutable_maps_types),
+    ],
+)
 class MapTests(unittest.TestCase):
+    def setUp(self) -> None:
+        """
+        The `setUp` method performs these assignments with type hints to enable
+        pyre when using 'parameterized'. Otherwise, Pyre cannot deduce the types
+        behind `containers_types` and `maps_types`.
+        """
+        # pyre-ignore[16]: has no attribute `sets_types`
+        self.LocationMap: Dict[int, Dict[int, int]] = self.maps_types.LocationMap
+        self.StrIntMap: Type[StrIntMapType] = self.maps_types.StrIntMap
+        self.StrStrIntListMapMap: Type[StrStrIntListMapMapType] = (
+            self.maps_types.StrStrIntListMapMap
+        )
+        self.StrStrMap: Type[StrStrMapType] = self.maps_types.StrStrMap
+        self.StrI32ListMap: Type[StrI32ListMapType] = self.maps_types.StrI32ListMap
+        self.StrAtoIValueMap: Type[StrAtoIValueMapType] = (
+            self.maps_types.StrAtoIValueMap
+        )
+        self.F14MapFollyString: Type[F14MapFollyStringType] = (
+            self.maps_types.F14MapFollyString
+        )
+        self.StrEasyMap: Type[StrEasyMapType] = self.maps_types.StrEasyMap
+        self.easy: Type[easyType] = self.maps_types.easy
+        # pyre-ignore[16]: has no attribute `containers_types`
+        self.Foo: Type[FooType] = self.containers_types.Foo
+        self.Maps: Type[MapsType] = self.containers_types.Maps
+        self.Color: Type[ColorType] = self.containers_types.Color
+        self.is_mutable_run: bool = self.containers_types.__name__.endswith(
+            "thrift_mutable_types"
+        )
+
+    def to_list(self, list_data: list[ListT]) -> list[ListT] | _ThriftListWrapper:
+        return to_thrift_list(list_data) if self.is_mutable_run else list_data
+
+    def to_map(
+        self, map_data: dict[MapKey, MapValue]
+    ) -> dict[MapKey, MapValue] | _ThriftMapWrapper:
+        return to_thrift_map(map_data) if self.is_mutable_run else map_data
+
     def test_recursive_const_map(self) -> None:
-        self.assertEqual(LocationMap[1][1], 1)
+        self.assertEqual(self.LocationMap[1][1], 1)
 
     def test_None(self) -> None:
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            StrIntMap({None: 5})
+            self.StrIntMap({None: 5})
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            StrIntMap({"foo": None})
+            self.StrIntMap({"foo": None})
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            StrStrIntListMapMap({"bar": {"foo": [None, None]}})
+            self.StrStrIntListMapMap({"bar": {"foo": [None, None]}})
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            StrStrIntListMapMap({"bar": {"foo": None}})
+            self.StrStrIntListMapMap({"bar": {"foo": None}})
+
+    def test_no_dict(self) -> None:
+        with self.assertRaises(AttributeError):
+            StrIntMapType().__dict__
 
     def test_getitem(self) -> None:
-        x = StrStrMap({"test": "value"})
+        x = self.StrStrMap({"test": "value"})
         self.assertEqual(x["test"], "value")
         self.assertEqual(x[MyStringEnum.test], "value")
         with self.assertRaises(KeyError):
+            # pyre-ignore[6]: Intentional for test
             x[5]
         with self.assertRaises(KeyError):
+            # pyre-ignore[6]: Intentional for test
             x[x]
 
     def test_get(self) -> None:
-        x = StrStrMap({"test": "value"})
+        x = self.StrStrMap({"test": "value"})
         self.assertEqual(x.get("test"), "value")
+        # pyre-ignore[6]: Intentional for test
         self.assertIs(x.get(5), None)
+        # pyre-ignore[6]: Intentional for test
         self.assertIs(x.get(x), None)
 
     def test_contains(self) -> None:
-        x = StrStrMap({"test": "value"})
+        x = self.StrStrMap({"test": "value"})
         self.assertIn("test", x)
         self.assertNotIn(5, x)
         self.assertNotIn(x, x)
 
+    def test_contains_enum(self) -> None:
+        cmap = self.Maps(
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            colorMap=self.to_map({c: c for c in [self.Color.red, self.Color.blue]})
+        )
+        self.assertIn(self.Color.red, cmap.colorMap)
+        self.assertIn(self.Color.blue, cmap.colorMap)
+        self.assertNotIn(self.Color.green, cmap.colorMap)
+
+    def test_dict_views(self) -> None:
+        dmap = self.StrStrMap({"test": "value"})
+        dmap_keys = dmap.keys()
+        dmap_values = dmap.values()
+        dmap_items = dmap.items()
+        self.assertEqual(len(dmap_keys), 1)
+        self.assertEqual(len(dmap_values), 1)
+        self.assertEqual(len(dmap_items), 1)
+        self.assertIsInstance(dmap_keys, KeysView)
+        self.assertIsInstance(dmap_values, ValuesView)
+        self.assertIsInstance(dmap_items, ItemsView)
+
     def test_items_values(self) -> None:
         x = {"test": "value"}
-        tx = StrStrMap(x)
+        tx = self.StrStrMap(x)
         self.assertEqual(list(x.values()), list(tx.values()))
         self.assertEqual(list(x.keys()), list(tx.keys()))
         self.assertEqual(list(x.items()), list(tx.items()))
 
     def test_empty(self) -> None:
-        StrIntMap()
-        StrIntMap({})
-        StrStrIntListMapMap({})
-        StrStrIntListMapMap({"foo": {}})
-        StrStrIntListMapMap({"foo": {"bar": []}})
+        self.StrIntMap()
+        self.StrIntMap({})
+        self.StrStrIntListMapMap({})
+        # pyre-ignore[6]: Fixme: type error to be addressed later
+        self.StrStrIntListMapMap({"foo": self.to_map({})})
+        # pyre-ignore[6]: Fixme: type error to be addressed later
+        self.StrStrIntListMapMap({"foo": self.to_map({"bar": []})})
 
     def test_mixed_construction(self) -> None:
-        s = StrI32ListMap({"bar": [0, 1]})
-        x = StrStrIntListMapMap({"foo": s})
+        if self.is_mutable_run:
+            # TODO: remove after implementing `to_thrift_map()`
+            return
+
+        s = self.StrI32ListMap({"bar": [0, 1]})
+        x = self.StrStrIntListMapMap({"foo": s})
         px = {}
         px["foo"] = x["foo"]
         px["baz"] = {"wat": [4]}
         px["foo"] = dict(px["foo"])
         px["foo"]["bar"] = px["foo"]["bar"] + [5, 7, 8]
-        self.assertEquals(s["bar"], [0, 1])
+        self.assertEqual(s["bar"], [0, 1])
         # Now turn this crazy mixed structure back to Cython
-        cx = StrStrIntListMapMap(px)
+        cx = self.StrStrIntListMapMap(px)
         px["bar"] = {"lol": "TypeError"}
         with self.assertRaises(TypeError):
-            StrStrIntListMapMap(px)
+            self.StrStrIntListMapMap(px)
         self.assertNotIn("bar", cx)
 
-    def test_hashability(self) -> None:
-        hash(StrI32ListMap())
-        x = StrStrIntListMapMap({"foo": StrI32ListMap()})
-        hash(x["foo"])
-
     def test_equality(self) -> None:
-        x = StrIntMap({"foo": 5, "bar": 4})
-        y = StrIntMap({"foo": 4, "bar": 5})
+        x = self.StrIntMap({"foo": 5, "bar": 4})
+        y = self.StrIntMap({"foo": 4, "bar": 5})
         self.assertNotEqual(x, y)
-        y = StrIntMap({"foo": 5, "bar": 4})
+        y = self.StrIntMap({"foo": 5, "bar": 4})
         self.assertEqual(x, y)
         self.assertEqual(x, x)
         self.assertEqual(y, y)
 
     def test_custom_cpp_type(self) -> None:
         x = {"foo": "foo_value"}
-        tx = F14MapFollyString(x)
+        tx = self.F14MapFollyString(x)
         self.assertEqual(x["foo"], tx["foo"])
         self.assertEqual(list(x.values()), list(tx.values()))
         self.assertEqual(list(x.keys()), list(tx.keys()))
         self.assertEqual(list(x.items()), list(tx.items()))
 
     def test_struct_in_map(self) -> None:
-        a = StrEasyMap({"a": easy()})
-        b = StrEasyMap({"a": easy(val=0)})
-        c = StrEasyMap({"a": easy(val=1)})
-        d = StrEasyMap({"a": easy(val_list=[])})
+        b = self.StrEasyMap({"a": self.easy(val=0)})
+        a = self.StrEasyMap({"a": self.easy()})
+        c = self.StrEasyMap({"a": self.easy(val=1)})
+        # pyre-ignore[6]: TODO: Thrift-Container init
+        d = self.StrEasyMap({"a": self.easy(val_list=self.to_list([]))})
         self.assertEqual(a, b)
         self.assertEqual(a, d)
         self.assertNotEqual(a, c)
 
     def test_struct_with_map_fields(self) -> None:
-        s = Maps(
-            boolMap={True: True, False: False},
-            byteMap={1: 1, 2: 2, 3: 3},
-            i16Map={4: 4, 5: 5, 6: 6},
-            i64Map={7: 7, 8: 8, 9: 9},
-            doubleMap={1.23: 1.23, 4.56: 4.56},
-            floatMap={7.89: 7.89, 10.11: 10.11},
-            stringMap={"foo": "foo", "bar": "bar"},
-            binaryMap={b"foo": b"foo", b"bar": b"bar"},
-            iobufMap={IOBuf(b"foo"): IOBuf(b"foo"), IOBuf(b"bar"): IOBuf(b"bar")},
-            structMap={Foo(value=1): Foo(value=1), Foo(value=2): Foo(value=2)},
+        s = self.Maps(
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            boolMap=self.to_map({True: True, False: False}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            byteMap=self.to_map({1: 1, 2: 2, 3: 3}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            i16Map=self.to_map({4: 4, 5: 5, 6: 6}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            i64Map=self.to_map({7: 7, 8: 8, 9: 9}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            doubleMap=self.to_map({1.23: 1.23, 4.56: 4.56}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            floatMap=self.to_map({7.89: 7.89, 10.11: 10.11}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            stringMap=self.to_map({"foo": "foo", "bar": "bar"}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            binaryMap=self.to_map({b"foo": b"foo", b"bar": b"bar"}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            iobufMap=self.to_map(
+                {IOBuf(b"foo"): IOBuf(b"foo"), IOBuf(b"bar"): IOBuf(b"bar")}
+            ),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            structMap=(
+                to_thrift_map({})
+                if self.is_mutable_run
+                else {
+                    self.Foo(value=1): self.Foo(value=1),
+                    self.Foo(value=2): self.Foo(value=2),
+                }
+            ),
         )
         self.assertEqual(s.boolMap, {True: True, False: False})
-        self.assertEqual(s.byteMap, {1: 1, 2: 2, 3: 3})
         self.assertEqual(s.i16Map, {4: 4, 5: 5, 6: 6})
         self.assertEqual(s.i64Map, {7: 7, 8: 8, 9: 9})
         self.assertEqual(s.doubleMap, {1.23: 1.23, 4.56: 4.56})
         self.assertEqual(s.floatMap, {7.89: 7.89, 10.11: 10.11})
         self.assertEqual(s.stringMap, {"foo": "foo", "bar": "bar"})
+        self.assertEqual(s.byteMap, {1: 1, 2: 2, 3: 3})
         self.assertEqual(s.binaryMap, {b"foo": b"foo", b"bar": b"bar"})
         self.assertEqual(
             s.iobufMap, {IOBuf(b"foo"): IOBuf(b"foo"), IOBuf(b"bar"): IOBuf(b"bar")}
         )
-        self.assertEqual(
-            s.structMap, {Foo(value=1): Foo(value=1), Foo(value=2): Foo(value=2)}
-        )
-        # test reaccess the map element won't have to recreating the struct
-        self.assertIs(s.structMap[Foo(value=1)], s.structMap[Foo(value=1)])
-        self.assertIs(s.structMap[Foo(value=2)], s.structMap[Foo(value=2)])
+        if not self.is_mutable_run:
+            self.assertEqual(
+                s.structMap,
+                {
+                    self.Foo(value=1): self.Foo(value=1),
+                    self.Foo(value=2): self.Foo(value=2),
+                },
+            )
+            # test reaccess the map element won't have to recreating the struct
+            self.assertIs(
+                s.structMap[self.Foo(value=1)], s.structMap[self.Foo(value=1)]
+            )
+            self.assertIs(
+                s.structMap[self.Foo(value=2)], s.structMap[self.Foo(value=2)]
+            )
+
+    def test_adapted_maps(self) -> None:
+        the_map = {"foo": 1, "bar": 2}
+
+        self.assertEqual(the_map, self.StrAtoIValueMap(the_map))
+
+    def test_map_module_name(self) -> None:
+        easy_map = self.StrEasyMap({"a": self.easy()})
+        self.assertEqual(easy_map.__class__.__module__, "thrift.python.types")
+
+
+# TODO: Collapse these two test cases into parameterized test above
+class MapImmutablePythonTests(unittest.TestCase):
+    Color = immutable_containers_types.Color
+    Maps = immutable_containers_types.Maps
+
+    def test_contains_enum(self) -> None:
+        cmap = self.Maps(colorMap={c: c for c in [self.Color.red, self.Color.blue]})
+        self.assertNotIn("str", cmap.colorMap)
+
+        # This behavior is more permissive than thrift-py3
+        # which implicitly converts int to enum
+        self.assertIn(0, cmap.colorMap)
+        self.assertIn(1, cmap.colorMap)
+        self.assertNotIn(2, cmap.colorMap)
+        # gross
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap[0], self.Color.red)
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap[1], self.Color.blue)
+
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(0), self.Color.red)
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(1), self.Color.blue)
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(2), None)
+
+
+# TODO: Collapse these two test cases into parameterized test above
+class MapMutablePythonTests(unittest.TestCase):
+    Color = mutable_containers_types.Color
+    Maps = mutable_containers_types.Maps
+
+    # this test case documents behavior divergences from thrift-python
+    @unittest.expectedFailure
+    def test_contains_enum(self) -> None:
+        # pyre-ignore[6]: Fixme: type error to be addressed later
+        cmap = self.Maps(colorMap={c: c for c in [self.Color.red, self.Color.blue]})
+        # TODO(T194526180): mutable thrift-python should not raise
+        self.assertNotIn("str", cmap.colorMap)
+        # TODO(T194526180): mutable thrift-python should not raise
+        self.assertIn(0, cmap.colorMap)
+
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(0), self.Color.red)
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(1), self.Color.blue)
+        # pyre-ignore[6]: Intentional for test
+        self.assertEqual(cmap.colorMap.get(2), None)

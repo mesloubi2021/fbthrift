@@ -18,7 +18,7 @@ from libcpp.memory cimport unique_ptr
 from libcpp.string cimport string
 from libc.stdint cimport uint32_t, uint16_t
 from folly.iobuf cimport cIOBuf, cIOBufQueue
-from thrift.py3.common cimport Protocol as cProtocol
+from thrift.python.protocol cimport Protocol as cProtocol
 
 
 cdef extern from "thrift/lib/py3/serializer.h" namespace "::thrift::py3" nogil:
@@ -40,5 +40,5 @@ cdef extern from "thrift/lib/cpp/transport/THeader.h" namespace "apache::thrift:
         void setProtocolId(cProtocol)
         uint16_t getProtocolId()
         void setTransform(Transform)
-        unique_ptr[cIOBuf] addHeader(unique_ptr[cIOBuf])
+        unique_ptr[cIOBuf] addHeader(unique_ptr[cIOBuf]) except +
         unique_ptr[cIOBuf] removeHeader(cIOBufQueue*, size_t&, F14NodeMap[string, string]) except +

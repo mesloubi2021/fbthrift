@@ -16,26 +16,35 @@
 
 #include <thrift/compiler/detail/system.h>
 
+#include <functional>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
-namespace detail {
+namespace apache::thrift::compiler::detail {
 
-boost::filesystem::path make_abs_path(
-    const boost::filesystem::path& base_path,
-    const boost::filesystem::path& path) {
-  auto abs_path = path.is_absolute() ? path : base_path / path;
+std::filesystem::path make_abs_path(
+    const std::filesystem::path& base_path, const std::filesystem::path& path) {
+  auto abs_path = std::invoke([&] {
+    if (path.empty()) {
+      return base_path;
+    } else if (path.is_absolute()) {
+      return path;
+    } else if (!path.root_directory().empty()) {
+      // to help on windows with path relative but starting with `\\`
+      return base_path / path.relative_path();
+    } else {
+      return base_path / path;
+    }
+  });
   if (platform_is_windows()) {
     return format_abs_path(abs_path.lexically_normal().string());
   }
   return abs_path;
 }
 
-boost::filesystem::path format_abs_path(const std::string& path) {
-  auto abs_path = boost::filesystem::path{path};
+std::filesystem::path format_abs_path(std::string_view path) {
+  auto abs_path = std::filesystem::path{path};
   if (platform_is_windows()) {
     // Handles long paths on windows.
     // https://www.boost.org/doc/libs/1_69_0/libs/filesystem/doc/reference.html#long-path-warning
@@ -51,7 +60,4 @@ boost::filesystem::path format_abs_path(const std::string& path) {
   return abs_path;
 }
 
-} // namespace detail
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler::detail

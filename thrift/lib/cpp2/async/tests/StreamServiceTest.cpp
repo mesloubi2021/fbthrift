@@ -16,12 +16,13 @@
 
 #include <folly/portability/GTest.h>
 
-#include <folly/experimental/coro/Collect.h>
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/Sleep.h>
 #include <thrift/lib/cpp2/GeneratedCodeHelper.h>
 #include <thrift/lib/cpp2/async/tests/util/Util.h>
 
 using namespace apache::thrift;
+using namespace apache::thrift::detail::test;
 
 template <typename Service>
 class StreamServiceTest
@@ -31,7 +32,8 @@ using TestTypes = ::testing::Types<
     TestStreamGeneratorService,
     TestStreamPublisherService,
     TestStreamGeneratorWithHeaderService,
-    TestStreamPublisherWithHeaderService>;
+    TestStreamPublisherWithHeaderService,
+    TestStreamProducerCallbackService>;
 TYPED_TEST_CASE(StreamServiceTest, TestTypes);
 
 using RichPayloadReceived = ClientBufferedStream<int32_t>::RichPayloadReceived;
@@ -59,8 +61,7 @@ TYPED_TEST(StreamServiceTest, Throw) {
           auto t = co_await gen.next();
           EXPECT_EQ(i, *t);
         }
-        EXPECT_THROW(
-            co_await gen.next(), apache::thrift::TApplicationException);
+        EXPECT_THROW(co_await gen.next(), TApplicationException);
       });
 }
 
@@ -147,8 +148,7 @@ TYPED_TEST(StreamServiceTest, DuplicateStreamIdThrows) {
       });
 }
 
-class InitialThrowHandler
-    : public apache::thrift::ServiceHandler<TestStreamService> {
+class InitialThrowHandler : public ServiceHandler<TestStreamService> {
  public:
   ServerStream<int32_t> range(int32_t, int32_t) override {
     throw std::runtime_error("oops");
@@ -170,7 +170,9 @@ TEST_F(InitialThrowTest, InitialThrow) {
         FirstResponsePayload&&,
         folly::EventBase*,
         StreamServerCallback* serverCallback) override {
-      SCOPE_EXIT { responseReceived_.post(); };
+      SCOPE_EXIT {
+        responseReceived_.post();
+      };
       if (!onFirstResponseBool_) {
         serverCallback->onStreamCancel();
         return false;
@@ -423,5 +425,16 @@ TYPED_TEST(MultiStreamServiceTest, UncompletedPublisherMoveAssignment) {
       [](Client<TestStreamService>& client) -> folly::coro::Task<void> {
         co_await client.co_uncompletedPublisherMoveAssignment(
             RpcOptions().setTimeout(std::chrono::seconds{10}));
+      });
+}
+
+class StreamClientCallbackTest : public AsyncTestSetup<
+                                     TestStreamClientCallbackService,
+                                     Client<TestStreamService>> {};
+TEST_F(StreamClientCallbackTest, RpcMethodName) {
+  connectToServer(
+      [](Client<TestStreamService>& client) -> folly::coro::Task<void> {
+        auto gen = (co_await client.co_range(0, 0)).toAsyncGenerator();
+        EXPECT_EQ(0, co_await client.co_test());
       });
 }

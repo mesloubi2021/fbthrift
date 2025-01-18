@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 # See __init__.pyi for easier to digest types for typecheckers
 
 __all__ = []
@@ -37,9 +39,16 @@ except ModuleNotFoundError:
     pass
 
 try:
-    from thrift.py3.types import BadEnum, Enum, Flag, Struct, Union  # noqa: 401
+    from thrift.python.types import Enum, Flag  # noqa: 401
 
-    __all__.extend(["Struct", "BadEnum", "Union", "Enum", "Flag"])
+    __all__.extend(["Enum", "Flag"])
+except ModuleNotFoundError:
+    pass
+
+try:
+    from thrift.py3.types import BadEnum, Struct, Union  # noqa: 401
+
+    __all__.extend(["Struct", "BadEnum", "Union"])
 except ModuleNotFoundError:
     pass
 

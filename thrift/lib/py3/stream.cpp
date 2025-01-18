@@ -19,12 +19,11 @@
 #include <folly/CppAttributes.h>
 #include <folly/Portability.h>
 #include <thrift/lib/py3/stream.h>
+
+#if __has_include(<thrift/lib/py3/stream_api.h>) && FOLLY_HAS_COROUTINES
 #include <thrift/lib/py3/stream_api.h> // @manual
 
-#if FOLLY_HAS_COROUTINES
-
-namespace thrift {
-namespace py3 {
+namespace thrift::py3 {
 
 namespace {
 
@@ -37,10 +36,10 @@ void do_import() {
 } // namespace
 
 void cancelPythonIterator(PyObject* iter) {
-  FOLLY_MAYBE_UNUSED static bool done = (do_import(), false);
+  [[maybe_unused]] static bool done = (do_import(), false);
   cancelAsyncGenerator(iter);
 }
 
-} // namespace py3
-} // namespace thrift
+} // namespace thrift::py3
+
 #endif

@@ -48,7 +48,7 @@ TEST_F(ThriftClientTest, FutureCapturesChannel) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
   auto fut = client->future_sendResponse(12);
   // To prove that even if the client is gone, the channel is captured:
   client = nullptr;
@@ -70,7 +70,7 @@ TEST_F(ThriftClientTest, SemiFutureCapturesChannel) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
   auto fut = client->semifuture_sendResponse(15).via(&eb).waitVia(&eb);
 
   // To prove that even if the client is gone, the channel is captured:
@@ -86,7 +86,7 @@ TEST_F(ThriftClientTest, FutureCapturesChannelOneway) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
   auto fut = client->future_noResponse(12);
   // To prove that even if the client is gone, the channel is captured:
   client = nullptr;
@@ -101,7 +101,7 @@ TEST_F(ThriftClientTest, SemiFutureCapturesChannelOneway) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
   auto fut = client->semifuture_noResponse(12).via(&eb).waitVia(&eb);
   // To prove that even if the client is gone, the channel is captured:
   client = nullptr;
@@ -114,7 +114,7 @@ TEST_F(ThriftClientTest, SyncRpcOptionsTimeout) {
    public:
     DelayHandler(milliseconds delay) : delay_(delay) {}
     void async_eb_eventBaseAsync(
-        unique_ptr<HandlerCallback<unique_ptr<string>>> cb) override {
+        HandlerCallbackPtr<unique_ptr<string>> cb) override {
       auto eb = cb->getEventBase();
       eb->runAfterDelay(
           [cb = std::move(cb)] { cb->result("hello world"); }, delay_.count());
@@ -167,7 +167,7 @@ TEST_F(ThriftClientTest, SyncCallRequestResponse) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(
       &eb, RocketClientChannel::newChannel);
 
   auto doSyncRPC = [&]() {
@@ -177,7 +177,7 @@ TEST_F(ThriftClientTest, SyncCallRequestResponse) {
     EXPECT_TRUE(response->response.hasValue());
     EXPECT_EQ(*response->response, "123");
 
-    auto& stats = response->responseContext.rpcSizeStats;
+    auto& stats = response->responseContext.rpcTransportStats;
     EXPECT_LE(1, stats.requestSerializedSizeBytes);
     EXPECT_LE(stats.requestWireSizeBytes, stats.requestSerializedSizeBytes);
     EXPECT_LE(
@@ -251,7 +251,7 @@ TEST_F(ThriftClientTest, SyncCallOneWay) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
 
   auto doSyncRPC = [&]() { client->sync_noResponse(123); };
 
@@ -301,7 +301,7 @@ TEST_F(ThriftClientTest, FutureCallRequestResponse) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
 
   auto doFutureSyncRPC = [&]() {
     std::string res;
@@ -381,7 +381,7 @@ TEST_F(ThriftClientTest, FutureCallOneWay) {
   ScopedServerInterfaceThread runner(handler);
 
   EventBase eb;
-  auto client = runner.newClient<TestServiceAsyncClient>(&eb);
+  auto client = runner.newClient<apache::thrift::Client<TestService>>(&eb);
 
   auto doFutureSyncRPC = [&]() {
     auto f = client->future_noResponse(123);

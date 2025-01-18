@@ -3,9 +3,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 import configparser
 import io
 import os
+import sys
 from typing import List
 
 from .builder import (
@@ -19,6 +22,7 @@ from .builder import (
     NopBuilder,
     OpenSSLBuilder,
     SqliteBuilder,
+    SystemdBuilder,
 )
 from .cargo import CargoBuilder
 from .expr import parse_expr
@@ -28,6 +32,7 @@ from .fetcher import (
     PreinstalledNopFetcher,
     ShipitTransformerFetcher,
     SimpleShipitTransformerFetcher,
+    SubFetcher,
     SystemPackageFetcher,
 )
 from .py_wheel_builder import PythonWheelBuilder
@@ -43,6 +48,7 @@ SCHEMA = {
             "fbsource_path": OPTIONAL,
             "shipit_project": OPTIONAL,
             "shipit_fbcode_builder": OPTIONAL,
+            "use_shipit": OPTIONAL,
         },
     },
     "dependencies": {"optional_section": True, "allow_values": False},
@@ -62,6 +68,7 @@ SCHEMA = {
             "subdir": OPTIONAL,
             "make_binary": OPTIONAL,
             "build_in_src_dir": OPTIONAL,
+            "only_install": OPTIONAL,
             "job_weight_mib": OPTIONAL,
             "patchfile": OPTIONAL,
             "patchfile_opts": OPTIONAL,
@@ -82,6 +89,7 @@ SCHEMA = {
         "optional_section": True,
         "fields": {
             "run_tests": OPTIONAL,
+            "required_locales": OPTIONAL,
         },
     },
     "crate.pathmap": {"optional_section": True},
@@ -91,6 +99,7 @@ SCHEMA = {
     "rpms": {"optional_section": True},
     "debs": {"optional_section": True},
     "homebrew": {"optional_section": True},
+    "pps": {"optional_section": True},
     "preinstalled.env": {"optional_section": True},
     "bootstrap.args": {"optional_section": True},
     "b2.args": {"optional_section": True},
@@ -101,6 +110,7 @@ SCHEMA = {
     "shipit.pathmap": {"optional_section": True},
     "shipit.strip": {"optional_section": True},
     "install.files": {"optional_section": True},
+    "subprojects": {"optional_section": True},
     # fb-only
     "sandcastle": {"optional_section": True, "fields": {"run_tests": OPTIONAL}},
 }
@@ -126,6 +136,7 @@ ALLOWED_EXPR_SECTIONS = [
     "shipit.strip",
     "homebrew",
     "github.actions",
+    "pps",
 ]
 
 
@@ -373,6 +384,7 @@ class ManifestParser(object):
             "rpm": self.get_section_as_args("rpms", ctx),
             "deb": self.get_section_as_args("debs", ctx),
             "homebrew": self.get_section_as_args("homebrew", ctx),
+            "pacman-package": self.get_section_as_args("pps", ctx),
         }
 
     def _is_satisfied_by_preinstalled_environment(self, ctx):
@@ -381,7 +393,10 @@ class ManifestParser(object):
             return False
         for key in envs:
             val = os.environ.get(key, None)
-            print(f"Testing ENV[{key}]: {repr(val)}")
+            print(
+                f"Testing ENV[{key}]: {repr(val)}",
+                file=sys.stderr,
+            )
             if val is None:
                 return False
             if len(val) == 0:
@@ -392,9 +407,11 @@ class ManifestParser(object):
     def get_repo_url(self, ctx):
         return self.get("git", "repo_url", ctx=ctx)
 
-    def create_fetcher(self, build_options, ctx):
-        use_real_shipit = (
-            ShipitTransformerFetcher.available() and build_options.use_shipit
+    def _create_fetcher(self, build_options, ctx):
+        real_shipit_available = ShipitTransformerFetcher.available(build_options)
+        use_real_shipit = real_shipit_available and (
+            build_options.use_shipit
+            or self.get("manifest", "use_shipit", defval="false", ctx=ctx) == "true"
         )
         if (
             not use_real_shipit
@@ -408,28 +425,32 @@ class ManifestParser(object):
             self.fbsource_path
             and build_options.fbsource_dir
             and self.shipit_project
-            and ShipitTransformerFetcher.available()
+            and real_shipit_available
         ):
             # We can use the code from fbsource
             return ShipitTransformerFetcher(build_options, self.shipit_project)
 
+        # If both of these are None, the package can only be coming from
+        # preinstalled toolchain or system packages
+        repo_url = self.get_repo_url(ctx)
+        url = self.get("download", "url", ctx=ctx)
+
         # Can we satisfy this dep with system packages?
-        if build_options.allow_system_packages:
+        if (repo_url is None and url is None) or build_options.allow_system_packages:
             if self._is_satisfied_by_preinstalled_environment(ctx):
                 return PreinstalledNopFetcher()
 
-            packages = self.get_required_system_packages(ctx)
-            package_fetcher = SystemPackageFetcher(build_options, packages)
-            if package_fetcher.packages_are_installed():
-                return package_fetcher
+            if build_options.host_type.get_package_manager():
+                packages = self.get_required_system_packages(ctx)
+                package_fetcher = SystemPackageFetcher(build_options, packages)
+                if package_fetcher.packages_are_installed():
+                    return package_fetcher
 
-        repo_url = self.get_repo_url(ctx)
         if repo_url:
             rev = self.get("git", "rev")
             depth = self.get("git", "depth")
             return GitFetcher(build_options, self, repo_url, rev, depth)
 
-        url = self.get("download", "url", ctx=ctx)
         if url:
             # We need to defer this import until now to avoid triggering
             # a cycle when the facebook/__init__.py is loaded.
@@ -447,8 +468,22 @@ class ManifestParser(object):
                 )
 
         raise KeyError(
-            "project %s has no fetcher configuration matching %s" % (self.name, ctx)
+            "project %s has no fetcher configuration or system packages matching %s"
+            % (self.name, ctx)
         )
+
+    def create_fetcher(self, build_options, loader, ctx):
+        fetcher = self._create_fetcher(build_options, ctx)
+        subprojects = self.get_section_as_ordered_pairs("subprojects", ctx)
+        if subprojects:
+            subs = []
+            for project, subdir in subprojects:
+                submanifest = loader.load_manifest(project)
+                subfetcher = submanifest.create_fetcher(build_options, loader, ctx)
+                subs.append((subfetcher, subdir))
+            return SubFetcher(fetcher, subs)
+        else:
+            return fetcher
 
     def get_builder_name(self, ctx):
         builder = self.get("build", "builder", ctx=ctx)
@@ -464,6 +499,7 @@ class ManifestParser(object):
         inst_dir,
         ctx,
         loader,
+        dep_manifests,
         final_install_prefix=None,
         extra_cmake_defines=None,
         cmake_target=None,
@@ -487,6 +523,8 @@ class ManifestParser(object):
             test_args = self.get_section_as_args("make.test_args", ctx)
             if builder == "cmakebootstrap":
                 return CMakeBootStrapBuilder(
+                    loader,
+                    dep_manifests,
                     build_options,
                     ctx,
                     self,
@@ -499,6 +537,8 @@ class ManifestParser(object):
                 )
             else:
                 return MakeBuilder(
+                    loader,
+                    dep_manifests,
                     build_options,
                     ctx,
                     self,
@@ -517,6 +557,8 @@ class ManifestParser(object):
             if ldflags_cmd:
                 conf_env_args["LDFLAGS"] = ldflags_cmd
             return AutoconfBuilder(
+                loader,
+                dep_manifests,
                 build_options,
                 ctx,
                 self,
@@ -531,11 +573,23 @@ class ManifestParser(object):
             args = self.get_section_as_args("b2.args", ctx)
             if extra_b2_args is not None:
                 args += extra_b2_args
-            return Boost(build_options, ctx, self, src_dir, build_dir, inst_dir, args)
+            return Boost(
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                src_dir,
+                build_dir,
+                inst_dir,
+                args,
+            )
 
         if builder == "cmake":
             defines = self.get_section_as_dict("cmake.defines", ctx)
             return CMakeBuilder(
+                loader,
+                dep_manifests,
                 build_options,
                 ctx,
                 self,
@@ -543,7 +597,6 @@ class ManifestParser(object):
                 build_dir,
                 inst_dir,
                 defines,
-                loader,
                 final_install_prefix,
                 extra_cmake_defines,
                 cmake_target,
@@ -551,39 +604,103 @@ class ManifestParser(object):
 
         if builder == "python-wheel":
             return PythonWheelBuilder(
-                build_options, ctx, self, src_dir, build_dir, inst_dir
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                src_dir,
+                build_dir,
+                inst_dir,
             )
 
         if builder == "sqlite":
-            return SqliteBuilder(build_options, ctx, self, src_dir, build_dir, inst_dir)
+            return SqliteBuilder(
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                src_dir,
+                build_dir,
+                inst_dir,
+            )
 
         if builder == "ninja_bootstrap":
             return NinjaBootstrap(
-                build_options, ctx, self, build_dir, src_dir, inst_dir
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                build_dir,
+                src_dir,
+                inst_dir,
             )
 
         if builder == "nop":
-            return NopBuilder(build_options, ctx, self, src_dir, inst_dir)
+            return NopBuilder(
+                loader, dep_manifests, build_options, ctx, self, src_dir, inst_dir
+            )
 
         if builder == "openssl":
             return OpenSSLBuilder(
-                build_options, ctx, self, build_dir, src_dir, inst_dir
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                build_dir,
+                src_dir,
+                inst_dir,
             )
 
         if builder == "iproute2":
             return Iproute2Builder(
-                build_options, ctx, self, src_dir, build_dir, inst_dir
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                src_dir,
+                build_dir,
+                inst_dir,
+            )
+
+        if builder == "systemd":
+            return SystemdBuilder(
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                self,
+                src_dir,
+                build_dir,
+                inst_dir,
             )
 
         if builder == "cargo":
             return self.create_cargo_builder(
-                build_options, ctx, src_dir, build_dir, inst_dir, loader
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                src_dir,
+                build_dir,
+                inst_dir,
             )
 
         raise KeyError("project %s has no known builder" % (self.name))
 
     def create_prepare_builders(
-        self, build_options, ctx, src_dir, build_dir, inst_dir, loader
+        self,
+        build_options,
+        ctx,
+        src_dir,
+        build_dir,
+        inst_dir,
+        loader,
+        dep_manifests,
     ):
         """Create builders that have a prepare step run, e.g. to write config files"""
         prepare_builders = []
@@ -591,19 +708,27 @@ class ManifestParser(object):
         cargo = self.get_section_as_dict("cargo", ctx)
         if not builder == "cargo" and cargo:
             cargo_builder = self.create_cargo_builder(
-                build_options, ctx, src_dir, build_dir, inst_dir, loader
+                loader,
+                dep_manifests,
+                build_options,
+                ctx,
+                src_dir,
+                build_dir,
+                inst_dir,
             )
             prepare_builders.append(cargo_builder)
         return prepare_builders
 
     def create_cargo_builder(
-        self, build_options, ctx, src_dir, build_dir, inst_dir, loader
+        self, loader, dep_manifests, build_options, ctx, src_dir, build_dir, inst_dir
     ):
         build_doc = self.get("cargo", "build_doc", False, ctx)
         workspace_dir = self.get("cargo", "workspace_dir", None, ctx)
         manifests_to_build = self.get("cargo", "manifests_to_build", None, ctx)
         cargo_config_file = self.get("cargo", "cargo_config_file", None, ctx)
         return CargoBuilder(
+            loader,
+            dep_manifests,
             build_options,
             ctx,
             self,
@@ -613,7 +738,6 @@ class ManifestParser(object):
             build_doc,
             workspace_dir,
             manifests_to_build,
-            loader,
             cargo_config_file,
         )
 

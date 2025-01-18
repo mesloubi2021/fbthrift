@@ -12,15 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 import typing
 
 from apache.thrift.type.type.thrift_types import Type
 
 from folly.iobuf import IOBuf
 
-from thrift.python.any.typestub import (
+from thrift.lib.python.any.typestub import (
     PrimitiveType,
     SerializableType,
+    SerializableTypeOrContainers,
     StructOrUnionOrException,
     TKey,
     TPrimitive,
@@ -29,7 +32,7 @@ from thrift.python.any.typestub import (
 )
 from thrift.python.exceptions import GeneratedError
 from thrift.python.serializer import Protocol
-from thrift.python.types import Enum, StructOrUnion
+from thrift.python.types import AnyTypeInfo, Enum, StructOrUnion
 
 def serialize_primitive(
     obj: TPrimitive,
@@ -38,6 +41,7 @@ def serialize_primitive(
 ) -> IOBuf: ...
 def deserialize_primitive(
     cls: typing.Type[TPrimitive],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: typing.Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
     thrift_type: typing.Optional[Type] = ...,
@@ -48,6 +52,7 @@ def serialize_list(
 ) -> IOBuf: ...
 def deserialize_list(
     elem_cls: typing.Type[TSerializable],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: typing.Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
 ) -> typing.Sequence[TSerializable]: ...
@@ -57,6 +62,7 @@ def serialize_set(
 ) -> IOBuf: ...
 def deserialize_set(
     elem_cls: typing.Type[TSerializable],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: typing.Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
 ) -> typing.AbstractSet[TSerializable]: ...
@@ -67,6 +73,12 @@ def serialize_map(
 def deserialize_map(
     key_cls: typing.Type[TKey],
     value_cls: typing.Type[TValue],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: typing.Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
 ) -> typing.Mapping[TKey, TValue]: ...
+def serialize_with_type_info(
+    obj: SerializableTypeOrContainers,
+    protocol: Protocol,
+    type_info: AnyTypeInfo,
+) -> IOBuf: ...

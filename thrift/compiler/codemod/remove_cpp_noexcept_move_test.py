@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import os
 import shutil
 import tempfile
@@ -21,6 +23,7 @@ import unittest
 import pkg_resources
 
 from thrift.compiler.codemod.test_utils import read_file, run_binary, write_file
+
 
 # TODO(urielrivas): We can use clangr's unit-test formatting in the future.
 class RemoveCppNoexceptMove(unittest.TestCase):
@@ -59,7 +62,7 @@ class RemoveCppNoexceptMove(unittest.TestCase):
                 struct Faa {
                     1: i32 faa1;
                     2: string faa2;
-                } (cpp.virtual)
+                } ( cpp.virtual)
 
                 union Fee {
                     1: i32 fee1;

@@ -28,6 +28,7 @@
 #include <thrift/lib/cpp2/server/ConcurrencyControllerInterface.h>
 #include <thrift/lib/cpp2/server/IResourcePoolAcceptor.h>
 #include <thrift/lib/cpp2/server/RequestPileInterface.h>
+#include <thrift/lib/thrift/gen-cpp2/serverdbginfo_types.h>
 
 namespace apache::thrift {
 
@@ -67,8 +68,17 @@ class ResourcePool : public IResourcePoolAcceptor {
     return std::nullopt;
   }
 
-  // Access tp executor as shared pointer if it exists.
-  std::optional<std::shared_ptr<folly::Executor>> sharedPtrExecutor() {
+  std::optional<folly::Executor::KeepAlive<folly::Executor>>
+  keepAliveExecutor() {
+    if (executor_) {
+      return folly::getKeepAliveToken(*executor_);
+    }
+    return std::nullopt;
+  }
+
+  // Deprecated: use keepAliveExecutor if possible.
+  std::optional<std::shared_ptr<folly::Executor>>
+  sharedPtrExecutor_deprecated() {
     if (executor_) {
       return executor_;
     }
@@ -103,17 +113,28 @@ class ResourcePool : public IResourcePoolAcceptor {
 
   std::string describe() const;
 
+  serverdbginfo::ResourcePoolDbgInfo getDbgInfo() const;
+
  private:
   friend class ResourcePoolSet;
   ResourcePool(
       std::unique_ptr<RequestPileInterface>&& requestPile,
       std::shared_ptr<folly::Executor> executor,
       std::unique_ptr<ConcurrencyControllerInterface>&& concurrencyController,
-      std::string_view name);
+      std::string_view name,
+      bool joinExecutorOnStop);
+
+  bool isAsyncPool();
+  bool isDeferredPool();
+  bool isSyncPool();
+  std::optional<ServerRequestRejection> acceptAsync(ServerRequest&& request);
+  std::optional<ServerRequestRejection> acceptDeferred(ServerRequest&& request);
+  std::optional<ServerRequestRejection> acceptSync(ServerRequest&& request);
 
   std::unique_ptr<RequestPileInterface> requestPile_;
   std::shared_ptr<folly::Executor> executor_;
   std::unique_ptr<ConcurrencyControllerInterface> concurrencyController_;
   std::string name_;
+  const bool joinExecutorOnStop_;
 };
 } // namespace apache::thrift

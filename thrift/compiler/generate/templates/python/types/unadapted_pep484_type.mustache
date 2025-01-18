@@ -18,7 +18,7 @@
 
 This is for pep 484 typing
 
-This is useful for typing call paterns since it allows python container types OR
+This is useful for typing call patterns since it allows python container types OR
 thrift-python specific container types.
 
 }}{{#type:bool?}}bool{{/type:bool?}}{{!
@@ -31,21 +31,21 @@ thrift-python specific container types.
 }}{{#type:string?}}str{{/type:string?}}{{!
 }}{{#type:binary?}}{{#type:iobuf?}}_fbthrift_iobuf.IOBuf{{/type:iobuf?}}{{^type:iobuf?}}bytes{{/type:iobuf?}}{{/type:binary?}}{{!
 }}{{#type:struct}}{{!
-    }}{{#type:need_module_path?}}{{type:module_path}}.{{/type:need_module_path?}}{{!
-  }}{{struct:name}}{{!
+    }}{{#type:need_module_path?}}{{type:module_mangle}}.{{/type:need_module_path?}}{{!
+  }}{{^type:need_module_path?}}{{^struct:has_adapter?}}{{> private/alias_prefix}}{{/struct:has_adapter?}}{{/type:need_module_path?}}{{> structs/unadapted_name}}{{!
 }}{{/type:struct}}{{!
-}}{{#type:list?}}_typing.Sequence[{{!
+}}{{#type:list?}}{{> types/sequence }}[{{!
     }}{{#type:list_elem_type}}{{> types/pep484_type}}{{/type:list_elem_type}}{{!
 }}]{{/type:list?}}{{!
-}}{{#type:set?}}_typing.AbstractSet[{{!
+}}{{#type:set?}}{{> types/set }}[{{!
     }}{{#type:set_elem_type}}{{> types/pep484_type}}{{/type:set_elem_type}}{{!
 }}]{{/type:set?}}{{!
-}}{{#type:map?}}_typing.Mapping[{{!
+}}{{#type:map?}}{{> types/mapping }}[{{!
     }}{{#type:key_type}}{{> types/pep484_type}}{{/type:key_type}}, {{!
     }}{{#type:value_type}}{{> types/pep484_type}}{{/type:value_type}}{{!
 }}]{{/type:map?}}{{!
 }}{{#type:void?}}None{{/type:void?}}{{!
 }}{{#type:enum}}{{!
-  }}{{#type:need_module_path?}}{{type:module_path}}.{{/type:need_module_path?}}{{!
-  }}{{enum:name}}{{!
+  }}{{#type:need_module_path?}}{{type:module_mangle}}.{{/type:need_module_path?}}{{!
+  }}{{^type:need_module_path?}}{{> private/alias_prefix}}{{/type:need_module_path?}}{{enum:name}}{{!
 }}{{/type:enum}}

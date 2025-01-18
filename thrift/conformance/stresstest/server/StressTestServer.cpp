@@ -22,6 +22,11 @@
 
 #include <thrift/conformance/stresstest/util/IoUringUtil.h>
 
+#include <scripts/rroeser/src/executor/WorkStealingExecutor.h>
+#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <thrift/lib/cpp2/server/ParallelConcurrencyController.h>
+#include <thrift/lib/cpp2/server/ThriftServer.h>
+
 DEFINE_int32(port, 5000, "Server port");
 DEFINE_int32(io_threads, 0, "Number of IO threads (0 == number of cores)");
 DEFINE_int32(cpu_threads, 0, "Number of CPU threads (0 == number of cores)");
@@ -30,6 +35,19 @@ DEFINE_int32(
     -1,
     "Configures max requests, 0 will disable max request limit");
 DEFINE_bool(io_uring, false, "Enables io_uring if available when set to true");
+DEFINE_bool(
+    work_stealing,
+    false,
+    "Enable work stealing test. Implies --enable_resource_pools");
+DEFINE_bool(
+    work_stealing_executor_only,
+    false,
+    "Enable work stealing test without request pile or concurrency controller."
+    " Implies --work_stealing and --enable_resource_pools");
+DEFINE_bool(
+    se_parallel_concurrency_controller,
+    false,
+    "Enable SEParallelConcurrencyController. Implies --enable_resource_pools");
 DEFINE_string(
     certPath,
     "folly/io/async/test/certs/tests-cert.pem",
@@ -42,12 +60,46 @@ DEFINE_string(
     caPath,
     "folly/io/async/test/certs/ca-cert.pem",
     "Path to client trusted CA file");
+DEFINE_bool(enable_overload_checker, false, "Enable overload checker");
+DEFINE_bool(enable_resource_pools, false, "Enable resource pools");
+DEFINE_bool(
+    disable_active_request_tracking, false, "Disabled Active Request Tracking");
+DEFINE_bool(enable_checksum, false, "Enable Server Side Checksum support");
 
 namespace apache {
 namespace thrift {
 namespace stress {
 
+using namespace apache::thrift::rocket;
+
 namespace {
+
+bool isResourcePoolsEnabled() {
+  // These flags explicitly or implicitly enable resource pools.
+  return FLAGS_enable_resource_pools || FLAGS_work_stealing ||
+      FLAGS_work_stealing_executor_only ||
+      FLAGS_se_parallel_concurrency_controller;
+}
+
+bool isWorkStealingEnabled() {
+  // These flags explicitly or implicitly enable work stealing executor.
+  return FLAGS_work_stealing || FLAGS_work_stealing_executor_only;
+}
+
+bool isRoundRobinRequestPileEnabled() {
+  return isResourcePoolsEnabled() && !FLAGS_work_stealing_executor_only;
+}
+
+bool isParallelConcurrencyControllerEnabled() {
+  return isResourcePoolsEnabled() && !FLAGS_work_stealing_executor_only &&
+      !FLAGS_se_parallel_concurrency_controller;
+}
+
+bool isSEParallelConcurrencyControllerEnabled() {
+  return isResourcePoolsEnabled() && !FLAGS_work_stealing_executor_only &&
+      FLAGS_se_parallel_concurrency_controller;
+}
+
 uint32_t sanitizeNumThreads(int32_t n) {
   return n <= 0 ? std::thread::hardware_concurrency() : n;
 }
@@ -117,6 +169,30 @@ std::shared_ptr<ThriftServer> createStressTestServer(
       getIOThreadPool("thrift_eventbase", FLAGS_io_threads));
   server->setNumCPUWorkerThreads(sanitizeNumThreads(FLAGS_cpu_threads));
 
+  LOG(INFO) << "Enable Checksum Support: " << FLAGS_enable_checksum;
+  if (FLAGS_enable_checksum) {
+    PayloadSerializer::initialize(
+        ChecksumPayloadSerializerStrategy<LegacyPayloadSerializerStrategy>(
+            ChecksumPayloadSerializerStrategyOptions{
+                .recordChecksumFailure =
+                    [] { LOG(FATAL) << "Checksum failure detected"; },
+                .recordChecksumSuccess =
+                    [] {
+                      LOG_EVERY_N(INFO, 1'000'000)
+                          << "Checksum success detected";
+                    },
+                .recordChecksumCalculated =
+                    [] {
+                      LOG_EVERY_N(INFO, 1'000'000) << "Checksum calculated";
+                    }}));
+  }
+
+  LOG(INFO) << "Active Request Tracking Disabled: "
+            << FLAGS_disable_active_request_tracking;
+  if (FLAGS_disable_active_request_tracking) {
+    server->disableActiveRequestsTracking();
+  }
+
   if (FLAGS_max_requests > -1) {
     LOG(INFO) << "Setting max server requests: " << FLAGS_max_requests;
     server->setMaxRequests(FLAGS_max_requests);
@@ -126,6 +202,52 @@ std::shared_ptr<ThriftServer> createStressTestServer(
       !FLAGS_caPath.empty()) {
     server->setSSLConfig(getSSLConfig());
   }
+
+  if (!isResourcePoolsEnabled()) {
+    return server;
+  }
+
+  LOG(INFO) << "Resource pools enabled";
+  std::shared_ptr<folly::Executor> executor;
+  auto t = sanitizeNumThreads(FLAGS_cpu_threads);
+
+  if (isWorkStealingEnabled()) {
+    LOG(INFO) << "Work Stealing Executor enabled";
+    executor = std::make_shared<folly::WorkStealingExecutor>(FLAGS_cpu_threads);
+  } else {
+    LOG(INFO) << "CPU Thread Pool Executor enabled";
+    executor = std::make_shared<folly::CPUThreadPoolExecutor>(
+        t, folly::CPUThreadPoolExecutor::makeThrottledLifoSemQueue());
+  }
+
+  std::unique_ptr<RequestPileInterface> requestPile;
+  if (isRoundRobinRequestPileEnabled()) {
+    LOG(INFO) << "Round Robin Request Pile enabled";
+    requestPile = std::make_unique<RoundRobinRequestPile>(
+        RoundRobinRequestPile::Options{});
+  }
+
+  std::unique_ptr<ConcurrencyControllerInterface> concurrencyController;
+  if (isParallelConcurrencyControllerEnabled()) {
+    LOG(INFO) << "Parallel Concurrency Controller enabled";
+    concurrencyController = std::make_unique<ParallelConcurrencyController>(
+        *requestPile.get(), *executor.get());
+  } else if (isSEParallelConcurrencyControllerEnabled()) {
+    LOG(INFO) << "ParallelConcurrencyController with SerialExecutor enabled";
+    concurrencyController = std::make_unique<ParallelConcurrencyController>(
+        *requestPile.get(),
+        *executor.get(),
+        ParallelConcurrencyController::RequestExecutionMode::Serial);
+  }
+
+  server->resourcePoolSet().setResourcePool(
+      ResourcePoolHandle::defaultAsync(),
+      std::move(requestPile),
+      executor,
+      std::move(concurrencyController));
+  server->ensureResourcePools();
+  server->requireResourcePools();
+
   return server;
 }
 

@@ -45,12 +45,12 @@
 
 #include <thrift/lib/cpp2/async/ServerSinkBridge.h>
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <thrift/lib/cpp2/transport/core/TryUtil.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
 #include <thrift/lib/cpp2/transport/rocket/client/RocketClient.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/test/Util.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnection.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerFrameContext.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerHandler.h>
@@ -59,10 +59,7 @@
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_constants.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
-namespace test {
+namespace apache::thrift::rocket::test {
 
 namespace {
 constexpr int32_t kClientVersion = 7;
@@ -112,18 +109,16 @@ makeTestResponse(
 rocket::SetupFrame RocketTestClient::makeTestSetupFrame(
     MetadataOpaqueMap<std::string, std::string> md) {
   RequestSetupMetadata meta;
-  meta.opaque_ref() = {};
-  *meta.opaque_ref() = std::move(md);
-  meta.maxVersion_ref() = kClientVersion;
-  CompactProtocolWriter compactProtocolWriter;
-  folly::IOBufQueue paramQueue;
-  compactProtocolWriter.setOutput(&paramQueue);
-  meta.write(&compactProtocolWriter);
+  meta.opaque() = {};
+  *meta.opaque() = std::move(md);
+  meta.maxVersion() = kClientVersion;
+
+  auto serializedMeta = PayloadSerializer::getInstance()->packCompact(meta);
 
   // Serialize RocketClient's major/minor version (which is separate from the
   // rsocket protocol major/minor version) into setup metadata.
   auto buf = folly::IOBuf::createCombined(
-      sizeof(int32_t) + meta.serializedSize(&compactProtocolWriter));
+      sizeof(int32_t) + serializedMeta->computeChainDataLength());
   folly::IOBufQueue queue;
   queue.append(std::move(buf));
   folly::io::QueueAppender appender(&queue, /* do not grow */ 0);
@@ -132,7 +127,7 @@ rocket::SetupFrame RocketTestClient::makeTestSetupFrame(
   appender.writeBE<uint16_t>(0); // Thrift RocketClient major version
   appender.writeBE<uint16_t>(1); // Thrift RocketClient minor version
   // Append serialized setup parameters to setup frame metadata
-  appender.insert(paramQueue.move());
+  appender.insert(std::move(serializedMeta));
   return rocket::SetupFrame(
       rocket::Payload::makeFromMetadataAndData(queue.move(), {}), false);
 }
@@ -306,7 +301,7 @@ class RocketTestServerAcceptor final : public wangle::Acceptor {
       folly::Function<std::unique_ptr<RocketServerHandler>()>
           frameHandlerFactory,
       std::promise<void> shutdownPromise)
-      : Acceptor(wangle::ServerSocketConfig{}),
+      : Acceptor(std::make_shared<wangle::ServerSocketConfig>()),
         frameHandlerFactory_(std::move(frameHandlerFactory)),
         shutdownPromise_(std::move(shutdownPromise)) {}
 
@@ -322,8 +317,8 @@ class RocketTestServerAcceptor final : public wangle::Acceptor {
         std::move(socket),
         frameHandlerFactory_(),
         memoryTracker_, // (ingress)
-        memoryTracker_ // (egress)
-    );
+        memoryTracker_, // (egress)
+        streamMetricCallback_);
 
     getConnectionManager()->addConnection(connection);
   }
@@ -354,6 +349,7 @@ class RocketTestServerAcceptor final : public wangle::Acceptor {
   size_t connections_{0};
   folly::Optional<size_t> expectedRemainingStreams_ = folly::none;
   MemoryTracker memoryTracker_;
+  NoopStreamMetricCallback streamMetricCallback_;
 };
 } // namespace
 
@@ -379,21 +375,17 @@ class RocketTestServer::RocketTestServerHandler : public RocketServerHandler {
       cursor.retreat(4);
     }
     // Validate RequestSetupMetadata
-    CompactProtocolReader reader;
-    reader.setInput(cursor);
     RequestSetupMetadata meta;
-    meta.read(&reader);
-    EXPECT_EQ(reader.getCursorPosition(), frame.payload().metadataSize());
+    size_t unpackedSize =
+        PayloadSerializer::getInstance()->unpack(meta, cursor, false);
+    EXPECT_EQ(unpackedSize, frame.payload().metadataSize());
     EXPECT_EQ(expectedSetupMetadata_, meta.opaque_ref().value_or({}));
     version_ = std::min(kServerVersion, meta.maxVersion_ref().value_or(0));
     ServerPushMetadata serverMeta;
     serverMeta.set_setupResponse();
     serverMeta.setupResponse_ref()->version_ref() = version_;
-    CompactProtocolWriter compactProtocolWriter;
-    folly::IOBufQueue queue;
-    compactProtocolWriter.setOutput(&queue);
-    serverMeta.write(&compactProtocolWriter);
-    connection.sendMetadataPush(std::move(queue).move());
+    connection.sendMetadataPush(
+        PayloadSerializer::getInstance()->packCompact(serverMeta));
   }
 
   void handleRequestResponseFrame(
@@ -449,7 +441,7 @@ class RocketTestServer::RocketTestServerHandler : public RocketServerHandler {
       void onStreamCancel() override { delete this; }
 
       bool onSinkHeaders(HeadersPayload&& payload) override {
-        auto metadata_ref = payload.payload.otherMetadata_ref();
+        auto metadata_ref = payload.payload.otherMetadata();
         EXPECT_TRUE(metadata_ref);
         if (metadata_ref) {
           EXPECT_EQ(
@@ -507,8 +499,7 @@ class RocketTestServer::RocketTestServerHandler : public RocketServerHandler {
 
     for (size_t i = 1; i <= nHeaders; ++i) {
       HeadersPayloadContent header;
-      header.otherMetadata_ref() = {
-          {"expected_header", folly::to<std::string>(i)}};
+      header.otherMetadata() = {{"expected_header", folly::to<std::string>(i)}};
       auto alive = clientCallback->onStreamHeaders({std::move(header), {}});
       DCHECK(alive);
     }
@@ -619,7 +610,4 @@ void RocketTestServer::setExpectedSetupMetadata(
   expectedSetupMetadata_ = std::move(md);
 }
 
-} // namespace test
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket::test

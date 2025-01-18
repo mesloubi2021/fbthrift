@@ -27,18 +27,17 @@
 #include <folly/Function.h>
 #include <folly/Portability.h>
 #include <folly/Traits.h>
+#include <folly/Utility.h>
 #include <folly/synchronization/AtomicUtil.h>
 #include <thrift/lib/cpp2/BoxedValuePtr.h>
 #include <thrift/lib/cpp2/FieldRefTraits.h>
 #include <thrift/lib/cpp2/Thrift.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace detail {
 
 template <typename T>
-using is_set_t =
-    std::conditional_t<std::is_const<T>::value, const uint8_t, uint8_t>;
+using is_set_t = std::conditional_t<std::is_const_v<T>, const uint8_t, uint8_t>;
 
 [[noreturn]] void throw_on_bad_optional_field_access();
 [[noreturn]] void throw_on_bad_union_field_access();
@@ -50,6 +49,7 @@ struct alias_isset_fn;
 struct move_to_unique_ptr_fn;
 struct assign_from_unique_ptr_fn;
 struct union_value_unsafe_fn;
+struct is_non_optional_field_set_manually_or_by_serializer_fn;
 
 // IntWrapper is a wrapper of integer that's always copy/move assignable
 // even if integer is atomic
@@ -236,11 +236,11 @@ class BitRef {
 
 template <typename value_type, typename return_type = value_type>
 using EnableIfConst =
-    std::enable_if_t<std::is_const<value_type>::value, return_type>;
+    std::enable_if_t<std::is_const_v<value_type>, return_type>;
 
 template <typename value_type, typename return_type = value_type>
 using EnableIfNonConst =
-    std::enable_if_t<!std::is_const<value_type>::value, return_type>;
+    std::enable_if_t<!std::is_const_v<value_type>, return_type>;
 
 template <typename T, typename U>
 using EnableIfImplicit = std::enable_if_t<
@@ -255,19 +255,20 @@ using EnableIfImplicit = std::enable_if_t<
 /// std::remove_reference_t<T> in a Thrift-generated struct.
 template <typename T>
 class field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
 
   template <typename U>
   friend class field_ref;
   friend struct apache::thrift::detail::unset_unsafe_fn;
+  friend struct apache::thrift::detail::
+      is_non_optional_field_set_manually_or_by_serializer_fn;
 
  public:
   using value_type = std::remove_reference_t<T>;
   using reference_type = T;
 
  private:
-  using BitRef =
-      apache::thrift::detail::BitRef<std::is_const<value_type>::value>;
+  using BitRef = apache::thrift::detail::BitRef<std::is_const_v<value_type>>;
 
  public:
   /// Internal constructor
@@ -284,15 +285,17 @@ class field_ref {
       const uint8_t bit_index = 0) noexcept
       : value_(value), bitref_(is_set, bit_index) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ field_ref(const field_ref<U>& other) noexcept
       : value_(other.value_), bitref_(other.bitref_) {}
 
   template <typename U = value_type>
   FOLLY_ERASE
-      std::enable_if_t<std::is_assignable<value_type&, U&&>::value, field_ref&>
+      std::enable_if_t<std::is_assignable_v<value_type&, U&&>, field_ref&>
       operator=(U&& value) noexcept(
-          std::is_nothrow_assignable<value_type&, U&&>::value) {
+          std::is_nothrow_assignable_v<value_type&, U&&>) {
     value_ = static_cast<U&&>(value);
     bitref_ = true;
     return *this;
@@ -300,11 +303,10 @@ class field_ref {
 
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE field_ref& operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_ = static_cast<value_type&&>(value);
     bitref_ = true;
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   /// Assignment from field_ref is intentionally not provided to prevent
@@ -312,20 +314,29 @@ class field_ref {
   /// rebinding. The copy_from method is provided instead.
   template <typename U>
   FOLLY_ERASE void copy_from(field_ref<U> other) noexcept(
-      std::is_nothrow_assignable<value_type&, U>::value) {
+      std::is_nothrow_assignable_v<value_type&, U>) {
     value_ = other.value();
     bitref_ = other.is_set();
   }
 
-  [[deprecated("Use is_set() method instead")]] FOLLY_ERASE bool has_value()
-      const noexcept {
+  [[deprecated(
+      "Avoid using has_value() API for non-optional field since it's often used incorrectly. "
+      "If this is a legit use-case, please migrate to "
+      "apache::thrift::is_non_optional_field_set_manually_or_by_serializer(obj.field_ref()).")]]
+  FOLLY_ERASE bool has_value() const noexcept {
     return bool(bitref_);
   }
 
   /// Returns true iff the field is set. field_ref doesn't provide conversion to
   /// bool to avoid confusion between checking if the field is set and getting
   /// the field's value, particularly for bool fields.
-  FOLLY_ERASE bool is_set() const noexcept { return bool(bitref_); }
+  [[deprecated(
+      "Avoid using is_set() API for non-optional field since it's often used incorrectly. "
+      "If this is a legit use-case, please migrate to "
+      "apache::thrift::is_non_optional_field_set_manually_or_by_serializer(obj.field_ref()).")]]
+  FOLLY_ERASE bool is_set() const noexcept {
+    return bool(bitref_);
+  }
 
   /// Returns a reference to the value.
   FOLLY_ERASE reference_type value() const noexcept {
@@ -341,14 +352,15 @@ class field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const noexcept {
     return &value_;
   }
 
   /// Returns a pointer to the value.
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const noexcept {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->()
+      const noexcept {
     return &value_;
   }
 
@@ -379,8 +391,7 @@ class field_ref {
   /// Constructs the value in-place.
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     bitref_ = false;
@@ -488,7 +499,7 @@ bool operator>=(const T& lhs, field_ref<U> rhs) {
 // std::remove_reference_t<T> in a Thrift-generated struct.
 template <typename T>
 class optional_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
 
   template <typename U>
   friend class optional_field_ref;
@@ -501,8 +512,7 @@ class optional_field_ref {
   using reference_type = T;
 
  private:
-  using BitRef =
-      apache::thrift::detail::BitRef<std::is_const<value_type>::value>;
+  using BitRef = apache::thrift::detail::BitRef<std::is_const_v<value_type>>;
 
   // for alias_isset_fn
   FOLLY_ERASE optional_field_ref(reference_type value, BitRef bitref)
@@ -521,7 +531,9 @@ class optional_field_ref {
       const uint8_t bit_index = 0) noexcept
       : value_(value), bitref_(is_set, bit_index) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ optional_field_ref(
       const optional_field_ref<U>& other) noexcept
       : value_(other.value_), bitref_(other.bitref_) {}
@@ -536,11 +548,10 @@ class optional_field_ref {
       : value_(other.value_), bitref_(other.bitref_) {}
 
   template <typename U = value_type>
-  FOLLY_ERASE std::enable_if_t<
-      std::is_assignable<value_type&, U&&>::value,
-      optional_field_ref&>
-  operator=(U&& value) noexcept(
-      std::is_nothrow_assignable<value_type&, U&&>::value) {
+  FOLLY_ERASE std::
+      enable_if_t<std::is_assignable_v<value_type&, U&&>, optional_field_ref&>
+      operator=(U&& value) noexcept(
+          std::is_nothrow_assignable_v<value_type&, U&&>) {
     value_ = static_cast<U&&>(value);
     bitref_ = true;
     return *this;
@@ -548,11 +559,10 @@ class optional_field_ref {
 
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE optional_field_ref& operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_ = static_cast<value_type&&>(value);
     bitref_ = true;
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   // Copies the data (the set flag and the value if available) from another
@@ -563,22 +573,21 @@ class optional_field_ref {
   // rebinding. This copy_from method is provided instead.
   template <typename U>
   FOLLY_ERASE void copy_from(const optional_field_ref<U>& other) noexcept(
-      std::is_nothrow_assignable<value_type&, U>::value) {
+      std::is_nothrow_assignable_v<value_type&, U>) {
     value_ = other.value_unchecked();
     bitref_ = other.has_value();
   }
 
   template <typename U>
   FOLLY_ERASE void move_from(optional_field_ref<U> other) noexcept(
-      std::is_nothrow_assignable<value_type&, std::remove_reference_t<U>&&>::
-          value) {
+      std::is_nothrow_assignable_v<value_type&, std::remove_reference_t<U>&&>) {
     value_ = static_cast<std::remove_reference_t<U>&&>(other.value_);
     bitref_ = other.has_value();
   }
 
   template <typename U>
   FOLLY_ERASE void from_optional(const std::optional<U>& other) noexcept(
-      std::is_nothrow_assignable<value_type&, const U&>::value) {
+      std::is_nothrow_assignable_v<value_type&, const U&>) {
     // Use if instead of a shorter ternary expression to prevent a potential
     // copy if T and U mismatch.
     if (other) {
@@ -593,7 +602,7 @@ class optional_field_ref {
   // move_from doesn't make other empty.
   template <typename U>
   FOLLY_ERASE void from_optional(std::optional<U>&& other) noexcept(
-      std::is_nothrow_assignable<value_type&, U&&>::value) {
+      std::is_nothrow_assignable_v<value_type&, U&&>) {
     // Use if instead of a shorter ternary expression to prevent a potential
     // copy if T and U mismatch.
     if (other) {
@@ -615,7 +624,7 @@ class optional_field_ref {
   FOLLY_ERASE explicit operator bool() const noexcept { return bool(bitref_); }
 
   FOLLY_ERASE void reset() noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_ = value_type();
     bitref_ = false;
   }
@@ -646,14 +655,14 @@ class optional_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const {
     throw_if_unset();
     return &value_;
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const {
     throw_if_unset();
     return &value_;
   }
@@ -664,7 +673,7 @@ class optional_field_ref {
   }
 
   FOLLY_ERASE reference_type
-  ensure() noexcept(std::is_nothrow_move_assignable<value_type>::value) {
+  ensure() noexcept(std::is_nothrow_move_assignable_v<value_type>) {
     if (!bitref_) {
       value_ = value_type();
       bitref_ = true;
@@ -683,8 +692,7 @@ class optional_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>&, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>&, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     reset();
@@ -817,17 +825,16 @@ bool operator!=(std::nullopt_t, const optional_field_ref<T>& a) {
 namespace detail {
 
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr bool is_boxed_value_ptr_v = false;
+inline constexpr bool is_boxed_value_ptr_v = false;
 
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr bool is_boxed_value_ptr_v<boxed_value_ptr<T>> =
-    true;
+inline constexpr bool is_boxed_value_ptr_v<boxed_value_ptr<T>> = true;
 
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr bool is_boxed_value_v = false;
+inline constexpr bool is_boxed_value_v = false;
 
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr bool is_boxed_value_v<boxed_value<T>> = true;
+inline constexpr bool is_boxed_value_v<boxed_value<T>> = true;
 
 template <typename From, typename To>
 using copy_reference_t = std::conditional_t<
@@ -845,7 +852,7 @@ using copy_const_t = std::conditional_t<
 
 template <typename T>
 class optional_boxed_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
   static_assert(
       detail::is_boxed_value_ptr_v<folly::remove_cvref_t<T>>,
       "not a boxed_value_ptr");
@@ -864,7 +871,9 @@ class optional_boxed_field_ref {
   FOLLY_ERASE explicit optional_boxed_field_ref(T value) noexcept
       : value_(value) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */
   optional_boxed_field_ref(const optional_boxed_field_ref<U>& other) noexcept
       : value_(other.value_) {}
@@ -880,7 +889,7 @@ class optional_boxed_field_ref {
 
   template <typename U = value_type>
   FOLLY_ERASE std::enable_if_t<
-      std::is_assignable<value_type&, U&&>::value,
+      std::is_assignable_v<value_type&, U&&>,
       optional_boxed_field_ref&>
   operator=(U&& value) {
     value_ = static_cast<U&&>(value);
@@ -962,14 +971,14 @@ class optional_boxed_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const {
     throw_if_unset();
     return &*value_;
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const {
     throw_if_unset();
     return &*value_;
   }
@@ -996,8 +1005,7 @@ class optional_boxed_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>&, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>&, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     reset();
@@ -1142,7 +1150,7 @@ bool operator!=(std::nullopt_t, const optional_boxed_field_ref<T>& a) {
 // It currently only supports Thrift structs.
 template <typename T>
 class intern_boxed_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
   static_assert(
       detail::is_boxed_value_v<folly::remove_cvref_t<T>>, "not a boxed_value");
 
@@ -1151,6 +1159,8 @@ class intern_boxed_field_ref {
 
   template <typename U>
   friend class intern_boxed_field_ref;
+  friend struct apache::thrift::detail::
+      is_non_optional_field_set_manually_or_by_serializer_fn;
 
   // TODO(dokwon): Consider removing `get_default_t` after resolving
   // dependency issue.
@@ -1161,8 +1171,7 @@ class intern_boxed_field_ref {
   using reference_type = detail::copy_reference_t<T, value_type>;
 
  private:
-  using BitRef =
-      apache::thrift::detail::BitRef<std::is_const<value_type>::value>;
+  using BitRef = apache::thrift::detail::BitRef<std::is_const_v<value_type>>;
 
  public:
   FOLLY_ERASE intern_boxed_field_ref(
@@ -1179,14 +1188,16 @@ class intern_boxed_field_ref {
       const uint8_t bit_index = 0) noexcept
       : value_(value), get_default_(get_default), bitref_(is_set, bit_index) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ intern_boxed_field_ref(
       const intern_boxed_field_ref<U>& other) noexcept
       : value_(other.value_), bitref_(other.bitref_) {}
 
   template <typename U = value_type>
   FOLLY_ERASE std::enable_if_t<
-      std::is_assignable<value_type&, U&&>::value,
+      std::is_assignable_v<value_type&, U&&>,
       intern_boxed_field_ref&>
   operator=(U&& value) {
     value_.mut() = static_cast<U&&>(value);
@@ -1196,11 +1207,10 @@ class intern_boxed_field_ref {
 
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE intern_boxed_field_ref& operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_.mut() = static_cast<value_type&&>(value);
     bitref_ = true;
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   // If the other field owns the value, it will perform deep copy. If the other
@@ -1219,7 +1229,13 @@ class intern_boxed_field_ref {
   // Returns true iff the field is set. 'intern_boxed_field_ref' doesn't provide
   // conversion to bool to avoid confusion between checking if the field is set
   // and getting the field's value, particularly for bool fields.
-  FOLLY_ERASE bool is_set() const noexcept { return bool(bitref_); }
+  [[deprecated(
+      "Avoid using is_set() API for non-optional field since it's often used incorrectly. "
+      "If this is a legit use-case, please migrate to "
+      "apache::thrift::is_non_optional_field_set_manually_or_by_serializer(obj.field_ref()).")]]
+  FOLLY_ERASE bool is_set() const noexcept {
+    return bool(bitref_);
+  }
 
   FOLLY_ERASE void reset() noexcept {
     // reset to the intern default.
@@ -1228,11 +1244,13 @@ class intern_boxed_field_ref {
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfNonConst<U, reference_type> value() {
+  FOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U, reference_type>
+  value() {
     return static_cast<reference_type>(value_.mut());
   }
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U, reference_type> value() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U, reference_type> value()
+      const {
     return static_cast<reference_type>(value_.value());
   }
 
@@ -1248,13 +1266,13 @@ class intern_boxed_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() {
     return &value_.mut();
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const {
     return &value_.value();
   }
 
@@ -1269,8 +1287,7 @@ class intern_boxed_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>&, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>&, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     bitref_ = false;
@@ -1381,7 +1398,7 @@ bool operator>=(const U& a, intern_boxed_field_ref<T> b) {
 // It currently only supports Thrift structs.
 template <typename T>
 class terse_intern_boxed_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
   static_assert(
       detail::is_boxed_value_v<folly::remove_cvref_t<T>>, "not a boxed_value");
 
@@ -1403,14 +1420,16 @@ class terse_intern_boxed_field_ref {
       T value, get_default_t get_default) noexcept
       : value_(value), get_default_(get_default) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ terse_intern_boxed_field_ref(
       const terse_intern_boxed_field_ref<U>& other) noexcept
       : value_(other.value_) {}
 
   template <typename U = value_type>
   FOLLY_ERASE std::enable_if_t<
-      std::is_assignable<value_type&, U&&>::value,
+      std::is_assignable_v<value_type&, U&&>,
       terse_intern_boxed_field_ref&>
   operator=(U&& value) {
     value_.mut() = static_cast<U&&>(value);
@@ -1420,10 +1439,9 @@ class terse_intern_boxed_field_ref {
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE terse_intern_boxed_field_ref&
   operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_.mut() = static_cast<value_type&&>(value);
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   template <typename U>
@@ -1433,8 +1451,7 @@ class terse_intern_boxed_field_ref {
 
   template <typename U>
   FOLLY_ERASE void move_from(terse_intern_boxed_field_ref<U> other) noexcept(
-      std::is_nothrow_assignable<value_type&, std::remove_reference_t<U>&&>::
-          value) {
+      std::is_nothrow_assignable_v<value_type&, std::remove_reference_t<U>&&>) {
     value_ = static_cast<std::remove_reference_t<U>&&>(other.value_);
   }
 
@@ -1444,11 +1461,13 @@ class terse_intern_boxed_field_ref {
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfNonConst<U, reference_type> value() {
+  FOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U, reference_type>
+  value() {
     return static_cast<reference_type>(value_.mut());
   }
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U, reference_type> value() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U, reference_type> value()
+      const {
     return static_cast<reference_type>(value_.value());
   }
 
@@ -1463,13 +1482,13 @@ class terse_intern_boxed_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() {
     return &value_.mut();
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const {
     return &value_.value();
   }
 
@@ -1481,8 +1500,7 @@ class terse_intern_boxed_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>&, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>&, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     value_.reset(
@@ -1647,6 +1665,18 @@ struct alias_isset_fn {
   }
 };
 
+struct is_non_optional_field_set_manually_or_by_serializer_fn {
+  template <typename T>
+  bool operator()(field_ref<T> ref) const noexcept {
+    return bool(ref.bitref_);
+  }
+
+  template <typename T>
+  bool operator()(intern_boxed_field_ref<T> ref) const noexcept {
+    return bool(ref.bitref_);
+  }
+};
+
 template <typename T>
 FOLLY_ERASE apache::thrift::optional_field_ref<T&&> make_optional_field_ref(
     T&& ref,
@@ -1720,6 +1750,30 @@ constexpr apache::thrift::detail::move_to_unique_ptr_fn move_to_unique_ptr;
 constexpr apache::thrift::detail::assign_from_unique_ptr_fn
     assign_from_unique_ptr;
 
+//  is_non_optional_field_set_manually_or_by_serializer
+//
+//  Whether the non-optional field is set manually or by the serializer.
+//
+//  When it is set manually, it's true when users use `obj.field_ref() = value`.
+//  If users use `*obj.field_ref() = value` it will still be false.
+//
+//  When it is set by the serializer, it can return false if
+//    1. Thrift struct is not generated by deserializer. (e.g., Users created it
+//    manually).
+//    2. It is actually an optional field in the serializer due to schema
+//    evolution, and the serializer did not set the field.
+//    3. It doesn't exist in the serializer due to schema evolution.
+//
+//  Note that we will always try to serialize this field since it's not an
+//  optional field.
+//
+//  Example:
+//
+//    apache::thrift::is_non_optional_field_set_manually_or_by_serializer(obj.field_ref());
+constexpr apache::thrift::detail::
+    is_non_optional_field_set_manually_or_by_serializer_fn
+        is_non_optional_field_set_manually_or_by_serializer;
+
 [[deprecated("Use `emplace` or `operator=` to set Thrift fields.")]] //
 constexpr apache::thrift::detail::ensure_isset_unsafe_fn ensure_isset_unsafe;
 
@@ -1738,7 +1792,7 @@ constexpr apache::thrift::detail::alias_isset_fn alias_isset;
 // std::remove_reference_t<T> in a Thrift-generated struct.
 template <typename T>
 class required_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
 
   template <typename U>
   friend class required_field_ref;
@@ -1750,27 +1804,27 @@ class required_field_ref {
   FOLLY_ERASE explicit required_field_ref(reference_type value) noexcept
       : value_(value) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ required_field_ref(
       const required_field_ref<U>& other) noexcept
       : value_(other.value_) {}
 
   template <typename U = value_type>
-  FOLLY_ERASE std::enable_if_t<
-      std::is_assignable<value_type&, U&&>::value,
-      required_field_ref&>
-  operator=(U&& value) noexcept(
-      std::is_nothrow_assignable<value_type&, U&&>::value) {
+  FOLLY_ERASE std::
+      enable_if_t<std::is_assignable_v<value_type&, U&&>, required_field_ref&>
+      operator=(U&& value) noexcept(
+          std::is_nothrow_assignable_v<value_type&, U&&>) {
     value_ = static_cast<U&&>(value);
     return *this;
   }
 
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE required_field_ref& operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_ = static_cast<value_type&&>(value);
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   // Assignment from required_field_ref is intentionally not provided to prevent
@@ -1778,7 +1832,7 @@ class required_field_ref {
   // rebinding. The copy_from method is provided instead.
   template <typename U>
   FOLLY_ERASE void copy_from(required_field_ref<U> other) noexcept(
-      std::is_nothrow_assignable<value_type&, U>::value) {
+      std::is_nothrow_assignable_v<value_type&, U>) {
     value_ = other.value();
   }
 
@@ -1800,13 +1854,14 @@ class required_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const noexcept {
     return &value_;
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const noexcept {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->()
+      const noexcept {
     return &value_;
   }
 
@@ -1828,8 +1883,7 @@ class required_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     return value_ = value_type(ilist, static_cast<Args&&>(args)...);
@@ -1945,14 +1999,14 @@ struct union_field_ref_owner_vtable_impl {
 };
 
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr union_field_ref_owner_vtable //
+inline constexpr union_field_ref_owner_vtable //
     union_field_ref_owner_vtable_for{nullptr};
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr union_field_ref_owner_vtable //
+inline constexpr union_field_ref_owner_vtable //
     union_field_ref_owner_vtable_for<T&>{
         &union_field_ref_owner_vtable_impl::reset<T>};
 template <typename T>
-FOLLY_INLINE_VARIABLE constexpr union_field_ref_owner_vtable //
+inline constexpr union_field_ref_owner_vtable //
     union_field_ref_owner_vtable_for<const T&>{nullptr};
 
 } // namespace detail
@@ -1960,13 +2014,13 @@ FOLLY_INLINE_VARIABLE constexpr union_field_ref_owner_vtable //
 // A reference to an union field of the possibly const-qualified type
 template <typename T>
 class union_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
 
   template <typename>
   friend class union_field_ref;
   friend struct detail::union_value_unsafe_fn;
 
-  using is_cpp_ref_or_boxed = folly::bool_constant<
+  using is_cpp_ref_or_boxed = std::bool_constant<
       detail::is_boxed_value_ptr_v<folly::remove_cvref_t<T>> ||
       detail::is_shared_or_unique_ptr_v<folly::remove_cvref_t<T>>>;
 
@@ -2007,12 +2061,12 @@ class union_field_ref {
   template <
       typename U = value_type,
       std::enable_if_t<
-          std::is_assignable<reference_type, U&&>::value &&
-              std::is_constructible<value_type, U&&>::value,
+          std::is_assignable_v<reference_type, U&&> &&
+              std::is_constructible_v<value_type, U&&>,
           int> = 0>
   FOLLY_ERASE union_field_ref& operator=(U&& other) noexcept(
-      std::is_nothrow_constructible<value_type, U>::value&&
-          std::is_nothrow_assignable<value_type, U>::value) {
+      std::is_nothrow_constructible_v<value_type, U> &&
+      std::is_nothrow_assignable_v<value_type, U>) {
     if (has_value() &&
         !detail::is_shared_or_unique_ptr_v<folly::remove_cvref_t<T>>) {
       get_value() = static_cast<U&&>(other);
@@ -2047,14 +2101,14 @@ class union_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const {
     throw_if_unset();
     return &get_value();
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const {
     throw_if_unset();
     return &get_value();
   }
@@ -2081,8 +2135,7 @@ class union_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     vtable_.reset(owner_);
@@ -2241,7 +2294,7 @@ struct union_value_unsafe_fn {
 // or unset.
 template <typename T>
 class terse_field_ref {
-  static_assert(std::is_reference<T>::value, "not a reference");
+  static_assert(std::is_reference_v<T>, "not a reference");
 
   template <typename U>
   friend class terse_field_ref;
@@ -2252,7 +2305,9 @@ class terse_field_ref {
 
   FOLLY_ERASE terse_field_ref(reference_type value) noexcept : value_(value) {}
 
-  template <typename U, typename = detail::EnableIfImplicit<T, U>>
+  template <
+      typename U,
+      typename = apache::thrift::detail::EnableIfImplicit<T, U>>
   FOLLY_ERASE /* implicit */ terse_field_ref(
       const terse_field_ref<U>& other) noexcept
       : value_(other.value_) {}
@@ -2267,32 +2322,30 @@ class terse_field_ref {
       : value_(other.value_) {}
 
   template <typename U = value_type>
-  FOLLY_ERASE std::
-      enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>
+  FOLLY_ERASE
+      std::enable_if_t<std::is_assignable_v<value_type&, U&&>, terse_field_ref&>
       operator=(U&& value) noexcept(
-          std::is_nothrow_assignable<value_type&, U&&>::value) {
+          std::is_nothrow_assignable_v<value_type&, U&&>) {
     value_ = static_cast<U&&>(value);
     return *this;
   }
 
   // Workaround for https://bugs.llvm.org/show_bug.cgi?id=49442
   FOLLY_ERASE terse_field_ref& operator=(value_type&& value) noexcept(
-      std::is_nothrow_move_assignable<value_type>::value) {
+      std::is_nothrow_move_assignable_v<value_type>) {
     value_ = static_cast<value_type&&>(value);
     return *this;
-    value.~value_type(); // Force emit destructor...
   }
 
   template <typename U>
   FOLLY_ERASE void copy_from(const terse_field_ref<U>& other) noexcept(
-      std::is_nothrow_assignable<value_type&, U>::value) {
+      std::is_nothrow_assignable_v<value_type&, U>) {
     value_ = other.value_;
   }
 
   template <typename U>
   FOLLY_ERASE void move_from(terse_field_ref<U> other) noexcept(
-      std::is_nothrow_assignable<value_type&, std::remove_reference_t<U>&&>::
-          value) {
+      std::is_nothrow_assignable_v<value_type&, std::remove_reference_t<U>&&>) {
     value_ = static_cast<std::remove_reference_t<U>&&>(other.value_);
   }
 
@@ -2308,13 +2361,14 @@ class terse_field_ref {
   [[deprecated(
       "Please use `foo.value().bar()` instead of `foo->bar()` "
       "since const is not propagated correctly in `operator->` API")]] FOLLY_ERASE
-      detail::EnableIfNonConst<U>*
+      apache::thrift::detail::EnableIfNonConst<U>*
       operator->() const noexcept {
     return &value_;
   }
 
   template <typename U = value_type>
-  FOLLY_ERASE detail::EnableIfConst<U>* operator->() const noexcept {
+  FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->()
+      const noexcept {
     return &value_;
   }
 
@@ -2333,8 +2387,7 @@ class terse_field_ref {
 
   template <class U, class... Args>
   FOLLY_ERASE std::enable_if_t<
-      std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::
-          value,
+      std::is_constructible_v<value_type, std::initializer_list<U>, Args&&...>,
       value_type&>
   emplace(std::initializer_list<U> ilist, Args&&... args) {
     value_ = value_type(ilist, static_cast<Args&&>(args)...);
@@ -2435,5 +2488,4 @@ bool operator>=(const T& lhs, terse_field_ref<U> rhs) {
   return lhs >= *rhs;
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

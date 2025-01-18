@@ -16,17 +16,16 @@
 
 #include <thrift/lib/cpp2/async/ServerStream.h>
 
-#include <folly/experimental/coro/Baton.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/Baton.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Sleep.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GTest.h>
 #include <folly/synchronization/Baton.h>
 #include <thrift/lib/cpp2/async/ClientBufferedStream.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class StreamElementEncoderStub final
     : public apache::thrift::detail::StreamElementEncoder<int> {
@@ -94,7 +93,7 @@ TEST(ServerStreamTest, PublishConsumeCoro) {
   ServerStream<int> factory(
       folly::coro::co_invoke([]() -> folly::coro::AsyncGenerator<int&&> {
         for (int i = 0; i < 10; ++i) {
-          co_yield std::move(i);
+          co_yield int(i);
         }
       }));
   clientEb.add(
@@ -129,7 +128,7 @@ TEST(ServerStreamTest, ImmediateCancel) {
       folly::coro::co_invoke([]() -> folly::coro::AsyncGenerator<int&&> {
         for (int i = 0; i < 10; ++i) {
           co_await folly::coro::sleep(std::chrono::milliseconds(10));
-          co_yield std::move(i);
+          co_yield int(i);
         }
         EXPECT_TRUE(false);
       }));
@@ -160,7 +159,7 @@ TEST(ServerStreamTest, DelayedCancel) {
       folly::coro::co_invoke([]() -> folly::coro::AsyncGenerator<int&&> {
         for (int i = 0; i < 10; ++i) {
           co_await folly::coro::sleep(std::chrono::milliseconds(10));
-          co_yield std::move(i);
+          co_yield int(i);
         }
         EXPECT_TRUE(false);
       }));
@@ -217,7 +216,7 @@ TEST(ServerStreamTest, CancelCoro) {
           for (int i = 0;; ++i) {
             EXPECT_LT(i, 10);
             co_await folly::coro::sleep(std::chrono::milliseconds(10));
-            co_yield std::move(i);
+            co_yield int(i);
           }
         }));
     clientEb.add(
@@ -398,11 +397,10 @@ TEST(ServerStreamTest, FactoryLeak) {
   std::move(publisher).complete();
   stream = folly::coro::co_invoke([]() -> folly::coro::AsyncGenerator<int&&> {
     for (int i = 0; i < 10; ++i) {
-      co_yield std::move(i);
+      co_yield int(i);
     }
   });
   stream = apache::thrift::ServerStream<int>::createEmpty();
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

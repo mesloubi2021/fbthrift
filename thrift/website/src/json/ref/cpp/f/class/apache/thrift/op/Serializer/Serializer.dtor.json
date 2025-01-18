@@ -15,10 +15,11 @@
       "definition_html": "virtual apache::thrift::op::Serializer::~Serializer",
       "argsstring_html": "()=default",
       "name_html": "~Serializer",
+      "qualifiedname_html": "apache::thrift::op::Serializer::~Serializer",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "49",
-        "column": "1"
+        "column": "11"
       },
       "definition": {
         "simple_html": "virtual ~Serializer()",
@@ -40,5 +41,11 @@
   "brief_html": "Destructs the Serializer.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/Serializer/Serializer.dtor",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/Serializer/Serializer.dtor"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/Serializer/Serializer.dtor",
+  "parent_links": [
+    {
+      "text_html": "Serializer",
+      "href": "/ref/cpp/class/apache/thrift/op/Serializer"
+    }
+  ]
 }

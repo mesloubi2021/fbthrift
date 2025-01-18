@@ -20,6 +20,7 @@ Pxd file to expose the interface defined in ClientsWrapper.h to CythonClients.py
 
 }}
 {{> common/auto_generated_py}}
+{{^program:auto_migrate?}}
 
 from cpython.ref cimport PyObject
 from libc.stdint cimport (
@@ -37,10 +38,11 @@ from libcpp.vector cimport vector
 
 from folly cimport cFollyFuture, cFollyTry, cFollyUnit
 cimport folly.iobuf as _fbthrift_iobuf
-from thrift.py3.common cimport cRpcOptions
+from thrift.python.common cimport cRpcOptions
 from thrift.py3.client cimport cClientWrapper
 
 cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.types as _{{#program:py3Namespaces}}{{value}}_{{/program:py3Namespaces}}{{program:name}}_types
+cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.cbindings as _{{#program:py3Namespaces}}{{value}}_{{/program:py3Namespaces}}{{program:name}}_cbindings
 {{#program:has_stream?}}
 from thrift.py3.stream cimport cResponseAndClientBufferedStream, cClientBufferedStream
 {{/program:has_stream?}}
@@ -48,6 +50,7 @@ from thrift.py3.stream cimport cResponseAndClientBufferedStream, cClientBuffered
 {{#program:includeNamespaces}}
 {{#hasTypes?}}
 cimport {{#includeNamespace}}{{value}}.{{/includeNamespace}}types as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}types
+cimport {{#includeNamespace}}{{value}}.{{/includeNamespace}}cbindings as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}cbindings
 {{/hasTypes?}}
 {{#hasServices?}}
 cimport {{#includeNamespace}}{{value}}.{{/includeNamespace}}clients_wrapper as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}clients_wrapper
@@ -62,7 +65,7 @@ cdef extern from "{{program:includePrefix}}{{program:cpp_gen_path}}/{{program:na
     }}{{service:cpp_name}}AsyncClient":
       pass
 
-{{#service:interactions}}
+{{#service:supportedInteractions}}
 cdef extern from "{{program:includePrefix}}{{program:cpp_gen_path}}/{{program:name}}_clients.h"{{!
     }} namespace "{{#program:cppNamespaces}}::{{value}}{{/program:cppNamespaces}}":
   cdef cppclass c{{service:parent_service_name}}AsyncClient_{{service:name}} {{!
@@ -70,7 +73,7 @@ cdef extern from "{{program:includePrefix}}{{program:cpp_gen_path}}/{{program:na
     }}{{service:parent_service_name}}AsyncClient::{{service:name}}":
       pass
 
-{{/service:interactions}}
+{{/service:supportedInteractions}}
 cdef extern from "<utility>" namespace "std":
   cdef unique_ptr[c{{service:name}}ClientWrapper] move(unique_ptr[c{{service:name}}ClientWrapper])
 
@@ -106,17 +109,17 @@ cdef extern from "{{program:includePrefix}}gen-py3/{{program:name}}/clients_wrap
       empty cppclass body
     }}
     {{^service:supportedFunctions}}
-    {{^service:interactions}}
+    {{^service:supportedInteractions}}
     {{#service:extends?}}
     pass
     {{/service:extends?}}
-    {{/service:interactions}}
+    {{/service:supportedInteractions}}
     {{/service:supportedFunctions}}
-    {{#service:interactions}}
+    {{#service:supportedInteractions}}
     cFollyFuture[unique_ptr[cClientWrapper]]& create{{service:name}}()
-    {{/service:interactions}}
+    {{/service:supportedInteractions}}
 
-  {{#service:interactions}}
+  {{#service:supportedInteractions}}
   cdef cppclass c{{service:parent_service_name}}ClientWrapper_{{service:name}}InteractionWrapper "{{!
   }}::{{#program:cppNamespaces}}{{value}}::{{/program:cppNamespaces}}{{service:parent_service_name}}ClientWrapper{{!
   }}::{{service:name}}InteractionWrapper"(cClientWrapper):
@@ -138,5 +141,6 @@ cdef extern from "{{program:includePrefix}}gen-py3/{{program:name}}/clients_wrap
     {{/service:extends?}}
     {{/service:supportedFunctions}}
 
-  {{/service:interactions}}
+  {{/service:supportedInteractions}}
 {{/program:services}}
+{{/program:auto_migrate?}}

@@ -20,8 +20,7 @@
 
 #include <thrift/lib/cpp2/frozen/FrozenUtil.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 using namespace frozen;
 
 template <class T>
@@ -143,7 +142,7 @@ TYPED_TEST_P(FrozenRange, Zeros) {
   EXPECT_EQ(*it++, 0);
   EXPECT_EQ(*it++, 0);
   size_t n = 0;
-  for (auto& item : fv) {
+  for (const auto& item : fv) {
     (void)item;
     ++n; // ensure iteration still works despite zero-byte items
   }
@@ -184,5 +183,4 @@ typedef ::testing::Types<
     MyTypesNested;
 INSTANTIATE_TYPED_TEST_CASE_P(RangesNested, FrozenRangeNested, MyTypesNested);
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

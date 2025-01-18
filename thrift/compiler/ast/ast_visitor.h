@@ -17,63 +17,82 @@
 #pragma once
 
 #include <cassert>
-#include <exception>
 #include <functional>
+#include <stdexcept>
 #include <type_traits>
 #include <vector>
 
-#include <thrift/compiler/ast/detail/ast_visitor.h>
-#include <thrift/compiler/ast/t_const.h>
-#include <thrift/compiler/ast/t_enum.h>
-#include <thrift/compiler/ast/t_enum_value.h>
-#include <thrift/compiler/ast/t_exception.h>
-#include <thrift/compiler/ast/t_field.h>
-#include <thrift/compiler/ast/t_function.h>
-#include <thrift/compiler/ast/t_interaction.h>
-#include <thrift/compiler/ast/t_interface.h>
 #include <thrift/compiler/ast/t_list.h>
 #include <thrift/compiler/ast/t_map.h>
 #include <thrift/compiler/ast/t_node.h>
 #include <thrift/compiler/ast/t_program.h>
-#include <thrift/compiler/ast/t_service.h>
 #include <thrift/compiler/ast/t_set.h>
 #include <thrift/compiler/ast/t_sink.h>
 #include <thrift/compiler/ast/t_stream.h>
 #include <thrift/compiler/ast/t_struct.h>
 #include <thrift/compiler/ast/t_structured.h>
-#include <thrift/compiler/ast/t_typedef.h>
 #include <thrift/compiler/ast/t_union.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
+namespace ast_detail {
+
+// Visitation and registration functions for concrete AST nodes.
+#define FBTHRIFT_AST_DETAIL_AST_VISITOR_NODE_T_(name)               \
+ private:                                                           \
+  using name##_type = node_type<t_##name>;                          \
+  ast_detail::visitor_list<Args..., name##_type&> name##_visitors_; \
+                                                                    \
+ public:                                                            \
+  void add_##name##_visitor(                                        \
+      std::function<void(Args..., name##_type&)> visitor) {         \
+    name##_visitors_.emplace_back(std::move(visitor));              \
+  }                                                                 \
+  void operator()(Args... args, name##_type& node) const
+
+// The type to use when traversing the given node type N.
+template <bool is_const, typename N>
+using node_type = std::conditional_t<is_const, const N, N>;
+
+// Helper that to propagate constness through a dynamic_cast.
+template <typename N>
+N* as(t_node* node) {
+  return dynamic_cast<N*>(node);
+}
+template <typename N>
+const N* as(const t_node* node) {
+  return dynamic_cast<const N*>(node);
+}
+
+// Checks if the context type Context has begin/end_visit methods.
+template <typename Context, typename = void>
+struct has_visit_methods : std::false_type {};
+template <typename Context>
+struct has_visit_methods<
+    Context,
+    std::void_t<
+        decltype(std::declval<Context>().begin_visit(std::declval<t_node&>())),
+        decltype(std::declval<Context>().end_visit(std::declval<t_node&>()))>>
+    : std::true_type {};
+
+// Helper to call begin/end_visit if supported by the visitation context C.
+template <typename Node, typename C>
+void begin_visit(Node& node, C& context) {
+  if constexpr (has_visit_methods<C>::value) {
+    context.begin_visit(node);
+  }
+}
+template <typename Node, typename C>
+void end_visit(Node& node, C& context) {
+  if constexpr (has_visit_methods<C>::value) {
+    context.end_visit(node);
+  }
+}
 
 // A list of visitor that accept the given arguments.
 template <typename... Args>
 using visitor_list = std::vector<std::function<void(Args...)>>;
 
-template <bool is_const, typename... Args>
-class basic_ast_visitor;
-
-// A class that can traverse ast nodes, invoking registered visitors for each
-// node visited.
-//
-// Visits AST nodes in 'preorder', visiting the parent node before children
-// nodes.
-//
-// For each concrete node type, provides the following functions:
-// - an operator() overload for visiting the node:
-//     void operator()(args..., t_{name}&) const;
-// - a function to add a node-specific visitor:
-//     void add_{name}_visitor(std::function<void(args..., t_{name}&)>);
-//
-// Also provides helper functions for registering a visitor for multiple node
-// types. For example: all interface, structured_declaration, and
-// declaration visitors.
-using ast_visitor = basic_ast_visitor<false>;
-
-// Same as ast_visitor, except traverse a const AST.
-using const_ast_visitor = basic_ast_visitor<true>;
+} // namespace ast_detail
 
 // A class that can traverse an AST, calling registered visitors.
 // See ast_visitor.
@@ -98,7 +117,7 @@ class basic_ast_visitor {
   // Does not include other t_structured nodes like t_paramlist.
   template <typename V>
   void add_structured_definition_visitor(V&& visitor) {
-    add_structured_visitor(visitor);
+    add_struct_visitor(visitor);
     add_union_visitor(visitor);
     add_exception_visitor(std::forward<V>(visitor));
   }
@@ -113,13 +132,18 @@ class basic_ast_visitor {
     add_typedef_visitor(std::forward<V>(visitor));
   }
 
-  // Adds a visitor for all IDL definition node types.
   template <typename V>
   void add_definition_visitor(V&& visitor) {
     add_root_definition_visitor(visitor);
     add_function_visitor(visitor);
     add_field_visitor(visitor);
-    add_enum_value_visitor(visitor);
+    add_enum_value_visitor(std::forward<V>(visitor));
+  }
+
+  // Adds a visitor for all IDL named node types.
+  template <typename V>
+  void add_named_visitor(V&& visitor) {
+    add_definition_visitor(visitor);
     add_program_visitor(std::forward<V>(visitor));
   }
 
@@ -134,25 +158,24 @@ class basic_ast_visitor {
     begin_visit(program_visitors_, node, args...);
     visit_children_ptrs(node.services(), args...);
     visit_children_ptrs(node.interactions(), args...);
-    // TODO(afuller): Split structs and unions in t_program accessors.
-    // Note: Loop must be resilient to visitor causing push_back calls.
+    // Loop must be resilient to visitor calling push_back.
     for (size_t i = 0; i < node.structs_and_unions().size(); ++i) {
       t_structured* struct_or_union = node.structs_and_unions()[i];
       if (auto* tunion = ast_detail::as<t_union>(struct_or_union)) {
-        this->operator()(args..., *tunion);
+        (*this)(args..., *tunion);
         continue;
       }
 
-      // if node is not a union, then it must be a struct
+      // If node is not a union, then it must be a struct.
       auto* tstruct = ast_detail::as<t_struct>(struct_or_union);
       assert(tstruct != nullptr);
-      this->operator()(args..., *tstruct);
+      (*this)(args..., *tstruct);
     }
     visit_children_ptrs(node.exceptions(), args...);
     visit_children_ptrs(node.typedefs(), args...);
     visit_children_ptrs(node.enums(), args...);
     visit_children_ptrs(node.consts(), args...);
-    // Note: Loop must be resilient to visitor causing push_back calls.
+    // Loop must be resilient to visitor calling push_back.
     for (size_t i = 0; i < node.type_instantiations().size(); ++i) {
       auto& type_inst = node.type_instantiations()[i];
       if (auto* set_node = ast_detail::as<t_set>(&type_inst)) {
@@ -218,11 +241,9 @@ class basic_ast_visitor {
   }
 
   // Types
-  FBTHRIFT_AST_DETAIL_AST_VISITOR_NODE_T_(structured) {
-    // Must actually be a struct.
-    // REVERT(aristidis)
-    // assert(typeid(node) == typeid(structured_type));
-    begin_visit(structured_visitors_, node, args...);
+  FBTHRIFT_AST_DETAIL_AST_VISITOR_NODE_T_(struct) {
+    assert(typeid(node) == typeid(t_struct));
+    begin_visit(struct_visitors_, node, args...);
     visit_children(node.fields(), args...);
     end_visit(node, args...);
   }
@@ -275,7 +296,9 @@ class basic_ast_visitor {
  private:
   template <typename N>
   static void begin_visit(
-      const visitor_list<Args..., N&>& visitors, N& node, Args... args) {
+      const ast_detail::visitor_list<Args..., N&>& visitors,
+      N& node,
+      Args... args) {
     // TODO(afuller): Replace with c++17 folding syntax when available.
     using _ = int[];
     void(_{0, (ast_detail::begin_visit(node, args), 0)...});
@@ -301,28 +324,28 @@ class basic_ast_visitor {
 
   template <typename C>
   void visit_child(C& child, Args... args) const {
-    operator()(args..., child);
+    (*this)(args..., child);
   }
 
   template <typename C>
   void visit_children(const C& children, Args... args) const {
-    // Note: Loop must be resilient to visitor causing push_back calls.
+    // Loop must be resilient to visitor calling push_back.
     for (size_t i = 0; i < children.size(); ++i) {
-      operator()(args..., children[i]);
+      (*this)(args..., children[i]);
     }
   }
   template <typename C>
   void visit_children_ptrs(const C& children, Args... args) const {
-    // Note: Loop must be resilient to visitor causing push_back calls.
+    // Loop must be resilient to visitor calling push_back.
     for (size_t i = 0; i < children.size(); ++i) {
-      operator()(args..., *children[i]);
+      (*this)(args..., *children[i]);
     }
   }
 };
 
-template <bool is_const, typename N = t_node>
+template <bool is_const>
 class basic_visitor_context {
-  using node_type = ast_detail::node_type<is_const, N>;
+  using node_type = ast_detail::node_type<is_const, t_node>;
   using program_type = ast_detail::node_type<is_const, t_program>;
 
  public:
@@ -365,9 +388,27 @@ class basic_visitor_context {
   std::vector<node_type*> context_;
 };
 
+// A class that can traverse ast nodes, invoking registered visitors for each
+// node visited.
+//
+// Visits AST nodes in 'preorder', visiting the parent node before children
+// nodes.
+//
+// For each concrete node type, provides the following functions:
+// - an operator() overload for visiting the node:
+//     void operator()(args..., t_{name}&) const;
+// - a function to add a node-specific visitor:
+//     void add_{name}_visitor(std::function<void(args..., t_{name}&)>);
+//
+// Also provides helper functions for registering a visitor for multiple node
+// types. For example: all interface, structured_declaration, and
+// declaration visitors.
+using ast_visitor = basic_ast_visitor<false>;
+
+// Same as ast_visitor, except traverse a const AST.
+using const_ast_visitor = basic_ast_visitor<true>;
+
 using visitor_context = basic_visitor_context<false>;
 using const_visitor_context = basic_visitor_context<true>;
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

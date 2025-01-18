@@ -25,8 +25,7 @@ namespace folly {
 class EventBase;
 }
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class AsyncProcessor;
 class Cpp2Worker;
@@ -38,28 +37,21 @@ namespace concurrency {
 class ThreadManager;
 } // namespace concurrency
 
-namespace server {
-class ServerConfigs;
-} // namespace server
-
 namespace rocket {
 
 struct ProcessorInfo {
   ProcessorInfo(
       apache::thrift::AsyncProcessorFactory& processorFactory,
       std::shared_ptr<apache::thrift::concurrency::ThreadManager> threadManager,
-      server::ServerConfigs& serverConfigs,
       RequestsRegistry* requestsRegistry,
       bool useResourcePool = false)
       : processorFactory_(processorFactory),
         threadManager_(std::move(threadManager)),
-        serverConfigs_(serverConfigs),
         requestsRegistry_(std::move(requestsRegistry)),
         useResourcePool_(useResourcePool) {}
 
   apache::thrift::AsyncProcessorFactory& processorFactory_;
   std::shared_ptr<apache::thrift::concurrency::ThreadManager> threadManager_;
-  server::ServerConfigs& serverConfigs_;
   RequestsRegistry* FOLLY_NULLABLE requestsRegistry_;
   bool useResourcePool_;
 };
@@ -79,5 +71,4 @@ class SetupFrameHandler {
 };
 
 } // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

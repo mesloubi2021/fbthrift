@@ -20,6 +20,7 @@
       "definition_html": "bool apache::thrift::op::detail::StructLessThan&lt; LessThanImpl &gt;::operator()",
       "argsstring_html": "(const T &amp;lhs, const T &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StructLessThan::operator()",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -32,11 +33,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "549",
-        "column": "1",
+        "line": "652",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "549",
-        "bodyend": "592"
+        "bodystart": "652",
+        "bodyend": "688"
       },
       "definition": {
         "simple_html": "template &lt;class T&gt;\nbool operator()(const T&amp; lhs, const T&amp; rhs) const",
@@ -58,5 +59,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StructLessThan/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StructLessThan/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StructLessThan/operator.call",
+  "parent_links": [
+    {
+      "text_html": "StructLessThan",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/StructLessThan"
+    }
+  ]
 }

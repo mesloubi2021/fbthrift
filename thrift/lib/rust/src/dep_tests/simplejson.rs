@@ -443,13 +443,49 @@ fn test_serde_compat() -> Result<()> {
 
     let fbthrift_s = String::from_utf8(serialize(&r).to_vec()).unwrap();
     // We aren't going to get full compat, but at least make it so fbthrift
-    // can deserialize
-    // what serde has written out
+    // can deserialize what serde has written out
     let serde_s = serde_json::to_string(&r).unwrap();
 
     // but passing between them should work
     assert_eq!(r, serde_json::from_str(&fbthrift_s).unwrap());
     assert_eq!(r, deserialize(&serde_s).unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_serde_compat_empty_union() -> Result<()> {
+    // Test the empty union scenario specifically, as it is a bit of
+    // a special case
+    let empty = Un::default();
+
+    // Historically, serde rep of an empty union has been different to simplejson
+    let empty_serde = serde_json::to_string(&empty).unwrap();
+    assert_eq!(r#"{"UnknownField":-1}"#, empty_serde);
+    let empty_simplejson = String::from_utf8(serialize(&empty).to_vec()).unwrap();
+    assert_eq!("{}", empty_simplejson);
+
+    // Mixed round-trip serde-to-simplejson should still work fine though
+    assert_eq!(empty, deserialize(&empty_serde).unwrap());
+
+    // Historically, mixed round-trip simplejson-to-serde fails
+    // assert_eq!(empty, serde_json::from_str(&empty_simplejson).unwrap());
+
+    Ok(())
+}
+
+#[test]
+fn test_serde_compat_deser_errors() -> Result<()> {
+    // Historically, serde deserialization for unions is stricter than simplejson.
+    // It returns an error on mising or unknown variants
+    assert!(serde_json::from_str::<Un>("{}").is_err());
+    assert!(serde_json::from_str::<Un>(r#"{"NotAVariant":{}}"#).is_err());
+
+    // On the other hand, serde deserialization for structs is similar to simplejson.
+    // It tolerates missing or unknown fields
+    assert!(serde_json::from_str::<UnOne>("{}").is_ok());
+    assert!(serde_json::from_str::<UnOne>(r#"{"one":1,"NotAField":2}"#).is_ok());
+
     Ok(())
 }
 

@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <filesystem>
 #include <memory>
 #include <queue>
 #include <set>
@@ -28,17 +29,19 @@
 #include <fmt/core.h>
 
 #include <thrift/compiler/ast/t_field.h>
-#include <thrift/compiler/gen/cpp/type_resolver.h>
+#include <thrift/compiler/ast/uri.h>
 #include <thrift/compiler/generate/common.h>
+#include <thrift/compiler/generate/cpp/name_resolver.h>
+#include <thrift/compiler/generate/cpp/util.h>
 #include <thrift/compiler/generate/mstch_objects.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/cpp2/util.h>
-#include <thrift/compiler/lib/uri.h>
-#include <thrift/compiler/validator/validator.h>
+#include <thrift/compiler/sema/ast_validator.h>
+#include <thrift/compiler/sema/schematizer.h>
+#include <thrift/compiler/sema/sema_context.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+using apache::thrift::compiler::detail::schematizer;
+
+namespace apache::thrift::compiler {
 namespace {
 
 // Since we can not include `thrift/annotation/cpp.thrift`,
@@ -130,7 +133,8 @@ std::vector<t_annotation> get_fatal_annotations(
 }
 
 std::string get_fatal_string_short_id(const std::string& key) {
-  return boost::algorithm::replace_all_copy(key, ".", "_");
+  return boost::algorithm::replace_all_copy(
+      boost::algorithm::replace_all_copy(key, ".", "_"), "/", "_");
 }
 std::string get_fatal_string_short_id(const t_named* node) {
   // Use the unmodified cpp name.
@@ -141,6 +145,7 @@ std::string get_fatal_namespace_name_short_id(
     const std::string& lang, const std::string& ns) {
   std::string replacement = lang == "cpp" || lang == "cpp2" ? "__" : "_";
   std::string result = boost::algorithm::replace_all_copy(ns, ".", replacement);
+  result = boost::algorithm::replace_all_copy(result, "/", "_");
   return result;
 }
 
@@ -197,6 +202,30 @@ bool resolves_to_container_or_struct(const t_type* type) {
   return type->is_container() || type->is_struct() || type->is_exception();
 }
 
+bool is_runtime_annotation(const t_named& named) {
+  return named.find_structured_annotation_or_null(kCppRuntimeAnnotation);
+}
+
+bool has_runtime_annotation(const t_named& named) {
+  return std::any_of(
+      named.structured_annotations().begin(),
+      named.structured_annotations().end(),
+      [](const t_const& cnst) { return is_runtime_annotation(*cnst.type()); });
+}
+
+bool has_schema(source_manager& sm, const t_program& program) {
+  return program.scope()->find(
+      program.scope_name(schematizer::name_schema(sm, program)));
+}
+
+std::string escape_binary_string(std::string_view str) {
+  std::string ret;
+  for (unsigned char chr : str) {
+    fmt::format_to(std::back_inserter(ret), "\\x{:02x}", chr);
+  }
+  return ret;
+}
+
 class cpp2_generator_context {
  public:
   static cpp2_generator_context create() { return cpp2_generator_context(); }
@@ -209,13 +238,13 @@ class cpp2_generator_context {
     return cpp2::is_orderable(memo, type);
   }
 
-  gen::cpp::type_resolver& resolver() { return resolver_; }
+  cpp_name_resolver& resolver() { return resolver_; }
 
  private:
   cpp2_generator_context() = default;
 
   std::unordered_map<const t_type*, bool> is_orderable_memo_;
-  gen::cpp::type_resolver resolver_;
+  cpp_name_resolver resolver_;
 };
 
 int checked_stoi(const std::string& s, std::string msg) {
@@ -240,8 +269,18 @@ class t_mstch_cpp2_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
 
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "program:autogen_path",
+        "service:autogen_path",
+        "field:fatal_annotations?",
+        "value:enable_referencing?",
+    };
+    return opts;
+  }
+
   std::string template_prefix() const override { return "cpp2"; }
-  bool convert_delimiter() const override { return true; }
 
   void process_options(
       const std::map<std::string, std::string>& options) override {
@@ -253,10 +292,9 @@ class t_mstch_cpp2_generator : public t_mstch_generator {
   }
 
   void generate_program() override;
-  void fill_validator_list(validator_list&) const override;
+  void fill_validator_visitors(ast_validator&) const override;
   static std::string get_cpp2_namespace(const t_program* program);
   static std::string get_cpp2_unprefixed_namespace(const t_program* program);
-  static mstch::array get_namespace_array(const t_program* program);
   static mstch::array cpp_includes(const t_program* program);
   static mstch::node include_prefix(
       const t_program* program, std::map<std::string, std::string>& options);
@@ -280,23 +318,39 @@ class t_mstch_cpp2_generator : public t_mstch_generator {
 };
 
 class cpp_mstch_program : public mstch_program {
+  // transitive_schema_initializers depends on consistent order.
+  struct program_less {
+    bool operator()(const t_program* a, const t_program* b) const {
+      return a->path() < b->path();
+    }
+  };
+  using transitive_include_map =
+      std::map<const t_program*, std::string, program_less>;
+
  public:
   cpp_mstch_program(
       const t_program* program,
       mstch_context& ctx,
       mstch_element_position pos,
-      boost::optional<int32_t> split_id = boost::none,
-      boost::optional<std::vector<t_structured*>> split_structs = boost::none)
+      source_manager& sm,
+      std::optional<int32_t> split_id = std::nullopt,
+      std::optional<std::vector<t_structured*>> split_structs = std::nullopt)
       : mstch_program(program, ctx, pos),
         split_id_(split_id),
-        split_structs_(split_structs) {
+        split_structs_(split_structs),
+        sm_(sm) {
     register_methods(
         this,
         {{"program:cpp_includes", &cpp_mstch_program::cpp_includes},
-         {"program:namespace_cpp2", &cpp_mstch_program::namespace_cpp2},
+         {"program:qualified_namespace",
+          &cpp_mstch_program::qualified_namespace},
          {"program:include_prefix", &cpp_mstch_program::include_prefix},
          {"program:cpp_declare_hash?", &cpp_mstch_program::cpp_declare_hash},
          {"program:thrift_includes", &cpp_mstch_program::thrift_includes},
+         {"program:transitive_schema_initializers",
+          &cpp_mstch_program::transitive_schema_initializers},
+         {"program:num_transitive_thrift_includes",
+          &cpp_mstch_program::num_transitive_thrift_includes},
          {"program:frozen_packed?", &cpp_mstch_program::frozen_packed},
          {"program:legacy_api?", &cpp_mstch_program::legacy_api},
          {"program:fatal_languages", &cpp_mstch_program::fatal_languages},
@@ -309,13 +363,17 @@ class cpp_mstch_program : public mstch_program {
          {"program:fatal_data_member", &cpp_mstch_program::fatal_data_member},
          {"program:split_structs", &cpp_mstch_program::split_structs},
          {"program:split_enums", &cpp_mstch_program::split_enums},
+         {"program:has_schema?", &cpp_mstch_program::has_schema},
+         {"program:schema_name", &cpp_mstch_program::schema_name},
+         {"program:schema_includes_const?",
+          &cpp_mstch_program::schema_includes_const},
+         {"program:needs_sinit?", &cpp_mstch_program::needs_sinit},
          {"program:structs_and_typedefs",
           &cpp_mstch_program::structs_and_typedefs}});
     register_has_option("program:tablebased?", "tablebased");
     register_has_option("program:no_metadata?", "no_metadata");
     register_has_option(
         "program:enforce_required?", "deprecated_enforce_required");
-    register_has_option("program:interning?", "interning");
   }
   std::string get_program_namespace(const t_program* program) override {
     return t_mstch_cpp2_generator::get_cpp2_namespace(program);
@@ -328,7 +386,7 @@ class cpp_mstch_program : public mstch_program {
       if (alias->is_typedef() && alias->has_annotation("cpp.type")) {
         const t_type* ttype = i->get_type()->get_true_type();
         if ((ttype->is_struct() || ttype->is_exception()) &&
-            !gen::cpp::type_resolver::find_first_adapter(*ttype)) {
+            !cpp_name_resolver::find_first_adapter(*ttype)) {
           result.push_back(i);
         }
       }
@@ -366,8 +424,7 @@ class cpp_mstch_program : public mstch_program {
   std::vector<std::string> get_fatal_struct_names() {
     std::vector<std::string> result;
     for (const t_structured* obj : program_->structured_definitions()) {
-      if (!obj->is_union() &&
-          !gen::cpp::type_resolver::find_first_adapter(*obj)) {
+      if (!obj->is_union() && !cpp_name_resolver::find_first_adapter(*obj)) {
         result.push_back(get_fatal_string_short_id(obj));
       }
     }
@@ -401,9 +458,8 @@ class cpp_mstch_program : public mstch_program {
     }
     return mstch::map{{"fatal_strings:items", a}};
   }
-
-  mstch::node namespace_cpp2() {
-    return t_mstch_cpp2_generator::get_namespace_array(program_);
+  mstch::node qualified_namespace() {
+    return t_mstch_cpp2_generator::get_cpp2_unprefixed_namespace(program_);
   }
   mstch::node cpp_includes() {
     mstch::array includes = t_mstch_cpp2_generator::cpp_includes(program_);
@@ -444,6 +500,69 @@ class cpp_mstch_program : public mstch_program {
     }
     return a;
   }
+  /**
+   * To reduce build time, the generated constants code only includes the
+   * headers for direct thrift includes in the .cpp file and not in the .h
+   * file, which means constants from transitive includes are not visible. To
+   * allow constructing a flattened array of schemas for transitive
+   * dependencies without undoing this optimization we indirect through the
+   * flattened array of one of the direct includes to reach the schema of the
+   * transitive include. Constructing this in mustache would be horrible, so
+   * we build up the code here instead.
+   */
+  std::unique_ptr<transitive_include_map> gen_transitive_include_map(
+      const t_program* program) {
+    auto includes = std::make_unique<transitive_include_map>();
+    auto local_includes = program->get_includes_for_codegen();
+    for (const auto* include : local_includes) {
+      if (include->find_structured_annotation_or_null(kDisableSchemaConstUri)) {
+        continue;
+      }
+
+      includes->emplace(
+          include,
+          fmt::format(
+              "::apache::thrift::detail::mc::readSchema({}::{}_constants::{})",
+              t_mstch_cpp2_generator::get_cpp2_namespace(include),
+              include->name(),
+              schematizer::name_schema(sm_, *include)));
+      const auto& recursive_includes = context_.cache().get(
+          *include, [&] { return gen_transitive_include_map(include); });
+      // Transitive includes begin at 1 because every programs' list of includes
+      // has itself as the first entry.
+      size_t i = 1;
+      for (const auto& [recursive_include, _] : recursive_includes) {
+        if (includes->count(recursive_include) == 0) {
+          includes->emplace(
+              recursive_include,
+              fmt::format(
+                  "::apache::thrift::detail::mc::readSchemaInclude({}::{}_constants::{}_includes, {})",
+                  t_mstch_cpp2_generator::get_cpp2_namespace(include),
+                  include->name(),
+                  schematizer::name_schema(sm_, *include),
+                  i));
+        }
+        ++i;
+      }
+    }
+    return includes;
+  }
+  mstch::node transitive_schema_initializers() {
+    const auto& includes = context_.cache().get(
+        *program_, [&] { return gen_transitive_include_map(program_); });
+    mstch::array initializers = {
+        fmt::format("{}()", schematizer::name_schema(sm_, *program_))};
+    for (const auto& [_, include] : includes) {
+      initializers.push_back(include);
+    }
+    return initializers;
+  }
+  mstch::node num_transitive_thrift_includes() {
+    const auto& includes = context_.cache().get(
+        *program_, [&] { return gen_transitive_include_map(program_); });
+    // Codegen includes the root program but transitive_include_map does not.
+    return includes.size() + 1;
+  }
   mstch::node frozen_packed() { return get_option("frozen") == "packed"; }
   mstch::node legacy_api() {
     return ::apache::thrift::compiler::generate_legacy_api(*program_);
@@ -461,7 +580,7 @@ class cpp_mstch_program : public mstch_program {
       }
     }
     if (!a.empty()) {
-      boost::get<mstch::map>(a.back())["last?"] = true;
+      std::get<mstch::map>(a.back())["last?"] = true;
     }
     return mstch::map{{"fatal_languages:items", a}};
   }
@@ -635,10 +754,36 @@ class cpp_mstch_program : public mstch_program {
         id);
   }
 
+  mstch::node has_schema() {
+    return ::apache::thrift::compiler::has_schema(sm_, *program_);
+  }
+
+  mstch::node schema_name() { return schematizer::name_schema(sm_, *program_); }
+
+  mstch::node schema_includes_const() {
+    return supports_schema_includes(program_);
+  }
+
+  mstch::node needs_sinit() { return has_option("any"); }
+
  private:
-  const boost::optional<int32_t> split_id_;
-  const boost::optional<std::vector<t_structured*>> split_structs_;
-  boost::optional<std::vector<t_enum*>> split_enums_;
+  bool supports_schema_includes(const t_program* program) {
+    enum class strong_bool {};
+    strong_bool supports = context_.cache().get(*program, [&] {
+      bool ret =
+          // If you don't have a schema const you don't need schema includes.
+          ::apache::thrift::compiler::has_schema(sm_, *program_) &&
+          // Opting out of schema const should disable all of its failure modes.
+          !program->find_structured_annotation_or_null(kDisableSchemaConstUri);
+      return std::make_unique<strong_bool>(static_cast<strong_bool>(ret));
+    });
+    return static_cast<bool>(supports);
+  }
+
+  const std::optional<int32_t> split_id_;
+  const std::optional<std::vector<t_structured*>> split_structs_;
+  std::optional<std::vector<t_enum*>> split_enums_;
+  source_manager& sm_;
 };
 
 class cpp_mstch_service : public mstch_service {
@@ -647,9 +792,11 @@ class cpp_mstch_service : public mstch_service {
       const t_service* service,
       mstch_context& ctx,
       mstch_element_position pos,
+      source_manager& sm,
+      const t_service* containing_service = nullptr,
       int32_t split_id = 0,
       int32_t split_count = 1)
-      : mstch_service(service, ctx, pos) {
+      : mstch_service(service, ctx, pos, containing_service), sm_(sm) {
     register_methods(
         this,
         {
@@ -659,26 +806,26 @@ class cpp_mstch_service : public mstch_service {
             {"service:autogen_path", &cpp_mstch_service::autogen_path},
             {"service:include_prefix", &cpp_mstch_service::include_prefix},
             {"service:thrift_includes", &cpp_mstch_service::thrift_includes},
-            {"service:namespace_cpp2", &cpp_mstch_service::namespace_cpp2},
+            {"service:qualified_namespace",
+             &cpp_mstch_service::qualified_namespace},
             {"service:oneway_functions", &cpp_mstch_service::oneway_functions},
             {"service:oneways?", &cpp_mstch_service::has_oneway},
             {"service:cpp_includes", &cpp_mstch_service::cpp_includes},
             {"service:metadata_name", &cpp_mstch_service::metadata_name},
             {"service:cpp_name", &cpp_mstch_service::cpp_name},
             {"service:qualified_name", &cpp_mstch_service::qualified_name},
-            {"service:parent_service_name",
-             &cpp_mstch_service::parent_service_name},
             {"service:parent_service_cpp_name",
              &cpp_mstch_service::parent_service_cpp_name},
             {"service:parent_service_qualified_name",
              &cpp_mstch_service::parent_service_qualified_name},
             {"service:thrift_uri_or_service_name",
              &cpp_mstch_service::thrift_uri_or_service_name},
-            {"service:service_schema_name",
-             &cpp_mstch_service::service_schema_name},
             {"service:has_service_schema",
              &cpp_mstch_service::has_service_schema},
             {"service:reduced_client?", &cpp_mstch_service::reduced_client},
+            {"service:definition_key", &cpp_mstch_service::definition_key},
+            {"service:definition_key_length",
+             &cpp_mstch_service::definition_key_length},
         });
 
     const auto all_functions = mstch_service::get_functions();
@@ -714,8 +861,9 @@ class cpp_mstch_service : public mstch_service {
     }
     return a;
   }
-  mstch::node namespace_cpp2() {
-    return t_mstch_cpp2_generator::get_namespace_array(service_->program());
+  mstch::node qualified_namespace() {
+    return t_mstch_cpp2_generator::get_cpp2_unprefixed_namespace(
+        service_->program());
   }
   mstch::node oneway_functions() {
     std::vector<const t_function*> oneway_functions;
@@ -744,10 +892,11 @@ class cpp_mstch_service : public mstch_service {
   mstch::node qualified_name() {
     return cpp2::get_service_qualified_name(*service_);
   }
-  virtual mstch::node parent_service_name() { return service_->get_name(); }
-  virtual mstch::node parent_service_cpp_name() { return cpp_name(); }
-  virtual mstch::node parent_service_qualified_name() {
-    return qualified_name();
+  mstch::node parent_service_cpp_name() {
+    return cpp2::get_name(parent_service());
+  }
+  mstch::node parent_service_qualified_name() {
+    return cpp2::get_service_qualified_name(*parent_service());
   }
   mstch::node reduced_client() {
     return service_->is_interaction() || !generate_legacy_api(*service_);
@@ -756,27 +905,15 @@ class cpp_mstch_service : public mstch_service {
     return service_->uri().empty() ? parent_service_name() : service_->uri();
   }
   mstch::node has_service_schema() {
-    const t_const* annotation =
-        service_->find_structured_annotation_or_null(kGenerateRuntimeSchemaUri);
-    return annotation ? true : false;
+    return has_schema(sm_, *service_->program());
   }
 
-  mstch::node service_schema_name() {
-    const t_const* annotation =
-        service_->find_structured_annotation_or_null(kGenerateRuntimeSchemaUri);
-    if (!annotation) {
-      return "";
-    }
-
-    std::string name;
-    if (auto nameOverride = annotation
-            ? annotation->get_value_from_structured_annotation_or_null("name")
-            : nullptr) {
-      name = nameOverride->get_string();
-    } else {
-      name = fmt::format("schema{}", service_->name());
-    }
-    return name;
+  mstch::node definition_key() {
+    schematizer s(*service_->program()->scope(), sm_, {});
+    return escape_binary_string(s.identify_definition(*service_));
+  }
+  mstch::node definition_key_length() {
+    return schematizer::definition_identifier_length();
   }
 
  private:
@@ -785,6 +922,7 @@ class cpp_mstch_service : public mstch_service {
   }
 
   std::vector<t_function*> functions_;
+  source_manager& sm_;
 };
 
 class cpp_mstch_interaction : public cpp_mstch_service {
@@ -795,22 +933,9 @@ class cpp_mstch_interaction : public cpp_mstch_service {
       const t_interaction* interaction,
       mstch_context& ctx,
       mstch_element_position pos,
-      const t_service* containing_service)
-      : cpp_mstch_service(interaction, ctx, pos),
-        containing_service_(containing_service) {}
-
-  mstch::node parent_service_name() override {
-    return containing_service_->get_name();
-  }
-  mstch::node parent_service_cpp_name() override {
-    return cpp2::get_name(containing_service_);
-  }
-  mstch::node parent_service_qualified_name() override {
-    return cpp2::get_service_qualified_name(*containing_service_);
-  }
-
- private:
-  const t_service* containing_service_ = nullptr;
+      const t_service* containing_service,
+      source_manager& sm)
+      : cpp_mstch_service(interaction, ctx, pos, sm, containing_service) {}
 };
 
 class cpp_mstch_function : public mstch_function {
@@ -826,7 +951,6 @@ class cpp_mstch_function : public mstch_function {
     register_methods(
         this,
         {
-            {"function:coroutine?", &cpp_mstch_function::coroutine},
             {"function:eb", &cpp_mstch_function::event_based},
             {"function:cpp_name", &cpp_mstch_function::cpp_name},
             {"function:cpp_return_type", &cpp_mstch_function::cpp_return_type},
@@ -836,23 +960,18 @@ class cpp_mstch_function : public mstch_function {
              &cpp_mstch_function::created_interaction},
             {"function:sync_returns_by_outparam?",
              &cpp_mstch_function::sync_returns_by_outparam},
+            {"function:prefixed_name", &cpp_mstch_function::prefixed_name},
+            {"function:has_deprecated_header_client_methods",
+             &cpp_mstch_function::has_deprecated_header_client_methods},
         });
   }
-  mstch::node coroutine() {
-    if (function_->interaction() || function_->is_interaction_member()) {
-      // Interaction codegen always has coroutine methods
-      return true;
-    }
-    if (function_->has_annotation("cpp.coroutine")) {
-      // cpp.coroutine always generates coroutine methods, even if
-      // no_service_handler_coroutines is set
-      return true;
-    }
-    // Coroutine methods are generated by default, with an opt-out
-    return !has_option("no_service_handler_coroutines");
-  }
   mstch::node event_based() {
-    return function_->get_annotation("thread") == "eb";
+    return function_->get_annotation("thread") == "eb" ||
+        function_->find_structured_annotation_or_null(
+            kCppProcessInEbThreadUri) ||
+        interface_->find_annotation_or_null("process_in_event_base") ||
+        interface_->find_structured_annotation_or_null(
+            kCppProcessInEbThreadUri);
   }
   mstch::node cpp_name() { return cpp2::get_name(function_); }
   mstch::node cpp_return_type() {
@@ -873,6 +992,24 @@ class cpp_mstch_function : public mstch_function {
         !function_->interaction() && !function_->sink_or_stream();
   }
 
+  mstch::node prefixed_name() {
+    return interface_->is_interaction()
+        ? fmt::format(
+              "{}_{}", interface_->get_name(), cpp2::get_name(function_))
+        : cpp_name();
+  }
+
+  mstch::node has_deprecated_header_client_methods() {
+    return function_->find_structured_annotation_or_null(
+               kCppGenerateDeprecatedHeaderClientMethodsUri) ||
+        function_->find_annotation_or_null(
+            "cpp.generate_deprecated_header_client_methods") ||
+        interface_->find_structured_annotation_or_null(
+            kCppGenerateDeprecatedHeaderClientMethodsUri) ||
+        interface_->find_annotation_or_null(
+            "cpp.generate_deprecated_header_client_methods");
+  }
+
  private:
   std::shared_ptr<cpp2_generator_context> cpp_context_;
 };
@@ -881,13 +1018,13 @@ bool needs_op_encode(const t_type& type);
 
 bool check_container_needs_op_encode(const t_type& type) {
   const auto* true_type = type.get_true_type();
-  if (auto container = dynamic_cast<const t_list*>(true_type)) {
-    return needs_op_encode(*container->elem_type());
-  } else if (auto container = dynamic_cast<const t_set*>(true_type)) {
-    return needs_op_encode(*container->elem_type());
-  } else if (auto container = dynamic_cast<const t_map*>(true_type)) {
-    return needs_op_encode(*container->key_type()) ||
-        needs_op_encode(*container->val_type());
+  if (auto list_container = dynamic_cast<const t_list*>(true_type)) {
+    return needs_op_encode(*list_container->elem_type());
+  } else if (auto set_container = dynamic_cast<const t_set*>(true_type)) {
+    return needs_op_encode(*set_container->elem_type());
+  } else if (auto map_container = dynamic_cast<const t_map*>(true_type)) {
+    return needs_op_encode(*map_container->key_type()) ||
+        needs_op_encode(*map_container->val_type());
   }
   return false;
 }
@@ -898,7 +1035,7 @@ bool needs_op_encode(const t_type& type) {
               type, kCppUseOpEncodeUri)) ||
       t_typedef::get_first_structured_annotation_or_null(
              &type, kCppUseOpEncodeUri) ||
-      gen::cpp::type_resolver::find_first_adapter(type) ||
+      cpp_name_resolver::find_first_adapter(type) ||
       check_container_needs_op_encode(type);
 }
 
@@ -913,7 +1050,7 @@ bool needs_op_encode(const t_field& field, const t_structured& strct) {
           strct.program()->inherit_annotation_or_null(
               strct, kCppUseOpEncodeUri)) ||
       strct.find_structured_annotation_or_null(kCppUseOpEncodeUri) ||
-      gen::cpp::type_resolver::find_first_adapter(field) ||
+      cpp_name_resolver::find_first_adapter(field) ||
       check_container_needs_op_encode(*field.type());
 }
 
@@ -956,7 +1093,7 @@ class cpp_mstch_type : public mstch_type {
             {"type:cpp_template", &cpp_mstch_type::cpp_template},
             {"type:cpp_indirection?", &cpp_mstch_type::cpp_indirection},
             {"type:non_empty_struct?", &cpp_mstch_type::is_non_empty_struct},
-            {"type:namespace_cpp2", &cpp_mstch_type::namespace_cpp2},
+            {"type:qualified_namespace", &cpp_mstch_type::qualified_namespace},
             {"type:cpp_declare_hash", &cpp_mstch_type::cpp_declare_hash},
             {"type:cpp_declare_equal_to",
              &cpp_mstch_type::cpp_declare_equal_to},
@@ -974,12 +1111,12 @@ class cpp_mstch_type : public mstch_type {
   std::string get_type_namespace(const t_program* program) override {
     return cpp2::get_gen_namespace(*program);
   }
-  mstch::node resolves_to_base() { return resolved_type_->is_base_type(); }
+  mstch::node resolves_to_base() { return resolved_type_->is_primitive_type(); }
   mstch::node resolves_to_integral() {
     return resolved_type_->is_byte() || resolved_type_->is_any_int();
   }
   mstch::node resolves_to_base_or_enum() {
-    return resolved_type_->is_base_type() || resolved_type_->is_enum();
+    return resolved_type_->is_primitive_type() || resolved_type_->is_enum();
   }
   mstch::node resolves_to_container() { return resolved_type_->is_container(); }
   mstch::node resolves_to_container_or_struct() {
@@ -1018,8 +1155,7 @@ class cpp_mstch_type : public mstch_type {
       if (!next->is_container()) {
         continue;
       }
-      if (false) {
-      } else if (next->is_list()) {
+      if (next->is_list()) {
         queue.push(static_cast<const t_list*>(next)->get_elem_type());
       } else if (next->is_set()) {
         queue.push(static_cast<const t_set*>(next)->get_elem_type());
@@ -1044,15 +1180,12 @@ class cpp_mstch_type : public mstch_type {
     return cpp_context_->resolver().get_standard_type(*type_);
   }
   mstch::node cpp_adapter() {
-    if (const auto* adapter =
-            gen::cpp::type_resolver::find_first_adapter(*type_)) {
+    if (const auto* adapter = cpp_name_resolver::find_first_adapter(*type_)) {
       return *adapter;
     }
     return {};
   }
-  mstch::node resolved_cpp_type() {
-    return fmt::to_string(cpp2::get_type(resolved_type_));
-  }
+  mstch::node resolved_cpp_type() { return cpp2::get_type(resolved_type_); }
   mstch::node is_string_or_binary() {
     return resolved_type_->is_string_or_binary();
   }
@@ -1069,15 +1202,16 @@ class cpp_mstch_type : public mstch_type {
         {"cpp.declare_equal_to", "cpp2.declare_equal_to"});
   }
   mstch::node cpp_use_allocator() {
-    return t_typedef::get_first_annotation_or_null(
+    return !!t_typedef::get_first_annotation_or_null(
         type_, {"cpp.use_allocator"});
   }
   mstch::node is_non_empty_struct() {
     auto as_struct = dynamic_cast<const t_struct*>(resolved_type_);
     return as_struct && as_struct->has_fields();
   }
-  mstch::node namespace_cpp2() {
-    return t_mstch_cpp2_generator::get_namespace_array(type_->program());
+  mstch::node qualified_namespace() {
+    return t_mstch_cpp2_generator::get_cpp2_unprefixed_namespace(
+        type_->program());
   }
   mstch::node type_class() { return cpp2::get_gen_type_class(*resolved_type_); }
   mstch::node type_tag() {
@@ -1159,8 +1293,8 @@ class cpp_mstch_struct : public mstch_struct {
              &cpp_mstch_struct::cpp_declare_equal_to},
             {"struct:cpp_noncopyable", &cpp_mstch_struct::cpp_noncopyable},
             {"struct:cpp_noncomparable", &cpp_mstch_struct::cpp_noncomparable},
-            {"struct:cpp_trivially_relocatable",
-             &cpp_mstch_struct::cpp_trivially_relocatable},
+            {"struct:cpp_runtime_annotation?",
+             &cpp_mstch_struct::cpp_runtime_annotation},
             {"struct:is_eligible_for_constexpr?",
              &cpp_mstch_struct::is_eligible_for_constexpr},
             {"struct:virtual", &cpp_mstch_struct::cpp_virtual},
@@ -1190,17 +1324,19 @@ class cpp_mstch_struct : public mstch_struct {
              &cpp_mstch_struct::cpp_frozen2_exclude},
             {"struct:has_non_optional_and_non_terse_field?",
              &cpp_mstch_struct::has_non_optional_and_non_terse_field},
+            {"struct:has_field_with_runtime_annotation?",
+             &cpp_mstch_struct::has_field_with_runtime_annotation},
             {"struct:any?", &cpp_mstch_struct::any},
             {"struct:scoped_enum_as_union_type?",
              &cpp_mstch_struct::scoped_enum_as_union_type},
             {"struct:extra_namespace", &cpp_mstch_struct::extra_namespace},
             {"struct:type_tag", &cpp_mstch_struct::type_tag},
-            {"struct:patch?", &cpp_mstch_struct::patch},
+            {"struct:use_op_encode?", &cpp_mstch_struct::use_op_encode},
             {"struct:is_trivially_destructible?",
              &cpp_mstch_struct::is_trivially_destructible},
         });
   }
-  mstch::node fields_size() { return std::to_string(struct_->fields().size()); }
+  mstch::node fields_size() { return struct_->fields().size(); }
   mstch::node explicitly_constructed_fields() {
     // Filter fields according to the following criteria:
     // Get all enums
@@ -1217,7 +1353,7 @@ class cpp_mstch_struct : public mstch_struct {
         continue;
       }
       if (type->is_enum() ||
-          (type->is_base_type() && !type->is_string_or_binary()) ||
+          (type->is_primitive_type() && !type->is_string_or_binary()) ||
           (type->is_string_or_binary() && field->get_value() != nullptr) ||
           (type->is_container() && field->get_value() != nullptr &&
            !field->get_value()->is_empty()) ||
@@ -1228,7 +1364,7 @@ class cpp_mstch_struct : public mstch_struct {
              field->get_req() != t_field::e_req::optional))) ||
           (type->is_container() && cpp2::is_explicit_ref(field) &&
            field->get_req() != t_field::e_req::optional) ||
-          (type->is_base_type() && cpp2::is_explicit_ref(field) &&
+          (type->is_primitive_type() && cpp2::is_explicit_ref(field) &&
            field->get_req() != t_field::e_req::optional)) {
         filtered_fields.push_back(field);
       }
@@ -1262,7 +1398,7 @@ class cpp_mstch_struct : public mstch_struct {
     }
     for (const auto& f : struct_->fields()) {
       if (cpp2::field_transitively_refers_to_unique(&f) || cpp2::is_lazy(&f) ||
-          gen::cpp::type_resolver::find_first_adapter(f)) {
+          cpp_name_resolver::find_first_adapter(f)) {
         return true;
       }
     }
@@ -1273,7 +1409,7 @@ class cpp_mstch_struct : public mstch_struct {
     return cpp_context_->resolver().get_underlying_namespaced_name(*struct_);
   }
   mstch::node cpp_underlying_name() {
-    return cpp_context_->resolver().get_underlying_name(*struct_);
+    return cpp_name_resolver::get_underlying_name(*struct_);
   }
   mstch::node cpp_underlying_type() {
     return cpp_context_->resolver().get_underlying_type_name(*struct_);
@@ -1328,10 +1464,8 @@ class cpp_mstch_struct : public mstch_struct {
   mstch::node cpp_noncomparable() {
     return struct_->has_annotation({"cpp.noncomparable", "cpp2.noncomparable"});
   }
-  mstch::node cpp_trivially_relocatable() {
-    return nullptr !=
-        struct_->find_structured_annotation_or_null(
-            kCppTriviallyRelocatableUri);
+  mstch::node cpp_runtime_annotation() {
+    return is_runtime_annotation(*struct_);
   }
   mstch::node is_eligible_for_constexpr() {
     return is_eligible_for_constexpr_(struct_) ||
@@ -1342,20 +1476,17 @@ class cpp_mstch_struct : public mstch_struct {
   }
   mstch::node message() {
     if (!struct_->is_exception()) {
-      return mstch::node();
+      return {};
     }
-
-    const auto& message = struct_->get_annotation("message");
-
-    if (message == "") {
-      return message;
+    const auto* message_field =
+        dynamic_cast<const t_exception&>(*struct_).get_message_field();
+    if (!message_field) {
+      return {};
     }
-
     if (!should_mangle_field_storage_name_in_struct(*struct_)) {
-      return message;
+      return message_field->name();
     }
-
-    return mangle_field_name(message);
+    return mangle_field_name(message_field->name());
   }
   mstch::node cpp_allocator() {
     return struct_->get_annotation("cpp.allocator");
@@ -1422,7 +1553,7 @@ class cpp_mstch_struct : public mstch_struct {
         size++;
       }
     }
-    return std::to_string(size);
+    return size;
   }
   mstch::node isset_bitset_option() {
     static const std::string kPrefix =
@@ -1478,7 +1609,7 @@ class cpp_mstch_struct : public mstch_struct {
     if (!struct_->is_union()) {
       throw std::runtime_error("not a union struct");
     }
-    return std::to_string(struct_->fields().size());
+    return struct_->fields().size();
   }
   mstch::node has_non_optional_and_non_terse_field() {
     const auto& fields = struct_->fields();
@@ -1493,9 +1624,13 @@ class cpp_mstch_struct : public mstch_struct {
               field.get_req() != t_field::e_req::terse;
         });
   }
+  mstch::node has_field_with_runtime_annotation() {
+    const auto& fields = struct_->fields();
+    return std::any_of(fields.begin(), fields.end(), has_runtime_annotation);
+  }
 
   mstch::node scoped_enum_as_union_type() {
-    return struct_->find_structured_annotation_or_null(
+    return !!struct_->find_structured_annotation_or_null(
         kCppScopedEnumAsUnionTypeUri);
   }
 
@@ -1552,8 +1687,8 @@ class cpp_mstch_struct : public mstch_struct {
         const t_struct* strct =
             dynamic_cast<const t_struct*>(type->get_true_type());
         assert(strct);
-        for (const auto& field : strct->fields()) {
-          size_t field_align = compute_alignment(&field, memo);
+        for (const auto& field_2 : strct->fields()) {
+          size_t field_align = compute_alignment(&field_2, memo);
           align = std::max(align, field_align);
           if (align == kMaxAlign) {
             // No need to continue because the struct already has the maximum
@@ -1648,12 +1783,6 @@ class cpp_mstch_struct : public mstch_struct {
         !struct_->has_annotation("cpp.detail.no_any");
   }
 
-  mstch::node patch() {
-    return !struct_->is_exception() &&
-        struct_->program()->inherit_annotation_or_null(
-            *struct_, kGeneratePatchUri) != nullptr;
-  }
-
   mstch::node is_trivially_destructible() {
     for (const auto& field : struct_->fields()) {
       const t_type* type = field.get_type()->get_true_type();
@@ -1663,6 +1792,15 @@ class cpp_mstch_struct : public mstch_struct {
       }
     }
     return true;
+  }
+
+  mstch::node use_op_encode() {
+    for (const auto& field : struct_->fields()) {
+      if (needs_op_encode(field, *struct_)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   std::shared_ptr<cpp2_generator_context> cpp_context_;
@@ -1703,6 +1841,7 @@ class cpp_mstch_field : public mstch_field {
              &cpp_mstch_field::serialization_next_field_type},
             {"field:non_opt_cpp_ref?", &cpp_mstch_field::non_opt_cpp_ref},
             {"field:opt_cpp_ref?", &cpp_mstch_field::opt_cpp_ref},
+            {"field:terse_cpp_ref?", &cpp_mstch_field::terse_cpp_ref},
             {"field:cpp_ref?", &cpp_mstch_field::cpp_ref},
             {"field:cpp_ref_unique?", &cpp_mstch_field::cpp_ref_unique},
             {"field:cpp_ref_shared?", &cpp_mstch_field::cpp_ref_shared},
@@ -1745,14 +1884,17 @@ class cpp_mstch_field : public mstch_field {
             {"field:raw_binary?", &cpp_mstch_field::raw_binary},
             {"field:raw_string_or_binary?",
              &cpp_mstch_field::raw_string_or_binary},
+            {"field:cpp_has_runtime_annotation?",
+             &cpp_mstch_field::cpp_has_runtime_annotation},
             {"field:use_op_encode?", &cpp_mstch_field::use_op_encode},
+            {"field:fill?", &cpp_mstch_field::fill},
         });
     register_has_option("field:deprecated_clear?", "deprecated_clear");
   }
   mstch::node name_hash() {
     return "__fbthrift_hash_" + cpp2::sha256_hex(field_->get_name());
   }
-  mstch::node index_plus_one() { return std::to_string(pos_.index + 1); }
+  mstch::node index_plus_one() { return pos_.index + 1; }
   mstch::node ordinal() { return index_plus_one(); }
   mstch::node isset_index() {
     assert(field_context_);
@@ -1781,9 +1923,10 @@ class cpp_mstch_field : public mstch_field {
   }
   mstch::node has_deprecated_accessors() {
     return !cpp2::is_explicit_ref(field_) && !cpp2::is_lazy(field_) &&
-        !gen::cpp::type_resolver::find_first_adapter(*field_) &&
-        !gen::cpp::type_resolver::find_field_interceptor(*field_) &&
-        !has_option("no_getters_setters");
+        !cpp_name_resolver::find_first_adapter(*field_) &&
+        !cpp_name_resolver::find_field_interceptor(*field_) &&
+        !has_option("no_getters_setters") &&
+        field_->get_req() != t_field::e_req::terse;
   }
   mstch::node cpp_ref() { return cpp2::is_explicit_ref(field_); }
   mstch::node opt_cpp_ref() {
@@ -1793,6 +1936,10 @@ class cpp_mstch_field : public mstch_field {
   mstch::node non_opt_cpp_ref() {
     return cpp2::is_explicit_ref(field_) &&
         field_->get_req() != t_field::e_req::optional;
+  }
+  mstch::node terse_cpp_ref() {
+    return cpp2::is_explicit_ref(field_) &&
+        field_->get_req() == t_field::e_req::terse;
   }
   mstch::node lazy() { return cpp2::is_lazy(field_); }
   mstch::node lazy_ref() { return cpp2::is_lazy_ref(field_); }
@@ -1848,21 +1995,21 @@ class cpp_mstch_field : public mstch_field {
   }
   mstch::node cpp_first_adapter() {
     if (const std::string* adapter =
-            gen::cpp::type_resolver::find_first_adapter(*field_)) {
+            cpp_name_resolver::find_first_adapter(*field_)) {
       return *adapter;
     }
     return {};
   }
   mstch::node cpp_exactly_one_adapter() {
     bool hasFieldAdapter =
-        gen::cpp::type_resolver::find_structured_adapter_annotation(*field_);
+        cpp_name_resolver::find_structured_adapter_annotation(*field_);
     bool hasTypeAdapter =
-        gen::cpp::type_resolver::find_first_adapter(*field_->type());
+        cpp_name_resolver::find_first_adapter(*field_->type());
     return hasFieldAdapter != hasTypeAdapter;
   }
   mstch::node cpp_field_interceptor() {
     if (const std::string* interceptor =
-            gen::cpp::type_resolver::find_field_interceptor(*field_)) {
+            cpp_name_resolver::find_field_interceptor(*field_)) {
       return *interceptor;
     }
     return {};
@@ -1873,9 +2020,8 @@ class cpp_mstch_field : public mstch_field {
   mstch::node cpp_accessor_attribute() {
     if (const t_const* annotation = field_->find_structured_annotation_or_null(
             kCppFieldInterceptorUri)) {
-      if (const auto* val =
-              annotation->get_value_from_structured_annotation_or_null(
-                  "noinline")) {
+      if (annotation->get_value_from_structured_annotation_or_null(
+              "noinline")) {
         return std::string("FOLLY_NOINLINE");
       }
     }
@@ -1885,8 +2031,7 @@ class cpp_mstch_field : public mstch_field {
   mstch::node cpp_adapter() {
     // Only find a structured adapter on the field.
     if (const std::string* adapter =
-            gen::cpp::type_resolver::find_structured_adapter_annotation(
-                *field_)) {
+            cpp_name_resolver::find_structured_adapter_annotation(*field_)) {
       return *adapter;
     }
     return {};
@@ -1898,8 +2043,8 @@ class cpp_mstch_field : public mstch_field {
   mstch::node enum_has_value() {
     if (auto enm = dynamic_cast<const t_enum*>(field_->get_type())) {
       const auto* const_value = field_->get_value();
-      using cv = t_const_value::t_const_value_type;
-      if (const_value->get_type() == cv::CV_INTEGER) {
+      using cv = t_const_value::t_const_value_kind;
+      if (const_value->kind() == cv::CV_INTEGER) {
         if (auto* enum_value = enm->find_value(const_value->get_integer())) {
           return context_.enum_value_factory->make_mstch_object(
               enum_value, context_, pos_);
@@ -1973,17 +2118,28 @@ class cpp_mstch_field : public mstch_field {
 
   mstch::node raw_binary() {
     return field_->type()->get_true_type()->is_binary() &&
-        !gen::cpp::type_resolver::find_first_adapter(*field_);
+        !cpp_name_resolver::find_first_adapter(*field_);
   }
 
   mstch::node raw_string_or_binary() {
     return field_->type()->get_true_type()->is_string_or_binary() &&
-        !gen::cpp::type_resolver::find_first_adapter(*field_);
+        !cpp_name_resolver::find_first_adapter(*field_);
+  }
+
+  mstch::node cpp_has_runtime_annotation() {
+    return has_runtime_annotation(*field_);
   }
 
   mstch::node use_op_encode() {
     assert(field_context_->strct);
     return needs_op_encode(*field_, *field_context_->strct);
+  }
+
+  // Not optional, terse, or deprecated terse.
+  mstch::node fill() {
+    return (field_->qualifier() == t_field_qualifier::none ||
+            field_->qualifier() == t_field_qualifier::required) &&
+        !std::get<bool>(deprecated_terse_writes());
   }
 
  private:
@@ -2042,7 +2198,7 @@ class cpp_mstch_enum : public mstch_enum {
         });
   }
   mstch::node is_empty() { return enum_->get_enum_values().empty(); }
-  mstch::node size() { return std::to_string(enum_->get_enum_values().size()); }
+  mstch::node size() { return enum_->get_enum_values().size(); }
   mstch::node min() {
     if (!enum_->get_enum_values().empty()) {
       auto e_min = std::min_element(
@@ -2069,10 +2225,11 @@ class cpp_mstch_enum : public mstch_enum {
   }
   mstch::node cpp_is_unscoped() { return cpp_is_unscoped_(); }
   mstch::node cpp_name() { return cpp2::get_name(enum_); }
-  mstch::node cpp_enum_type() { return fmt::to_string(cpp_enum_type(*enum_)); }
+  mstch::node cpp_enum_type() { return cpp_enum_type(*enum_); }
   mstch::node cpp_declare_bitwise_ops() {
-    return enum_->get_annotation(
-        {"cpp.declare_bitwise_ops", "cpp2.declare_bitwise_ops"});
+    return enum_->find_annotation_or_null(
+               {"cpp.declare_bitwise_ops", "cpp2.declare_bitwise_ops"}) ||
+        enum_->find_structured_annotation_or_null(kBitmaskEnumUri);
   }
   mstch::node has_zero() {
     auto* enum_value = enum_->find_value(0);
@@ -2180,11 +2337,14 @@ class cpp_mstch_const : public mstch_const {
             {"constant:cpp_name", &cpp_mstch_const::cpp_name},
             {"constant:cpp_adapter", &cpp_mstch_const::cpp_adapter},
             {"constant:cpp_type", &cpp_mstch_const::cpp_type},
+            {"constant:cpp_runtime_annotation?",
+             &cpp_mstch_const::cpp_runtime_annotation},
             {"constant:uri", &cpp_mstch_const::uri},
             {"constant:has_extra_arg?", &cpp_mstch_const::has_extra_arg},
             {"constant:extra_arg", &cpp_mstch_const::extra_arg},
             {"constant:extra_arg_type", &cpp_mstch_const::extra_arg_type},
             {"constant:outline_init?", &cpp_mstch_const::outline_init},
+            {"constant:generated?", &cpp_mstch_const::generated},
         });
   }
   mstch::node enum_value() {
@@ -2200,6 +2360,9 @@ class cpp_mstch_const : public mstch_const {
     return mstch::node();
   }
   mstch::node cpp_name() { return cpp2::get_name(field_); }
+  mstch::node cpp_runtime_annotation() {
+    return is_runtime_annotation(*const_->type());
+  }
   mstch::node cpp_adapter() {
     if (const std::string* adapter =
             cpp_context_->resolver().find_structured_adapter_annotation(
@@ -2231,6 +2394,7 @@ class cpp_mstch_const : public mstch_const {
         cpp_context_->resolver().find_structured_adapter_annotation(*const_) ||
         cpp_context_->resolver().find_first_adapter(*const_->type());
   }
+  mstch::node generated() { return const_->generated(); }
 
  private:
   std::shared_ptr<cpp2_generator_context> cpp_context_;
@@ -2257,8 +2421,8 @@ class cpp_mstch_const_value : public mstch_const_value {
 
  private:
   mstch::node default_construct() {
-    return boost::get<bool>(is_empty_container()) &&
-        !gen::cpp::type_resolver::find_first_adapter(
+    return std::get<bool>(is_empty_container()) &&
+        !cpp_name_resolver::find_first_adapter(
                *const_value_->get_owner()->type());
   }
 
@@ -2316,9 +2480,9 @@ void t_mstch_cpp2_generator::generate_program() {
 }
 
 void t_mstch_cpp2_generator::set_mstch_factories() {
-  mstch_context_.add<cpp_mstch_program>();
-  mstch_context_.add<cpp_mstch_service>();
-  mstch_context_.add<cpp_mstch_interaction>();
+  mstch_context_.add<cpp_mstch_program>(std::ref(source_mgr_));
+  mstch_context_.add<cpp_mstch_service>(std::ref(source_mgr_));
+  mstch_context_.add<cpp_mstch_interaction>(std::ref(source_mgr_));
   mstch_context_.add<cpp_mstch_function>(cpp_context_);
   mstch_context_.add<cpp_mstch_type>(cpp_context_);
   mstch_context_.add<cpp_mstch_typedef>(cpp_context_);
@@ -2367,7 +2531,6 @@ void t_mstch_cpp2_generator::generate_reflection(const t_program* program) {
   // Unique Compile-time Strings, Metadata tags and Metadata registration
   render_to_file(prog, "module_fatal.h", name + "_fatal.h");
 
-  render_to_file(prog, "module_fatal_enum.h", name + "_fatal_enum.h");
   render_to_file(prog, "module_fatal_union.h", name + "_fatal_union.h");
   render_to_file(prog, "module_fatal_struct.h", name + "_fatal_struct.h");
   render_to_file(prog, "module_fatal_constant.h", name + "_fatal_constant.h");
@@ -2410,6 +2573,7 @@ void t_mstch_cpp2_generator::generate_structs(const t_program* program) {
           program,
           mstch_context_,
           mstch_element_position(),
+          source_mgr_,
           split_id,
           shards.at(split_id));
       render_to_file(
@@ -2437,8 +2601,13 @@ void t_mstch_cpp2_generator::generate_out_of_line_service(
   auto mstch_service =
       make_mstch_service_cached(get_program(), service, mstch_context_);
 
+  mstch::map context = {
+      {"program", cached_program(get_program())},
+      {"service", mstch_service},
+  };
+
   render_to_file(mstch_service, "ServiceAsyncClient.h", name + "AsyncClient.h");
-  render_to_file(mstch_service, "service.cpp", name + ".cpp");
+  render_to_file(context, "service.cpp", name + ".cpp");
   render_to_file(mstch_service, "service.h", name + ".h");
   render_to_file(mstch_service, "service.tcc", name + ".tcc");
   render_to_file(
@@ -2455,6 +2624,8 @@ void t_mstch_cpp2_generator::generate_out_of_line_service(
           service,
           mstch_context_,
           mstch_element_position(),
+          source_mgr_,
+          nullptr,
           split_id,
           split_count);
       render_to_file(
@@ -2519,6 +2690,7 @@ void t_mstch_cpp2_generator::generate_inline_services(
               });
         });
   };
+
   mstch::map context = {
       {"program", cached_program(get_program())},
       {"any_sinks?",
@@ -2550,22 +2722,6 @@ std::string t_mstch_cpp2_generator::get_cpp2_namespace(
   return cpp2::get_gen_unprefixed_namespace(*program);
 }
 
-mstch::array t_mstch_cpp2_generator::get_namespace_array(
-    const t_program* program) {
-  const auto v = cpp2::get_gen_namespace_components(*program);
-  mstch::array a;
-  for (auto it = v.begin(); it != v.end(); ++it) {
-    mstch::map m;
-    m.emplace("namespace:name", *it);
-    a.push_back(m);
-  }
-  for (auto itr = a.begin(); itr != a.end(); ++itr) {
-    boost::get<mstch::map>(*itr).emplace("first?", itr == a.begin());
-    boost::get<mstch::map>(*itr).emplace("last?", std::next(itr) == a.end());
-  }
-  return a;
-}
-
 mstch::array t_mstch_cpp2_generator::cpp_includes(const t_program* program) {
   mstch::array a;
   if (program->language_includes().count("cpp")) {
@@ -2593,7 +2749,7 @@ mstch::node t_mstch_cpp2_generator::include_prefix(
       return include_prefix + "/" + out_dir_base + "/";
     }
   }
-  if (boost::filesystem::path(prefix).has_root_directory()) {
+  if (std::filesystem::path(prefix).has_root_directory()) {
     return include_prefix + "/" + out_dir_base + "/";
   }
   return prefix + out_dir_base + "/";
@@ -2635,72 +2791,64 @@ t_mstch_cpp2_generator::get_client_name_to_split_count() const {
   return ret;
 }
 
-class annotation_validator : public validator {
- public:
-  explicit annotation_validator(
-      const std::map<std::string, std::string>& options)
-      : options_(options) {}
-  using validator::visit;
-
-  /**
-   * Make sure there is no incompatible annotation.
-   */
-  bool visit(t_structured* s) override;
-
- private:
-  const std::map<std::string, std::string>& options_;
-};
-
-bool annotation_validator::visit(t_structured* s) {
-  if (cpp2::packed_isset(*s)) {
-    if (options_.count("tablebased") != 0) {
-      report_error(
-          *s,
-          "Tablebased serialization is incompatible with isset bitpacking for "
-          "struct `{}`",
-          s->get_name());
+// Make sure there is no incompatible annotation.
+void validate_struct_annotations(
+    sema_context& ctx,
+    const t_structured& s,
+    const std::map<std::string, std::string>& options) {
+  if (cpp2::packed_isset(s)) {
+    if (options.count("tablebased") != 0) {
+      ctx.report(
+          s,
+          "tablebased-isset-bitpacking-rule",
+          diagnostic_level::error,
+          "Tablebased serialization is incompatible with isset bitpacking for struct `{}`",
+          s.get_name());
     }
   }
 
-  for (const auto& field : s->fields()) {
+  for (const auto& field : s.fields()) {
     if (cpp2::is_mixin(field)) {
       // Mixins cannot be refs
       if (cpp2::is_explicit_ref(&field)) {
-        report_error(
-            field, "Mixin field `{}` can not be a ref in cpp.", field.name());
+        ctx.report(
+            field,
+            "mixin-ref-rule",
+            diagnostic_level::error,
+            "Mixin field `{}` can not be a ref in cpp.",
+            field.name());
       }
     }
   }
-  return true;
 }
 
-class splits_validator : public validator {
+class validate_splits {
  public:
-  explicit splits_validator(
+  explicit validate_splits(
       int split_count,
       const std::unordered_map<std::string, int>& client_name_to_split_count)
       : split_count_(split_count),
         client_name_to_split_count_(client_name_to_split_count) {}
 
-  using validator::visit;
-
-  bool visit(t_program* program) override {
-    program_ = program;
+  void operator()(sema_context& ctx, const t_program& program) {
     validate_type_cpp_splits(
-        program->structured_definitions().size() + program->enums().size());
-    validate_client_cpp_splits(program->services());
-    return true;
+        program.structured_definitions().size() + program.enums().size(),
+        ctx,
+        program);
+    validate_client_cpp_splits(program.services(), ctx);
   }
 
  private:
-  const t_program* program_ = nullptr;
   int split_count_ = 0;
   std::unordered_map<std::string, int> client_name_to_split_count_;
 
-  void validate_type_cpp_splits(const int32_t object_count) {
+  void validate_type_cpp_splits(
+      const int32_t object_count, sema_context& ctx, const t_program& program) {
     if (split_count_ > object_count) {
-      report_error(
-          *program_,
+      ctx.report(
+          program,
+          "more-splits-than-objects-rule",
+          diagnostic_level::error,
           "`types_cpp_splits={}` is misconfigured: it can not be greater "
           "than the number of objects, which is {}.",
           split_count_,
@@ -2708,16 +2856,19 @@ class splits_validator : public validator {
     }
   }
 
-  void validate_client_cpp_splits(const std::vector<t_service*>& services) {
+  void validate_client_cpp_splits(
+      const std::vector<t_service*>& services, sema_context& ctx) {
     if (client_name_to_split_count_.empty()) {
-      return; // A fast path.
+      return;
     }
     for (const t_service* s : services) {
       auto iter = client_name_to_split_count_.find(s->get_name());
       if (iter != client_name_to_split_count_.end() &&
           iter->second > static_cast<int32_t>(s->get_functions().size())) {
-        report_error(
+        ctx.report(
             *s,
+            "more-splits-than-functions-rule",
+            diagnostic_level::error,
             "`client_cpp_splits={}` (For service {}) is misconfigured: it "
             "can not be greater than the number of functions, which is {}.",
             iter->second,
@@ -2728,43 +2879,112 @@ class splits_validator : public validator {
   }
 };
 
-class lazy_field_validator : public validator {
- public:
-  using validator::visit;
-  bool visit(t_field* field) override {
-    if (cpp2::is_lazy(field)) {
-      auto t = field->get_type()->get_true_type();
-      const char* field_type = nullptr;
-      if (t->is_any_int() || t->is_bool() || t->is_byte()) {
-        field_type = "Integral field";
-      }
-      if (t->is_floating_point()) {
-        field_type = "Floating point field";
-      }
-      if (field_type) {
-        report_error(
-            *field,
-            "{} `{}` can not be marked as lazy, since doing so won't bring "
-            "any benefit.",
-            field_type,
-            field->get_name());
-      }
+void validate_lazy_fields(sema_context& ctx, const t_field& field) {
+  if (cpp2::is_lazy(&field)) {
+    auto t = field.get_type()->get_true_type();
+    const char* field_type = nullptr;
+    if (t->is_any_int() || t->is_bool() || t->is_byte()) {
+      field_type = "Integral field";
     }
-    return true;
+    if (t->is_floating_point()) {
+      field_type = "Floating point field";
+    }
+    if (field_type) {
+      ctx.report(
+          field,
+          "no-lazy-int-float-field-rule",
+          diagnostic_level::error,
+          "{} `{}` can not be marked as lazy, since doing so won't bring "
+          "any benefit.",
+          field_type,
+          field.get_name());
+    }
   }
-};
-
-void t_mstch_cpp2_generator::fill_validator_list(
-    validator_list& validators) const {
-  validators.add<annotation_validator>(options());
-  validators.add<splits_validator>(
-      get_split_count(options()), client_name_to_split_count_);
-  validators.add<lazy_field_validator>();
 }
 
-THRIFT_REGISTER_GENERATOR(mstch_cpp2, "cpp2", "");
+void t_mstch_cpp2_generator::fill_validator_visitors(
+    ast_validator& validator) const {
+  validator.add_structured_definition_visitor(std::bind(
+      validate_struct_annotations,
+      std::placeholders::_1,
+      std::placeholders::_2,
+      options()));
+  validator.add_program_visitor(
+      validate_splits(get_split_count(options()), client_name_to_split_count_));
+  validator.add_field_visitor(validate_lazy_fields);
+}
+
+THRIFT_REGISTER_GENERATOR(
+    mstch_cpp2, "cpp2", R"(    (NOTE: the list below may not be exhaustive)
+    any
+      Register types with the AnyRegistry.
+    client_cpp_splits={[<service name:str>:<split count:int>[,...]*]}
+      Enable splitting of client method .cpp files (into N
+      *.async_client_split.cpp" files). The given split count cannot be greater
+      than the number of methods in the corresponding service. See also
+      types_cpp_splits below.
+    deprecated_clear
+      Use the deprecated semantics for "clearing" Thrift structs, which assigns
+      the *standard* default value instead of the *intrinsic* defaults (see
+      https://github.com/facebook/fbthrift/blob/main/thrift/doc/idl/index.md#default-values).
+    deprecated_enforce_required
+      Enforce required fields (deprecated since 2019).
+    deprecated_public_required_fields
+      Make member variables corresponding to required fields public instead of
+      private. In addition to exposing directly the field (which is unsafe to
+      begin with), this prevents the generation of the reference accessors
+      that do not have the _ref() suffix.
+    deprecated_terse_writes
+      Enable deprecated terse writes, which are discouraged in favor of
+      @thrift.TerseWrite. See:
+      https://github.com/facebook/fbthrift/blob/main/thrift/doc/idl/field-qualifiers.md#terse-writes-compiler-option
+    frozen[=packed]
+      Enable frozen structs. If the packed parameter is given, structure members
+      will be packed with an alignment of 1 (i.e., #pragma pack(push, 1)).
+      NOTE: this capability is not actively maintained. Use at your own risks.
+    frozen2
+      Enable frozen2 (see https://fburl.com/thrift_frozen2).
+      NOTE: this capability is not actively maintained. Use at your own risks.
+    includes=<extra_include:str>:...
+      Add cpp_include for each of the given values.
+    include_prefix
+      Override the "include prefix" for all generated files, i.e. the directory
+      from which application code should include headers, typically:
+      <include_prefix>/gen-cpp2/...
+    json
+      Enable SimpleJson serialization.
+    no_getters_setters
+      Do not generate (deprecated) field getter and setter methods, even when
+      it would be possible to do so. This is enouraged, and eventually will be
+      enabled by default as getters and setters are deprecated in favor of field
+      references (i.e., field() or field_ref() methods). Other conditions that
+      would prevent getters/setters from being generated (even if this option is
+      not enabled) include if the corresponding field: is a reference field
+      (@cpp.Ref, cpp[2].ref_[type]), is adapted (@cpp.Adapter), is lazy
+      (@cpp.Lazy), has a @cpp.FieldIntercaptor or is terse.
+    no_metadata
+      Generate empty metadata, do not generate _metadata.cpp.
+    py3cpp
+      if specified, output folder is "gen-py3cpp" instead of "gen-cpp2".
+    reflection
+      Enable the generation of "old-type" (a.k.a. "fatal") reflection for Thrift
+      types. This is deprecated in favor of always-on reflection (see
+      https://fburl.com/thrift-cpp-reflection). Note: the name "fatal" comes
+      from the name of the Facebook Template Library, see:
+      https://github.com/facebook/fatal/blob/main/README.md
+    single_file_service
+      Generate all RPC services and client code in a single file, respectively.
+    sync_methods_return_try
+      Generate (deprecated) sync code for RPC methods that returns a folly::Try.
+    tablebased
+      Enable the table-based serialization.
+    types_cpp_splits=<split_count:int>
+      Enable splitting of type .cpp files (into the given number of files).
+      Cannot be greater than the number of objects. See also client_cpp_splits
+      above.
+)"
+
+);
 
 } // namespace
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

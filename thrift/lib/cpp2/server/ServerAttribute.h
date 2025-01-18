@@ -23,18 +23,17 @@
 
 #include <folly/GLog.h>
 #include <folly/SharedMutex.h>
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/observer/SimpleObservable.h>
 #include <folly/synchronization/DelayedInit.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /*
  * ServerAttribute provides a mechanism for setting values which have varying
  * precedence depending on who set it. The resolved value (`.get()`)
  * prioritizes the value in the following order, falling back to the next one
  * if the value is reset:
- *   1. explicit application override through legacy BaseThriftServer setters
+ *   1. explicit application override through legacy ThriftServer setters
  *   2. baseline from configuration mechanism
  *   3. default provided in constructor, or through ThriftServerInitialConfig
  */
@@ -88,7 +87,7 @@ struct ServerAttributeThreadLocal;
  */
 template <typename T>
 using ServerAttributeDynamic = std::conditional_t<
-    sizeof(T) <= sizeof(std::uint64_t) && std::is_trivially_copyable<T>::value,
+    sizeof(T) <= sizeof(std::uint64_t) && std::is_trivially_copyable_v<T>,
     ServerAttributeAtomic<T>,
     ServerAttributeThreadLocal<T>>;
 
@@ -156,8 +155,18 @@ struct ServerAttributeObservable {
   }
   T get() const { return **getObserver(); }
 
+  T getDefault() const { return **default_.getObserver(); }
+
   std::optional<T> getBaseline() const {
     return **rawValues_.baseline_.getObserver();
+  }
+
+  std::optional<T> getOverride() const {
+    return **rawValues_.override_.getObserver();
+  }
+
+  std::optional<T> getOverrideInternal() const {
+    return **rawValues_.override_internal_.getObserver();
   }
 
   const folly::observer::Observer<T>& getObserver() const {
@@ -215,7 +224,11 @@ struct ServerAttributeAtomic
   using apache::thrift::detail::ServerAttributeObservable<T>::set;
   using apache::thrift::detail::ServerAttributeObservable<T>::getObserver;
   using apache::thrift::detail::ServerAttributeObservable<T>::setDefault;
+  using apache::thrift::detail::ServerAttributeObservable<T>::getDefault;
   using apache::thrift::detail::ServerAttributeObservable<T>::getBaseline;
+  using apache::thrift::detail::ServerAttributeObservable<T>::getOverride;
+  using apache::thrift::detail::ServerAttributeObservable<
+      T>::getOverrideInternal;
 
   T get() const { return *getAtomicObserver(); }
 
@@ -236,7 +249,11 @@ struct ServerAttributeThreadLocal
   using apache::thrift::detail::ServerAttributeObservable<T>::set;
   using apache::thrift::detail::ServerAttributeObservable<T>::getObserver;
   using apache::thrift::detail::ServerAttributeObservable<T>::setDefault;
+  using apache::thrift::detail::ServerAttributeObservable<T>::getDefault;
   using apache::thrift::detail::ServerAttributeObservable<T>::getBaseline;
+  using apache::thrift::detail::ServerAttributeObservable<T>::getOverride;
+  using apache::thrift::detail::ServerAttributeObservable<
+      T>::getOverrideInternal;
 
   const T& get() const { return **getTLObserver(); }
 
@@ -282,5 +299,4 @@ struct ServerAttributeStatic {
   std::reference_wrapper<const T> merged_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

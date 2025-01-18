@@ -26,8 +26,7 @@
 #include <thrift/lib/cpp2/protocol/JSONProtocolCommon.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using folly::IOBuf;
 using folly::IOBufQueue;
@@ -130,11 +129,10 @@ class SimpleJSONProtocolReader : public JSONProtocolReaderCommon {
   inline bool peekList();
   inline bool peekSet();
 
-  inline void skip(TType type);
+  inline void skip(TType type, int depth = 0);
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #include <thrift/lib/cpp2/protocol/SimpleJSONProtocol-inl.h>
 

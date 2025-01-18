@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -52,16 +52,16 @@ public class {{service:javaCapitalName}}AsyncReactiveWrapper {{#service:extends}
     {{/service:streamingFunctions}}
     {{#service:sinkFunctions}}
     @java.lang.Override
-    public {{#function:return_type}}{{> SinkReturnType}}{{/function:return_type}} {{function:javaName}}({{#function:args}}final {{#field:type}}{{> Type}}{{/field:type}} {{field:javaName}}, {{/function:args}} org.reactivestreams.Publisher<{{#function:return_type}}{{#function:sink_elem_type}}{{ >BoxedType}}{{/function:sink_elem_type}}{{/function:return_type}}> payloads) {
+    public {{#function:return_type}}{{> SinkReturnType}}{{/function:return_type}} {{function:javaName}}({{#function:args}}final {{#field:type}}{{> Type}}{{/field:type}} {{field:javaName}}, {{/function:args}} org.reactivestreams.Publisher<{{#function:return_type}}{{#function:sink_elem_type}}{{> BoxedType}}{{/function:sink_elem_type}}{{/function:return_type}}> payloads) {
         throw new UnsupportedOperationException();
     }
 
     {{/service:sinkFunctions}}
     {{#service:interactions}}
     public class {{service:name}}Impl implements {{service:name}} {
-        private {{service:javaParentCapitalName}}.Async.{{service:name}} _delegateInteraction;
+        private {{interaction:javaParentCapitalName}}.Async.{{service:name}} _delegateInteraction;
 
-        {{service:name}}Impl({{service:javaParentCapitalName}}.Async.{{service:name}} delegateInteraction) {
+        {{service:name}}Impl({{interaction:javaParentCapitalName}}.Async.{{service:name}} delegateInteraction) {
             this._delegateInteraction = delegateInteraction;
         }
 

@@ -16,7 +16,7 @@
 
 }}{{!
 
-  This tempalte defined the client type/functions for a thrift service.
+  This template defined the client type/functions for a thrift service.
 
 }}
 type {{service:go_name}}ChannelClient struct {
@@ -29,7 +29,7 @@ type {{service:go_name}}ChannelClient struct {
     ch thrift.RequestChannel
 }
 // Compile time interface enforcer
-var _ {{service:go_name}}ChannelClientInterface = &{{service:go_name}}ChannelClient{}
+var _ {{service:go_name}}ChannelClientInterface = (*{{service:go_name}}ChannelClient)(nil)
 
 func New{{service:go_name}}ChannelClient(channel thrift.RequestChannel) *{{service:go_name}}ChannelClient {
     return &{{service:go_name}}ChannelClient{
@@ -46,16 +46,6 @@ func (c *{{service:go_name}}ChannelClient) Close() error {
     return c.ch.Close()
 }
 
-func (c *{{service:go_name}}ChannelClient) IsOpen() bool {
-    return c.ch.IsOpen()
-}
-
-func (c *{{service:go_name}}ChannelClient) Open() error {
-    return c.ch.Open()
-}
-
-{{! COMPAT: backwards compatibility - remove once all code is migrated to ChannelClient. }}
-// Deprecated: Use {{service:go_name}}ChannelClient instead.
 type {{service:go_name}}Client struct {
     {{#service:extends?}}
     {{#service:extends}}
@@ -64,22 +54,20 @@ type {{service:go_name}}Client struct {
     {{/service:extends}}
     {{/service:extends?}}
     chClient *{{service:go_name}}ChannelClient
-    Mu       sync.Mutex
 }
 // Compile time interface enforcer
-var _ {{service:go_name}}ClientInterface = &{{service:go_name}}Client{}
+var _ {{service:go_name}}ClientInterface = (*{{service:go_name}}Client)(nil)
+var _ {{service:go_name}}ContextClientInterface = (*{{service:go_name}}Client)(nil)
 
-{{! COMPAT: backwards compatibility - remove once all code is migrated to ChannelClient. }}
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}Client(t thrift.Transport, iprot thrift.Protocol, oprot thrift.Protocol) *{{service:go_name}}Client {
+func New{{service:go_name}}Client(prot thrift.Protocol) *{{service:go_name}}Client {
     return &{{service:go_name}}Client{
         {{#service:extends?}}
         {{#service:extends}}
-        {{service:go_name}}Client: {{service:go_package_alias_prefix}}New{{service:go_name}}Client(t, iprot, oprot),
+        {{service:go_name}}Client: {{service:go_package_alias_prefix}}New{{service:go_name}}Client(prot),
         {{/service:extends}}
         {{/service:extends?}}
         chClient: New{{service:go_name}}ChannelClient(
-            thrift.NewSerialChannel(iprot),
+            thrift.NewSerialChannel(prot),
         ),
     }
 }
@@ -87,50 +75,11 @@ func New{{service:go_name}}Client(t thrift.Transport, iprot thrift.Protocol, opr
 func (c *{{service:go_name}}Client) Close() error {
     return c.chClient.Close()
 }
-
-func (c *{{service:go_name}}Client) IsOpen() bool {
-    return c.chClient.IsOpen()
-}
-
-func (c *{{service:go_name}}Client) Open() error {
-    return c.chClient.Open()
-}
-
-// Deprecated: Use {{service:go_name}}ChannelClient instead.
-type {{service:go_name}}ThreadsafeClient = {{service:go_name}}Client
-
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}ThreadsafeClient(t thrift.Transport, iprot thrift.Protocol, oprot thrift.Protocol) *{{service:go_name}}ThreadsafeClient {
-    return New{{service:go_name}}Client(t, iprot, oprot)
-}
-
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}ClientProtocol(prot thrift.Protocol) *{{service:go_name}}Client {
-  return New{{service:go_name}}Client(prot.Transport(), prot, prot)
-}
-
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}ThreadsafeClientProtocol(prot thrift.Protocol) *{{service:go_name}}Client {
-  return New{{service:go_name}}Client(prot.Transport(), prot, prot)
-}
-
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}ClientFactory(t thrift.Transport, pf thrift.ProtocolFactory) *{{service:go_name}}Client {
-  iprot := pf.GetProtocol(t)
-  oprot := pf.GetProtocol(t)
-  return New{{service:go_name}}Client(t, iprot, oprot)
-}
-
-// Deprecated: Use New{{service:go_name}}ChannelClient() instead.
-func New{{service:go_name}}ThreadsafeClientFactory(t thrift.Transport, pf thrift.ProtocolFactory) *{{service:go_name}}ThreadsafeClient {
-  return New{{service:go_name}}ClientFactory(t, pf)
-}
-
 {{#service:functions}}
 {{#function:go_supported?}}
 
 func (c *{{service:go_name}}ChannelClient) {{> svc/func_signature}} {
-    in := &req{{service:go_name}}{{function:go_name}}{
+    {{function:in_var_name}} := &req{{service:go_name}}{{function:go_name}}{
         {{#function:args}}
         {{#field:type}}
         {{field:go_name}}: {{field:go_arg_name}},
@@ -138,33 +87,32 @@ func (c *{{service:go_name}}ChannelClient) {{> svc/func_signature}} {
         {{/function:args}}
     }
     {{#function:oneway?}}
-    return c.ch.Oneway({{function:ctx_arg_name}}, "{{function:name}}", in)
+    return c.ch.Oneway({{function:ctx_arg_name}}, "{{function:name}}", {{function:in_var_name}})
     {{/function:oneway?}}{{!
 
     }}{{^function:oneway?}}
-    out := newResp{{service:go_name}}{{function:go_name}}()
-    err := c.ch.Call({{function:ctx_arg_name}}, "{{function:name}}", in, out)
-    if err != nil {
-        return {{^function:void?}}{{#function:return_type}}{{> common/go_zero_value}}{{/function:return_type}}, {{/function:void?}}err
+    {{function:out_var_name}} := newResp{{service:go_name}}{{function:go_name}}()
+    {{function:err_var_name}} := c.ch.Call({{function:ctx_arg_name}}, "{{function:name}}", {{function:in_var_name}}, {{function:out_var_name}})
+    if {{function:err_var_name}} != nil {
+        return {{^function:void?}}{{#function:return_type}}{{> common/go_zero_value}}{{/function:return_type}}, {{/function:void?}}{{function:err_var_name}}
     }{{#function:exceptions?}}{{!
     }}{{#function:exceptions}}{{!
-    }} else if out.{{field:go_name}} != nil {
-        return {{^function:void?}}{{#function:return_type}}{{> common/go_zero_value}}{{/function:return_type}}, {{/function:void?}}out.{{field:go_name}}
+    }} else if {{function:out_var_name}}.{{field:go_name}} != nil {
+        return {{^function:void?}}{{#function:return_type}}{{> common/go_zero_value}}{{/function:return_type}}, {{/function:void?}}{{function:out_var_name}}.{{field:go_name}}
     }{{/function:exceptions}}{{!
     }}{{/function:exceptions?}}
-    return {{^function:void?}}out.Get{{function:retval_field_name}}(), {{/function:void?}}nil
+    return {{^function:void?}}{{function:out_var_name}}.Get{{function:retval_field_name}}(), {{/function:void?}}nil
     {{/function:oneway?}}
 }
 
 func (c *{{service:go_name}}Client) {{> svc/func_signature_no_ctx}} {
-    return c.chClient.{{function:go_name}}(nil{{function:comma}}{{!
+    return c.chClient.{{function:go_name}}(context.Background(){{function:comma}}{{!
       }}{{#function:args}}{{field:go_arg_name}}{{^last?}}, {{/last?}}{{/function:args}})
 }
 
+func (c *{{service:go_name}}Client) {{> svc/func_signature_with_ctx}} {
+    return c.chClient.{{function:go_name}}({{function:ctx_arg_name}}{{function:comma}}{{!
+      }}{{#function:args}}{{field:go_arg_name}}{{^last?}}, {{/last?}}{{/function:args}})
+}
 {{/function:go_supported?}}
 {{/service:functions}}
-
-{{#service:req_resp_structs}}
-{{> types/struct}}
-
-{{/service:req_resp_structs}}

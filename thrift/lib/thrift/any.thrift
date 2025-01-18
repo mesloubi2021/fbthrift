@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-include "thrift/annotation/java.thrift"
-include "thrift/annotation/thrift.thrift"
 include "thrift/lib/thrift/any_rep.thrift"
 
 /** The **standard** representations for Thrift: Any. */
-@thrift.Experimental
 package "facebook.com/thrift/type"
 
 namespace cpp2 apache.thrift.type
@@ -35,29 +32,20 @@ namespace py thrift.lib.thrift.any
  * Always contains enough information to deserialize the stored value,  if the
  * type/protocol are recognized.
  */
-@java.Adapter{
-  adapterClassName = "com.facebook.thrift.any.AnyAdapter",
-  typeClassName = "com.facebook.thrift.any.Any",
-}
-@thrift.Experimental // TODO(afuller): Adapt!
-typedef any_rep.AnyStruct Any (thrift.uri = "")
+typedef any_rep.AnyStruct Any (
+  thrift.uri = "",
+  thrift.patch.uri = "facebook.com/thrift/op/AnyPatch",
+)
 
 /** A type that can hold any subset of 'any' value.
  *
  * Unlike `Any`, `SemiAny` may not hold enough information to deserialized the
  * stored value.
  */
-@java.Adapter{
-  adapterClassName = "com.facebook.thrift.any.SemiAnyAdapter",
-  typeClassName = "com.facebook.thrift.any.SemiAny",
-}
-@thrift.Experimental // TODO(afuller): Adapt!
 typedef any_rep.SemiAnyStruct SemiAny (thrift.uri = "")
 
 /** A list of SemiAny values, accessible by ValueId. */
-@thrift.Experimental // TODO(afuller): Adapt!
 typedef list<Any> AnyValueList
 
 /** A list of SemiAny values, accessible by ValueId. */
-@thrift.Experimental // TODO(afuller): Adapt!
 typedef list<SemiAny> SemiAnyValueList

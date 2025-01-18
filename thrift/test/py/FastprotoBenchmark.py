@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import gc
@@ -20,6 +22,8 @@ import timeit
 from multiprocessing import Process, Queue
 
 import psutil
+
+# pyre-fixme[21]: Could not find name `fastproto` in `thrift.protocol`.
 from thrift.protocol import fastproto, TBinaryProtocol, TCompactProtocol
 from thrift.transport import TTransport
 
@@ -50,6 +54,7 @@ ooe.write(proto)
 binary_buf = trans.getvalue()
 
 trans = TTransport.TMemoryBuffer()
+# pyre-fixme[9]: proto has type `TBinaryProtocol`; used as `TCompactProtocol`.
 proto = TCompactProtocol.TCompactProtocol(trans)
 ooe.write(proto)
 compact_buf = trans.getvalue()
@@ -185,8 +190,12 @@ def memory_usage_fastproto():
                     break
 
 
-if __name__ == "__main__":
+def main() -> None:
     print("Starting Benchmarks")
     benchmark_fastproto()
     if hpy is not None:
         memory_usage_fastproto()
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover

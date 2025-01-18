@@ -23,13 +23,14 @@ the clients/callback partial.
 
 }}
 {{> common/auto_generated_py}}
+{{^program:auto_migrate?}}
 from libc.stdint cimport (
     int8_t as cint8_t,
     int16_t as cint16_t,
     int32_t as cint32_t,
     int64_t as cint64_t,
 )
-from libcpp.memory cimport shared_ptr, make_shared, unique_ptr, make_unique
+from libcpp.memory cimport shared_ptr, make_shared, unique_ptr
 from libcpp.string cimport string
 from libcpp cimport bool as cbool
 from cpython cimport bool as pbool
@@ -40,15 +41,17 @@ from libcpp.utility cimport move as cmove
 from cython.operator cimport dereference as deref, typeid
 from cpython.ref cimport PyObject
 from thrift.py3.client cimport cRequestChannel_ptr, makeClientWrapper, cClientWrapper
-from thrift.py3.exceptions cimport try_make_shared_exception, create_py_exception
+from thrift.py3.exceptions cimport try_make_shared_exception
+from thrift.python.exceptions cimport create_py_exception
 from folly cimport cFollyTry, cFollyUnit, c_unit
 from folly.cast cimport down_cast_ptr
 from libcpp.typeinfo cimport type_info
 import thrift.py3.types
 cimport thrift.py3.types
+from thrift.py3.types cimport make_unique
 import thrift.py3.client
 cimport thrift.py3.client
-from thrift.py3.common cimport (
+from thrift.python.common cimport (
     RpcOptions as __RpcOptions,
     cThriftServiceMetadataResponse as __fbthrift_cThriftServiceMetadataResponse,
     ServiceMetadata,
@@ -67,6 +70,7 @@ import types as _py_types
 from asyncio import get_event_loop as asyncio_get_event_loop, shield as asyncio_shield, InvalidStateError as asyncio_InvalidStateError
 
 cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.types as _{{#program:py3Namespaces}}{{value}}_{{/program:py3Namespaces}}{{program:name}}_types
+cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.cbindings as _{{#program:py3Namespaces}}{{value}}_{{/program:py3Namespaces}}{{program:name}}_cbindings
 import {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.types as _{{#program:py3Namespaces}}{{value}}_{{/program:py3Namespaces}}{{program:name}}_types
 {{#program:has_stream?}}
 from thrift.py3.stream cimport cResponseAndClientBufferedStream, cClientBufferedStream
@@ -74,6 +78,7 @@ from thrift.py3.stream cimport cResponseAndClientBufferedStream, cClientBuffered
 {{#program:includeNamespaces}}
 {{#hasTypes?}}
 cimport {{#includeNamespace}}{{value}}.{{/includeNamespace}}types as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}types
+cimport {{#includeNamespace}}{{value}}.{{/includeNamespace}}cbindings as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}cbindings
 import {{#includeNamespace}}{{value}}.{{/includeNamespace}}types as _{{#includeNamespace}}{{value}}_{{/includeNamespace}}types
 {{/hasTypes?}}
 {{#hasServices?}}
@@ -82,13 +87,13 @@ import {{#includeNamespace}}{{value}}.{{/includeNamespace}}clients as _{{#includ
 {{/hasServices?}}
 {{/program:includeNamespaces}}
 
-cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.services_reflection as _services_reflection
+cimport {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.services_interface as _fbthrift_services_interface
 
 {{#program:services}}
 from {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.clients_wrapper cimport c{{service:name}}AsyncClient, c{{service:name}}ClientWrapper
-{{#service:interactions}}
+{{#service:supportedInteractions}}
 from {{#program:py3Namespaces}}{{value}}.{{/program:py3Namespaces}}{{program:name}}.clients_wrapper cimport c{{service:parent_service_name}}ClientWrapper_{{service:name}}InteractionWrapper
-{{/service:interactions}}
+{{/service:supportedInteractions}}
 {{#service:extends}}
 {{#service:externalProgram?}}
 from {{#service:py3Namespaces}}{{value}}.{{/service:py3Namespaces}}{{service:programName}}.clients_wrapper cimport c{{service:name}}ClientWrapper
@@ -125,6 +130,13 @@ cdef class {{service:name}}({{#service:extends}}{{#service:externalProgram?}}{{!
         )
 
 {{#service:supportedFunctions}}
+    {{! horrific workaround to expose python annotations on thrift py3 service functions}}
+    _fbthrift_annotations_DO_NOT_USE_{{function:name}} = {
+        'return': '{{#function:return_type}}{{!
+        }}{{> types/pep484_type_period_separated}}{{/function:return_type}}',
+        {{#function:args}}'{{field:py_name}}': '{{#field:type}}{{> types/pep484_type_period_separated}}{{/field:type}}', {{/function:args}}
+    }
+
     @cython.always_allow_keywords(True)
     def {{function:name}}(
             {{service:name}} self{{#function:args}},
@@ -167,7 +179,7 @@ cdef class {{service:name}}({{#service:extends}}{{#service:externalProgram?}}{{!
 
 {{/service:supportedFunctions}}
 
-{{#service:interactions}}
+{{#service:supportedInteractions}}
     def create{{service:name}}(
             {{service:parent_service_name}} self
     ):
@@ -180,22 +192,23 @@ cdef class {{service:name}}({{#service:extends}}{{#service:externalProgram?}}{{!
         )
         return interaction
 
-{{/service:interactions}}
-    @classmethod
-    def __get_reflection__(cls):
-        return _services_reflection.get_reflection__{{service:name}}(for_clients=True)
+    async def async_create{{service:name}}(
+            {{service:parent_service_name}} self
+    ):
+        return self.create{{service:name}}()
 
+{{/service:supportedInteractions}}
     @staticmethod
     def __get_metadata__():
         cdef __fbthrift_cThriftServiceMetadataResponse response
-        ServiceMetadata[_services_reflection.c{{service:cpp_name}}SvIf].gen(response)
+        ServiceMetadata[_fbthrift_services_interface.c{{service:cpp_name}}SvIf].gen(response)
         return __MetadataBox.box(cmove(deref(response.metadata_ref())))
 
     @staticmethod
     def __get_thrift_name__():
         return "{{program:name}}.{{service:name}}"
 
-{{#service:interactions}}
+{{#service:supportedInteractions}}
 @cython.auto_pickle(False)
 cdef class {{service:parent_service_name}}_{{service:name}}({{#service:extends}}{{#service:externalProgram?}}{{!
     }}_{{#service:py3Namespaces}}{{value}}_{{/service:py3Namespaces}}{{!
@@ -248,5 +261,6 @@ cdef class {{service:parent_service_name}}_{{service:name}}({{#service:extends}}
 {{^service:supportedFunctions}}
     pass
 {{/service:supportedFunctions}}
-{{/service:interactions}}
+{{/service:supportedInteractions}}
 {{/program:services}}
+{{/program:auto_migrate?}}

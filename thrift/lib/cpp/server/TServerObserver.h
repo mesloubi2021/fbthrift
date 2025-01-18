@@ -26,6 +26,8 @@
 #include <folly/Optional.h>
 #include <wangle/acceptor/TransportInfo.h>
 
+#include <thrift/lib/cpp2/server/Overload.h>
+
 namespace apache {
 namespace thrift {
 namespace server {
@@ -40,39 +42,34 @@ class TServerObserver {
   class SamplingStatus {
    public:
     SamplingStatus() noexcept : SamplingStatus(false, 0, 0) {}
-    SamplingStatus(
-        bool isServerSamplingEnabled, bool isClientSamplingEnabled) noexcept
+    explicit SamplingStatus(bool isServerSamplingEnabled) noexcept
         : isServerSamplingEnabled_(isServerSamplingEnabled),
-          isClientSamplingEnabled_(isClientSamplingEnabled),
-          clientLogSampleRatio_(0),
-          clientLogErrorSampleRatio_(0) {}
+          logSampleRatio_(0),
+          logErrorSampleRatio_(0) {}
     SamplingStatus(
         bool isServerSamplingEnabled,
-        int64_t clientLogSampleRatio,
-        int64_t clientLogErrorSampleRatio) noexcept
+        int64_t logSampleRatio,
+        int64_t logErrorSampleRatio) noexcept
         : isServerSamplingEnabled_(isServerSamplingEnabled),
-          isClientSamplingEnabled_(
-              clientLogSampleRatio > 0 || clientLogErrorSampleRatio > 0),
-          clientLogSampleRatio_(std::max(int64_t{0}, clientLogSampleRatio)),
-          clientLogErrorSampleRatio_(
-              std::max(int64_t{0}, clientLogErrorSampleRatio)) {}
+          logSampleRatio_(std::max(int64_t{0}, logSampleRatio)),
+          logErrorSampleRatio_(std::max(int64_t{0}, logErrorSampleRatio)) {}
 
     bool isEnabled() const {
-      return isEnabledByServer() || isEnabledByClient();
+      return isServerSamplingEnabled() || isRequestLoggingEnabled();
     }
-    bool isEnabledByServer() const { return isServerSamplingEnabled_; }
-    bool isEnabledByClient() const { return isClientSamplingEnabled_; }
 
-    int64_t getClientLogSampleRatio() const { return clientLogSampleRatio_; }
-    int64_t getClientLogErrorSampleRatio() const {
-      return clientLogErrorSampleRatio_;
+    bool isServerSamplingEnabled() const { return isServerSamplingEnabled_; }
+    bool isRequestLoggingEnabled() const {
+      return logSampleRatio_ > 0 || logErrorSampleRatio_ > 0;
     }
+
+    int64_t getLogSampleRatio() const { return logSampleRatio_; }
+    int64_t getLogErrorSampleRatio() const { return logErrorSampleRatio_; }
 
    private:
     bool isServerSamplingEnabled_;
-    bool isClientSamplingEnabled_;
-    int64_t clientLogSampleRatio_;
-    int64_t clientLogErrorSampleRatio_;
+    int64_t logSampleRatio_;
+    int64_t logErrorSampleRatio_;
   };
 
   class PreHandlerTimestamps {
@@ -121,27 +118,48 @@ class TServerObserver {
     }
 
     folly::Optional<uint64_t> writeDelayLatencyUsec() const {
-      if (writeBegin != clock::time_point()) {
+      if (writeBegin != clock::time_point() &&
+          processEnd != clock::time_point()) {
         return to_microseconds(writeBegin - processEnd);
       }
       return {};
     }
 
     folly::Optional<uint64_t> writeLatencyUsec() const {
-      if (writeBegin != clock::time_point()) {
+      if (writeBegin != clock::time_point() &&
+          writeEnd != clock::time_point()) {
         return to_microseconds(writeEnd - writeBegin);
       }
       return {};
     }
   };
 
-  virtual void connAccepted(const wangle::TransportInfo&) {}
+  // This class is used to pass information regarding a connection to
+  // TServerObserver callbacks.
+  //  - `connectionId` uniquely identifies a connection; connections with the
+  //  same ID are considered the same connection.
+  //  - `securityProtocol` indicates the security protocol being used; possible
+  //  values include TLS12, Fizz, stopTLS, and kTLS.
+  class ConnectionInfo {
+   public:
+    ConnectionInfo(uint64_t connectionId, const std::string& securityProtocol)
+        : connectionId_(connectionId), securityProtocol_(securityProtocol) {}
+    uint64_t getConnectionId() const { return connectionId_; }
+    const std::string& getSecurityProtocol() const { return securityProtocol_; }
+
+   private:
+    uint64_t connectionId_;
+    std::string securityProtocol_;
+  };
+
+  virtual void connAccepted(
+      const wangle::TransportInfo&, const ConnectionInfo&) {}
 
   virtual void connDropped() {}
 
   virtual void connRejected() {}
 
-  virtual void connClosed() {}
+  virtual void connClosed(const ConnectionInfo&) {}
 
   virtual void activeConnections(int32_t /*numConnections*/) {}
 
@@ -157,7 +175,7 @@ class TServerObserver {
 
   virtual void taskTimeout() {}
 
-  virtual void serverOverloaded() {}
+  virtual void serverOverloaded(apache::thrift::LoadShedder /*loadShedder*/) {}
 
   virtual void receivedRequest(const std::string* /*method*/) {}
 
@@ -166,8 +184,6 @@ class TServerObserver {
   virtual void queuedRequests(int32_t /*numRequests*/) {}
 
   virtual void queueTimeout() {}
-
-  virtual void shadowQueueTimeout() {}
 
   virtual void sentReply() {}
 
@@ -183,15 +199,19 @@ class TServerObserver {
 
   virtual void undeclaredException() {}
 
-  virtual void resourcePoolsEnabled(std::string /*explanation*/) {}
+  virtual void resourcePoolsEnabled(const std::string& /*explanation*/) {}
 
-  virtual void resourcePoolsDisabled(std::string /*explanation*/) {}
+  virtual void resourcePoolsDisabled(const std::string& /*explanation*/) {}
 
   virtual void resourcePoolsInitialized(
-      std::vector<std::string> /*resourcePoolsDescriptions*/) {}
+      const std::vector<std::string>& /*resourcePoolsDescriptions*/) {}
+
+  virtual void pendingConnections(int32_t /*numPendingConnections*/) {}
 
   // The observer has to specify a sample rate for callCompleted notifications
   inline uint32_t getSampleRate() const { return sampleRate_; }
+
+  virtual std::string getName() const final { return typeid(*this).name(); }
 
  protected:
   uint32_t sampleRate_;

@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%><% > common/namespace_cpp2_begin%>
+}}
+namespace {{service:qualified_namespace}} {
+{{> service_common/typedefs}}
+{{> service_tcc/process_and_return}}
 
-<% > service_common/typedefs%>
-<% > service_tcc/process_and_return%>
-
-<%#service:interactions%>
-<% > service_common/typedefs%>
-<% > service_tcc/process_and_return%>
-<%/service:interactions%>
-<% > common/namespace_cpp2_end%>
+{{#service:interactions}}
+{{> service_common/typedefs}}
+{{> service_tcc/process_and_return}}
+{{/service:interactions}}
+} // namespace {{service:qualified_namespace}}

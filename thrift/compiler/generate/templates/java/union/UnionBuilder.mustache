@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -24,6 +24,11 @@ public {{struct:javaCapitalName}}() {
 @ThriftConstructor
 @Deprecated
 public {{struct:javaCapitalName}}(final {{> FieldType}} {{field:javaName}}) {
+    {{^field:optional?}}{{^field:required?}}{{^field:isNumericOrVoid?}}
+    if (!{{struct:javaCapitalName}}.allowNullFieldValues && {{field:javaName}} == null) {
+        throw new TProtocolException("Cannot initialize Union field '{{struct:javaCapitalName}}.{{field:javaName}}' with null value!");
+    }
+    {{/field:isNumericOrVoid?}}{{/field:required?}}{{/field:optional?}}
     this.value = {{field:javaName}};
     this.id = {{field:key}};
 }
@@ -33,6 +38,11 @@ public {{struct:javaCapitalName}}(final {{> FieldType}} {{field:javaName}}) {
 
 public static {{struct:javaCapitalName}} from{{field:javaCapitalName}}(final {{> FieldType}} {{field:javaName}}) {
     {{struct:javaCapitalName}} res = new {{struct:javaCapitalName}}();
+    {{^field:optional?}}{{^field:required?}}{{^field:isNumericOrVoid?}}
+    if (!{{struct:javaCapitalName}}.allowNullFieldValues && {{field:javaName}} == null) {
+        throw new TProtocolException("Cannot initialize Union field '{{struct:javaCapitalName}}.{{field:javaName}}' with null value!");
+    }
+    {{/field:isNumericOrVoid?}}{{/field:required?}}{{/field:optional?}}
     res.value = {{field:javaName}};
     res.id = {{field:key}};
     return res;

@@ -111,12 +111,15 @@ struct FieldLevelTerseStruct {
 struct CppRefTerseStruct {
   @python.Py3Hidden
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   1: i32 unique_int_field;
   @python.Py3Hidden
   @cpp.Ref{type = cpp.RefType.SharedMutable}
+  @cpp.AllowLegacyNonOptionalRef
   2: i32 shared_int_field;
   @python.Py3Hidden
   @cpp.Ref{type = cpp.RefType.Shared}
+  @cpp.AllowLegacyNonOptionalRef
   3: i32 shared_const_int_field;
   @thrift.InternBox
   4: MyStruct intern_boxed_field;
@@ -236,8 +239,9 @@ struct AdaptedListFields {
 
 @thrift.TerseWrite
 exception TerseException {
+  @thrift.ExceptionMessage
   1: string msg;
-} (message = 'msg')
+}
 
 @thrift.TerseWrite
 struct ThreeLevelTerseStructs {
@@ -284,4 +288,12 @@ struct TerseInternBoxedStructWithCustomDefault {
   @python.Py3Hidden
   @thrift.InternBox
   2: MyStructWithCustomDefaultAdapted intern_boxed_field_with_custom_default_adapted;
+}
+
+@thrift.TerseWrite
+struct TerseSafePatch {
+  1: i32 version;
+
+  @cpp.Type{name = "std::unique_ptr<folly::IOBuf>"}
+  2: binary data;
 }

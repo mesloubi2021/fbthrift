@@ -19,6 +19,7 @@ include "thrift/annotation/scope.thrift"
 package "facebook.com/thrift/annotation/go"
 
 namespace java com.facebook.thrift.annotation.go_deprecated
+namespace android com.facebook.thrift.annotation.go_deprecated
 namespace js thrift.annotation.go
 namespace py.asyncio facebook_thrift_asyncio.annotation.go
 namespace go thrift.annotation.go
@@ -37,10 +38,3 @@ struct Name {
 struct Tag {
   1: string tag;
 }
-
-// Annotation for declaring a typedef as a new type (rather than an alias).
-//
-//  type T1 = T2  // alias declaration
-//  type T1 T2    // type definition
-@scope.Typedef
-struct NewType {}

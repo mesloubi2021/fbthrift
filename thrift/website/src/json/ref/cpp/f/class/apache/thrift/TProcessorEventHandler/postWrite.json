@@ -15,6 +15,7 @@
       "definition_html": "virtual void apache::thrift::TProcessorEventHandler::postWrite",
       "argsstring_html": "(void *, const char *, uint32_t)",
       "name_html": "postWrite",
+      "qualifiedname_html": "apache::thrift::TProcessorEventHandler::postWrite",
       "param": [
         {
           "type_html": "void *"
@@ -29,7 +30,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
         "line": "123",
-        "column": "1",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
         "bodystart": "123",
         "bodyend": "124"
@@ -57,5 +58,11 @@
   "brief_html": "<p>Called after writing the response. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/postWrite",
-  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/postWrite"
+  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/postWrite",
+  "parent_links": [
+    {
+      "text_html": "TProcessorEventHandler",
+      "href": "/ref/cpp/class/apache/thrift/TProcessorEventHandler"
+    }
+  ]
 }

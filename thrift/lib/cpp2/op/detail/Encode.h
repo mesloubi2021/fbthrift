@@ -21,6 +21,7 @@
 #include <folly/Overload.h>
 #include <folly/Range.h>
 #include <folly/Utility.h>
+#include <folly/container/Reserve.h>
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp/protocol/TType.h>
 #include <thrift/lib/cpp2/FieldRef.h>
@@ -31,24 +32,21 @@
 #include <thrift/lib/cpp2/type/NativeType.h>
 #include <thrift/lib/cpp2/type/Tag.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class BinaryProtocolWriter;
 class CompactProtocolWriter;
 class SimpleJSONProtocolWriter;
 
-namespace op {
-namespace detail {
+namespace op::detail {
 
 template <typename T, typename Tag>
-FOLLY_INLINE_VARIABLE constexpr bool kIsStrongType =
-    std::is_enum<folly::remove_cvref_t<T>>::value&&
-        type::is_a_v<Tag, type::integral_c>;
-
-template <typename T, typename Tag>
-FOLLY_INLINE_VARIABLE constexpr bool kIsIntegral =
+inline constexpr bool kIsStrongType =
+    std::is_enum_v<folly::remove_cvref_t<T>> &&
     type::is_a_v<Tag, type::integral_c>;
+
+template <typename T, typename Tag>
+inline constexpr bool kIsIntegral = type::is_a_v<Tag, type::integral_c>;
 
 using apache::thrift::protocol::TType;
 
@@ -129,7 +127,7 @@ struct TypeTagToTType<type::cpp_type<T, Tag>> {
 };
 
 template <typename Tag>
-FOLLY_INLINE_VARIABLE constexpr apache::thrift::protocol::TType typeTagToTType =
+inline constexpr apache::thrift::protocol::TType typeTagToTType =
     detail::TypeTagToTType<Tag>::value;
 
 template <bool, typename>
@@ -149,6 +147,10 @@ struct SerializedSize<ZeroCopy, type::byte_t> {
   uint32_t operator()(Protocol& prot, int8_t i) const {
     return prot.serializedSizeByte(i);
   }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint8_t i) const {
+    return prot.serializedSizeByte(folly::to_signed(i));
+  }
 };
 
 template <bool ZeroCopy>
@@ -156,6 +158,10 @@ struct SerializedSize<ZeroCopy, type::i16_t> {
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, int16_t i) const {
     return prot.serializedSizeI16(i);
+  }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint16_t i) const {
+    return prot.serializedSizeI16(folly::to_signed(i));
   }
 };
 
@@ -165,6 +171,10 @@ struct SerializedSize<ZeroCopy, type::i32_t> {
   uint32_t operator()(Protocol& prot, int32_t i) const {
     return prot.serializedSizeI32(i);
   }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint32_t i) const {
+    return prot.serializedSizeI32(folly::to_signed(i));
+  }
 };
 
 template <bool ZeroCopy>
@@ -172,6 +182,10 @@ struct SerializedSize<ZeroCopy, type::i64_t> {
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, int64_t i) const {
     return prot.serializedSizeI64(i);
+  }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint64_t i) const {
+    return prot.serializedSizeI64(folly::to_signed(i));
   }
 };
 
@@ -210,6 +224,12 @@ struct SerializedSize<false, type::binary_t> {
   uint32_t operator()(Protocol& prot, const folly::IOBuf& s) const {
     return prot.serializedSizeBinary(s);
   }
+
+  template <typename Protocol>
+  uint32_t operator()(
+      Protocol& prot, const std::unique_ptr<folly::IOBuf>& s) const {
+    return prot.serializedSizeBinary(s);
+  }
 };
 
 template <>
@@ -220,6 +240,11 @@ struct SerializedSize<true, type::binary_t> {
   }
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, const folly::IOBuf& s) const {
+    return prot.serializedSizeZCBinary(s);
+  }
+  template <typename Protocol>
+  uint32_t operator()(
+      Protocol& prot, const std::unique_ptr<folly::IOBuf>& s) const {
     return prot.serializedSizeZCBinary(s);
   }
 };
@@ -384,6 +409,10 @@ struct Encode<type::byte_t> {
   uint32_t operator()(Protocol& prot, int8_t i) const {
     return prot.writeByte(i);
   }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint8_t i) const {
+    return prot.writeByte(folly::to_signed(i));
+  }
 };
 
 template <>
@@ -391,6 +420,10 @@ struct Encode<type::i16_t> {
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, int16_t i) const {
     return prot.writeI16(i);
+  }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint16_t i) const {
+    return prot.writeI16(folly::to_signed(i));
   }
 };
 
@@ -400,6 +433,10 @@ struct Encode<type::i32_t> {
   uint32_t operator()(Protocol& prot, int32_t i) const {
     return prot.writeI32(i);
   }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint32_t i) const {
+    return prot.writeI32(folly::to_signed(i));
+  }
 };
 
 template <>
@@ -407,6 +444,10 @@ struct Encode<type::i64_t> {
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, int64_t i) const {
     return prot.writeI64(i);
+  }
+  template <typename Protocol>
+  uint32_t operator()(Protocol& prot, uint64_t i) const {
+    return prot.writeI64(folly::to_signed(i));
   }
 };
 
@@ -442,6 +483,11 @@ struct Encode<type::binary_t> {
   }
   template <typename Protocol>
   uint32_t operator()(Protocol& prot, folly::StringPiece s) const {
+    return prot.writeBinary(s);
+  }
+  template <typename Protocol>
+  uint32_t operator()(
+      Protocol& prot, const std::unique_ptr<folly::IOBuf>& s) const {
     return prot.writeBinary(s);
   }
 };
@@ -487,7 +533,7 @@ struct ShouldWrite {
 };
 
 template <class Tag>
-FOLLY_INLINE_VARIABLE constexpr ShouldWrite<Tag> should_write{};
+inline constexpr ShouldWrite<Tag> should_write{};
 
 template <typename T>
 struct StructEncode {
@@ -603,8 +649,10 @@ struct MapEncode {
         typeTagToTType<Value>,
         checked_container_size(map.size()));
     for (const auto& kv : map) {
+      xfer += apache::thrift::detail::pm::writeMapValueBegin(prot, true);
       xfer += Encode<Key>{}(prot, kv.first);
       xfer += Encode<Value>{}(prot, kv.second);
+      xfer += apache::thrift::detail::pm::writeMapValueEnd(prot, true);
     }
     xfer += prot.writeMapEnd();
     return xfer;
@@ -670,6 +718,12 @@ struct Decode<type::byte_t> {
   void operator()(Protocol& prot, int8_t& i) const {
     prot.readByte(i);
   }
+  template <typename Protocol>
+  void operator()(Protocol& prot, uint8_t& i) const {
+    int8_t tmp;
+    prot.readByte(tmp);
+    i = folly::to_unsigned(tmp);
+  }
 };
 
 template <>
@@ -677,6 +731,12 @@ struct Decode<type::i16_t> {
   template <typename Protocol>
   void operator()(Protocol& prot, int16_t& i) const {
     prot.readI16(i);
+  }
+  template <typename Protocol>
+  void operator()(Protocol& prot, uint16_t& i) const {
+    int16_t tmp;
+    prot.readI16(tmp);
+    i = folly::to_unsigned(tmp);
   }
 };
 
@@ -686,6 +746,12 @@ struct Decode<type::i32_t> {
   void operator()(Protocol& prot, int32_t& i) const {
     prot.readI32(i);
   }
+  template <typename Protocol>
+  void operator()(Protocol& prot, uint32_t& i) const {
+    int32_t tmp;
+    prot.readI32(tmp);
+    i = folly::to_unsigned(tmp);
+  }
 };
 
 template <>
@@ -693,6 +759,12 @@ struct Decode<type::i64_t> {
   template <typename Protocol>
   void operator()(Protocol& prot, int64_t& i) const {
     prot.readI64(i);
+  }
+  template <typename Protocol>
+  void operator()(Protocol& prot, uint64_t& i) const {
+    int64_t tmp;
+    prot.readI64(tmp);
+    i = folly::to_unsigned(tmp);
   }
 };
 
@@ -782,14 +854,56 @@ struct Decode<type::list<Tag>> {
         consumeElem();
       }
     } else if (typeTagToTType<Tag> == t) {
-      apache::thrift::detail::pm::reserve_if_possible(&list, s);
-      while (s--) {
-        consumeElem();
+      if (!canReadNElements(prot, s, {t})) {
+        TProtocolException::throwTruncatedData();
+      }
+#ifndef _MSC_VER
+      constexpr auto should_resize_without_initialization =
+          std::is_trivial_v<typename ListType::value_type> &&
+          folly::is_detected_v<
+              apache::thrift::detail::pm::detect_resize_without_initialization,
+              ListType,
+              decltype(s)>;
+#else
+      // For MSVC, vector layout is not fixed, so resizeWithoutInitialization
+      // is not supported yet
+      constexpr auto should_resize_without_initialization = false;
+#endif
+      constexpr auto should_resize =
+          folly::is_detected_v<
+              apache::thrift::detail::pm::detect_resize,
+              ListType,
+              decltype(s)> &&
+          std::is_trivial_v<typename ListType::value_type>;
+      // Do special treatments for lists of primitive types, as we found
+      // resize is more performant than reserve.
+      if constexpr (should_resize_without_initialization) {
+        folly::resizeWithoutInitialization(list, s);
+        auto outIt = list.begin();
+        const auto outEnd = list.end();
+        try {
+          for (; outIt != outEnd; ++outIt) {
+            Decode<Tag>{}(prot, *outIt);
+          }
+        } catch (...) {
+          // For behaviour parity, initialize the leftover elements when
+          // exceptions happen
+          std::fill(outIt, outEnd, typename ListType::value_type());
+          throw;
+        }
+      } else if constexpr (should_resize) {
+        list.resize(s);
+        for (auto&& elem : list) {
+          Decode<Tag>{}(prot, elem);
+        }
+      } else {
+        folly::reserve_if_available(list, s);
+        while (s--) {
+          consumeElem();
+        }
       }
     } else {
-      while (s--) {
-        prot.skip(t);
-      }
+      apache::thrift::skip_n(prot, s, {t});
     }
 
     prot.readListEnd();
@@ -842,7 +956,7 @@ struct Decode<type::set<Tag>> {
 
     bool sorted = true;
     typename Set::container_type tmp(set.get_allocator());
-    apache::thrift::detail::pm::reserve_if_possible(&tmp, set_size);
+    folly::reserve_if_available(tmp, set_size);
     {
       auto& elem0 = apache::thrift::detail::pm::emplace_back_default(tmp);
       Decode<Tag>{}(prot, elem0);
@@ -862,7 +976,7 @@ struct Decode<type::set<Tag>> {
   static std::enable_if_t<
       !apache::thrift::detail::pm::sorted_unique_constructible_v<Set>>
   decode_known_length_set(Protocol& prot, Set& set, std::uint32_t set_size) {
-    apache::thrift::detail::pm::reserve_if_possible(&set, set_size);
+    folly::reserve_if_available(set, set_size);
 
     for (auto i = set_size; i > 0; i--) {
       typename Set::value_type value =
@@ -889,11 +1003,12 @@ struct Decode<type::set<Tag>> {
         consumeElem();
       }
     } else if (typeTagToTType<Tag> == t) {
+      if (!canReadNElements(prot, s, {t})) {
+        TProtocolException::throwTruncatedData();
+      }
       decode_known_length_set(prot, set, s);
     } else {
-      while (s--) {
-        prot.skip(t);
-      }
+      apache::thrift::skip_n(prot, s, {t});
     }
 
     prot.readSetEnd();
@@ -914,7 +1029,7 @@ struct Decode<type::map<Key, Value>> {
 
     bool sorted = true;
     typename Map::container_type tmp(map.get_allocator());
-    apache::thrift::detail::pm::reserve_if_possible(&tmp, map_size);
+    folly::reserve_if_available(tmp, map_size);
     {
       auto& elem0 =
           apache::thrift::detail::pm::emplace_back_default_map(tmp, map);
@@ -938,7 +1053,7 @@ struct Decode<type::map<Key, Value>> {
   static std::enable_if_t<
       !apache::thrift::detail::pm::sorted_unique_constructible_v<Map>>
   decode_known_length_map(Protocol& prot, Map& map, std::uint32_t map_size) {
-    apache::thrift::detail::pm::reserve_if_possible(&map, map_size);
+    folly::reserve_if_available(map, map_size);
 
     for (auto i = map_size; i--;) {
       typename Map::key_type key = apache::thrift::detail::default_map_key(map);
@@ -971,12 +1086,12 @@ struct Decode<type::map<Key, Value>> {
       }
     } else if (
         typeTagToTType<Key> == keyType && typeTagToTType<Value> == valueType) {
+      if (!canReadNElements(prot, s, {keyType, valueType})) {
+        TProtocolException::throwTruncatedData();
+      }
       decode_known_length_map(prot, map, s);
     } else {
-      while (s--) {
-        prot.skip(keyType);
-        prot.skip(valueType);
-      }
+      apache::thrift::skip_n(prot, s, {keyType, valueType});
     }
     prot.readMapEnd();
   }
@@ -1064,7 +1179,6 @@ struct Decode<
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace op::detail
+
+} // namespace apache::thrift

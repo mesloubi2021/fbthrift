@@ -16,14 +16,39 @@
 
 #include <thrift/compiler/diagnostic.h>
 
-#include <sstream>
+#include <ostream>
 #include <string>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+using apache::thrift::compiler::diagnostic;
+using apache::thrift::compiler::diagnostic_level;
 
-namespace {
+fmt::format_context::iterator fmt::formatter<diagnostic>::format(
+    const diagnostic& d, format_context& ctx) const {
+  auto out = ctx.out();
+  fmt::format_to(
+      out,
+      "[{}:{}",
+      apache::thrift::compiler::level_to_string(d.level()),
+      d.file());
+  if (d.lineno() > 0) {
+    fmt::format_to(out, ":{}", d.lineno());
+  }
+  fmt::format_to(out, "] {}", d.message());
+  if (!d.name().empty()) {
+    fmt::format_to(out, " [{}]", d.name());
+  }
+  if (d.fixit_hint()) {
+    fmt::format_to(
+        out,
+        R"( fix: [original: "{}"][replacement: "{}"])",
+        d.fixit_hint()->original(),
+        d.fixit_hint()->replacement());
+  }
+  return out;
+}
+
+namespace apache::thrift::compiler {
+
 const char* level_to_string(diagnostic_level level) {
   switch (level) {
     case diagnostic_level::error:
@@ -37,25 +62,9 @@ const char* level_to_string(diagnostic_level level) {
   }
   return "??";
 }
-} // namespace
 
 std::string diagnostic::str() const {
-  std::ostringstream ss;
-  ss << *this;
-  return ss.str();
-}
-
-std::ostream& operator<<(std::ostream& os, const diagnostic& e) {
-  os << "[" << level_to_string(e.level()) << ":" << e.file();
-  if (e.lineno() > 0) {
-    os << ":" << e.lineno();
-  }
-  os << "] ";
-  os << e.message();
-  if (!e.name().empty()) {
-    os << " [" << e.name() << "]";
-  }
-  return os;
+  return fmt::format("{}", *this);
 }
 
 void diagnostic_results::add(diagnostic diag) {
@@ -74,6 +83,7 @@ diagnostic_results::diagnostic_results(
 void diagnostics_engine::do_report(
     source_location loc,
     std::string name,
+    std::optional<fixit> fixit_hint,
     diagnostic_level level,
     std::string msg) {
   if (level == diagnostic_level::error) {
@@ -89,14 +99,20 @@ void diagnostics_engine::do_report(
     file_name = resolved_loc.file_name();
     line = resolved_loc.line();
   }
+  if (fixit_hint) {
+    fixit_hint->resolve_location(*source_mgr_, loc);
+  }
   report_cb_(
       {level,
        std::move(msg),
        std::move(file_name),
        static_cast<int>(line),
-       std::move(name)});
+       std::move(name),
+       std::move(fixit_hint)});
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+std::ostream& operator<<(std::ostream& out, const diagnostic& diag) {
+  return out << diag.str();
+}
+
+} // namespace apache::thrift::compiler

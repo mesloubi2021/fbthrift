@@ -22,13 +22,17 @@ final class ResourceConfiguration {
   private ResourceConfiguration() {}
 
   static final boolean enableForkJoinPool =
-      System.getProperty("thrift.separate-forkjoin-scheduler", "true").equalsIgnoreCase("true");
+      System.getProperty("thrift.separate-forkjoin-scheduler", "false").equalsIgnoreCase("true");
 
   static final boolean enableOperatorFusion =
       System.getProperty("thrift.operator-fusion", "true").equalsIgnoreCase("true");
 
   static final boolean forceExecutionOffEventLoop =
       System.getProperty("thrift.force-execution-off-eventloop", "true").equalsIgnoreCase("true");
+
+  static final boolean forceClientExecutionOffEventLoop =
+      System.getProperty("thrift.force-client-execution-off-eventloop", "true")
+          .equalsIgnoreCase("true");
 
   static final int maxPendingTasksForOffLoop =
       Math.max(

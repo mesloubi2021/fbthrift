@@ -15,6 +15,7 @@
       "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
       "argsstring_html": "(const BasePatch &amp;)=default",
       "name_html": "BasePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
       "param": [
         {
           "type_html": "const <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/op/detail/BasePatch\">BasePatch</a> &amp;"
@@ -22,8 +23,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "52",
-        "column": "1"
+        "line": "57",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BasePatch(const BasePatch&amp;)",
@@ -46,11 +47,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "no",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
       "argsstring_html": "(BasePatch &amp;&amp;) noexcept=default",
       "name_html": "BasePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/op/detail/BasePatch\">BasePatch</a> &amp;&amp;"
@@ -58,8 +61,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "53",
-        "column": "1"
+        "line": "58",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BasePatch(BasePatch&amp;&amp;)",
@@ -82,5 +85,11 @@
   "brief_html": "Constructs the BasePatch.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BasePatch",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BasePatch"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BasePatch",
+  "parent_links": [
+    {
+      "text_html": "BaseAssignPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseAssignPatch"
+    }
+  ]
 }

@@ -21,9 +21,7 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "Tag",
-      "defname_html": "Tag"
+      "type_html": "typename Tag"
     }
   ],
   "types": [
@@ -34,10 +32,11 @@
       "definition_html": "using apache::thrift::op::detail::StringOp&lt; Tag &gt;::T =  type::native_type&lt;Tag&gt;",
       "argsstring_html": "",
       "name_html": "T",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::T",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "159",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "159",
         "bodyend": "-1"
@@ -51,10 +50,11 @@
       "definition_html": "using apache::thrift::op::detail::StringOp&lt; Tag &gt;::Base =  BaseOp&lt;Tag&gt;",
       "argsstring_html": "",
       "name_html": "Base",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::Base",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "160",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "160",
         "bodyend": "-1"
@@ -75,6 +75,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(std::string &amp;self, std::string val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -88,7 +89,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "164",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "164",
         "bodyend": "166"
@@ -116,6 +117,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(folly::IOBuf &amp;self, const folly::IOBuf &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -129,7 +131,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "167",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "167",
         "bodyend": "169"
@@ -157,6 +159,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(folly::IOBuf &amp;self, const std::string &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -170,7 +173,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "170",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "170",
         "bodyend": "173"
@@ -198,6 +201,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -211,7 +215,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "174",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "174",
         "bodyend": "176"
@@ -239,6 +243,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -252,7 +257,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "177",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "177",
         "bodyend": "179"
@@ -280,6 +285,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -293,7 +299,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "180",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "180",
         "bodyend": "182"
@@ -326,6 +332,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(const IOBufPtr &amp;self, T &amp;&amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -339,7 +346,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "184",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "184",
         "bodyend": "186"
@@ -356,7 +363,7 @@
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/assign"
     },
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ace24bfea7aac956b752762f2b04431da",
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1af69bac7f9a4e0ec0f473f8974cddc0a3",
       "prot": "public",
       "static": "yes",
       "const": "no",
@@ -372,9 +379,10 @@
         }
       ],
       "type_html": "std::unique_ptr&lt; folly::IOBuf &gt;",
-      "definition_html": "static std::unique_ptr&lt;folly::IOBuf&gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
+      "definition_html": "static std::unique_ptr&lt; folly::IOBuf &gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
       "argsstring_html": "(T1 &amp;&amp;first, T2 &amp;&amp;second)",
       "name_html": "concat",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::concat",
       "param": [
         {
           "type_html": "T1 &amp;&amp;",
@@ -388,7 +396,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "189",
-        "column": "1",
+        "column": "26",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "189",
         "bodyend": "194"
@@ -398,7 +406,7 @@
         "simple_raw": "template <typename T1, typename T2>\nstatic std::unique_ptr<folly::IOBuf> concat(T1&& first, T2&& second)",
         "detailed_html": "template &lt;typename T1, typename T2&gt;\ninline static std::unique_ptr&lt;folly::IOBuf&gt; concat(T1&amp;&amp; first, T2&amp;&amp; second)",
         "detailed_raw": "template <typename T1, typename T2>\ninline static std::unique_ptr<folly::IOBuf> concat(T1&& first, T2&& second)",
-        "original_definition_html": "static std::unique_ptr&lt;folly::IOBuf&gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
+        "original_definition_html": "static std::unique_ptr&lt; folly::IOBuf &gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
         "original_argsstring_html": "(T1 &amp;&amp;first, T2 &amp;&amp;second)"
       },
       "filepath": "fns/struct/apache/thrift/op/detail/StringOp/concat",
@@ -416,6 +424,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(std::string &amp;self, const std::string &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -429,7 +438,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "196",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "196",
         "bodyend": "196"
@@ -457,6 +466,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -470,7 +480,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "197",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "197",
         "bodyend": "199"
@@ -498,6 +508,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -511,7 +522,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "200",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "200",
         "bodyend": "202"
@@ -544,6 +555,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(folly::IOBuf &amp;self, T &amp;&amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -557,7 +569,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "204",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "204",
         "bodyend": "206"
@@ -585,6 +597,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -598,7 +611,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "207",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "207",
         "bodyend": "209"
@@ -631,6 +644,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(IOBufPtr &amp;self, T &amp;&amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -644,7 +658,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "211",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "211",
         "bodyend": "213"
@@ -672,6 +686,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(IOBufPtr &amp;self, const IOBufPtr &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -685,7 +700,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "214",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "214",
         "bodyend": "216"
@@ -713,6 +728,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, std::string val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -726,7 +742,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "218",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "218",
         "bodyend": "220"
@@ -754,6 +770,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -767,7 +784,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "221",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "221",
         "bodyend": "223"
@@ -795,6 +812,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -808,7 +826,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "224",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "224",
         "bodyend": "226"
@@ -841,6 +859,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(folly::IOBuf &amp;self, T &amp;&amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -854,7 +873,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "228",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "228",
         "bodyend": "230"
@@ -882,6 +901,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -895,7 +915,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "231",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "231",
         "bodyend": "233"
@@ -928,6 +948,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(IOBufPtr &amp;self, T &amp;&amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -941,7 +962,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "235",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "235",
         "bodyend": "237"
@@ -969,6 +990,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(IOBufPtr &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -982,7 +1004,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "238",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "238",
         "bodyend": "240"
@@ -1010,6 +1032,7 @@
       "definition_html": "static folly::partial_ordering apache::thrift::op::detail::StringOp&lt; Tag &gt;::compare",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "compare",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::compare",
       "param": [
         {
           "type_html": "const void *",
@@ -1022,11 +1045,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "242",
-        "column": "1",
+        "line": "249",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "242",
-        "bodyend": "257"
+        "bodystart": "249",
+        "bodyend": "259"
       },
       "definition": {
         "simple_html": "static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
@@ -1051,6 +1074,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
       "argsstring_html": "(void *s, const Dyn &amp;val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
       "param": [
         {
           "type_html": "void *",
@@ -1063,11 +1087,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "259",
-        "column": "1",
+        "line": "261",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "259",
-        "bodyend": "272"
+        "bodystart": "261",
+        "bodyend": "269"
       },
       "definition": {
         "simple_html": "static void assign(void* s, const Dyn&amp; val)",
@@ -1092,6 +1116,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(void *s, const Dyn &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "void *",
@@ -1104,11 +1129,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "274",
-        "column": "1",
+        "line": "271",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "274",
-        "bodyend": "287"
+        "bodystart": "271",
+        "bodyend": "279"
       },
       "definition": {
         "simple_html": "static void prepend(void* s, const Dyn&amp; val)",
@@ -1133,6 +1158,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
       "argsstring_html": "(void *s, const Dyn &amp;val)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
       "param": [
         {
           "type_html": "void *",
@@ -1145,11 +1171,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "289",
-        "column": "1",
+        "line": "281",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "289",
-        "bodyend": "302"
+        "bodystart": "281",
+        "bodyend": "289"
       },
       "definition": {
         "simple_html": "static void append(void* s, const Dyn&amp; val)",
@@ -1174,6 +1200,7 @@
       "definition_html": "static bool apache::thrift::op::detail::StringOp&lt; Tag &gt;::add",
       "argsstring_html": "(void *s, const Dyn &amp;val)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::add",
       "param": [
         {
           "type_html": "void *",
@@ -1186,11 +1213,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "303",
-        "column": "1",
+        "line": "290",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "303",
-        "bodyend": "303"
+        "bodystart": "290",
+        "bodyend": "290"
       },
       "definition": {
         "simple_html": "static bool add(void* s, const Dyn&amp; val)",
@@ -1204,7 +1231,7 @@
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/add"
     },
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a05f0296516ba5055dfcea05bda4dfb3f",
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a51f90237dfd720c01f1c875b612a1575",
       "prot": "public",
       "static": "yes",
       "const": "no",
@@ -1212,13 +1239,20 @@
       "inline": "yes",
       "virtual": "non-virtual",
       "type_html": "<code>T</code> &amp;",
-      "definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+      "definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
       "argsstring_html": "(void *ptr)",
       "name_html": "ref",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::ref",
+      "param": [
+        {
+          "type_html": "void *",
+          "declname_html": "ptr"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "161",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "56",
         "bodyend": "56"
@@ -1228,14 +1262,14 @@
         "simple_raw": "static T& ref(void* ptr)",
         "detailed_html": "inline static T&amp; ref(void* ptr)",
         "detailed_raw": "inline static T& ref(void* ptr)",
-        "original_definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+        "original_definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
         "original_argsstring_html": "(void *ptr)"
       },
       "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/ref"
     },
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ad1040ba69dd0287d0ae90b0b15a65b4f",
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a824275fe00ce416814fcb4aabc68b264",
       "prot": "public",
       "static": "yes",
       "const": "no",
@@ -1243,13 +1277,20 @@
       "inline": "yes",
       "virtual": "non-virtual",
       "type_html": "const <code>T</code> &amp;",
-      "definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+      "definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
       "argsstring_html": "(const void *ptr)",
       "name_html": "ref",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::ref",
+      "param": [
+        {
+          "type_html": "const void *",
+          "declname_html": "ptr"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "161",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "57",
         "bodyend": "57"
@@ -1259,7 +1300,7 @@
         "simple_raw": "static const T& ref(const void* ptr)",
         "detailed_html": "inline static const T&amp; ref(const void* ptr)",
         "detailed_raw": "inline static const T& ref(const void* ptr)",
-        "original_definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+        "original_definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
         "original_argsstring_html": "(const void *ptr)"
       },
       "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
@@ -1272,7 +1313,7 @@
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
     "bodystart": "158",
-    "bodyend": "304"
+    "bodyend": "291"
   },
   "namespacednames_html": [
     "apache",
@@ -1298,6 +1339,50 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::assign",
           "functions": [
             {
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1afa1d257919d226c53a502d7c3cd969d3",
+              "prot": "public",
+              "static": "yes",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "void",
+              "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::assign",
+              "argsstring_html": "(void *ptr, const Dyn &amp;val)",
+              "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::assign",
+              "param": [
+                {
+                  "type_html": "void *",
+                  "declname_html": "ptr"
+                },
+                {
+                  "type_html": "const <code>Dyn</code> &amp;",
+                  "declname_html": "val"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+                "line": "80",
+                "column": "15",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+                "bodystart": "80",
+                "bodyend": "80"
+              },
+              "definition": {
+                "simple_html": "static void assign(void* ptr, const Dyn&amp; val)",
+                "simple_raw": "static void assign(void* ptr, const Dyn& val)",
+                "detailed_html": "inline static void assign(void* ptr, const Dyn&amp; val)",
+                "detailed_raw": "inline static void assign(void* ptr, const Dyn& val)",
+                "original_definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::assign",
+                "original_argsstring_html": "(void *ptr, const Dyn &amp;val)"
+              },
+              "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/assign",
+              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/assign",
+              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
+              "compoundname_html": "apache::thrift::op::detail::StringOp::assign"
+            },
+            {
               "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a25b974ea27f185a1aea942da681e0e62",
               "prot": "public",
               "static": "yes",
@@ -1309,6 +1394,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(std::string &amp;self, std::string val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1322,7 +1408,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "164",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "164",
                 "bodyend": "166"
@@ -1352,6 +1438,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(folly::IOBuf &amp;self, const folly::IOBuf &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -1365,7 +1452,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "167",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "167",
                 "bodyend": "169"
@@ -1395,6 +1482,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(folly::IOBuf &amp;self, const std::string &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -1408,7 +1496,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "170",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "170",
                 "bodyend": "173"
@@ -1438,6 +1526,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1451,7 +1540,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "174",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "174",
                 "bodyend": "176"
@@ -1481,6 +1570,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1494,7 +1584,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "177",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "177",
                 "bodyend": "179"
@@ -1524,6 +1614,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -1537,7 +1628,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "180",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "180",
                 "bodyend": "182"
@@ -1572,6 +1663,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(const IOBufPtr &amp;self, T &amp;&amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -1585,7 +1677,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "184",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "184",
                 "bodyend": "186"
@@ -1615,6 +1707,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::assign",
               "argsstring_html": "(void *s, const Dyn &amp;val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::assign",
               "param": [
                 {
                   "type_html": "void *",
@@ -1627,11 +1720,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "259",
-                "column": "1",
+                "line": "261",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "bodystart": "259",
-                "bodyend": "272"
+                "bodystart": "261",
+                "bodyend": "269"
               },
               "definition": {
                 "simple_html": "static void assign(void* s, const Dyn&amp; val)",
@@ -1645,49 +1738,6 @@
               "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/assign",
               "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
               "compoundname_html": "apache::thrift::op::detail::StringOp::assign"
-            },
-            {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1afa1d257919d226c53a502d7c3cd969d3",
-              "prot": "public",
-              "static": "yes",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::assign",
-              "argsstring_html": "(void *ptr, const Dyn &amp;val)",
-              "name_html": "assign",
-              "param": [
-                {
-                  "type_html": "void *",
-                  "declname_html": "ptr"
-                },
-                {
-                  "type_html": "const <code>Dyn</code> &amp;",
-                  "declname_html": "val"
-                }
-              ],
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-                "line": "80",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-                "bodystart": "80",
-                "bodyend": "80"
-              },
-              "definition": {
-                "simple_html": "static void assign(void* ptr, const Dyn&amp; val)",
-                "simple_raw": "static void assign(void* ptr, const Dyn& val)",
-                "detailed_html": "inline static void assign(void* ptr, const Dyn&amp; val)",
-                "detailed_raw": "inline static void assign(void* ptr, const Dyn& val)",
-                "original_definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::assign",
-                "original_argsstring_html": "(void *ptr, const Dyn &amp;val)"
-              },
-              "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/assign",
-              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/assign",
-              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
-              "compoundname_html": "apache::thrift::op::detail::StringOp::assign"
             }
           ],
           "filepath": "f/struct/apache/thrift/op/detail/StringOp/assign",
@@ -1696,7 +1746,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/assign",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/assign"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/assign",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1704,7 +1760,7 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::concat",
           "functions": [
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ace24bfea7aac956b752762f2b04431da",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1af69bac7f9a4e0ec0f473f8974cddc0a3",
               "prot": "public",
               "static": "yes",
               "const": "no",
@@ -1720,9 +1776,10 @@
                 }
               ],
               "type_html": "std::unique_ptr&lt; folly::IOBuf &gt;",
-              "definition_html": "static std::unique_ptr&lt;folly::IOBuf&gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
+              "definition_html": "static std::unique_ptr&lt; folly::IOBuf &gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
               "argsstring_html": "(T1 &amp;&amp;first, T2 &amp;&amp;second)",
               "name_html": "concat",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::concat",
               "param": [
                 {
                   "type_html": "T1 &amp;&amp;",
@@ -1736,7 +1793,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "189",
-                "column": "1",
+                "column": "26",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "189",
                 "bodyend": "194"
@@ -1746,7 +1803,7 @@
                 "simple_raw": "template <typename T1, typename T2>\nstatic std::unique_ptr<folly::IOBuf> concat(T1&& first, T2&& second)",
                 "detailed_html": "template &lt;typename T1, typename T2&gt;\ninline static std::unique_ptr&lt;folly::IOBuf&gt; concat(T1&amp;&amp; first, T2&amp;&amp; second)",
                 "detailed_raw": "template <typename T1, typename T2>\ninline static std::unique_ptr<folly::IOBuf> concat(T1&& first, T2&& second)",
-                "original_definition_html": "static std::unique_ptr&lt;folly::IOBuf&gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
+                "original_definition_html": "static std::unique_ptr&lt; folly::IOBuf &gt; apache::thrift::op::detail::StringOp&lt; Tag &gt;::concat",
                 "original_argsstring_html": "(T1 &amp;&amp;first, T2 &amp;&amp;second)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/StringOp/concat",
@@ -1761,7 +1818,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/concat",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/concat"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/concat",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1780,6 +1843,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(std::string &amp;self, const std::string &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1793,7 +1857,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "196",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "196",
                 "bodyend": "196"
@@ -1823,6 +1887,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1836,7 +1901,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "197",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "197",
                 "bodyend": "199"
@@ -1866,6 +1931,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -1879,7 +1945,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "200",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "200",
                 "bodyend": "202"
@@ -1914,6 +1980,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(folly::IOBuf &amp;self, T &amp;&amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -1927,7 +1994,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "204",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "204",
                 "bodyend": "206"
@@ -1957,6 +2024,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -1970,7 +2038,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "207",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "207",
                 "bodyend": "209"
@@ -2005,6 +2073,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(IOBufPtr &amp;self, T &amp;&amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "<code>IOBufPtr</code> &amp;",
@@ -2018,7 +2087,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "211",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "211",
                 "bodyend": "213"
@@ -2048,6 +2117,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(IOBufPtr &amp;self, const IOBufPtr &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "<code>IOBufPtr</code> &amp;",
@@ -2061,7 +2131,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "214",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "214",
                 "bodyend": "216"
@@ -2091,6 +2161,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::append",
               "argsstring_html": "(void *s, const Dyn &amp;val)",
               "name_html": "append",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::append",
               "param": [
                 {
                   "type_html": "void *",
@@ -2103,11 +2174,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "289",
-                "column": "1",
+                "line": "281",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "bodystart": "289",
-                "bodyend": "302"
+                "bodystart": "281",
+                "bodyend": "289"
               },
               "definition": {
                 "simple_html": "static void append(void* s, const Dyn&amp; val)",
@@ -2129,7 +2200,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/append",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/append"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/append",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2148,6 +2225,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(std::string &amp;self, std::string val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -2161,7 +2239,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "218",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "218",
                 "bodyend": "220"
@@ -2191,6 +2269,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -2204,7 +2283,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "221",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "221",
                 "bodyend": "223"
@@ -2234,6 +2313,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "std::string &amp;",
@@ -2247,7 +2327,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "224",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "224",
                 "bodyend": "226"
@@ -2282,6 +2362,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(folly::IOBuf &amp;self, T &amp;&amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -2295,7 +2376,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "228",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "228",
                 "bodyend": "230"
@@ -2325,6 +2406,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "folly::IOBuf &amp;",
@@ -2338,7 +2420,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "231",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "231",
                 "bodyend": "233"
@@ -2373,6 +2455,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(IOBufPtr &amp;self, T &amp;&amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "<code>IOBufPtr</code> &amp;",
@@ -2386,7 +2469,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "235",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "235",
                 "bodyend": "237"
@@ -2416,6 +2499,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(IOBufPtr &amp;self, const IOBufPtr &amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "<code>IOBufPtr</code> &amp;",
@@ -2429,7 +2513,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "238",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "238",
                 "bodyend": "240"
@@ -2459,6 +2543,7 @@
               "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
               "argsstring_html": "(void *s, const Dyn &amp;val)",
               "name_html": "prepend",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
               "param": [
                 {
                   "type_html": "void *",
@@ -2471,11 +2556,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "274",
-                "column": "1",
+                "line": "271",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "bodystart": "274",
-                "bodyend": "287"
+                "bodystart": "271",
+                "bodyend": "279"
               },
               "definition": {
                 "simple_html": "static void prepend(void* s, const Dyn&amp; val)",
@@ -2497,56 +2582,19 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/prepend",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/prepend"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/prepend",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
           "name_html": "compare",
           "compoundname_html": "apache::thrift::op::detail::StringOp::compare",
           "functions": [
-            {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ae2d1ad16bfd9a8d3c60b0195f0b7df25",
-              "prot": "public",
-              "static": "yes",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "type_html": "folly::partial_ordering",
-              "definition_html": "static folly::partial_ordering apache::thrift::op::detail::StringOp&lt; Tag &gt;::compare",
-              "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
-              "name_html": "compare",
-              "param": [
-                {
-                  "type_html": "const void *",
-                  "declname_html": "lhs"
-                },
-                {
-                  "type_html": "const <code>Dyn</code> &amp;",
-                  "declname_html": "rhs"
-                }
-              ],
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "242",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "bodystart": "242",
-                "bodyend": "257"
-              },
-              "definition": {
-                "simple_html": "static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
-                "simple_raw": "static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
-                "detailed_html": "inline static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
-                "detailed_raw": "inline static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
-                "original_definition_html": "static folly::partial_ordering apache::thrift::op::detail::StringOp&lt; Tag &gt;::compare",
-                "original_argsstring_html": "(const void *lhs, const Dyn &amp;rhs)"
-              },
-              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/compare",
-              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/compare",
-              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
-              "compoundname_html": "apache::thrift::op::detail::StringOp::compare"
-            },
             {
               "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1aa5173cbe10f3e2a83460fa12ae605259",
               "prot": "public",
@@ -2559,6 +2607,7 @@
               "definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
               "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
               "name_html": "compare",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::compare",
               "param": [
                 {
                   "type_html": "const void *",
@@ -2572,7 +2621,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "87",
-                "column": "1",
+                "column": "34",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "87",
                 "bodyend": "94"
@@ -2589,6 +2638,50 @@
               "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/compare",
               "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
               "compoundname_html": "apache::thrift::op::detail::StringOp::compare"
+            },
+            {
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ae2d1ad16bfd9a8d3c60b0195f0b7df25",
+              "prot": "public",
+              "static": "yes",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "folly::partial_ordering",
+              "definition_html": "static folly::partial_ordering apache::thrift::op::detail::StringOp&lt; Tag &gt;::compare",
+              "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
+              "name_html": "compare",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::compare",
+              "param": [
+                {
+                  "type_html": "const void *",
+                  "declname_html": "lhs"
+                },
+                {
+                  "type_html": "const <code>Dyn</code> &amp;",
+                  "declname_html": "rhs"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
+                "line": "249",
+                "column": "34",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
+                "bodystart": "249",
+                "bodyend": "259"
+              },
+              "definition": {
+                "simple_html": "static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
+                "simple_raw": "static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
+                "detailed_html": "inline static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
+                "detailed_raw": "inline static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
+                "original_definition_html": "static folly::partial_ordering apache::thrift::op::detail::StringOp&lt; Tag &gt;::compare",
+                "original_argsstring_html": "(const void *lhs, const Dyn &amp;rhs)"
+              },
+              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/compare",
+              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/compare",
+              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
+              "compoundname_html": "apache::thrift::op::detail::StringOp::compare"
             }
           ],
           "filepath": "f/struct/apache/thrift/op/detail/StringOp/compare",
@@ -2597,7 +2690,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/compare",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/compare"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/compare",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2616,6 +2715,7 @@
               "definition_html": "static bool apache::thrift::op::detail::StringOp&lt; Tag &gt;::add",
               "argsstring_html": "(void *s, const Dyn &amp;val)",
               "name_html": "add",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::add",
               "param": [
                 {
                   "type_html": "void *",
@@ -2628,11 +2728,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "303",
-                "column": "1",
+                "line": "290",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "bodystart": "303",
-                "bodyend": "303"
+                "bodystart": "290",
+                "bodyend": "290"
               },
               "definition": {
                 "simple_html": "static bool add(void* s, const Dyn&amp; val)",
@@ -2654,7 +2754,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/add",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/add"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/add",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2662,7 +2768,7 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::ref",
           "functions": [
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a05f0296516ba5055dfcea05bda4dfb3f",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a51f90237dfd720c01f1c875b612a1575",
               "prot": "public",
               "static": "yes",
               "const": "no",
@@ -2670,75 +2776,10 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "<code>T</code> &amp;",
-              "definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+              "definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
               "argsstring_html": "(void *ptr)",
               "name_html": "ref",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "161",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-                "bodystart": "56",
-                "bodyend": "56"
-              },
-              "definition": {
-                "simple_html": "static T&amp; ref(void* ptr)",
-                "simple_raw": "static T& ref(void* ptr)",
-                "detailed_html": "inline static T&amp; ref(void* ptr)",
-                "detailed_raw": "inline static T& ref(void* ptr)",
-                "original_definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
-                "original_argsstring_html": "(void *ptr)"
-              },
-              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
-              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/ref",
-              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
-              "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
-            },
-            {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1ad1040ba69dd0287d0ae90b0b15a65b4f",
-              "prot": "public",
-              "static": "yes",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "type_html": "const <code>T</code> &amp;",
-              "definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
-              "argsstring_html": "(const void *ptr)",
-              "name_html": "ref",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-                "line": "161",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-                "bodystart": "57",
-                "bodyend": "57"
-              },
-              "definition": {
-                "simple_html": "static const T&amp; ref(const void* ptr)",
-                "simple_raw": "static const T& ref(const void* ptr)",
-                "detailed_html": "inline static const T&amp; ref(const void* ptr)",
-                "detailed_raw": "inline static const T& ref(const void* ptr)",
-                "original_definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
-                "original_argsstring_html": "(const void *ptr)"
-              },
-              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
-              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/ref",
-              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
-              "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
-            },
-            {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a05f0296516ba5055dfcea05bda4dfb3f",
-              "prot": "public",
-              "static": "yes",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "type_html": "<code>T</code> &amp;",
-              "definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
-              "argsstring_html": "(void *ptr)",
-              "name_html": "ref",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ref",
               "param": [
                 {
                   "type_html": "void *",
@@ -2748,7 +2789,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "56",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "56",
                 "bodyend": "56"
@@ -2758,7 +2799,7 @@
                 "simple_raw": "static T& ref(void* ptr)",
                 "detailed_html": "inline static T&amp; ref(void* ptr)",
                 "detailed_raw": "inline static T& ref(void* ptr)",
-                "original_definition_html": "static T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+                "original_definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
                 "original_argsstring_html": "(void *ptr)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/ref",
@@ -2767,7 +2808,7 @@
               "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
             },
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1ad1040ba69dd0287d0ae90b0b15a65b4f",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a824275fe00ce416814fcb4aabc68b264",
               "prot": "public",
               "static": "yes",
               "const": "no",
@@ -2775,9 +2816,10 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "const <code>T</code> &amp;",
-              "definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+              "definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
               "argsstring_html": "(const void *ptr)",
               "name_html": "ref",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ref",
               "param": [
                 {
                   "type_html": "const void *",
@@ -2787,7 +2829,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "57",
-                "column": "1",
+                "column": "18",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "57",
                 "bodyend": "57"
@@ -2797,12 +2839,92 @@
                 "simple_raw": "static const T& ref(const void* ptr)",
                 "detailed_html": "inline static const T&amp; ref(const void* ptr)",
                 "detailed_raw": "inline static const T& ref(const void* ptr)",
-                "original_definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+                "original_definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
                 "original_argsstring_html": "(const void *ptr)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/ref",
               "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/ref",
               "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
+              "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
+            },
+            {
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a51f90237dfd720c01f1c875b612a1575",
+              "prot": "public",
+              "static": "yes",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "<code>T</code> &amp;",
+              "definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+              "argsstring_html": "(void *ptr)",
+              "name_html": "ref",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::ref",
+              "param": [
+                {
+                  "type_html": "void *",
+                  "declname_html": "ptr"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
+                "line": "161",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+                "bodystart": "56",
+                "bodyend": "56"
+              },
+              "definition": {
+                "simple_html": "static T&amp; ref(void* ptr)",
+                "simple_raw": "static T& ref(void* ptr)",
+                "detailed_html": "inline static T&amp; ref(void* ptr)",
+                "detailed_raw": "inline static T& ref(void* ptr)",
+                "original_definition_html": "static T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+                "original_argsstring_html": "(void *ptr)"
+              },
+              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
+              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/ref",
+              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
+              "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
+            },
+            {
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp_1a824275fe00ce416814fcb4aabc68b264",
+              "prot": "public",
+              "static": "yes",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "const <code>T</code> &amp;",
+              "definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+              "argsstring_html": "(const void *ptr)",
+              "name_html": "ref",
+              "qualifiedname_html": "apache::thrift::op::detail::StringOp::ref",
+              "param": [
+                {
+                  "type_html": "const void *",
+                  "declname_html": "ptr"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
+                "line": "161",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+                "bodystart": "57",
+                "bodyend": "57"
+              },
+              "definition": {
+                "simple_html": "static const T&amp; ref(const void* ptr)",
+                "simple_raw": "static const T& ref(const void* ptr)",
+                "detailed_html": "inline static const T&amp; ref(const void* ptr)",
+                "detailed_raw": "inline static const T& ref(const void* ptr)",
+                "original_definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ref",
+                "original_argsstring_html": "(const void *ptr)"
+              },
+              "filepath": "fns/struct/apache/thrift/op/detail/StringOp/ref",
+              "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/StringOp/ref",
+              "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1StringOp",
               "compoundname_html": "apache::thrift::op::detail::StringOp::ref"
             }
           ],
@@ -2812,7 +2934,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ref",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ref"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ref",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2820,7 +2948,7 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::cref",
           "functions": [
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a14450fe732a354800f4801f14635ed7f",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a59aa2afead584ef1a57372aaaed803d5",
               "prot": "public",
               "static": "yes",
               "const": "no",
@@ -2828,9 +2956,10 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "const <code>T</code> &amp;",
-              "definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::cref",
+              "definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::cref",
               "argsstring_html": "(const void *ptr)",
               "name_html": "cref",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::cref",
               "param": [
                 {
                   "type_html": "const void *",
@@ -2840,7 +2969,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "58",
-                "column": "1",
+                "column": "18",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "58",
                 "bodyend": "58"
@@ -2850,7 +2979,7 @@
                 "simple_raw": "static const T& cref(const void* ptr)",
                 "detailed_html": "inline static const T&amp; cref(const void* ptr)",
                 "detailed_raw": "inline static const T& cref(const void* ptr)",
-                "original_definition_html": "static const T&amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::cref",
+                "original_definition_html": "static const T &amp; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::cref",
                 "original_argsstring_html": "(const void *ptr)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/cref",
@@ -2865,7 +2994,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/cref",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/cref"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/cref",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2892,6 +3027,7 @@
               "definition_html": "static Ptr apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ret",
               "argsstring_html": "(T &amp;&amp;val)",
               "name_html": "ret",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ret",
               "param": [
                 {
                   "type_html": "<code>T</code> &amp;&amp;",
@@ -2901,7 +3037,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "60",
-                "column": "1",
+                "column": "14",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "60",
                 "bodyend": "62"
@@ -2939,6 +3075,7 @@
               "definition_html": "static Ptr apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ret",
               "argsstring_html": "(RTag, T &amp;&amp;val)",
               "name_html": "ret",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ret",
               "param": [
                 {
                   "type_html": "RTag"
@@ -2951,7 +3088,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "64",
-                "column": "1",
+                "column": "14",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "64",
                 "bodyend": "66"
@@ -2976,7 +3113,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2995,6 +3138,7 @@
               "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
               "argsstring_html": "(void *ptr)",
               "name_html": "delete_",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
               "param": [
                 {
                   "type_html": "void *",
@@ -3004,7 +3148,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "68",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "68",
                 "bodyend": "68"
@@ -3029,7 +3173,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/delete_",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/delete_"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/delete_",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -3037,7 +3187,7 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::make",
           "functions": [
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1ac3285228ad98a3ae7dc4256740217dcb",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1ab2f91a5a30b9f79cf59eb5a42163c2cb",
               "prot": "public",
               "static": "yes",
               "const": "no",
@@ -3045,9 +3195,10 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "void *",
-              "definition_html": "static void* apache::thrift::op::detail::BaseOp&lt; Tag &gt;::make",
+              "definition_html": "static void * apache::thrift::op::detail::BaseOp&lt; Tag &gt;::make",
               "argsstring_html": "(void *ptr, bool consume)",
               "name_html": "make",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::make",
               "param": [
                 {
                   "type_html": "void *",
@@ -3061,7 +3212,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "69",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "69",
                 "bodyend": "77"
@@ -3071,7 +3222,7 @@
                 "simple_raw": "static void* make(void* ptr, bool consume)",
                 "detailed_html": "inline static void* make(void* ptr, bool consume)",
                 "detailed_raw": "inline static void* make(void* ptr, bool consume)",
-                "original_definition_html": "static void* apache::thrift::op::detail::BaseOp&lt; Tag &gt;::make",
+                "original_definition_html": "static void * apache::thrift::op::detail::BaseOp&lt; Tag &gt;::make",
                 "original_argsstring_html": "(void *ptr, bool consume)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/make",
@@ -3086,7 +3237,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/make",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/make"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/make",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -3105,6 +3262,7 @@
               "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::empty",
               "argsstring_html": "(const void *ptr)",
               "name_html": "empty",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::empty",
               "param": [
                 {
                   "type_html": "const void *",
@@ -3114,7 +3272,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "78",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "78",
                 "bodyend": "78"
@@ -3139,7 +3297,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/empty",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/empty"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/empty",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -3158,6 +3322,7 @@
               "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::clear",
               "argsstring_html": "(void *ptr)",
               "name_html": "clear",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::clear",
               "param": [
                 {
                   "type_html": "void *",
@@ -3167,7 +3332,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "79",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "79",
                 "bodyend": "79"
@@ -3192,7 +3357,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/clear",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/clear"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/clear",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -3211,6 +3382,7 @@
               "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
               "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
               "name_html": "identical",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
               "param": [
                 {
                   "type_html": "const void *",
@@ -3224,7 +3396,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "81",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "81",
                 "bodyend": "85"
@@ -3249,7 +3421,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/identical",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/identical"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/identical",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -3257,7 +3435,7 @@
           "compoundname_html": "apache::thrift::op::detail::StringOp::partialCmp",
           "functions": [
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a003e01decf8f373784ebf4694238816b",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1a819462f6ca807354a220bd8ebf42922a",
               "prot": "private",
               "static": "yes",
               "const": "no",
@@ -3270,9 +3448,10 @@
                 }
               ],
               "type_html": "<code>if_comparable</code>&lt; UTag &gt;",
-              "definition_html": "static if_comparable&lt;UTag&gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
+              "definition_html": "static if_comparable&lt; UTag &gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
               "argsstring_html": "(const T &amp;lhs, const T &amp;rhs)",
               "name_html": "partialCmp",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::partialCmp",
               "param": [
                 {
                   "type_html": "const <code>T</code> &amp;",
@@ -3286,7 +3465,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "98",
-                "column": "1",
+                "column": "24",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "98",
                 "bodyend": "100"
@@ -3296,7 +3475,7 @@
                 "simple_raw": "template <typename UTag>\nstatic if_comparable<UTag> partialCmp(const T& lhs, const T& rhs)",
                 "detailed_html": "template &lt;typename UTag&gt;\nprivate inline static if_comparable&lt;UTag&gt; partialCmp(const T&amp; lhs, const T&amp; rhs)",
                 "detailed_raw": "template <typename UTag>\nprivate inline static if_comparable<UTag> partialCmp(const T& lhs, const T& rhs)",
-                "original_definition_html": "static if_comparable&lt;UTag&gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
+                "original_definition_html": "static if_comparable&lt; UTag &gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
                 "original_argsstring_html": "(const T &amp;lhs, const T &amp;rhs)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/partialCmp",
@@ -3305,7 +3484,7 @@
               "compoundname_html": "apache::thrift::op::detail::StringOp::partialCmp"
             },
             {
-              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1adc9774008343ebca274479f96324051e",
+              "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1ada8a74dab2d536f4749df3b65509d4a9",
               "prot": "private",
               "static": "yes",
               "const": "no",
@@ -3318,9 +3497,10 @@
                 }
               ],
               "type_html": "<code>if_not_comparable</code>&lt; UTag &gt;",
-              "definition_html": "static if_not_comparable&lt;UTag&gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
+              "definition_html": "static if_not_comparable&lt; UTag &gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
               "argsstring_html": "(const T &amp;lhs, const T &amp;rhs)",
               "name_html": "partialCmp",
+              "qualifiedname_html": "apache::thrift::op::detail::BaseOp::partialCmp",
               "param": [
                 {
                   "type_html": "const <code>T</code> &amp;",
@@ -3334,7 +3514,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "line": "102",
-                "column": "1",
+                "column": "28",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
                 "bodystart": "102",
                 "bodyend": "105"
@@ -3344,7 +3524,7 @@
                 "simple_raw": "template <typename UTag>\nstatic if_not_comparable<UTag> partialCmp(const T& lhs, const T& rhs)",
                 "detailed_html": "template &lt;typename UTag&gt;\nprivate inline static if_not_comparable&lt;UTag&gt; partialCmp(\n    const T&amp; lhs, const T&amp; rhs)",
                 "detailed_raw": "template <typename UTag>\nprivate inline static if_not_comparable<UTag> partialCmp(\n    const T& lhs, const T& rhs)",
-                "original_definition_html": "static if_not_comparable&lt;UTag&gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
+                "original_definition_html": "static if_not_comparable&lt; UTag &gt; apache::thrift::op::detail::BaseOp&lt; Tag &gt;::partialCmp",
                 "original_argsstring_html": "(const T &amp;lhs, const T &amp;rhs)"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/partialCmp",
@@ -3359,7 +3539,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/partialCmp",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/partialCmp"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/partialCmp",
+          "parent_links": [
+            {
+              "text_html": "StringOp",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+            }
+          ]
         }
       ]
     }

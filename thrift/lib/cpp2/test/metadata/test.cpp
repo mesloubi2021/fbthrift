@@ -25,6 +25,7 @@
 #include <thrift/lib/cpp2/test/metadata/gen-cpp2/ParentService.h>
 #include <thrift/lib/cpp2/test/metadata/gen-cpp2/RepeatedTestService.h>
 #include <thrift/lib/cpp2/test/metadata/gen-cpp2/SimpleStructsTestService.h>
+#include <thrift/lib/cpp2/test/metadata/gen-cpp2/StreamTestService.h>
 #include <thrift/lib/cpp2/test/metadata/gen-cpp2/StructUnionTestService.h>
 #include <thrift/lib/cpp2/test/metadata/gen-cpp2/TypedefTestService.h>
 #include <thrift/lib/thrift/gen-cpp2/metadata_types.h>
@@ -37,13 +38,6 @@ using apache::thrift::metadata::ThriftMetadata;
 using apache::thrift::metadata::ThriftPrimitiveType;
 using apache::thrift::metadata::ThriftServiceMetadataResponse;
 using apache::thrift::metadata::ThriftType;
-
-void check_unstructured_metadata(
-    const std::map<std::string, std::string>& meta, const std::string& prefix) {
-  EXPECT_EQ(meta.size(), 2);
-  EXPECT_EQ(meta.at(prefix + "_foo"), "1");
-  EXPECT_EQ(meta.at(prefix + "_bar"), prefix + "_baz");
-}
 
 auto cons(std::string data, std::optional<ThriftConstValue> next = {}) {
   ThriftConstStruct s;
@@ -81,6 +75,28 @@ class ServiceMetadataTest : public testing::Test {
   ThriftServiceMetadataResponse response_;
   void resetResponse() { response_ = ThriftServiceMetadataResponse{}; }
 };
+
+TEST_F(ServiceMetadataTest, StreamTest) {
+  auto& metadata = getMetadata<apache::thrift::ServiceHandler<
+      metadata::test::stream::StreamTestService>>();
+  EXPECT_EQ(
+      response_.services_ref()->front().module_ref()->name_ref(),
+      "stream_test");
+  auto s = metadata.services_ref()->at("stream_test.StreamTestService");
+  EXPECT_EQ(*s.name_ref(), "stream_test.StreamTestService");
+  EXPECT_EQ(*s.functions_ref()->at(0).name_ref(), "responseAndRange");
+  EXPECT_EQ(
+      s.functions_ref()->at(0).return_type_ref()->getType(),
+      ThriftType::Type::t_stream);
+  EXPECT_EQ(
+      s.functions_ref()
+          ->at(0)
+          .return_type_ref()
+          ->get_t_stream()
+          .initialResponseType_ref()
+          ->getType(),
+      ThriftType::Type::t_primitive);
+}
 
 TEST_F(ServiceMetadataTest, EnumTest) {
   auto& metadata = getMetadata<
@@ -160,23 +176,23 @@ TEST_F(ServiceMetadataTest, SimpleStructsTest) {
 
   // structured annotation of the field
   EXPECT_EQ(
-      s1.fields_ref()[3].structured_annotations_ref()->at(0),
+      s1.fields_ref()[3].structured_annotations()->at(0),
       *cons("Abbr_field").cv_struct_ref());
-  EXPECT_EQ(s1.fields_ref()[3].structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(s1.fields_ref()[3].structured_annotations()->size(), 1);
 
   // structured annotation of the typedef
   auto tf = s1.fields_ref()[3].type_ref()->get_t_typedef();
   EXPECT_EQ(tf.name_ref(), "simple_structs_test.Abbreviations");
   EXPECT_EQ(
-      tf.structured_annotations_ref()->at(0),
+      tf.structured_annotations()->at(0),
       *cons("Abbr_typedef").cv_struct_ref());
-  EXPECT_EQ(tf.structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(tf.structured_annotations()->size(), 1);
 
   auto s2 = metadata.structs_ref()->at("simple_structs_test.City");
   EXPECT_EQ(*s2.name_ref(), "simple_structs_test.City");
-  EXPECT_EQ(s2.structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(s2.structured_annotations()->size(), 1);
   EXPECT_EQ(
-      s2.structured_annotations_ref()->at(0), *cons("struct").cv_struct_ref());
+      s2.structured_annotations()->at(0), *cons("struct").cv_struct_ref());
   EXPECT_EQ(*s2.fields_ref()[0].id_ref(), 1);
   EXPECT_EQ(*s2.fields_ref()[0].name_ref(), "name");
   EXPECT_EQ(
@@ -184,14 +200,14 @@ TEST_F(ServiceMetadataTest, SimpleStructsTest) {
   EXPECT_EQ(
       s2.fields_ref()[0].type_ref()->get_t_primitive(),
       ThriftPrimitiveType::THRIFT_STRING_TYPE);
-  EXPECT_EQ(s2.fields_ref()[0].structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(s2.fields_ref()[0].structured_annotations()->size(), 1);
   ThriftConstStruct cs;
   cs.type_ref()->name_ref() = "simple_structs_test.Map";
   ThriftConstValue m;
   m.cv_map_ref().ensure().push_back(pair(0, "0"));
   m.cv_map_ref()->push_back(pair(1, "1"));
   cs.fields_ref()->emplace("value", std::move(m));
-  EXPECT_EQ(s2.fields_ref()[0].structured_annotations_ref()->at(0), cs);
+  EXPECT_EQ(s2.fields_ref()[0].structured_annotations()->at(0), cs);
 
   EXPECT_EQ(*s2.fields_ref()[1].id_ref(), 2);
   EXPECT_EQ(*s2.fields_ref()[1].name_ref(), "country");
@@ -200,9 +216,9 @@ TEST_F(ServiceMetadataTest, SimpleStructsTest) {
   EXPECT_EQ(
       s2.fields_ref()[1].type_ref()->get_t_primitive(),
       ThriftPrimitiveType::THRIFT_STRING_TYPE);
-  EXPECT_EQ(s2.fields_ref()[1].structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(s2.fields_ref()[1].structured_annotations()->size(), 1);
   EXPECT_EQ(
-      s2.fields_ref()[1].structured_annotations_ref()->at(0),
+      s2.fields_ref()[1].structured_annotations()->at(0),
       *cons("2", cons("1", cons("0"))).cv_struct_ref());
 
   EXPECT_EQ(*s2.fields_ref()[2].id_ref(), 3);
@@ -273,8 +289,6 @@ TEST_F(ServiceMetadataTest, NestedStructsTest) {
   EXPECT_EQ(
       s1.fields_ref()[0].type_ref()->get_t_primitive(),
       ThriftPrimitiveType::THRIFT_STRING_TYPE);
-  check_unstructured_metadata(
-      *s1.fields_ref()[0].unstructured_annotations_ref(), "field");
   EXPECT_EQ(*s1.fields_ref()[1].id_ref(), 2);
   EXPECT_EQ(*s1.fields_ref()[1].name_ref(), "continent");
   EXPECT_EQ(s1.fields_ref()[1].type_ref()->getType(), ThriftType::Type::t_enum);
@@ -327,10 +341,7 @@ TEST_F(ServiceMetadataTest, NestedStructsTest) {
   auto listType = *s3.fields_ref()[1].type_ref();
   EXPECT_EQ(listType.getType(), ThriftType::Type::t_list);
   auto elemType = listType.get_t_list().valueType_ref().get();
-  auto ttypedef = elemType->get_t_typedef();
-  EXPECT_EQ(
-      *ttypedef.underlyingType_ref()->get_t_struct().name_ref(),
-      "nested_structs_test.Foo");
+  EXPECT_EQ(*elemType->get_t_struct().name_ref(), "nested_structs_test.Foo");
 }
 
 TEST_F(ServiceMetadataTest, IncludeTest) {
@@ -597,17 +608,17 @@ TEST_F(ServiceMetadataTest, ServiceTest) {
 
   const auto& p = metadata.services_ref()->at("service_test.ParentService");
   EXPECT_EQ(*p.name_ref(), "service_test.ParentService");
-  EXPECT_EQ(p.structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(p.structured_annotations()->size(), 1);
   EXPECT_EQ(
-      p.structured_annotations_ref()->at(0), *cons("service").cv_struct_ref());
+      p.structured_annotations()->at(0), *cons("service").cv_struct_ref());
   EXPECT_EQ(p.functions_ref()->size(), 1);
   EXPECT_EQ(apache::thrift::get_pointer(p.parent()), nullptr);
 
   const auto& f = p.functions_ref()[0];
   EXPECT_EQ(*f.name_ref(), "parentFun");
-  EXPECT_EQ(f.structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(f.structured_annotations()->size(), 1);
   EXPECT_EQ(
-      f.structured_annotations_ref()->at(0), *cons("function").cv_struct_ref());
+      f.structured_annotations()->at(0), *cons("function").cv_struct_ref());
   EXPECT_EQ(f.return_type_ref()->getType(), ThriftType::Type::t_primitive);
   EXPECT_EQ(
       f.return_type_ref()->get_t_primitive(),
@@ -646,9 +657,9 @@ TEST_F(ServiceMetadataTest, ServiceTest) {
   EXPECT_EQ(
       *f1.arguments_ref()[0].type_ref()->get_t_typedef().name_ref(),
       "typedef_test.StringMap");
-  EXPECT_EQ(f1.arguments_ref()[0].structured_annotations_ref()->size(), 1);
+  EXPECT_EQ(f1.arguments_ref()[0].structured_annotations()->size(), 1);
   EXPECT_EQ(
-      f1.arguments_ref()[0].structured_annotations_ref()->at(0),
+      f1.arguments_ref()[0].structured_annotations()->at(0),
       *cons("argument").cv_struct_ref());
   EXPECT_EQ(*f1.exceptions_ref()[0].id_ref(), 1);
   EXPECT_EQ(*f1.exceptions_ref()[0].name_ref(), "ex");

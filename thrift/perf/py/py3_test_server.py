@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import optparse
 import sys
 
 from apache.thrift.test.load import LoadTest
-from apache.thrift.test.py3.py3_load_handler import LoadHandler
+from thrift.perf.py.py3_load_handler import LoadHandler
 from thrift.protocol.TBinaryProtocol import TBinaryProtocolAcceleratedFactory
 from thrift.protocol.THeaderProtocol import THeaderProtocolFactory
 from thrift.server import TCppServer, TServer
@@ -112,6 +114,10 @@ def main():
     server.serve()
 
 
-if __name__ == "__main__":
+def invoke_main() -> None:
     rc = main()
     sys.exit(rc)
+
+
+if __name__ == "__main__":
+    invoke_main()  # pragma: no cover

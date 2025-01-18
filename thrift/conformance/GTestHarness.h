@@ -133,35 +133,18 @@ class ClientAndServer {
 template <typename Client>
 client_fn_map<Client> getServers(ChannelType channelType) {
   auto cmds = parseCmds(getEnvOrThrow("THRIFT_CONFORMANCE_SERVER_BINARIES"));
-  auto channelTypeOverrides =
-      parseCmds(getEnvOr("THRIFT_CONFORMANCE_CHANNEL_TYPE_OVERRIDES", ""));
   client_fn_map<Client> result;
   for (const auto& entry : cmds) {
     result.emplace(
         entry.first,
         [name = std::string(entry.first),
          cmd = std::string(entry.second),
-         channelType,
-         channelTypeOverrides]() -> Client& {
+         channelType]() -> Client& {
           static folly::Synchronized<std::map<
               std::string_view,
               std::unique_ptr<ClientAndServer<Client>>>>
               clients;
           auto lockedClients = clients.wlock();
-
-          // Override the channel type if specified.
-          auto actualChannelType = channelType;
-          auto cht_itr = channelTypeOverrides.find(name);
-          if (cht_itr != channelTypeOverrides.end()) {
-            if (cht_itr->second == "Header") {
-              actualChannelType = ChannelType::Header;
-            } else if (cht_itr->second == "Rocket") {
-              actualChannelType = ChannelType::Rocket;
-            } else {
-              throw std::invalid_argument(
-                  "Unknown channel type: " + std::string(cht_itr->second));
-            }
-          }
 
           // Get or create ClientAndServer in the static map.
           auto itr = lockedClients->find(name);
@@ -169,8 +152,7 @@ client_fn_map<Client> getServers(ChannelType channelType) {
             itr = lockedClients->emplace_hint(
                 itr,
                 name,
-                std::make_unique<ClientAndServer<Client>>(
-                    cmd, actualChannelType));
+                std::make_unique<ClientAndServer<Client>>(cmd, channelType));
           }
           return itr->second->getClient();
         });
@@ -207,8 +189,8 @@ testing::AssertionResult runPatchTest(
 testing::AssertionResult runRpcTest(
     Client<RPCConformanceService>& client, const RpcTestCase& rpc);
 
-testing::AssertionResult runBasicRpcTest(
-    Client<BasicRPCConformanceService>& client, const RpcTestCase& rpc);
+testing::AssertionResult runStatelessRpcTest(
+    Client<RPCStatelessConformanceService>& client, const RpcTestCase& rpc);
 
 template <typename Client>
 class ConformanceTest : public testing::Test {
@@ -271,8 +253,8 @@ testing::AssertionResult runTestCase(Client& client, const TestCase& testCase) {
       } else if constexpr (std::is_same_v<
                                Client,
                                apache::thrift::Client<
-                                   BasicRPCConformanceService>>) {
-        return runBasicRpcTest(client, *testCase.rpc_ref());
+                                   RPCStatelessConformanceService>>) {
+        return runStatelessRpcTest(client, *testCase.rpc_ref());
       }
       return testing::AssertionFailure() << "Invalid test client.";
     case TestCaseUnion::Type::objectPatch:

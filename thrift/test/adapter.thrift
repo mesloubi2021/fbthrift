@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+include "thrift/annotation/scope.thrift"
 include "thrift/annotation/cpp.thrift"
 include "thrift/annotation/thrift.thrift"
 cpp_include "thrift/test/AdapterTest.h"
@@ -165,16 +166,18 @@ struct AdaptTemplatedNestedTestStruct {
   1: AdaptTemplatedTestStruct adaptedStruct;
 }
 
+@cpp.Name{value = "ThriftAdaptTestUnion"}
 union AdaptTestUnion {
   1: DurationMs delay;
   2: CustomProtocolType custom;
   @cpp.Adapter{name = "::apache::thrift::test::I32ToStringAdapter"}
   3: i32 i32_string_field;
-} (cpp.name = "ThriftAdaptTestUnion")
+}
 
+@cpp.Name{value = "ThriftAdaptedStruct"}
 struct AdaptedStruct {
   1: i64 data;
-} (cpp.name = "ThriftAdaptedStruct")
+}
 
 @cpp.Adapter{name = "::apache::thrift::test::TemplatedTestAdapter"}
 typedef AdaptedStruct AdaptedTypedef
@@ -209,6 +212,7 @@ typedef CircularAdaptee AdaptedCircularAdaptee
 
 struct ReorderedStruct {
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   1: DeclaredAfterStruct reordered_dependent_adapted;
 }
 @cpp.Adapter{
@@ -240,10 +244,10 @@ struct ApplyAdapter {}
 @ApplyAdapter
 struct TransitiveAdapted {}
 
-@cpp.Adapter{name = "::apache::thrift::test::CountingAdapter<true, int>"}
+@cpp.Adapter{name = "::apache::thrift::test::CountingAdapter<true, int64_t>"}
 typedef i64 CountingInt
 struct CountingStruct {
-  @cpp.Adapter{name = "::apache::thrift::test::CountingAdapter<false, int>"}
+  @cpp.Adapter{name = "::apache::thrift::test::CountingAdapter<false, int64_t>"}
   1: optional i64 regularInt;
   2: optional CountingInt countingInt;
   @cpp.Adapter{
@@ -348,4 +352,11 @@ struct CustomSerializedSize {
 struct CustomSerializedSizeOpEncode {
   @cpp.Adapter{name = "::apache::thrift::test::SerializedSizeAdapter"}
   1: binary field;
+}
+
+struct StructOfMyStruct {
+  @cpp.Adapter{
+    name = "::apache::thrift::InlineAdapter<::apache::thrift::test::WrappedMyStruct<::apache::thrift::test::basic::MyStruct>>",
+  }
+  1: MyStruct myStruct;
 }

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filesystem>
 #include <string>
 #include <utility>
 #include <vector>
@@ -22,9 +23,7 @@
 
 #include <thrift/compiler/detail/system.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 struct TestCase {
   TestCase(std::string base_path, std::string path, std::string expected_path)
@@ -32,29 +31,27 @@ struct TestCase {
         path{std::move(path)},
         expected_path{std::move(expected_path)} {}
 
-  boost::filesystem::path base_path;
-  boost::filesystem::path path;
-  boost::filesystem::path expected_path;
+  std::filesystem::path base_path;
+  std::filesystem::path path;
+  std::filesystem::path expected_path;
 };
 
 TEST(SystemTest, MakeAbsPath) {
   const std::vector<TestCase> kCasesForWindows{
       {"C:/i/am/base/path",
        "C:/i/am\\\\absolute/path",
-       "\\\\?\\C:\\i\\am\\absolute\\path"},
-      {"C:/i/am\\base/path",
-       "append/me",
-       "\\\\?\\C:\\i\\am\\base\\path\\append\\me"},
-      {"C:/i/am/base/path", "", "\\\\?\\C:\\i\\am\\base\\path"},
+       R"(\\?\C:\i\am\absolute\path)"},
+      {"C:/i/am\\base/path", "append/me", R"(\\?\C:\i\am\base\path\append\me)"},
+      {"C:/i/am/base/path", "", R"(\\?\C:\i\am\base\path)"},
       {"C:/i/am/a/veeeeery/long/path/Lorem\\ipsum/dolor/sit/amet/consectetur/adipiscing/elit/sed/do/eiusmod/tempor/Lorem/ipsum/dolor/sit/amet/consectetur/adipiscing/elit/sed/do/eiusmod/tempor/Lorem/ipsum/dolor/sit/amet/consectetur/adipiscing/elit/sed/do/eiusmod/tempor/ipsum",
-       "\\append\\me\\\\please",
-       "\\\\?\\C:\\i\\am\\a\\veeeeery\\long\\path\\Lorem\\ipsum\\dolor\\sit\\amet\\consectetur\\adipiscing\\elit\\sed\\do\\eiusmod\\tempor\\Lorem\\ipsum\\dolor\\sit\\amet\\consectetur\\adipiscing\\elit\\sed\\do\\eiusmod\\tempor\\Lorem\\ipsum\\dolor\\sit\\amet\\consectetur\\adipiscing\\elit\\sed\\do\\eiusmod\\tempor\\ipsum\\append\\me\\please"},
+       R"(\append\me\\please)",
+       R"(\\?\C:\i\am\a\veeeeery\long\path\Lorem\ipsum\dolor\sit\amet\consectetur\adipiscing\elit\sed\do\eiusmod\tempor\Lorem\ipsum\dolor\sit\amet\consectetur\adipiscing\elit\sed\do\eiusmod\tempor\Lorem\ipsum\dolor\sit\amet\consectetur\adipiscing\elit\sed\do\eiusmod\tempor\ipsum\append\me\please)"},
       {"C:/i/am\\base/./path",
        "append/./me",
-       "\\\\?\\C:\\i\\am\\base\\path\\append\\me"},
+       R"(\\?\C:\i\am\base\path\append\me)"},
       {"C:/i/am/base/path",
-       "\\append/../me\\\\please",
-       "\\\\?\\C:\\i\\am\\base\\path\\me\\please"},
+       R"(\append/../me\\please)",
+       R"(\\?\C:\i\am\base\path\me\please)"},
   };
   const std::vector<TestCase> kCasesForOther{
       {"/i/am/base/path", "/i/am/absolute/path", "/i/am/absolute/path"},
@@ -72,6 +69,4 @@ TEST(SystemTest, MakeAbsPath) {
   }
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

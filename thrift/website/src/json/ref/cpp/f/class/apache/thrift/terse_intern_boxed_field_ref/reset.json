@@ -10,18 +10,20 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE void",
       "definition_html": "FOLLY_ERASE void apache::thrift::terse_intern_boxed_field_ref&lt; T &gt;::reset",
       "argsstring_html": "() noexcept",
       "name_html": "reset",
+      "qualifiedname_html": "apache::thrift::terse_intern_boxed_field_ref::reset",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1456",
-        "column": "1",
+        "line": "1469",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1456",
-        "bodyend": "1459"
+        "bodystart": "1469",
+        "bodyend": "1472"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE void reset()",
@@ -43,5 +45,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/reset",
-  "refid": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/reset"
+  "refid": "/ref/cpp/f/class/apache/thrift/terse_intern_boxed_field_ref/reset",
+  "parent_links": [
+    {
+      "text_html": "terse_intern_boxed_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/terse_intern_boxed_field_ref"
+    }
+  ]
 }

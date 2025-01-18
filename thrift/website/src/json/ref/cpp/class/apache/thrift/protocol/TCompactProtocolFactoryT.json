@@ -34,10 +34,11 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::TCompactProtocolFactoryT",
       "argsstring_html": "()",
       "name_html": "TCompactProtocolFactoryT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::TCompactProtocolFactoryT",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "272",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "272",
         "bodyend": "272"
@@ -65,6 +66,7 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::TCompactProtocolFactoryT",
       "argsstring_html": "(int32_t string_limit, int32_t container_limit)",
       "name_html": "TCompactProtocolFactoryT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::TCompactProtocolFactoryT",
       "param": [
         {
           "type_html": "int32_t",
@@ -78,7 +80,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "274",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "274",
         "bodyend": "275"
@@ -106,10 +108,11 @@
       "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::~TCompactProtocolFactoryT",
       "argsstring_html": "() override",
       "name_html": "~TCompactProtocolFactoryT",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::~TCompactProtocolFactoryT",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "277",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "277",
         "bodyend": "277"
@@ -137,6 +140,7 @@
       "definition_html": "void apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::setStringSizeLimit",
       "argsstring_html": "(int32_t string_limit)",
       "name_html": "setStringSizeLimit",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::setStringSizeLimit",
       "param": [
         {
           "type_html": "int32_t",
@@ -146,7 +150,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "279",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "279",
         "bodyend": "281"
@@ -174,6 +178,7 @@
       "definition_html": "void apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::setContainerSizeLimit",
       "argsstring_html": "(int32_t container_limit)",
       "name_html": "setContainerSizeLimit",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::setContainerSizeLimit",
       "param": [
         {
           "type_html": "int32_t",
@@ -183,7 +188,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "283",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "283",
         "bodyend": "285"
@@ -200,7 +205,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/protocol/TCompactProtocolFactoryT/setContainerSizeLimit"
     },
     {
-      "refid": "classapache_1_1thrift_1_1protocol_1_1TCompactProtocolFactoryT_1a07e2650edd9c607305f221ae893ce203",
+      "refid": "classapache_1_1thrift_1_1protocol_1_1TCompactProtocolFactoryT_1a074d969067d2e8dd276e65e37c8ae70e",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -208,9 +213,10 @@
       "inline": "yes",
       "virtual": "non-virtual",
       "type_html": "std::shared_ptr&lt; TProtocol &gt;",
-      "definition_html": "std::shared_ptr&lt;TProtocol&gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
+      "definition_html": "std::shared_ptr&lt; TProtocol &gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
       "argsstring_html": "(std::shared_ptr&lt; TTransport &gt; trans) override",
       "name_html": "getProtocol",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::getProtocol",
       "param": [
         {
           "type_html": "std::shared_ptr&lt; TTransport &gt;",
@@ -220,7 +226,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "287",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "287",
         "bodyend": "300"
@@ -230,7 +236,7 @@
         "simple_raw": "std::shared_ptr<TProtocol> getProtocol(std::shared_ptr<TTransport> trans)",
         "detailed_html": "inline std::shared_ptr&lt;TProtocol&gt; getProtocol(\n    std::shared_ptr&lt;TTransport&gt; trans) override",
         "detailed_raw": "inline std::shared_ptr<TProtocol> getProtocol(\n    std::shared_ptr<TTransport> trans) override",
-        "original_definition_html": "std::shared_ptr&lt;TProtocol&gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
+        "original_definition_html": "std::shared_ptr&lt; TProtocol &gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
         "original_argsstring_html": "(std::shared_ptr&lt; TTransport &gt; trans) override"
       },
       "filepath": "fns/class/apache/thrift/protocol/TCompactProtocolFactoryT/getProtocol",
@@ -263,10 +269,11 @@
       "definition_html": "int32_t apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::string_limit_",
       "argsstring_html": "",
       "name_html": "string_limit_",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::string_limit_",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "303",
-        "column": "1",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "303",
         "bodyend": "-1"
@@ -281,10 +288,11 @@
       "definition_html": "int32_t apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::container_limit_",
       "argsstring_html": "",
       "name_html": "container_limit_",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::container_limit_",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "304",
-        "column": "1",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "304",
         "bodyend": "-1"
@@ -320,10 +328,11 @@
               "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::TCompactProtocolFactoryT",
               "argsstring_html": "()",
               "name_html": "TCompactProtocolFactoryT",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::TCompactProtocolFactoryT",
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "272",
-                "column": "1",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "272",
                 "bodyend": "272"
@@ -354,6 +363,7 @@
               "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::TCompactProtocolFactoryT",
               "argsstring_html": "(int32_t string_limit, int32_t container_limit)",
               "name_html": "TCompactProtocolFactoryT",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::TCompactProtocolFactoryT",
               "param": [
                 {
                   "type_html": "int32_t",
@@ -367,7 +377,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "274",
-                "column": "1",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "274",
                 "bodyend": "275"
@@ -393,7 +403,13 @@
           "brief_html": "Constructs the TCompactProtocolFactoryT.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT",
-          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT"
+          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT",
+          "parent_links": [
+            {
+              "text_html": "TCompactProtocolFactoryT",
+              "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolFactoryT"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -412,10 +428,11 @@
               "definition_html": "apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::~TCompactProtocolFactoryT",
               "argsstring_html": "() override",
               "name_html": "~TCompactProtocolFactoryT",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::~TCompactProtocolFactoryT",
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "277",
-                "column": "1",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "277",
                 "bodyend": "277"
@@ -440,7 +457,13 @@
           "brief_html": "Destructs the TCompactProtocolFactoryT.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT.dtor",
-          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT.dtor"
+          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/TCompactProtocolFactoryT.dtor",
+          "parent_links": [
+            {
+              "text_html": "TCompactProtocolFactoryT",
+              "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolFactoryT"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -459,6 +482,7 @@
               "definition_html": "void apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::setStringSizeLimit",
               "argsstring_html": "(int32_t string_limit)",
               "name_html": "setStringSizeLimit",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::setStringSizeLimit",
               "param": [
                 {
                   "type_html": "int32_t",
@@ -468,7 +492,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "279",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "279",
                 "bodyend": "281"
@@ -493,7 +517,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setStringSizeLimit",
-          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setStringSizeLimit"
+          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setStringSizeLimit",
+          "parent_links": [
+            {
+              "text_html": "TCompactProtocolFactoryT",
+              "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolFactoryT"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -512,6 +542,7 @@
               "definition_html": "void apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::setContainerSizeLimit",
               "argsstring_html": "(int32_t container_limit)",
               "name_html": "setContainerSizeLimit",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::setContainerSizeLimit",
               "param": [
                 {
                   "type_html": "int32_t",
@@ -521,7 +552,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "283",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "283",
                 "bodyend": "285"
@@ -546,7 +577,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setContainerSizeLimit",
-          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setContainerSizeLimit"
+          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/setContainerSizeLimit",
+          "parent_links": [
+            {
+              "text_html": "TCompactProtocolFactoryT",
+              "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolFactoryT"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -554,7 +591,7 @@
           "compoundname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::getProtocol",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1protocol_1_1TCompactProtocolFactoryT_1a07e2650edd9c607305f221ae893ce203",
+              "refid": "classapache_1_1thrift_1_1protocol_1_1TCompactProtocolFactoryT_1a074d969067d2e8dd276e65e37c8ae70e",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -562,9 +599,10 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "std::shared_ptr&lt; TProtocol &gt;",
-              "definition_html": "std::shared_ptr&lt;TProtocol&gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
+              "definition_html": "std::shared_ptr&lt; TProtocol &gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
               "argsstring_html": "(std::shared_ptr&lt; TTransport &gt; trans) override",
               "name_html": "getProtocol",
+              "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactoryT::getProtocol",
               "param": [
                 {
                   "type_html": "std::shared_ptr&lt; TTransport &gt;",
@@ -574,7 +612,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "line": "287",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
                 "bodystart": "287",
                 "bodyend": "300"
@@ -584,7 +622,7 @@
                 "simple_raw": "std::shared_ptr<TProtocol> getProtocol(std::shared_ptr<TTransport> trans)",
                 "detailed_html": "inline std::shared_ptr&lt;TProtocol&gt; getProtocol(\n    std::shared_ptr&lt;TTransport&gt; trans) override",
                 "detailed_raw": "inline std::shared_ptr<TProtocol> getProtocol(\n    std::shared_ptr<TTransport> trans) override",
-                "original_definition_html": "std::shared_ptr&lt;TProtocol&gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
+                "original_definition_html": "std::shared_ptr&lt; TProtocol &gt; apache::thrift::protocol::TCompactProtocolFactoryT&lt; Transport_ &gt;::getProtocol",
                 "original_argsstring_html": "(std::shared_ptr&lt; TTransport &gt; trans) override"
               },
               "filepath": "fns/class/apache/thrift/protocol/TCompactProtocolFactoryT/getProtocol",
@@ -599,7 +637,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/getProtocol",
-          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/getProtocol"
+          "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolFactoryT/getProtocol",
+          "parent_links": [
+            {
+              "text_html": "TCompactProtocolFactoryT",
+              "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolFactoryT"
+            }
+          ]
         }
       ]
     }

@@ -15,13 +15,14 @@
       "definition_html": "protocol::Object apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toObject",
       "argsstring_html": "() const",
       "name_html": "toObject",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toObject",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "110",
-        "column": "1",
+        "line": "131",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "110",
-        "bodyend": "113"
+        "bodystart": "131",
+        "bodyend": "135"
       },
       "definition": {
         "simple_html": "protocol::Object toObject() const",
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BoolPatch/toObject",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BoolPatch/toObject"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BoolPatch/toObject",
+  "parent_links": [
+    {
+      "text_html": "BoolPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BoolPatch"
+    }
+  ]
 }

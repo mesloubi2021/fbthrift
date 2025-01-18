@@ -20,14 +20,13 @@
 #include <folly/Portability.h>
 #include <folly/Try.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 template <typename T>
 FOLLY_NODISCARD folly::Try<T> collapseTry(
     folly::Try<folly::Try<T>>&& arg) noexcept {
   static_assert(
-      std::is_nothrow_move_constructible<folly::Try<T>>::value,
+      std::is_nothrow_move_constructible_v<folly::Try<T>>,
       "move constructor should not throw");
   if (arg.hasException()) {
     return folly::Try<T>(std::move(arg.exception()));
@@ -38,5 +37,4 @@ FOLLY_NODISCARD folly::Try<T> collapseTry(
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

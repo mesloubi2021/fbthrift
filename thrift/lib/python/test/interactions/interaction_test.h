@@ -18,9 +18,7 @@
 #include <thrift/lib/python/test/interactions/gen-cpp2/BlankService.h>
 #include <thrift/lib/python/test/interactions/gen-cpp2/Calculator.h>
 
-namespace interactions {
-namespace test {
-namespace thrift {
+namespace interactions::test::thrift {
 struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
   struct SemiAdditionHandler
       : apache::thrift::ServiceHandler<Calculator>::AdditionIf {
@@ -60,16 +58,16 @@ struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
   }
 
   void async_tm_newAddition(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          apache::thrift::TileAndResponse<AdditionIf, void>>> cb) override {
+      apache::thrift::HandlerCallbackPtr<
+          apache::thrift::TileAndResponse<AdditionIf, void>> cb) override {
     auto handler =
         std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
     cb->result({std::move(handler)});
   }
 
   void async_tm_initializedAddition(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          apache::thrift::TileAndResponse<AdditionIf, int>>> cb,
+      apache::thrift::HandlerCallbackPtr<
+          apache::thrift::TileAndResponse<AdditionIf, int>> cb,
       int x) override {
     auto handler =
         std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -78,9 +76,9 @@ struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
   }
 
   void async_tm_stringifiedAddition(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          apache::thrift::
-              TileAndResponse<AdditionIf, std::unique_ptr<std::string>>>> cb,
+      apache::thrift::HandlerCallbackPtr<apache::thrift::TileAndResponse<
+          AdditionIf,
+          std::unique_ptr<std::string>>> cb,
       int x) override {
     auto handler =
         std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -91,6 +89,4 @@ struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
 };
 struct SemiBlankServiceHandler
     : apache::thrift::ServiceHandler<BlankServiceRenamed> {};
-} // namespace thrift
-} // namespace test
-} // namespace interactions
+} // namespace interactions::test::thrift

@@ -15,6 +15,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::empty",
       "argsstring_html": "(const void *ptr)",
       "name_html": "empty",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::empty",
       "param": [
         {
           "type_html": "const void *",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "78",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "78",
         "bodyend": "78"
@@ -49,5 +50,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/empty",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/empty"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/empty",
+  "parent_links": [
+    {
+      "text_html": "AnyOp&lt; type::map&lt; KTag, VTag &gt; &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4"
+    }
+  ]
 }

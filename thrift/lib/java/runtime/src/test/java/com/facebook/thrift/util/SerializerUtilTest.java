@@ -17,6 +17,9 @@
 package com.facebook.thrift.util;
 
 import com.facebook.thrift.test.EveryLayout;
+import com.facebook.thrift.test.universalname.TestRequest;
+import com.facebook.thrift.util.resources.ChunkedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -85,11 +88,44 @@ public class SerializerUtilTest {
   }
 
   @Test
-  public void testToAndFromStreams() throws Exception {
+  public void testToAndFromStreams() {
     InputStream in = SerializerUtil.toInputStream(everyLayout, SerializationProtocol.TBinary);
     EveryLayout everyLayout =
         SerializerUtil.fromInputStream(EveryLayout.asReader(), in, SerializationProtocol.TBinary);
     Assert.assertEquals(this.everyLayout, everyLayout);
+  }
+
+  /**
+   * Test reading a chunked input stream where reading will only return up to 3 bytes max, this
+   * simulates effects we saw in the sanppy input stream reading scenario where it only returns up
+   * to ~32kb at a time. This test ensures that our read api's read and fill the array buffers with
+   * the expect byte content.
+   */
+  @Test
+  public void testToChunkedInputStream() {
+    InputStream in = SerializerUtil.toInputStream(everyLayout, SerializationProtocol.TBinary);
+    EveryLayout everyLayout =
+        SerializerUtil.fromInputStream(
+            EveryLayout.asReader(), new ChunkedInputStream(in), SerializationProtocol.TBinary);
+    Assert.assertEquals(this.everyLayout, everyLayout);
+  }
+
+  @Test(expected = IndexOutOfBoundsException.class)
+  public void testBadDataWithoutStopTagThrowsIndexOutOfBoundsException() {
+    ByteBuffer in =
+        SerializerUtil.toByteBuffer(
+            new TestRequest.Builder().setAString("abcd").build(), SerializationProtocol.TCompact);
+
+    // Remove Trailing byte tha would normally indicate STOP
+    byte[] slice = new byte[in.capacity() - 1];
+    in.get(slice, 0, in.capacity() - 1);
+
+    // Use ByteArrayInputStream to simulate use of input stream
+    TestRequest everyLayout =
+        SerializerUtil.fromInputStream(
+            TestRequest.asReader(),
+            new ByteArrayInputStream(slice),
+            SerializationProtocol.TCompact);
   }
 
   @Test
@@ -108,6 +144,15 @@ public class SerializerUtilTest {
     SerializerUtil.toOutStream(everyLayout, bos, SerializationProtocol.TSimpleJSONBase64);
     String json = new String(bos.toByteArray(), StandardCharsets.UTF_8);
     EveryLayout everyLayout = SerializerUtil.fromJsonStringBase64(EveryLayout.asReader(), json);
+    Assert.assertEquals(this.everyLayout, everyLayout);
+  }
+
+  @Test
+  public void testFromsTJsonString() {
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    SerializerUtil.toOutStream(everyLayout, bos, SerializationProtocol.TJSON);
+    String json = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+    EveryLayout everyLayout = SerializerUtil.fromTJsonString(EveryLayout.asReader(), json);
     Assert.assertEquals(this.everyLayout, everyLayout);
   }
 

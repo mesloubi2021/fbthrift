@@ -20,6 +20,7 @@
       "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::merge",
       "argsstring_html": "(U &amp;&amp;next)",
       "name_html": "merge",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::merge",
       "param": [
         {
           "type_html": "U &amp;&amp;",
@@ -28,11 +29,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "100",
-        "column": "1",
+        "line": "105",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "100",
-        "bodyend": "107"
+        "bodystart": "105",
+        "bodyend": "112"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nvoid merge(U&amp;&amp; next)",
@@ -57,5 +58,11 @@
   "brief_html": "<p>Merges another patch into the current patch. After the merge (<code>patch.merge(next)</code>), <code>patch.apply(value)</code> is equivalent to <code>next.apply(patch.apply(value))</code>. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BaseClearPatch/merge",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseClearPatch/merge"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseClearPatch/merge",
+  "parent_links": [
+    {
+      "text_html": "BaseClearPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseClearPatch"
+    }
+  ]
 }

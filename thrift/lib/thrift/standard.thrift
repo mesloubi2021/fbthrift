@@ -16,12 +16,14 @@
 
 include "thrift/annotation/thrift.thrift"
 include "thrift/annotation/java.thrift"
+include "thrift/annotation/cpp.thrift"
 
 cpp_include "<folly/io/IOBuf.h>"
 cpp_include "<folly/FBString.h>"
 
 /** The **standard** types all Thrift implementations support. */
 @thrift.Experimental
+@thrift.TerseWrite
 package "facebook.com/thrift/type"
 
 namespace cpp2 apache.thrift.type
@@ -43,11 +45,12 @@ enum Void {
  *
  * Each language can map this type into a customized memory efficient object.
  */
+@cpp.Type{name = "folly::fbstring"}
 @java.Adapter{
   adapterClassName = "com.facebook.thrift.adapter.common.UnpooledByteBufTypeAdapter",
   typeClassName = "io.netty.buffer.ByteBuf",
 }
-typedef binary (cpp.type = "folly::fbstring") ByteString
+typedef binary ByteString
 
 /**
  * Typedef for binary data.
@@ -55,36 +58,47 @@ typedef binary (cpp.type = "folly::fbstring") ByteString
  * Each language can map this type into a customized memory efficient object.
  * May be used for zero-copy slice of data.
  */
+@cpp.Type{name = "folly::IOBuf"}
 @java.Adapter{
   adapterClassName = "com.facebook.thrift.adapter.common.UnpooledByteBufTypeAdapter",
   typeClassName = "io.netty.buffer.ByteBuf",
 }
-typedef binary (cpp.type = "folly::IOBuf") ByteBuffer
+typedef binary ByteBuffer
 
-/**
- * A (scheme-less) URI.
- *
- * Of the form described in RFC 3986, but with every component optional.
- *
- * See rfc3986
- */
-// TODO(afuller): Add definition for 'normal' based on unicode + uri specs.
-@thrift.Experimental // TODO(afuller): Adapt.
-typedef string Uri (thrift.uri = "")
-
-/** The uri of an IDL defined type. */
+/** The "uri" of a Thrift type. */
 union TypeUri {
-  /** The unique Thrift URI for this type. */
-  1: Uri uri;
-  /** A prefix of the SHA2-256 hash of the URI. */
-  2: ByteString typeHashPrefixSha2_256;
   /**
-   * The (potentially not unique) scoped name of this type.
-   * Format is `filename.typename`, e.g. `standard.TypeUri`.
-   * This is a fallback for types that do not have URIs yet.
-   * Must be prepared for the active field to switch to `uri` as package statements are rolled out!
+   * The universal name of this type, sometimes referred to as a Thrift URI.
+   * Usually preferred when the name is shorter or has the same length as the
+   * hash prefix.
+   */
+  1: string uri;
+
+  /**
+   * A prefix of the SHA2-256 hash of the universal name. It is ByteString
+   * instead of binary to fit a 16-byte prefix into the inline storage making
+   * use of the small string optimization (SSO). In libstdc++ std::string SSO
+   * is limited to 15 bytes and would require an allocation.
+   */
+  2: ByteString typeHashPrefixSha2_256;
+
+  /**
+   * The scoped (qualified) name of this type in the form
+   * `<filename>.<typename>`, e.g. `search.Query`. Unlike the universal name,
+   * it is potentially not unique. This is a fallback for types that do not
+   * have universal names yet. Don't rely on `scopedName` to be always
+   * available. It will be replaced by `uri` as package declarations are
+   * rolled out.
    */
   3: string scopedName;
+
+  /**
+   * Warning: not a stable identifier
+   *
+   * A key into the `definitionMap` in schema.thrift when 'use_hash' option is specified.
+   * This MUST be only used in the context of schema.thrift and DO NOT provide any stability guarantee.
+   */
+  4: ByteString definitionKey;
 }
 
 /** Uniquely identifies a Thrift type. */

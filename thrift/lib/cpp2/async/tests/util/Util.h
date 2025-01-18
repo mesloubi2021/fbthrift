@@ -17,8 +17,8 @@
 #pragma once
 
 #include <folly/SocketAddress.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Task.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/synchronization/Baton.h>
@@ -33,8 +33,7 @@
 #include <thrift/lib/cpp2/transport/rocket/server/RocketRoutingHandler.h>
 #include <thrift/lib/cpp2/transport/rocket/test/util/TestUtil.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 template <class Handler, class Client>
 class AsyncTestSetup : public TestSetup {
@@ -47,9 +46,7 @@ class AsyncTestSetup : public TestSetup {
     setIdleTimeout(std::chrono::milliseconds(0));
     setTaskExpireTime(std::chrono::milliseconds(0));
     setStreamExpireTime(std::chrono::milliseconds(0));
-    server_ = createServer(
-        std::make_shared<ThriftServerAsyncProcessorFactory<Handler>>(handler_),
-        serverPort_);
+    server_ = createServer(handler_, serverPort_);
   }
 
   void TearDown() override {
@@ -110,5 +107,4 @@ class DuplicateWriteSocket : public folly::AsyncSocket {
   bool firstWrite_{true};
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -20,3 +20,9 @@
 #include <cstddef>
 
 #include <thrift/lib/cpp/Thrift.h>
+
+namespace apache::thrift {
+
+using namespace std::string_view_literals;
+
+} // namespace apache::thrift

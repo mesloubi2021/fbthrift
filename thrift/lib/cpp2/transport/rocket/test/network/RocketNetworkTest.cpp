@@ -28,10 +28,10 @@
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/Try.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Task.h>
 #include <folly/executors/ManualExecutor.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Task.h>
 #include <folly/fibers/FiberManager.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/AsyncSocket.h>
@@ -1379,6 +1379,8 @@ TEST_F(RocketNetworkTest, CloseNowWithPendingWriteCallback) {
  */
 
 TEST_F(RocketNetworkTest, ObserverIsNotInstalledWhenFlagIsFalse) {
+  THRIFT_FLAG_SET_MOCK(enable_rocket_connection_observers, false);
+  client_->reconnect();
   auto observer =
       std::make_unique<NiceMock<MockRocketServerConnectionObserver>>();
 
@@ -1418,6 +1420,7 @@ MATCHER_P2(WriteEventContextMatcher, startRawOffset, endRawOffset, "") {
 
 TEST_F(RocketNetworkTest, ObserverIsNotifiedOnWriteSuccessRequestResponse) {
   THRIFT_FLAG_SET_MOCK(enable_rocket_connection_observers, true);
+  client_->reconnect();
   this->withClient([&](RocketTestClient& client) {
     RocketServerConnection::ManagedObserver::EventSet eventSet;
     eventSet.enable(
@@ -1547,6 +1550,7 @@ TEST_F(RocketNetworkTest, ObserverIsNotifiedOnWriteSuccessRequestResponse) {
 
 TEST_F(RocketNetworkTest, ObserverIsNotifiedOnWriteSuccessRequestStream) {
   THRIFT_FLAG_SET_MOCK(enable_rocket_connection_observers, true);
+  client_->reconnect();
   this->withClient([this](RocketTestClient& client) {
     RocketServerConnection::ManagedObserver::EventSet eventSet;
     eventSet.enable(

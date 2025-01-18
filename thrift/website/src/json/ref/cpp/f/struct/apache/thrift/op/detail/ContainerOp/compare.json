@@ -15,6 +15,7 @@
       "definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "compare",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::compare",
       "param": [
         {
           "type_html": "const void *",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "87",
-        "column": "1",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "87",
         "bodyend": "94"
@@ -53,5 +54,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/compare",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/compare"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ContainerOp/compare",
+  "parent_links": [
+    {
+      "text_html": "ContainerOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/ContainerOp"
+    }
+  ]
 }

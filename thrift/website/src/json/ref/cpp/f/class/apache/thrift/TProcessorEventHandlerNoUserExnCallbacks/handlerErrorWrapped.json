@@ -15,6 +15,7 @@
       "definition_html": "virtual void apache::thrift::TProcessorEventHandler::handlerErrorWrapped",
       "argsstring_html": "(void *ctx, const char *fn_name, const folly::exception_wrapper &amp;)",
       "name_html": "handlerErrorWrapped",
+      "qualifiedname_html": "apache::thrift::TProcessorEventHandler::handlerErrorWrapped",
       "param": [
         {
           "type_html": "void *",
@@ -30,11 +31,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "line": "135",
-        "column": "1",
+        "line": "150",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "bodystart": "135",
-        "bodyend": "138"
+        "bodystart": "150",
+        "bodyend": "153"
       },
       "definition": {
         "simple_html": "virtual void handlerErrorWrapped(\n    void* ctx, const char* fn_name, const folly::exception_wrapper&amp;)",
@@ -56,5 +57,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/handlerErrorWrapped",
-  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/handlerErrorWrapped"
+  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks/handlerErrorWrapped",
+  "parent_links": [
+    {
+      "text_html": "TProcessorEventHandlerNoUserExnCallbacks",
+      "href": "/ref/cpp/class/apache/thrift/TProcessorEventHandlerNoUserExnCallbacks"
+    }
+  ]
 }

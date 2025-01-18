@@ -137,7 +137,6 @@ struct structC {
   30: map<structA, structB> o3;
 }
 
-@cpp.TriviallyRelocatable
 struct struct1 {
   1: required i32 field0;
   2: optional string field1;
@@ -185,6 +184,7 @@ struct struct4 {
   2: optional string field1;
   3: enum1 field2;
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   6: structA field3;
 }
 

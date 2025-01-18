@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 }}{{#field:optional?}}::std::option::Option::Some({{/field:optional?}}{{!
 }}{{#field:box?}}::std::boxed::Box::new({{/field:box?}}{{!
 }}{{#field:arc?}}::std::sync::Arc::new({{/field:arc?}}{{!
-    }}{{>lib/value}}{{!
+    }}{{> lib/value}}{{!
 }}{{#field:arc?}}){{/field:arc?}}{{!
 }}{{#field:box?}}){{/field:box?}}{{!
 }}{{#field:optional?}}){{/field:optional?}}

@@ -33,8 +33,7 @@
 
 #if FOLLY_HAS_COROUTINES
 
-namespace thrift {
-namespace py3 {
+namespace thrift::py3 {
 
 template <typename T>
 class ClientBufferedStreamWrapper {
@@ -82,7 +81,11 @@ apache::thrift::ServerStream<StreamElement> createAsyncIteratorFromPyIterator(
     folly::Function<void(
         PyObject*, folly::Promise<std::optional<StreamElement>>)> genNext) {
   Py_INCREF(iter);
-  auto guard = folly::makeGuard([iter] { Py_DECREF(iter); });
+  auto guard =
+      folly::makeGuard([iter, executor = folly::getKeepAliveToken(executor)] {
+        // Ensure the Python async generator is destroyed on a Python thread
+        executor->add([iter] { Py_DECREF(iter); });
+      });
 
   return folly::coro::co_invoke(
       [iter,
@@ -118,8 +121,7 @@ apache::thrift::ServerStream<StreamElement> createAsyncIteratorFromPyIterator(
         }
       });
 }
-} // namespace py3
-} // namespace thrift
+} // namespace thrift::py3
 
 #else /* !FOLLY_HAS_COROUTINES */
 #error  Thrift stream type support needs C++ coroutines, which are not currently available. \

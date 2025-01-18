@@ -30,9 +30,7 @@
 #include <thrift/lib/cpp2/transport/rocket/framing/Flags.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/FrameType.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 class Serializer {
  public:
@@ -43,7 +41,7 @@ class Serializer {
 
   // All data in rsocket protocol is transmitted in Big Endian format.
   template <class T>
-  std::enable_if_t<std::is_arithmetic<T>::value, size_t> writeBE(T value) {
+  std::enable_if_t<std::is_arithmetic_v<T>, size_t> writeBE(T value) {
     const auto bigEndianValue = folly::Endian::big(value);
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&bigEndianValue);
     return push(bytes, sizeof(T));
@@ -117,8 +115,8 @@ class HeaderSerializer {
   size_t writeBE(T value) {
     constexpr auto size = sizeof(T);
     if (FOLLY_LIKELY(canWrite(size))) {
-      T* target = reinterpret_cast<T*>(buf_ + pos_);
-      *target = folly::Endian::big(value);
+      T big_endian_value = folly::Endian::big(value);
+      std::memcpy(buf_ + pos_, &big_endian_value, size);
       incrementPosition(size);
       return size;
     }
@@ -163,6 +161,4 @@ class HeaderSerializer {
   size_t maxLen_;
 };
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

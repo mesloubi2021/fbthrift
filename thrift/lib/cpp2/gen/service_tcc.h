@@ -39,11 +39,7 @@
 #include <thrift/lib/cpp2/protocol/detail/protocol_methods.h>
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
-
-namespace ap {
+namespace apache::thrift::detail::ap {
 
 template <typename Prot>
 std::unique_ptr<folly::IOBuf> process_serialize_xform_app_exn(
@@ -151,7 +147,15 @@ void process_throw_wrapped_handler_error(
         std::string(trustedServerEx->errorCode()));
     return;
   }
-  LOG(ERROR) << "uncaught exception in function " << method << ": " << ew;
+
+  FB_LOG_EVERY_MS(ERROR, 1000)
+      << "Service handler threw an uncaught exception in method " << method
+      << ": " << ew
+      << ". Only those exception types which are declared in the thrift IDL "
+         "for this service method can be serialized directly. All other exception"
+         " types are caught and their message strings sent as a generic "
+         "application-error exception. Such as here.";
+
   if (stack) {
     stack->userExceptionWrapped(false, ew);
     stack->handlerErrorWrapped(ew);
@@ -164,8 +168,4 @@ void process_throw_wrapped_handler_error(
   sendExceptionHelper(std::move(req), std::move(buf));
 }
 
-} // namespace ap
-
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail::ap

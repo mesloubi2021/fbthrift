@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
 import sys
 import threading
 
-import six
 
 UEXW_MAX_LENGTH = 1024
 
@@ -123,7 +124,6 @@ class TServerInterface:
 
 
 class TProcessor:
-
     """Base class for processor, which works on two streams."""
 
     def __init__(self):
@@ -146,8 +146,7 @@ class TProcessor:
 
     def readMessageBegin(self, iprot):
         name, _, seqid = iprot.readMessageBegin()
-        if six.PY3:
-            name = name.decode("utf8")
+        name = name.decode("utf8")
         return name, seqid
 
     def skipMessageStruct(self, iprot):
@@ -246,7 +245,6 @@ class TProcessor:
 
 
 class TException(Exception):
-
     """Base class for all thrift exceptions."""
 
     # BaseException.message is deprecated in Python v[2.6,3.0)
@@ -266,7 +264,6 @@ class TException(Exception):
 
 
 class TApplicationException(TException):
-
     """Application level thrift exceptions."""
 
     UNKNOWN = 0

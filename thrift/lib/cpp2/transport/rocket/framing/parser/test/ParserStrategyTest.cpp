@@ -19,26 +19,9 @@
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/parser/FrameLengthParserStrategy.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/parser/ParserStrategy.h>
+#include <thrift/lib/cpp2/transport/rocket/framing/parser/test/TestUtil.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
-
-class FakeOwner {
- public:
-  void handleFrame(std::unique_ptr<folly::IOBuf> buf) {
-    frames_.push_back(std::move(buf));
-  }
-  bool incMemoryUsage(uint32_t n) {
-    memoryCounter_ += n;
-    return true;
-  }
-  void decMemoryUsage(uint32_t n) { memoryCounter_ -= n; }
-
-  std::vector<std::unique_ptr<folly::IOBuf>> frames_{};
-
-  uint32_t memoryCounter_ = 0;
-};
+namespace apache::thrift::rocket {
 
 TEST(ParserTest, testAppendFrame) {
   FakeOwner owner;
@@ -81,6 +64,4 @@ TEST(ParserTest, testAppendLessThanFullFrame) {
   EXPECT_EQ(owner.frames_.size(), 0);
 }
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

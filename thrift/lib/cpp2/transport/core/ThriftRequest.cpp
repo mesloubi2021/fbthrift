@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <thrift/lib/cpp2/server/CPUConcurrencyController.h>
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
 #include <thrift/lib/cpp2/transport/core/ThriftRequest.h>
 
@@ -22,8 +23,7 @@
 THRIFT_FLAG_DEFINE_int64(queue_time_logging_threshold_ms, 5);
 THRIFT_FLAG_DEFINE_bool(enable_request_event_logging, true);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_REGISTER(
@@ -42,37 +42,12 @@ THRIFT_PLUGGABLE_FUNC_REGISTER(
 }
 } // namespace detail
 
-namespace {
-RequestLoggingContext buildRequestLoggingContext(
-    const ResponseRpcMetadata& metadata,
-    const std::optional<ResponseRpcError>& responseRpcError,
-    const server::TServerObserver::CallTimestamps& timestamps,
-    const Cpp2RequestContext& reqContext) {
-  RequestLoggingContext requestLoggingContext;
-  requestLoggingContext.timestamps = timestamps;
-  requestLoggingContext.responseRpcError = responseRpcError;
-  if (auto payloadMetadata = metadata.payloadMetadata()) {
-    if (auto exceptionMetadata = payloadMetadata->exceptionMetadata_ref()) {
-      requestLoggingContext.exceptionMetaData = *exceptionMetadata;
-    }
-  }
-
-  if (const auto* clientId = reqContext.clientId()) {
-    requestLoggingContext.clientId = *clientId;
-  }
-  requestLoggingContext.methodName = reqContext.getMethodName();
-  if (const auto* requestId = reqContext.getClientRequestId()) {
-    requestLoggingContext.requestId = *requestId;
-  }
-
-  return requestLoggingContext;
-}
-} // namespace
-
 ThriftRequestCore::ThriftRequestCore(
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
-    Cpp2ConnContext& connContext)
+    Cpp2ConnContext& connContext,
+    apache::thrift::detail::ServiceInterceptorRequestStorageContext
+        serviceInterceptorsStorage)
     : serverConfigs_(serverConfigs),
       kind_(metadata.kind_ref().value_or(
           RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE)),
@@ -85,9 +60,10 @@ ThriftRequestCore::ThriftRequestCore(
           &connContext,
           &header_,
           metadata.name_ref() ? std::move(*metadata.name_ref()).str()
-                              : std::string{}),
-      queueTimeout_(serverConfigs_),
-      taskTimeout_(serverConfigs_),
+                              : std::string{},
+          std::move(serviceInterceptorsStorage)),
+      queueTimeout_(*this),
+      taskTimeout_(*this, serverConfigs_),
       stateMachine_(
           includeInRecentRequestsCount(reqContext_.getMethodName()),
           serverConfigs_.getAdaptiveConcurrencyController(),
@@ -144,6 +120,8 @@ ThriftRequestCore::ThriftRequestCore(
     compressionConfig_ = *compressionConfig;
   }
 
+  header_.setChecksum(metadata.checksum().to_optional());
+
   if (auto* observer = serverConfigs_.getObserver()) {
     observer->receivedRequest(&reqContext_.getMethodName());
   }
@@ -158,12 +136,11 @@ ThriftRequestCore::LogRequestSampleCallback::LogRequestSampleCallback(
     const ResponseRpcMetadata& metadata,
     const std::optional<ResponseRpcError>& responseRpcError,
     const server::TServerObserver::CallTimestamps& timestamps,
-    const Cpp2RequestContext& reqContext,
-    server::TServerObserver* observer,
+    const ThriftRequestCore& thriftRequest,
     MessageChannel::SendCallback* chainedCallback)
-    : requestLoggingContext_(buildRequestLoggingContext(
-          metadata, responseRpcError, timestamps, reqContext)),
-      observer_(observer),
+    : serverConfigs_(thriftRequest.serverConfigs_),
+      requestLoggingContext_(buildRequestLoggingContext(
+          metadata, responseRpcError, timestamps, thriftRequest)),
       chainedCallback_(chainedCallback) {}
 
 void ThriftRequestCore::LogRequestSampleCallback::sendQueued() {
@@ -175,7 +152,9 @@ void ThriftRequestCore::LogRequestSampleCallback::sendQueued() {
 }
 
 void ThriftRequestCore::LogRequestSampleCallback::messageSent() {
-  SCOPE_EXIT { delete this; };
+  SCOPE_EXIT {
+    delete this;
+  };
   requestLoggingContext_.timestamps.writeEnd = std::chrono::steady_clock::now();
   if (chainedCallback_ != nullptr) {
     chainedCallback_->messageSent();
@@ -184,7 +163,9 @@ void ThriftRequestCore::LogRequestSampleCallback::messageSent() {
 
 void ThriftRequestCore::LogRequestSampleCallback::messageSendError(
     folly::exception_wrapper&& e) {
-  SCOPE_EXIT { delete this; };
+  SCOPE_EXIT {
+    delete this;
+  };
   requestLoggingContext_.timestamps.writeEnd = std::chrono::steady_clock::now();
   if (chainedCallback_ != nullptr) {
     chainedCallback_->messageSendError(std::move(e));
@@ -195,17 +176,18 @@ ThriftRequestCore::LogRequestSampleCallback::~LogRequestSampleCallback() {
   const auto& samplingStatus =
       requestLoggingContext_.timestamps.getSamplingStatus();
 
-  if (samplingStatus.isEnabledByServer() && observer_) {
-    observer_->callCompleted(requestLoggingContext_.timestamps);
+  auto* observer = serverConfigs_.getObserver();
+  if (samplingStatus.isServerSamplingEnabled() && observer &&
+      requestLoggingContext_.requestStartedProcessing) {
+    observer->callCompleted(requestLoggingContext_.timestamps);
   }
 
   if (THRIFT_FLAG(enable_request_event_logging) &&
-      samplingStatus.isEnabledByClient()) {
+      samplingStatus.isRequestLoggingEnabled()) {
     const bool error = requestLoggingContext_.exceptionMetaData.has_value() ||
         requestLoggingContext_.responseRpcError.has_value();
-    if (auto samplingRatio = error
-            ? samplingStatus.getClientLogErrorSampleRatio()
-            : samplingStatus.getClientLogSampleRatio()) {
+    if (auto samplingRatio = error ? samplingStatus.getLogErrorSampleRatio()
+                                   : samplingStatus.getLogSampleRatio()) {
       auto& handler = getLoggingEventRegistry().getRequestEventHandler(
           error ? "error" : "success");
       handler.logSampled(samplingRatio, requestLoggingContext_);
@@ -213,27 +195,74 @@ ThriftRequestCore::LogRequestSampleCallback::~LogRequestSampleCallback() {
   }
 }
 
+RequestLoggingContext
+ThriftRequestCore::LogRequestSampleCallback::buildRequestLoggingContext(
+    const ResponseRpcMetadata& metadata,
+    const std::optional<ResponseRpcError>& responseRpcError,
+    const server::TServerObserver::CallTimestamps& timestamps,
+    const ThriftRequestCore& thriftRequest) {
+  RequestLoggingContext requestLoggingContext;
+  requestLoggingContext.timestamps = timestamps;
+  requestLoggingContext.responseRpcError = responseRpcError;
+  if (auto payloadMetadata = metadata.payloadMetadata()) {
+    if (auto exceptionMetadata = payloadMetadata->exceptionMetadata_ref()) {
+      requestLoggingContext.exceptionMetaData = *exceptionMetadata;
+    }
+  }
+
+  const auto& reqContext = thriftRequest.getRequestContext();
+  if (const auto* routingTarget = reqContext->getRoutingTarget()) {
+    requestLoggingContext.routingTarget = *routingTarget;
+  }
+  if (const auto* clientId = reqContext->clientId()) {
+    requestLoggingContext.clientId = *clientId;
+  }
+  requestLoggingContext.methodName = reqContext->getMethodName();
+  if (const auto* requestId = reqContext->getClientRequestId()) {
+    requestLoggingContext.requestId = *requestId;
+  }
+  requestLoggingContext.requestAttemptId = reqContext->getRequestAttemptId();
+
+  requestLoggingContext.requestStartedProcessing =
+      thriftRequest.isStartedProcessing();
+
+  // final timeout
+  requestLoggingContext.finalQueueTimeoutMs = thriftRequest.queueTimeout_.value;
+  requestLoggingContext.finalTaskTimeoutMs = thriftRequest.taskTimeout_.value;
+  // server timeout
+  requestLoggingContext.serverQueueTimeoutMs = serverConfigs_.getQueueTimeout();
+  requestLoggingContext.serverTaskTimeoutMs =
+      serverConfigs_.getTaskExpireTime();
+  requestLoggingContext.serverQueueTimeoutPct =
+      serverConfigs_.getQueueTimeoutPct();
+  requestLoggingContext.serverUseClientTimeout =
+      serverConfigs_.getUseClientTimeout();
+  // client timeout
+  requestLoggingContext.clientQueueTimeoutMs =
+      thriftRequest.clientQueueTimeout_;
+  requestLoggingContext.clientTimeoutMs = thriftRequest.clientTimeout_;
+
+  // CPUConcurrencyController mode
+  requestLoggingContext.cpuConcurrencyControllerMode = static_cast<uint8_t>(
+      serverConfigs_.getCPUConcurrencyController().config()->mode);
+
+  return requestLoggingContext;
+}
+
 MessageChannel::SendCallbackPtr ThriftRequestCore::createRequestLoggingCallback(
     MessageChannel::SendCallbackPtr&& cb,
     const ResponseRpcMetadata& metadata,
-    const std::optional<ResponseRpcError>& responseRpcError,
-    server::TServerObserver* observer) {
+    const std::optional<ResponseRpcError>& responseRpcError) {
   auto cbPtr = std::move(cb);
   // If we are sampling this call, wrap it with a RequestTimestampSample,
   // which also implements MessageChannel::SendCallback. Callers of
   // sendReply/sendError are responsible for cleaning up their own callbacks.
   auto& timestamps = getTimestamps();
-  if (stateMachine_.getStartedProcessing() &&
-      timestamps.getSamplingStatus().isEnabled()) {
+  if (timestamps.getSamplingStatus().isEnabled()) {
     auto chainedCallback = cbPtr.release();
     return MessageChannel::SendCallbackPtr(
         new ThriftRequestCore::LogRequestSampleCallback(
-            metadata,
-            responseRpcError,
-            timestamps,
-            reqContext_,
-            observer,
-            chainedCallback));
+            metadata, responseRpcError, timestamps, *this, chainedCallback));
   }
   return cbPtr;
 }
@@ -267,7 +296,8 @@ void ThriftRequestCore::sendReply(
     if (!isOneway()) {
       auto metadata = makeResponseRpcMetadata(
           header_.extractAllWriteHeaders(),
-          header_.extractProxiedPayloadMetadata());
+          header_.extractProxiedPayloadMetadata(),
+          header_.getChecksum());
       if (crc32c) {
         metadata.crc32c_ref() = *crc32c;
       }
@@ -301,7 +331,8 @@ void ThriftRequestCore::sendException(
     if (!isOneway()) {
       auto metadata = makeResponseRpcMetadata(
           header_.extractAllWriteHeaders(),
-          header_.extractProxiedPayloadMetadata());
+          header_.extractProxiedPayloadMetadata(),
+          std::nullopt /*checksum*/);
       if (checkResponseSize(*response.buffer())) {
         sendThriftException(
             std::move(metadata),
@@ -322,7 +353,8 @@ void ThriftRequestCore::sendException(
 
 ResponseRpcMetadata ThriftRequestCore::makeResponseRpcMetadata(
     transport::THeader::StringToStringMap&& writeHeaders,
-    std::optional<ProxiedPayloadMetadata> proxiedPayloadMetadata) {
+    std::optional<ProxiedPayloadMetadata> proxiedPayloadMetadata,
+    std::optional<Checksum> checksum) {
   ResponseRpcMetadata metadata;
 
   if (auto tfmr = detail::makeThriftFrameworkMetadataOnResponse(writeHeaders)) {
@@ -347,10 +379,13 @@ ResponseRpcMetadata ThriftRequestCore::makeResponseRpcMetadata(
     queueMetadata.queueingTimeMs_ref() = -1;
   }
 
-  queueMetadata.queueTimeoutMs_ref() = queueTimeoutUsed_.count();
+  queueMetadata.queueTimeoutMs_ref() = queueTimeout_.value.count();
+
+  if (checksum) {
+    metadata.checksum() = *checksum;
+  }
 
   return metadata;
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

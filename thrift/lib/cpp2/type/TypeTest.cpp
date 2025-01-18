@@ -16,16 +16,11 @@
 
 #include <thrift/lib/cpp2/type/Type.h>
 
-#include <list>
 #include <stdexcept>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 #include <folly/portability/GTest.h>
 #include <thrift/lib/cpp2/type/BaseType.h>
-#include <thrift/lib/cpp2/type/ThriftType.h>
-#include <thrift/lib/cpp2/type/Traits.h>
+#include <thrift/lib/cpp2/type/UniversalName.h>
 
 namespace apache::thrift::type {
 namespace {
@@ -42,7 +37,6 @@ TypeTestCase test(Args&&... args) {
 
 std::vector<TypeTestCase> getUniqueNonContainerTypes() {
   return {
-      test<void_t>(),
       test<bool_t>(),
       test<byte_t>(),
       test<i16_t>(),
@@ -168,5 +162,174 @@ TEST(TypeTest, NameValidation) {
   EXPECT_THROW(Type::create<exception_c>("BadName"), std::invalid_argument);
 }
 
+TEST(TypeTest, isFull) {
+  Type type;
+  // empty type
+  EXPECT_FALSE(type.isFull());
+
+  auto& t = type.toThrift();
+  t.name()->set_listType();
+
+  // only checks fullness of params, if present
+  EXPECT_TRUE(type.isFull());
+  // ensures that appropriate number of params are present
+  EXPECT_FALSE(type.isValid());
+
+  TypeStruct params;
+  t.params().value().push_back(params);
+
+  // invalid params
+  EXPECT_FALSE(type.isFull());
+  EXPECT_FALSE(type.isValid());
+
+  t.params()[0].name()->set_boolType();
+  // valid params
+  EXPECT_TRUE(type.isFull());
+  EXPECT_TRUE(type.isValid());
+
+  params.name()->set_i32Type();
+  t.params().value().push_back(params);
+  // only checks fullness of params, if present
+  EXPECT_TRUE(type.isFull());
+  // ensures that appropriate number of params are present
+  // list only needs one param
+  EXPECT_FALSE(type.isValid());
+
+  t.params()->clear();
+  TypeUri uri;
+  uri.set_uri("BadName");
+  t.name()->set_structType() = uri;
+  // only checks if uri is present
+  EXPECT_TRUE(type.isFull());
+  // ensures that uri is valid
+  EXPECT_FALSE(type.isValid());
+
+  type = Type::create<struct_c>("domain.com/my/package/MyStruct");
+  // ensures that uri is valid
+  EXPECT_TRUE(type.isValid());
+}
+
+TEST(TypeTest, IdenticalTypeStructBasic) {
+  auto unique = getUniqueTypes();
+  EXPECT_FALSE(unique.empty());
+  for (size_t i = 0; i < unique.size(); ++i) {
+    for (size_t j = 0; j < unique.size(); ++j) {
+      if (i == j) {
+        EXPECT_TRUE(identicalTypeStruct(
+            unique[i].type.toThrift(), unique[j].type.toThrift()));
+      } else {
+        EXPECT_FALSE(identicalTypeStruct(
+            unique[i].type.toThrift(), unique[j].type.toThrift()));
+      }
+    }
+  }
+}
+
+TEST(TypeTest, IdenticalTypeStructHash) {
+  auto structUri = "domain.com/my/package/MyStruct";
+  auto structType = Type::create<struct_c>(structUri).toThrift();
+  // TODO(dokwon): Consider adding Type::create with hash
+  TypeStruct structTypeWithHash;
+  structTypeWithHash.name()
+      ->structType_ref()
+      .ensure()
+      .typeHashPrefixSha2_256_ref() =
+      getUniversalHashPrefix(
+          getUniversalHash(type::UniversalHashAlgorithm::Sha2_256, structUri),
+          kDefaultTypeHashBytes)
+          .toString();
+  EXPECT_TRUE(identicalTypeStruct(structType, structTypeWithHash));
+  // list<struct>
+  {
+    TypeStruct type;
+    type.name()->listType_ref().ensure();
+    type.params()->push_back(structType);
+    TypeStruct typeWithHash;
+    typeWithHash.name()->listType_ref().ensure();
+    typeWithHash.params()->push_back(structTypeWithHash);
+    EXPECT_TRUE(identicalTypeStruct(type, typeWithHash));
+  }
+  // set<struct>
+  {
+    TypeStruct type;
+    type.name()->setType_ref().ensure();
+    type.params()->push_back(structType);
+    TypeStruct typeWithHash;
+    typeWithHash.name()->setType_ref().ensure();
+    typeWithHash.params()->push_back(structTypeWithHash);
+    EXPECT_TRUE(identicalTypeStruct(type, typeWithHash));
+  }
+  // map<struct, int>
+  {
+    TypeStruct type;
+    type.name()->mapType_ref().ensure();
+    type.params()->push_back(structType);
+    type.params()->push_back(Type::create<type::i32_t>().toThrift());
+    TypeStruct typeWithHash;
+    typeWithHash.name()->mapType_ref().ensure();
+    typeWithHash.params()->push_back(structTypeWithHash);
+    typeWithHash.params()->push_back(Type::create<type::i32_t>().toThrift());
+    EXPECT_TRUE(identicalTypeStruct(type, typeWithHash));
+  }
+  // map<int, struct>
+  {
+    TypeStruct type;
+    type.name()->mapType_ref().ensure();
+    type.params()->push_back(Type::create<type::i32_t>().toThrift());
+    type.params()->push_back(structType);
+    TypeStruct typeWithHash;
+    typeWithHash.name()->mapType_ref().ensure();
+    typeWithHash.params()->push_back(Type::create<type::i32_t>().toThrift());
+    typeWithHash.params()->push_back(structTypeWithHash);
+    EXPECT_TRUE(identicalTypeStruct(type, typeWithHash));
+  }
+  // map<struct, struct>
+  {
+    TypeStruct type;
+    type.name()->mapType_ref().ensure();
+    type.params()->push_back(structType);
+    type.params()->push_back(structType);
+    TypeStruct typeWithHash;
+    typeWithHash.name()->mapType_ref().ensure();
+    typeWithHash.params()->push_back(structTypeWithHash);
+    typeWithHash.params()->push_back(structTypeWithHash);
+    EXPECT_TRUE(identicalTypeStruct(type, typeWithHash));
+  }
+}
+
+TEST(TypeTest, DebugString) {
+  TypeStruct scopedStruct;
+  scopedStruct.name()->structType_ref().emplace().scopedName_ref() =
+      "foo.bar.Baz";
+
+  TypeStruct hashedUnion;
+  hashedUnion.name()->unionType_ref().emplace().typeHashPrefixSha2_256_ref() =
+      "\x00\x01\x02\x03";
+
+  TypeStruct keyedEnum;
+  keyedEnum.name()->enumType_ref().emplace().definitionKey_ref() = "abcde";
+
+  auto testCases = std::list<std::pair<Type, std::string>>{
+      {Type::get<bool_t>(), "bool"},
+      {Type::get<string_t>(), "string"},
+      {Type::get<list<i64_t>>(), "list<i64>"},
+      {Type::get<map<i32_t, double_t>>(), "map<i32, double>"},
+      {Type::create<struct_c>("meta.com/foo/Bar"), "struct<Bar>"},
+      {Type(scopedStruct), "struct<Baz>"},
+      {Type(hashedUnion), "union<?>"},
+      {Type(keyedEnum), "enum<?>"},
+      {Type(
+           map_c{},
+           Type::get<i16_t>(),
+           Type::create<struct_c>("meta.com/foo/Bar")),
+       "map<i16, struct<Bar>>"},
+  };
+
+  for (const auto& [type, expected] : testCases) {
+    EXPECT_EQ(type.debugString(), expected);
+  }
+
+  EXPECT_THROW(Type().debugString(), std::runtime_error);
+}
 } // namespace
 } // namespace apache::thrift::type

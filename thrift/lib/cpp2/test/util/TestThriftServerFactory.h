@@ -22,20 +22,19 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/test/util/TestServerFactory.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 template <typename Interface>
 struct TestThriftServerFactory : public TestServerFactory {
  public:
-  std::shared_ptr<BaseThriftServer> create() override {
+  std::shared_ptr<ThriftServer> create() override {
     auto server = std::make_shared<apache::thrift::ThriftServer>();
     server->setNumIOWorkerThreads(1);
     if (useSimpleThreadManager_) {
       auto threadFactory =
           std::make_shared<apache::thrift::concurrency::PosixThreadFactory>();
       server->setThreadManagerType(
-          apache::thrift::BaseThriftServer::ThreadManagerType::SIMPLE);
+          apache::thrift::ThriftServer::ThreadManagerType::SIMPLE);
       server->setNumCPUWorkerThreads(1);
       server->setThreadFactory(threadFactory);
     } else if (setupFunction_) {
@@ -62,7 +61,7 @@ struct TestThriftServerFactory : public TestServerFactory {
   }
 
   TestThriftServerFactory& setServerSetupFunction(
-      std::function<void(BaseThriftServer&)> setupFunction) override {
+      std::function<void(ThriftServer&)> setupFunction) override {
     setupFunction_ = setupFunction;
     return *this;
   }
@@ -74,9 +73,8 @@ struct TestThriftServerFactory : public TestServerFactory {
 
  private:
   bool useSimpleThreadManager_{true};
-  std::function<void(BaseThriftServer&)> setupFunction_;
+  std::function<void(ThriftServer&)> setupFunction_;
   uint32_t idleTimeoutMs_{0};
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

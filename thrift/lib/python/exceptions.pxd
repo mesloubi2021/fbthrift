@@ -17,14 +17,19 @@ from folly cimport cFollyExceptionWrapper, iobuf
 from libc.stdint cimport int16_t, uint32_t
 from libcpp.memory cimport unique_ptr
 from libcpp.string cimport string
-from thrift.py3.common cimport RpcOptions
+from thrift.python.common cimport RpcOptions
 
-from thrift.python.serializer cimport Protocol
+from thrift.python.protocol cimport Protocol
+
+
+cdef extern from * namespace "std":
+    cdef cppclass cException "std::exception":
+        const char* what() nogil
 
 
 cdef extern from "thrift/lib/cpp/Thrift.h" namespace "apache::thrift":
-    cdef cppclass cTException "apache::thrift::TException":
-        const char* what() nogil
+    cdef cppclass cTException "apache::thrift::TException"(cException):
+        pass
 
     cdef cppclass cTLibraryException "apache::thrift::TLibraryException"(cTException):
         pass
@@ -32,59 +37,75 @@ cdef extern from "thrift/lib/cpp/Thrift.h" namespace "apache::thrift":
 
 cdef extern from "thrift/lib/cpp/TApplicationException.h" namespace "apache::thrift":
 
-    cpdef enum class ApplicationErrorType "apache::thrift::TApplicationException::TApplicationExceptionType":
-        UNKNOWN "apache::thrift::TApplicationException::UNKNOWN"
-        UNKNOWN_METHOD "apache::thrift::TApplicationException::UNKNOWN_METHOD"
-        INVALID_MESSAGE_TYPE "apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE"
-        WRONG_METHOD_NAME "apache::thrift::TApplicationException::WRONG_METHOD_NAME"
-        BAD_SEQUENCE_ID "apache::thrift::TApplicationException::BAD_SEQUENCE_ID"
-        MISSING_RESULT "apache::thrift::TApplicationException::MISSING_RESULT"
-        INTERNAL_ERROR "apache::thrift::TApplicationException::INTERNAL_ERROR"
-        PROTOCOL_ERROR "apache::thrift::TApplicationException::PROTOCOL_ERROR"
-        INVALID_TRANSFORM "apache::thrift::TApplicationException::INVALID_TRANSFORM"
-        INVALID_PROTOCOL "apache::thrift::TApplicationException::INVALID_PROTOCOL"
-        UNSUPPORTED_CLIENT_TYPE "apache::thrift::TApplicationException::UNSUPPORTED_CLIENT_TYPE"
-        LOADSHEDDING "apache::thrift::TApplicationException::LOADSHEDDING"
-        TIMEOUT "apache::thrift::TApplicationException::TIMEOUT"
-        INJECTED_FAILURE "apache::thrift::TApplicationException::INJECTED_FAILURE"
+    enum cTApplicationExceptionType "apache::thrift::TApplicationException::TApplicationExceptionType":
+        cTApplicationExceptionType__UNKNOWN "apache::thrift::TApplicationException::UNKNOWN"
+        cTApplicationExceptionType__UNKNOWN_METHOD "apache::thrift::TApplicationException::UNKNOWN_METHOD"
+        cTApplicationExceptionType__INVALID_MESSAGE_TYPE "apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE"
+        cTApplicationExceptionType__WRONG_METHOD_NAME "apache::thrift::TApplicationException::WRONG_METHOD_NAME"
+        cTApplicationExceptionType__BAD_SEQUENCE_ID "apache::thrift::TApplicationException::BAD_SEQUENCE_ID"
+        cTApplicationExceptionType__MISSING_RESULT "apache::thrift::TApplicationException::MISSING_RESULT"
+        cTApplicationExceptionType__INTERNAL_ERROR "apache::thrift::TApplicationException::INTERNAL_ERROR"
+        cTApplicationExceptionType__PROTOCOL_ERROR "apache::thrift::TApplicationException::PROTOCOL_ERROR"
+        cTApplicationExceptionType__INVALID_TRANSFORM "apache::thrift::TApplicationException::INVALID_TRANSFORM"
+        cTApplicationExceptionType__INVALID_PROTOCOL "apache::thrift::TApplicationException::INVALID_PROTOCOL"
+        cTApplicationExceptionType__UNSUPPORTED_CLIENT_TYPE "apache::thrift::TApplicationException::UNSUPPORTED_CLIENT_TYPE"
+        cTApplicationExceptionType__LOADSHEDDING "apache::thrift::TApplicationException::LOADSHEDDING"
+        cTApplicationExceptionType__TIMEOUT "apache::thrift::TApplicationException::TIMEOUT"
+        cTApplicationExceptionType__INJECTED_FAILURE "apache::thrift::TApplicationException::INJECTED_FAILURE"
 
     cdef cppclass cTApplicationException "apache::thrift::TApplicationException"(cTException):
-        cTApplicationException(ApplicationErrorType type, const string& message) nogil except +
-        ApplicationErrorType getType() nogil
+        cTApplicationException(cTApplicationExceptionType type, const string& message) except + nogil
+        cTApplicationExceptionType getType() noexcept nogil
 
 
 cdef extern from "thrift/lib/cpp/transport/TTransportException.h" namespace "apache::thrift::transport":
 
-    cpdef enum class TransportErrorType "apache::thrift::transport::TTransportException::TTransportExceptionType":
-        UNKNOWN "apache::thrift::transport::TTransportException::UNKNOWN"
-        NOT_OPEN "apache::thrift::transport::TTransportException::NOT_OPEN"
-        ALREADY_OPEN "apache::thrift::transport::TTransportException::ALREADY_OPEN"
-        TIMED_OUT "apache::thrift::transport::TTransportException::TIMED_OUT"
-        END_OF_FILE "apache::thrift::transport::TTransportException::END_OF_FILE"
-        INTERRUPTED "apache::thrift::transport::TTransportException::INTERRUPTED"
-        BAD_ARGS "apache::thrift::transport::TTransportException::BAD_ARGS"
-        CORRUPTED_DATA "apache::thrift::transport::TTransportException::CORRUPTED_DATA"
-        INTERNAL_ERROR "apache::thrift::transport::TTransportException::INTERNAL_ERROR"
-        NOT_SUPPORTED "apache::thrift::transport::TTransportException::NOT_SUPPORTED"
-        INVALID_STATE "apache::thrift::transport::TTransportException::INVALID_STATE"
-        INVALID_FRAME_SIZE "apache::thrift::transport::TTransportException::INVALID_FRAME_SIZE"
-        SSL_ERROR "apache::thrift::transport::TTransportException::SSL_ERROR"
-        COULD_NOT_BIND "apache::thrift::transport::TTransportException::COULD_NOT_BIND"
-        NETWORK_ERROR "apache::thrift::transport::TTransportException::NETWORK_ERROR"
+    enum cTTransportExceptionType "apache::thrift::transport::TTransportException::TTransportExceptionType":
+        cTTransportExceptionType__UNKNOWN "apache::thrift::transport::TTransportException::UNKNOWN"
+        cTTransportExceptionType__NOT_OPEN "apache::thrift::transport::TTransportException::NOT_OPEN"
+        cTTransportExceptionType__ALREADY_OPEN "apache::thrift::transport::TTransportException::ALREADY_OPEN"
+        cTTransportExceptionType__TIMED_OUT "apache::thrift::transport::TTransportException::TIMED_OUT"
+        cTTransportExceptionType__END_OF_FILE "apache::thrift::transport::TTransportException::END_OF_FILE"
+        cTTransportExceptionType__INTERRUPTED "apache::thrift::transport::TTransportException::INTERRUPTED"
+        cTTransportExceptionType__BAD_ARGS "apache::thrift::transport::TTransportException::BAD_ARGS"
+        cTTransportExceptionType__CORRUPTED_DATA "apache::thrift::transport::TTransportException::CORRUPTED_DATA"
+        cTTransportExceptionType__INTERNAL_ERROR "apache::thrift::transport::TTransportException::INTERNAL_ERROR"
+        cTTransportExceptionType__NOT_SUPPORTED "apache::thrift::transport::TTransportException::NOT_SUPPORTED"
+        cTTransportExceptionType__INVALID_STATE "apache::thrift::transport::TTransportException::INVALID_STATE"
+        cTTransportExceptionType__INVALID_FRAME_SIZE "apache::thrift::transport::TTransportException::INVALID_FRAME_SIZE"
+        cTTransportExceptionType__SSL_ERROR "apache::thrift::transport::TTransportException::SSL_ERROR"
+        cTTransportExceptionType__COULD_NOT_BIND "apache::thrift::transport::TTransportException::COULD_NOT_BIND"
+        cTTransportExceptionType__NETWORK_ERROR "apache::thrift::transport::TTransportException::NETWORK_ERROR"
+
+    enum cTTransportExceptionOptions "apache::thrift::transport::TTransportException::Options":
+        cTTransportExceptionOptions__CHANNEL_IS_VALID "apache::thrift::transport::TTransportException::CHANNEL_IS_VALID"
 
     cdef cppclass cTTransportException "apache::thrift::transport::TTransportException"(cTLibraryException):
-        int getOptions()
-        TransportErrorType getType()
-        int getErrno()
+        int getOptions() noexcept
+        cTTransportExceptionType getType() noexcept
+        int getErrno() noexcept
+
+cdef extern from "thrift/lib/cpp/protocol/TProtocolException.h":
+    enum cTProtocolExceptionType "apache::thrift::protocol::TProtocolException::TProtocolExceptionType":
+        cTProtocolExceptionType__UNKNOWN "apache::thrift::protocol::TProtocolException::UNKNOWN"
+        cTProtocolExceptionType__INVALID_DATA "apache::thrift::protocol::TProtocolException::INVALID_DATA"
+        cTProtocolExceptionType__NEGATIVE_SIZE "apache::thrift::protocol::TProtocolException::NEGATIVE_SIZE"
+        cTProtocolExceptionType__SIZE_LIMIT "apache::thrift::protocol::TProtocolException::SIZE_LIMIT"
+        cTProtocolExceptionType__BAD_VERSION "apache::thrift::protocol::TProtocolException::BAD_VERSION"
+        cTProtocolExceptionType__NOT_IMPLEMENTED "apache::thrift::protocol::TProtocolException::NOT_IMPLEMENTED"
+        cTProtocolExceptionType__MISSING_REQUIRED_FIELD "apache::thrift::protocol::TProtocolException::MISSING_REQUIRED_FIELD"
+
+    cdef cppclass cTProtocolException "apache::thrift::protocol::TProtocolException"(cTLibraryException):
+        cTProtocolExceptionType getType()
 
 
 cdef class Error(Exception):
     """base class for all Thrift exceptions"""
     pass
 
+
 cdef class LibraryError(Error):
     pass
-
 
 cdef class ApplicationError(Error):
     pass
@@ -95,7 +116,8 @@ cdef ApplicationError create_ApplicationError(const cTApplicationException* ex)
 cdef class TransportError(LibraryError):
     pass
 
-cdef TransportError create_TransportError(const cTTransportException* ex)
+cdef class ProtocolError(LibraryError):
+    pass
 
 
 cdef object create_py_exception(const cFollyExceptionWrapper& ex, RpcOptions options)

@@ -20,14 +20,13 @@
 
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class MockCallback : public RequestCallback {
  public:
   MockCallback(bool clientError, bool serverError)
       : clientError_(clientError), serverError_(serverError) {}
-  virtual ~MockCallback() { EXPECT_TRUE(callbackReceived_); }
+  ~MockCallback() override { EXPECT_TRUE(callbackReceived_); }
 
   void requestSent() override {}
 
@@ -57,5 +56,4 @@ class MockCallback : public RequestCallback {
   bool serverError_;
   bool callbackReceived_{false};
 };
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -24,9 +24,7 @@
 #include <thrift/compiler/parse/lexer.h>
 #include <thrift/compiler/parse/parser.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 parser_actions::~parser_actions() = default;
 
@@ -196,12 +194,22 @@ class parser {
     assert(token_.kind == tok::kw_package);
     auto range = range_tracker(loc, end_);
     consume_token();
-    if (token_.kind != tok::string_literal) {
-      report_expected("string literal");
+    std::string name;
+    switch (token_.kind) {
+      case tok::string_literal:
+        name = lex_string_literal(token_);
+        consume_token();
+        if (name.empty()) {
+          report_error("package name cannot be empty");
+        }
+        try_consume_token(';');
+        break;
+      case tok::semi:
+        consume_token();
+        break;
+      default:
+        report_expected("string literal");
     }
-    auto name = lex_string_literal(token_);
-    consume_token();
-    try_consume_token(';');
     actions_.on_package(range, std::move(attrs), name);
   }
 
@@ -279,13 +287,13 @@ class parser {
         : nullptr;
   }
 
-  boost::optional<comment> try_parse_inline_doc() {
+  std::optional<comment> try_parse_inline_doc() {
     return token_.kind == tok::inline_doc
         ? actions_.on_inline_doc(token_.range, consume_token().string_value())
-        : boost::optional<comment>();
+        : std::optional<comment>();
   }
 
-  // structured_annotation: "@" (struct_literal | struct_literal_type)
+  // structured_annotation: "@" (identifier | struct_initializer)
   std::unique_ptr<t_const> parse_structured_annotation() {
     assert(token_.kind == '@');
     auto range = track_range();
@@ -294,7 +302,7 @@ class parser {
     if (token_.kind != '{') {
       return actions_.on_structured_annotation(range, name.str);
     }
-    auto value = parse_struct_literal_body(name);
+    auto value = parse_struct_initializer_body(name);
     return actions_.on_structured_annotation(range, std::move(value));
   }
 
@@ -361,7 +369,7 @@ class parser {
     auto range = range_tracker(loc, end_);
     expect_and_consume(tok::kw_service);
     auto name = parse_identifier();
-    auto base = identifier();
+    identifier base;
     if (try_consume_token(tok::kw_extends)) {
       base = parse_identifier();
     }
@@ -483,7 +491,8 @@ class parser {
     switch (token_.kind) {
       case tok::kw_void:
         is_void = true;
-        ret.type = &t_base_type::t_void();
+        ret.type =
+            actions_.on_type(token_.range, t_primitive_type::t_void(), {});
         consume_token();
         break;
       case tok::kw_sink:
@@ -493,7 +502,7 @@ class parser {
         ret.sink_or_stream = parse_stream();
         return ret;
       default:
-        ret.type = parse_type().get_type();
+        ret.type = parse_type();
         break;
     }
     if (!try_consume_token(',')) {
@@ -663,13 +672,13 @@ class parser {
   //
   // field_id: integer
   // field_qualifier: "required" | "optional"
-  // default_value: "=" const_value
+  // default_value: "=" initializer
   std::unique_ptr<t_field> parse_field(field_kind kind) {
     auto range = track_range();
     auto attrs = parse_attributes();
 
     // Parse the field id.
-    auto field_id = boost::optional<int64_t>();
+    auto field_id = std::optional<int64_t>();
     if (auto integer = try_parse_integer()) {
       field_id = *integer;
       expect_and_consume(':');
@@ -691,13 +700,13 @@ class parser {
       qual = t_field_qualifier::none;
     }
 
-    auto type = parse_type();
-    auto name = parse_identifier();
+    t_type_ref type = parse_type();
+    const identifier name = parse_identifier();
 
     // Parse the default value.
-    auto value = std::unique_ptr<t_const_value>();
+    std::unique_ptr<t_const_value> value;
     if (try_consume_token('=')) {
-      value = parse_const_value();
+      value = parse_initializer();
     }
 
     try_parse_deprecated_annotations(attrs);
@@ -740,7 +749,7 @@ class parser {
   // the token as return_clause.
   t_type_ref parse_type() {
     auto range = track_range();
-    if (const t_base_type* type = try_parse_base_type()) {
+    if (const t_primitive_type* type = try_parse_base_type()) {
       return actions_.on_type(range, *type, try_parse_deprecated_annotations());
     }
     switch (token_.kind) {
@@ -778,6 +787,10 @@ class parser {
             std::move(value_type),
             try_parse_deprecated_annotations());
       }
+      case tok::kw_void:
+        report_error("`void` cannot be used as a data type");
+        consume_token();
+        return t_type_ref::from_ptr(&t_primitive_type::t_void(), range);
       default:
         report_expected("type");
     }
@@ -785,27 +798,27 @@ class parser {
 
   // base_type: "bool" | "byte" | "i16" | "i32" | "i64" | "float" | "double" |
   //            "string" | "binary"
-  const t_base_type* try_parse_base_type() {
-    auto get_base_type = [this]() -> const t_base_type* {
+  const t_primitive_type* try_parse_base_type() {
+    auto get_base_type = [this]() -> const t_primitive_type* {
       switch (token_.kind) {
         case tok::kw_bool:
-          return &t_base_type::t_bool();
+          return &t_primitive_type::t_bool();
         case tok::kw_byte:
-          return &t_base_type::t_byte();
+          return &t_primitive_type::t_byte();
         case tok::kw_i16:
-          return &t_base_type::t_i16();
+          return &t_primitive_type::t_i16();
         case tok::kw_i32:
-          return &t_base_type::t_i32();
+          return &t_primitive_type::t_i32();
         case tok::kw_i64:
-          return &t_base_type::t_i64();
+          return &t_primitive_type::t_i64();
         case tok::kw_float:
-          return &t_base_type::t_float();
+          return &t_primitive_type::t_float();
         case tok::kw_double:
-          return &t_base_type::t_double();
+          return &t_primitive_type::t_double();
         case tok::kw_string:
-          return &t_base_type::t_string();
+          return &t_primitive_type::t_string();
         case tok::kw_binary:
-          return &t_base_type::t_binary();
+          return &t_primitive_type::t_binary();
         default:
           return nullptr;
       }
@@ -835,24 +848,28 @@ class parser {
 
   // enum_value:
   //   attributes
-  //   identifier ["=" integer] [deprecated_annotations] [comma_or_semicolon]
-  //   [inline_doc]
+  //   identifier ["=" integer] [deprecated_annotations] [","] [inline_doc]
   std::unique_ptr<t_enum_value> parse_enum_value() {
     auto range = track_range();
     auto attrs = parse_attributes();
     auto name = parse_identifier();
     auto value = try_consume_token('=')
-        ? boost::optional<int64_t>(parse_integer())
-        : boost::none;
+        ? std::optional<int64_t>(parse_integer())
+        : std::nullopt;
     try_parse_deprecated_annotations(attrs);
-    try_parse_comma_or_semicolon();
+    if (token_.kind == ',') {
+      consume_token();
+    } else if (token_.kind == ';') {
+      diags_.warning(token_.range.begin, "unexpected ';'");
+      consume_token();
+    }
     auto doc = try_parse_inline_doc();
     return actions_.on_enum_value(
         range, std::move(attrs), name, value, std::move(doc));
   }
 
   // const:
-  //   attributes "const" type identifier "=" const_value
+  //   attributes "const" type identifier "=" initializer
   //   [deprecated_annotations] [";"]
   void parse_const(source_location loc, std::unique_ptr<attributes> attrs) {
     auto range = range_tracker(loc, end_);
@@ -860,17 +877,24 @@ class parser {
     auto type = parse_type();
     auto name = parse_identifier();
     expect_and_consume('=');
-    auto value = parse_const_value();
+    auto value = parse_initializer();
     try_parse_deprecated_annotations(attrs);
     try_consume_token(';');
     actions_.on_const(range, std::move(attrs), type, name, std::move(value));
   }
 
-  // const_value:
-  //   bool_literal | integer | float | string_literal |
-  //   list_literal | map_literal | struct_literal | identifier
-  std::unique_ptr<t_const_value> parse_const_value() {
-    auto range = track_range();
+  // initializer:
+  //   integer | float | string_literal | bool_literal | identifier |
+  //   list_initializer | map_initializer | struct_initializer
+  std::unique_ptr<t_const_value> parse_initializer() {
+    range_tracker range = track_range();
+    std::unique_ptr<t_const_value> initializer_const_value =
+        parse_initializer_const_value();
+    initializer_const_value->set_src_range(range);
+    return initializer_const_value;
+  }
+
+  std::unique_ptr<t_const_value> parse_initializer_const_value() {
     auto s = sign::plus;
     switch (token_.kind) {
       case tok::bool_literal:
@@ -881,25 +905,25 @@ class parser {
       case to_tok('+'):
         consume_token();
         if (token_.kind == tok::int_literal) {
-          return actions_.on_integer(range, parse_integer(s));
+          return actions_.on_integer(parse_integer(s));
         } else if (token_.kind == tok::float_literal) {
           return actions_.on_float(parse_float(s));
         }
         report_expected("number");
         break;
       case tok::int_literal:
-        return actions_.on_integer(range, parse_integer());
+        return actions_.on_integer(parse_integer());
       case tok::float_literal:
         return actions_.on_float(parse_float());
       case tok::string_literal:
         return actions_.on_string_literal(lex_string_literal(consume_token()));
       case to_tok('['):
-        return parse_list_literal();
+        return parse_list_initializer();
       case to_tok('{'):
-        return parse_map_literal();
+        return parse_map_initializer();
       default:
         if (auto id = try_parse_identifier()) {
-          return token_.kind == '{' ? parse_struct_literal_body(*id)
+          return token_.kind == '{' ? parse_struct_initializer_body(*id)
                                     : actions_.on_const_ref(*id);
         }
         break;
@@ -907,15 +931,15 @@ class parser {
     report_expected("constant");
   }
 
-  // list_literal: "[" list_literal_contents? "]"
+  // list_initializer: "[" list_initializer_contents? "]"
   //
-  // list_literal_contents:
-  //   (const_value comma_or_semicolon)* const_value comma_or_semicolon?
-  std::unique_ptr<t_const_value> parse_list_literal() {
+  // list_initializer_contents:
+  //   (initializer comma_or_semicolon)* initializer comma_or_semicolon?
+  std::unique_ptr<t_const_value> parse_list_initializer() {
     expect_and_consume('[');
-    auto list = actions_.on_list_literal();
+    auto list = actions_.on_list_initializer();
     while (token_.kind != ']') {
-      list->add_list(parse_const_value());
+      list->add_list(parse_initializer());
       if (!try_parse_comma_or_semicolon()) {
         break;
       }
@@ -924,20 +948,17 @@ class parser {
     return list;
   }
 
-  // map_literal: "{" map_literal_contents? "}"
-  //
-  // map_literal_contents:
-  //   (const_value ":" const_value comma_or_semicolon)
-  //    const_value ":" const_value comma_or_semicolon?
-  std::unique_ptr<t_const_value> parse_map_literal() {
+  // map_initializer: "{" [(map_entry ",")* map_entry [","]] "}"
+  // map_entry:       initializer ":" initializer
+  std::unique_ptr<t_const_value> parse_map_initializer() {
     expect_and_consume('{');
-    auto map = actions_.on_map_literal();
+    auto map = actions_.on_map_initializer();
     while (token_.kind != '}') {
-      auto key = parse_const_value();
+      auto key = parse_initializer();
       expect_and_consume(':');
-      auto value = parse_const_value();
+      auto value = parse_initializer();
       map->add_map(std::move(key), std::move(value));
-      if (!try_parse_comma_or_semicolon()) {
+      if (!try_consume_token(',')) {
         break;
       }
     }
@@ -945,20 +966,20 @@ class parser {
     return map;
   }
 
-  // struct_literal: identifier "{" struct_literal_contents? "}"
+  // struct_initializer: identifier "{" struct_initializer_contents? "}"
   //
-  // struct_literal_contents:
-  //   (identifier "=" const_value comma_or_semicolon)*
-  //    identifier "=" const_value comma_or_semicolon?
-  std::unique_ptr<t_const_value> parse_struct_literal_body(identifier id) {
+  // struct_initializer_contents:
+  //   (identifier "=" initializer comma_or_semicolon)*
+  //    identifier "=" initializer comma_or_semicolon?
+  std::unique_ptr<t_const_value> parse_struct_initializer_body(identifier id) {
     auto id_end = end_;
     expect_and_consume('{');
-    auto map = actions_.on_struct_literal({id.loc, id_end}, id.str);
+    auto map = actions_.on_struct_initializer({id.loc, id_end}, id.str);
     while (token_.kind != '}') {
       auto key =
           actions_.on_string_literal(fmt::to_string(parse_identifier().str));
       expect_and_consume('=');
-      auto value = parse_const_value();
+      auto value = parse_initializer();
       map->add_map(std::move(key), std::move(value));
       if (!try_parse_comma_or_semicolon()) {
         break;
@@ -969,7 +990,7 @@ class parser {
   }
 
   // integer: ["+" | "-"] int_literal
-  boost::optional<int64_t> try_parse_integer(sign s = sign::plus) {
+  std::optional<int64_t> try_parse_integer(sign s = sign::plus) {
     auto range = track_range();
     switch (token_.kind) {
       case to_tok('-'):
@@ -1032,8 +1053,8 @@ class parser {
   //   | "permanent"
   //   | "server"
   //   | "client"
-  boost::optional<identifier> try_parse_identifier() {
-    auto range = track_range();
+  std::optional<identifier> try_parse_identifier() {
+    range_tracker range = track_range();
     switch (token_.kind) {
       case tok::identifier:
         return identifier{consume_token().string_value(), range};
@@ -1056,7 +1077,7 @@ class parser {
   }
 
   identifier parse_identifier() {
-    if (auto id = try_parse_identifier()) {
+    if (std::optional<identifier> id = try_parse_identifier()) {
       return *id;
     }
     report_expected("identifier");
@@ -1080,6 +1101,4 @@ bool parse(lexer& lex, parser_actions& actions, diagnostics_engine& diags) {
   return parser(lex, actions, diags).parse();
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

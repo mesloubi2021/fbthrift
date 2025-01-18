@@ -15,6 +15,7 @@
       "definition_html": "static bool apache::thrift::op::detail::NumberOp&lt; Tag &gt;::add",
       "argsstring_html": "(T &amp;self, const T &amp;val)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::NumberOp::add",
       "param": [
         {
           "type_html": "<code>T</code> &amp;",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "50",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "50",
         "bodyend": "50"
@@ -58,6 +59,7 @@
       "definition_html": "static bool apache::thrift::op::detail::NumberOp&lt; Tag &gt;::add",
       "argsstring_html": "(void *s, const Dyn &amp;v)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::NumberOp::add",
       "param": [
         {
           "type_html": "void *",
@@ -71,7 +73,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "51",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "51",
         "bodyend": "51"
@@ -96,5 +98,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/NumberOp/add",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/NumberOp/add"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/NumberOp/add",
+  "parent_links": [
+    {
+      "text_html": "NumberOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/NumberOp"
+    }
+  ]
 }

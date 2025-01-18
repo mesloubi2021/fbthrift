@@ -23,13 +23,12 @@
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using namespace testutil::testservice;
 
 CoreTestFixture::CoreTestFixture() : processor_(server_) {
-  server_.setThreadManagerType(BaseThriftServer::ThreadManagerType::SIMPLE);
+  server_.setThreadManagerType(ThriftServer::ThreadManagerType::SIMPLE);
   server_.setInterface(service_);
   server_.setup();
   channel_ = std::make_shared<FakeChannel>(&eventBase_);
@@ -42,7 +41,13 @@ CoreTestFixture::~CoreTestFixture() {
 
 std::unique_ptr<Cpp2ConnContext> CoreTestFixture::newCpp2ConnContext() {
   return std::make_unique<Cpp2ConnContext>(
-      nullptr, nullptr, nullptr, nullptr, nullptr, worker_.get());
+      nullptr,
+      nullptr,
+      nullptr,
+      nullptr,
+      nullptr,
+      worker_.get(),
+      worker_->getServer()->getServiceInterceptors().size());
 }
 
 void CoreTestFixture::runInEventBaseThread(folly::Function<void()> test) {
@@ -117,5 +122,4 @@ bool CoreTestFixture::deserializeException(
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

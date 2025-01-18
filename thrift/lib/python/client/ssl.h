@@ -16,19 +16,13 @@
 
 #pragma once
 
+#include <folly/io/async/AsyncSSLSocket.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/AsyncSocketException.h>
 #include <folly/io/async/SSLContext.h>
-#include <thrift/lib/cpp/async/TAsyncSSLSocket.h>
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 
-namespace thrift {
-namespace python {
-namespace client {
-
-using RequestChannel_ptr = std::unique_ptr<
-    apache::thrift::RequestChannel,
-    folly::DelayedDestruction::Destructor>;
+namespace thrift::python::client {
 
 class ConnectHandler : public folly::AsyncSocket::ConnectCallback,
                        public folly::DelayedDestruction {
@@ -50,15 +44,15 @@ class ConnectHandler : public folly::AsyncSocket::ConnectCallback,
       apache::thrift::protocol::PROTOCOL_TYPES proto,
       const std::string& endpoint);
 
-  folly::Future<RequestChannel_ptr> connect();
+  folly::Future<apache::thrift::RequestChannel::Ptr> connect();
   void setSupportedApplicationProtocols(
       const std::vector<std::string>& protocols);
   void connectSuccess() noexcept override;
   void connectErr(const folly::AsyncSocketException& ex) noexcept override;
 
  private:
-  folly::Promise<RequestChannel_ptr> promise_;
-  apache::thrift::async::TAsyncSSLSocket::UniquePtr socket_;
+  folly::Promise<apache::thrift::RequestChannel::Ptr> promise_;
+  folly::AsyncSSLSocket::UniquePtr socket_;
   std::string host_;
   const uint16_t port_;
   const uint32_t connect_timeout_;
@@ -68,29 +62,11 @@ class ConnectHandler : public folly::AsyncSocket::ConnectCallback,
   std::string endpoint_;
 };
 
-/**
- * Create a thrift channel by connecting to a host:port over TCP then SSL.
- */
-folly::Future<RequestChannel_ptr> createThriftChannelTCP(
-    const std::shared_ptr<folly::SSLContext>& ctx,
-    const std::string& host,
-    const uint16_t port,
-    const uint32_t connect_timeout,
-    const uint32_t ssl_timeout,
-    CLIENT_TYPE client_t,
+apache::thrift::RequestChannel::Ptr createHeaderChannel(
+    folly::AsyncTransport::UniquePtr sock,
+    CLIENT_TYPE client,
     apache::thrift::protocol::PROTOCOL_TYPES proto,
-    const std::string& endpoint);
+    folly::Optional<std::string> host = folly::none,
+    folly::Optional<std::string> endpoint = folly::none);
 
-RequestChannel_ptr sync_createThriftChannelTCP(
-    const std::shared_ptr<folly::SSLContext>& ctx,
-    const std::string& host,
-    const uint16_t port,
-    const uint32_t connect_timeout,
-    const uint32_t ssl_timeout,
-    CLIENT_TYPE client_t,
-    apache::thrift::protocol::PROTOCOL_TYPES proto,
-    const std::string& endpoint);
-
-} // namespace client
-} // namespace python
-} // namespace thrift
+} // namespace thrift::python::client

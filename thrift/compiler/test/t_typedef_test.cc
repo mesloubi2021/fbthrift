@@ -63,9 +63,9 @@ TEST(TypedefTest, bad_true_type) {
 }
 
 TEST(TypedefTest, inherited_annotations) {
-  t_program program("test");
+  t_program program("test", "test");
   t_scope scope;
-  t_typedef t1(&program, &t_base_type::t_i32(), "t1", &scope);
+  t_typedef t1(&program, &t_primitive_type::t_i32(), "t1", &scope);
   t_typedef t2(&program, &t1, "t2", &scope);
   t_typedef t3(&program, &t2, "t3", &scope);
   const t_type* p1(&t1);
@@ -140,30 +140,4 @@ TEST(TypedefTest, inherited_annotations) {
   EXPECT_EQ(t_typedef::get_first_annotation(p1, {"foo2"}), "");
   EXPECT_EQ(t_typedef::get_first_annotation(p2, {"foo2"}), "a");
   EXPECT_EQ(t_typedef::get_first_annotation(p3, {"foo2"}), "d");
-}
-
-TEST(TypedefTest, enum_values_as_consts) {
-  auto source_mgr = source_manager();
-  auto program = dedent_and_parse_to_program(source_mgr, R"(
-    enum Enum {
-      ONE = 1,
-      TWO = 2,
-    }
-    typedef Enum MyEnum
-    struct MyStruct {
-      1: MyEnum my_first_enum = MyEnum.ONE;
-      2: MyEnum my_second_enum = MyEnum.TWO;
-    }
-  )");
-
-  const std::vector<t_structured*>& structs = program->structs_and_unions();
-  ASSERT_EQ(structs.size(), 1);
-  const t_field* my_first_enum = structs[0]->get_field_by_id(1);
-  ASSERT_NE(my_first_enum, nullptr);
-  ASSERT_NE(my_first_enum->default_value(), nullptr);
-  EXPECT_EQ(my_first_enum->default_value()->get_integer(), 1);
-  const t_field* my_second_enum = structs[0]->get_field_by_id(2);
-  ASSERT_NE(my_second_enum, nullptr);
-  ASSERT_NE(my_second_enum->default_value(), nullptr);
-  EXPECT_EQ(my_second_enum->default_value()->get_integer(), 2);
 }

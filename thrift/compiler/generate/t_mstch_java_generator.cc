@@ -16,26 +16,25 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <iomanip>
 #include <set>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <thrift/compiler/lib/java/util.h>
 
 #include <openssl/evp.h>
 #include <thrift/compiler/ast/t_typedef.h>
-#include <thrift/compiler/detail/mustache/mstch.h>
-#include <thrift/compiler/gen/cpp/type_resolver.h>
+#include <thrift/compiler/ast/uri.h>
+#include <thrift/compiler/generate/cpp/name_resolver.h>
+#include <thrift/compiler/generate/java/util.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/whisker/mstch_compat.h>
 
 using namespace std;
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
@@ -43,8 +42,8 @@ namespace {
  * Gets the java namespace, throws a runtime error if not found.
  */
 std::string get_namespace_or_default(const t_program& prog) {
-  auto prog_namespace = boost::algorithm::join(
-      prog.gen_namespace_or_default("java.swift", {}), ".");
+  auto prog_namespace = fmt::format(
+      "{}", fmt::join(prog.gen_namespace_or_default("java.swift", {}), "."));
   if (prog_namespace != "") {
     return prog_namespace;
   } else {
@@ -160,6 +159,17 @@ class t_mstch_java_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
 
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "type:typedef_type", // in UnionWrite.mustache
+        "struct:isUnion?", // in WriteResponseType.mustache
+        "struct:asBean?", // in DefaultValue.mustache
+        "field:hasAdapter?", // in BoxedType.mustache
+    };
+    return opts;
+  }
+
   std::string template_prefix() const override { return "java"; }
 
   void generate_program() override;
@@ -179,7 +189,7 @@ class t_mstch_java_generator : public t_mstch_generator {
           mstch_context_.program_factory->make_mstch_object(
               program, mstch_context_);
     }
-    auto raw_package_dir = boost::filesystem::path{
+    auto raw_package_dir = std::filesystem::path{
         java::package_to_path(get_namespace_or_default(*program))};
     auto package_dir = has_option("separate_data_type_from_services")
         ? "services" / raw_package_dir
@@ -212,7 +222,7 @@ class t_mstch_java_generator : public t_mstch_generator {
           mstch_context_.program_factory->make_mstch_object(
               program, mstch_context_);
     }
-    auto raw_package_dir = boost::filesystem::path{
+    auto raw_package_dir = std::filesystem::path{
         java::package_to_path(get_namespace_or_default(*program))};
     auto package_dir = has_option("separate_data_type_from_services")
         ? "data-type" / raw_package_dir
@@ -253,7 +263,7 @@ class t_mstch_java_generator : public t_mstch_generator {
               program, mstch_context_);
     }
 
-    auto raw_package_dir = boost::filesystem::path{
+    auto raw_package_dir = std::filesystem::path{
         java::package_to_path(get_namespace_or_default(*program))};
 
     auto package_dir = has_option("separate_data_type_from_services")
@@ -392,7 +402,7 @@ class t_mstch_java_generator : public t_mstch_generator {
     auto name = program->name();
     const auto& prog = cached_program(program);
 
-    auto raw_package_dir = boost::filesystem::path{
+    auto raw_package_dir = std::filesystem::path{
         java::package_to_path(get_namespace_or_default(*program))};
     auto package_dir = has_option("separate_data_type_from_services")
         ? "data-type" / raw_package_dir
@@ -403,7 +413,7 @@ class t_mstch_java_generator : public t_mstch_generator {
   }
 
   void generate_placeholder(const t_program* program) {
-    auto package_dir = boost::filesystem::path{
+    auto package_dir = std::filesystem::path{
         java::package_to_path(get_namespace_or_default(*program))};
     auto placeholder_file_name = ".generated_" + program->name();
     if (has_option("separate_data_type_from_services")) {
@@ -421,7 +431,7 @@ class t_mstch_java_generator : public t_mstch_generator {
 
     auto java_namespace = get_namespace_or_default(*program);
     auto raw_package_dir =
-        boost::filesystem::path{java::package_to_path(java_namespace)};
+        std::filesystem::path{java::package_to_path(java_namespace)};
     auto package_dir = has_option("separate_data_type_from_services")
         ? "data-type" / raw_package_dir
         : raw_package_dir;
@@ -583,21 +593,19 @@ class mstch_java_struct : public mstch_struct {
         struct_, kJavaAnnotationUri, "java_annotation");
   }
   mstch::node exception_message() {
-    const auto& field_name_to_use = struct_->get_annotation("message");
-    if (const auto* field = struct_->get_field_by_name(field_name_to_use)) {
-      return get_java_swift_name(field);
-    }
-
-    throw std::runtime_error{
-        "The exception message field '" + field_name_to_use +
-        "' is not found in " + struct_->get_name() + "!"};
+    const auto* message_field =
+        dynamic_cast<const t_exception&>(*struct_).get_message_field();
+    return get_java_swift_name(message_field);
   }
   // we can only override Throwable's getMessage() if:
-  //  1 - there is provided 'message' annotation
-  //  2 - there is no struct field named 'message'
-  //      (since it will generate getMessage() as well)
+  // 1 - there is either provided `'message'` annotation or
+  //  `@thrift.ErrorMessage` annotation.
+  // 2 - there is no struct field named 'message' (since it
+  //  will generate `getMessage()` method)
   mstch::node needs_exception_message() {
-    return struct_->is_exception() && struct_->has_annotation("message") &&
+    return struct_->is_exception() &&
+        dynamic_cast<const t_exception&>(*struct_).get_message_field() !=
+        nullptr &&
         struct_->get_field_by_name("message") == nullptr;
   }
 };
@@ -605,15 +613,16 @@ class mstch_java_struct : public mstch_struct {
 class mstch_java_service : public mstch_service {
  public:
   mstch_java_service(
-      const t_service* s, mstch_context& ctx, mstch_element_position pos)
-      : mstch_service(s, ctx, pos) {
+      const t_service* s,
+      mstch_context& ctx,
+      mstch_element_position pos,
+      const t_service* containing_service = nullptr)
+      : mstch_service(s, ctx, pos, containing_service) {
     register_methods(
         this,
         {
             {"service:javaPackage", &mstch_java_service::java_package},
             {"service:javaCapitalName", &mstch_java_service::java_capital_name},
-            {"service:javaParentCapitalName",
-             &mstch_java_service::java_parent_capital_name},
             {"service:onewayFunctions",
              &mstch_java_service::get_oneway_functions},
             {"service:requestResponseFunctions",
@@ -630,10 +639,6 @@ class mstch_java_service : public mstch_service {
   }
   mstch::node java_capital_name() {
     return java::mangle_java_name(service_->get_name(), true);
-  }
-  mstch::node java_parent_capital_name() {
-    return java::mangle_java_name(
-        context_.options.at("parent_service_name"), true);
   }
   mstch::node get_oneway_functions() {
     std::vector<t_function*> funcs;
@@ -685,6 +690,27 @@ class mstch_java_service : public mstch_service {
   }
 };
 
+class mstch_java_interaction : public mstch_java_service {
+ public:
+  using ast_type = t_interaction;
+
+  mstch_java_interaction(
+      const t_interaction* interaction,
+      mstch_context& ctx,
+      mstch_element_position pos,
+      const t_service* containing_service)
+      : mstch_java_service(interaction, ctx, pos, containing_service) {
+    register_methods(
+        this,
+        {{"interaction:javaParentCapitalName",
+          &mstch_java_interaction::java_parent_capital_name}});
+  }
+
+  mstch::node java_parent_capital_name() {
+    return java::mangle_java_name(containing_service_->get_name(), true);
+  }
+};
+
 class mstch_java_function : public mstch_function {
  public:
   mstch_java_function(
@@ -698,20 +724,26 @@ class mstch_java_function : public mstch_function {
         {
             {"function:javaName", &mstch_java_function::java_name},
             {"function:voidType", &mstch_java_function::is_void_type},
-            {"function:nestedDepth", &mstch_java_function::get_nested_depth},
+
+            {"function:nestedDepth",
+             {with_no_caching, &mstch_java_function::get_nested_depth}},
             {"function:nestedDepth++",
-             &mstch_java_function::increment_nested_depth},
+             {with_no_caching, &mstch_java_function::increment_nested_depth}},
             {"function:nestedDepth--",
-             &mstch_java_function::decrement_nested_depth},
-            {"function:isFirstDepth?", &mstch_java_function::is_first_depth},
+             {with_no_caching, &mstch_java_function::decrement_nested_depth}},
+            {"function:isFirstDepth?",
+             {with_no_caching, &mstch_java_function::is_first_depth}},
             {"function:prevNestedDepth",
-             &mstch_java_function::preceding_nested_depth},
+             {with_no_caching, &mstch_java_function::preceding_nested_depth}},
             {"function:isNested?",
-             &mstch_java_function::get_nested_container_flag},
+             {with_no_caching,
+              &mstch_java_function::get_nested_container_flag}},
             {"function:setIsNested",
-             &mstch_java_function::set_nested_container_flag},
+             {with_no_caching,
+              &mstch_java_function::set_nested_container_flag}},
             {"function:unsetIsNested",
-             &mstch_java_function::unset_nested_container_flag},
+             {with_no_caching,
+              &mstch_java_function::unset_nested_container_flag}},
         });
   }
 
@@ -761,6 +793,7 @@ class mstch_java_field : public mstch_field {
         {
             {"field:javaName", &mstch_java_field::java_name},
             {"field:javaCapitalName", &mstch_java_field::java_capital_name},
+            {"field:javaConstantName", &mstch_java_field::java_constant_name},
             {"field:javaDefaultValue", &mstch_java_field::java_default_value},
             {"field:javaAllCapsName", &mstch_java_field::java_all_caps_name},
             {"field:recursive?", &mstch_java_field::is_recursive_reference},
@@ -773,19 +806,11 @@ class mstch_java_field : public mstch_field {
             {"field:isEnum?", &mstch_java_field::is_enum},
             {"field:isObject?", &mstch_java_field::is_object},
             {"field:isUnion?", &mstch_java_field::is_union},
-            {"field:nestedDepth", &mstch_java_field::get_nested_depth},
-            {"field:nestedDepth++", &mstch_java_field::increment_nested_depth},
-            {"field:nestedDepth--", &mstch_java_field::decrement_nested_depth},
-            {"field:isFirstDepth?", &mstch_java_field::is_first_depth},
-            {"field:prevNestedDepth",
-             &mstch_java_field::preceding_nested_depth},
             {"field:isContainer?", &mstch_java_field::is_container},
-            {"field:isNested?", &mstch_java_field::get_nested_container_flag},
-            {"field:setIsNested", &mstch_java_field::set_nested_container_flag},
             {"field:typeFieldName", &mstch_java_field::type_field_name},
             {"field:isSensitive?", &mstch_java_field::is_sensitive},
             {"field:hasInitialValue?", &mstch_java_field::has_initial_value},
-            {"field:isPrimitive?", &mstch_java_field::is_primitive},
+            {"field:isNumericOrVoid?", &mstch_java_field::is_numeric_or_void},
             {"field:hasWrapper?", &mstch_java_field::has_wrapper},
             {"field:wrapper",
              &mstch_java_field::get_structured_wrapper_class_name},
@@ -804,6 +829,23 @@ class mstch_java_field : public mstch_field {
              &mstch_java_field::get_field_adapter_type_class_name},
             {"field:fieldAdapterClassName",
              &mstch_java_field::get_field_adapter_class_name},
+            {"field:FieldNameUnmangled?",
+             &mstch_java_field::is_field_name_unmangled},
+
+            {"field:nestedDepth",
+             {with_no_caching, &mstch_java_field::get_nested_depth}},
+            {"field:nestedDepth++",
+             {with_no_caching, &mstch_java_field::increment_nested_depth}},
+            {"field:nestedDepth--",
+             {with_no_caching, &mstch_java_field::decrement_nested_depth}},
+            {"field:isFirstDepth?",
+             {with_no_caching, &mstch_java_field::is_first_depth}},
+            {"field:prevNestedDepth",
+             {with_no_caching, &mstch_java_field::preceding_nested_depth}},
+            {"field:isNested?",
+             {with_no_caching, &mstch_java_field::get_nested_container_flag}},
+            {"field:setIsNested",
+             {with_no_caching, &mstch_java_field::set_nested_container_flag}},
         });
   }
 
@@ -838,7 +880,7 @@ class mstch_java_field : public mstch_field {
   bool _has_type_adapter() {
     auto type = field_->get_type();
     if (type->is_typedef()) {
-      if (auto annotation = t_typedef::get_first_structured_annotation_or_null(
+      if (t_typedef::get_first_structured_annotation_or_null(
               type, kJavaAdapterUri)) {
         return true;
       }
@@ -897,7 +939,7 @@ class mstch_java_field : public mstch_field {
       // default values are ignored for optional fields
       return false;
     }
-    return field_->get_value();
+    return !!field_->get_value();
   }
   mstch::node get_nested_depth() { return nestedDepth; }
   mstch::node preceding_nested_depth() { return (nestedDepth - 1); }
@@ -915,7 +957,7 @@ class mstch_java_field : public mstch_field {
     nestedDepth--;
     return mstch::node();
   }
-  mstch::node is_primitive() {
+  mstch::node is_numeric_or_void() {
     auto type = field_->get_type()->get_true_type();
     return type->is_void() || type->is_bool() || type->is_byte() ||
         type->is_i16() || type->is_i32() || type->is_i64() ||
@@ -967,6 +1009,10 @@ class mstch_java_field : public mstch_field {
     return java::mangle_java_name(
         field_->get_annotation("java.swift.name", &field_->get_name()), true);
   }
+  mstch::node java_constant_name() {
+    return constant_name(
+        field_->get_annotation("java.swift.name", &field_->get_name()));
+  }
   mstch::node java_all_caps_name() {
     auto field_name = field_->get_name();
     boost::to_upper(field_name);
@@ -974,7 +1020,8 @@ class mstch_java_field : public mstch_field {
   }
   mstch::node java_default_value() { return default_value_for_field(field_); }
   mstch::node is_recursive_reference() {
-    return field_->get_annotation("swift.recursive_reference") == "true";
+    return field_->get_annotation("swift.recursive_reference") == "true" ||
+        field_->find_structured_annotation_or_null(kJavaRecursiveUri);
   }
   mstch::node is_negative_id() { return field_->get_key() < 0; }
   std::string default_value_for_field(const t_field* field) {
@@ -1042,6 +1089,11 @@ class mstch_java_field : public mstch_field {
     return get_structed_annotation_attribute(
         field_, kJavaAnnotationUri, "java_annotation");
   }
+
+  mstch::node is_field_name_unmangled() {
+    return !!field_->find_structured_annotation_or_null(
+        kJavaFieldUseUnmangledNameUri);
+  }
 };
 
 class mstch_java_enum : public mstch_enum {
@@ -1056,10 +1108,12 @@ class mstch_java_enum : public mstch_enum {
             {"enum:javaCapitalName", &mstch_java_enum::java_capital_name},
             {"enum:skipEnumNameMap?",
              &mstch_java_enum::java_skip_enum_name_map},
-            {"enum:ordinal++", &mstch_java_enum::get_ordinal},
+            {"enum:numValues", &mstch_java_enum::num_values},
+            {"enum:useIntrinsicDefault?",
+             &mstch_java_enum::use_intrinsic_default},
+            {"enum:findValueZero", &mstch_java_enum::find_value_zero},
         });
   }
-  int32_t ordinal = 0;
   mstch::node java_package() {
     return get_namespace_or_default(*enum_->program());
   }
@@ -1069,7 +1123,26 @@ class mstch_java_enum : public mstch_enum {
   mstch::node java_skip_enum_name_map() {
     return enum_->has_annotation("java.swift.skip_enum_name_map");
   }
-  mstch::node get_ordinal() { return ordinal++; }
+  mstch::node num_values() { return enum_->get_enum_values().size(); }
+  mstch::node use_intrinsic_default() {
+    if (enum_->find_structured_annotation_or_null(
+            kJavaUseIntrinsicDefaultUri) != nullptr) {
+      if (enum_->find_value(0) == nullptr) {
+        throw std::runtime_error(
+            "Enum " + enum_->get_name() +
+            " does not have a value for 0! You have to have value for 0 to use intrinsic default annotation.");
+      }
+      return true;
+    }
+    return false;
+  }
+  mstch::node find_value_zero() {
+    if (enum_->find_structured_annotation_or_null(
+            kJavaUseIntrinsicDefaultUri) != nullptr) {
+      return java::mangle_java_constant_name(enum_->find_value(0)->get_name());
+    }
+    return mstch::node();
+  }
 };
 
 class mstch_java_enum_value : public mstch_enum_value {
@@ -1082,11 +1155,13 @@ class mstch_java_enum_value : public mstch_enum_value {
         {
             {"enum_value:javaConstantName",
              &mstch_java_enum_value::java_constant_name},
+            {"enum_value:ordinal", &mstch_java_enum_value::ordinal},
         });
   }
   mstch::node java_constant_name() {
     return java::mangle_java_constant_name(enum_value_->get_name());
   }
+  mstch::node ordinal() { return pos_.index; }
 };
 
 class mstch_java_const : public mstch_const {
@@ -1138,6 +1213,10 @@ class mstch_java_const : public mstch_const {
             "java.swift.skip_enum_name_map");
       }
     }
+    if (const_->generated()) {
+      // T194272441 generated schema const is rendered incorrectly.
+      return true;
+    }
     return mstch::node();
   }
 };
@@ -1185,25 +1264,39 @@ class mstch_java_type : public mstch_type {
         {
             {"type:isContainer?", &mstch_java_type::is_container_type},
             {"type:javaType", &mstch_java_type::java_type},
-            {"type:setIsMapKey", &mstch_java_type::set_is_map_key},
-            {"type:isMapKey?", &mstch_java_type::get_map_key_flag},
-            {"type:setIsMapValue", &mstch_java_type::set_is_map_value},
-            {"type:isMapValue?", &mstch_java_type::get_map_value_flag},
             {"type:isBinaryString?", &mstch_java_type::is_binary_string},
-            {"type:setIsNotMap", &mstch_java_type::set_is_not_map},
             {"type:hasAdapter?", &mstch_java_type::has_type_adapter},
             {"type:adapterClassName",
              &mstch_java_type::get_structured_adapter_class_name},
             {"type:typeClassName",
              &mstch_java_type::get_structured_type_class_name},
-            {"type:setAdapter", &mstch_java_type::set_adapter},
-            {"type:unsetAdapter", &mstch_java_type::unset_adapter},
-            {"type:isAdapterSet?", &mstch_java_type::is_adapter_set},
-            {"type:addAdapter", &mstch_java_type::add_type_adapter},
-            {"type:adapterDefined?", &mstch_java_type::is_type_adapter_defined},
-            {"type:lastAdapter?", &mstch_java_type::is_last_type_adapter},
-            {"type:setTypeName", &mstch_java_type::set_type_name},
-            {"type:getTypeName", &mstch_java_type::get_type_name},
+
+            {"type:setIsMapKey",
+             {with_no_caching, &mstch_java_type::set_is_map_key}},
+            {"type:isMapKey?",
+             {with_no_caching, &mstch_java_type::get_map_key_flag}},
+            {"type:setIsMapValue",
+             {with_no_caching, &mstch_java_type::set_is_map_value}},
+            {"type:isMapValue?",
+             {with_no_caching, &mstch_java_type::get_map_value_flag}},
+            {"type:setIsNotMap",
+             {with_no_caching, &mstch_java_type::set_is_not_map}},
+            {"type:setAdapter",
+             {with_no_caching, &mstch_java_type::set_adapter}},
+            {"type:unsetAdapter",
+             {with_no_caching, &mstch_java_type::unset_adapter}},
+            {"type:isAdapterSet?",
+             {with_no_caching, &mstch_java_type::is_adapter_set}},
+            {"type:addAdapter",
+             {with_no_caching, &mstch_java_type::add_type_adapter}},
+            {"type:adapterDefined?",
+             {with_no_caching, &mstch_java_type::is_type_adapter_defined}},
+            {"type:lastAdapter?",
+             {with_no_caching, &mstch_java_type::is_last_type_adapter}},
+            {"type:setTypeName",
+             {with_no_caching, &mstch_java_type::set_type_name}},
+            {"type:getTypeName",
+             {with_no_caching, &mstch_java_type::get_type_name}},
         });
   }
   bool isMapValueFlag = false;
@@ -1243,8 +1336,7 @@ class mstch_java_type : public mstch_type {
 
   mstch::node has_structured_annotation(const char* uri) {
     if (type_->is_typedef()) {
-      if (auto annotation =
-              t_typedef::get_first_structured_annotation_or_null(type_, uri)) {
+      if (t_typedef::get_first_structured_annotation_or_null(type_, uri)) {
         return true;
       }
     }
@@ -1368,6 +1460,7 @@ void t_mstch_java_generator::generate_program() {
 void t_mstch_java_generator::set_mstch_factories() {
   mstch_context_.add<mstch_java_program>();
   mstch_context_.add<mstch_java_service>();
+  mstch_context_.add<mstch_java_interaction>();
   mstch_context_.add<mstch_java_function>();
   mstch_context_.add<mstch_java_type>();
   mstch_context_.add<mstch_java_struct>();
@@ -1380,6 +1473,4 @@ void t_mstch_java_generator::set_mstch_factories() {
 
 THRIFT_REGISTER_GENERATOR(mstch_java, "Java", "");
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

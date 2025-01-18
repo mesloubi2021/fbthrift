@@ -17,10 +17,7 @@
 #include <folly/python/iobuf.h>
 #include <thrift/lib/python/capi/extractor.h>
 
-namespace apache {
-namespace thrift {
-namespace python {
-namespace capi {
+namespace apache::thrift::python::capi {
 namespace {
 
 template <typename T, typename V>
@@ -130,7 +127,9 @@ int Extractor<bool>::typeCheck(PyObject* obj) {
   ExtractorResult<py_type> Extractor<py_type>::operator()(PyObject* obj) { \
     return extract_fn<cpp_type>(obj);                                      \
   }                                                                        \
-  int Extractor<py_type>::typeCheck(PyObject* obj) { return check_capi(obj); }
+  int Extractor<py_type>::typeCheck(PyObject* obj) {                       \
+    return check_capi(obj);                                                \
+  }
 
 SPECIALIZE_STR(Bytes, std::string, extractFromBytes, PyBytes_CheckExact)
 SPECIALIZE_STR(
@@ -175,7 +174,4 @@ Extractor<std::unique_ptr<folly::IOBuf>>::operator()(PyObject* obj) {
 SPECIALIZE_IOBUF_TYPECHECK(std::unique_ptr<folly::IOBuf>)
 #undef SPECIALIZE_IOBUF_TYPECHECK
 
-} // namespace capi
-} // namespace python
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::python::capi

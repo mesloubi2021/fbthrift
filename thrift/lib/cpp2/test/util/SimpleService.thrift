@@ -19,13 +19,14 @@ namespace cpp apache.thrift.util
 include "thrift/annotation/cpp.thrift"
 
 service SimpleService {
+  @cpp.GenerateDeprecatedHeaderClientMethods
   i64 add(1: i64 a, 2: i64 b);
 
   string echoSlow(1: string message, 2: i64 sleepMs);
 
   oneway void lob();
 
-  stream<i64> emptyStreamSlow(1: i64 sleepMs) (cpp.coroutine);
+  stream<i64> emptyStreamSlow(1: i64 sleepMs);
 
   sink<i64, bool> slowReturnSink(1: i64 sleepMs);
 

@@ -32,10 +32,7 @@
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 #include <thrift/lib/cpp2/type/ThriftType.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 
 // named comparison functions, similar to c++20
 //
@@ -152,7 +149,7 @@ using less_than_t = decltype(LessThan<LTag, RTag>{}(
 
 // If the give tags are comparable using LessThan.
 template <typename LTag, typename RTag = LTag>
-FOLLY_INLINE_VARIABLE constexpr bool less_than_comparable_v =
+inline constexpr bool less_than_comparable_v =
     folly::is_detected_v<less_than_t, LTag, RTag>;
 
 // Resolves to R, if the two tags can be used together in LessThan.
@@ -219,7 +216,7 @@ using compare_with_t = decltype(CompareWith<LTag, RTag>{}(
 
 // If the give tags are comparable.
 template <typename LTag, typename RTag = LTag>
-FOLLY_INLINE_VARIABLE constexpr bool comparable_v =
+inline constexpr bool comparable_v =
     folly::is_detected_v<compare_with_t, LTag, RTag>;
 
 // Resolves to R, if the two tags *can* be used together in CompareWith.
@@ -324,7 +321,7 @@ struct CompareWith<
     : CheckIOBufOp<LUTag, RUTag>, folly::IOBufCompare {};
 
 template <class T, class Comp>
-FOLLY_MAYBE_UNUSED bool sortAndLexicographicalCompare(
+[[maybe_unused]] bool sortAndLexicographicalCompare(
     const T& lhs, const T& rhs, Comp&& comp) {
   std::vector<decltype(lhs.begin())> l, r;
   for (auto i = lhs.begin(); i != lhs.end(); ++i) {
@@ -428,6 +425,22 @@ struct LessThan<
           folly::is_invocable_v<std::less<>, const T&, const T&>,
           std::less<>,
           MapLessThan<T, K, V>> {};
+
+template <typename K, typename V>
+struct LessThan<type::map<K, V>, type::map<K, V>> {
+  using map_type = type::native_type<type::map<K, V>>;
+
+  bool operator()(const map_type& x, const map_type& y) const {
+    if constexpr (folly::is_invocable_v<
+                      std::less<>,
+                      const map_type&,
+                      const map_type&>) {
+      return std::less<>{}(x, y);
+    } else {
+      return MapLessThan<map_type, K, V>{}(x, y);
+    }
+  }
+};
 
 // Identical for lists.
 template <
@@ -597,9 +610,7 @@ struct EqualTo<type::adapted<Adapter, Tag>> {
   static_assert(type::is_concrete_v<adapted_tag>, "");
   template <typename T>
   constexpr bool operator()(const T& lhs, const T& rhs) const {
-    auto useAdapter =
-        [](auto adapter) -> folly::void_t<decltype(adapter.equal(lhs, rhs))> {};
-    if constexpr (folly::is_invocable_v<decltype(useAdapter), Adapter>) {
+    if constexpr (adapt_detail::is_equal_adapter_v<Adapter, T>) {
       return Adapter::equal(lhs, rhs);
     } else if constexpr (folly::is_invocable_v<
                              std::equal_to<>,
@@ -617,9 +628,7 @@ struct LessThan<type::adapted<Adapter, Tag>> {
   static_assert(type::is_concrete_v<adapted_tag>, "");
   template <typename T>
   constexpr bool operator()(const T& lhs, const T& rhs) const {
-    auto useAdapter =
-        [](auto adapter) -> folly::void_t<decltype(adapter.less(lhs, rhs))> {};
-    if constexpr (folly::is_invocable_v<decltype(useAdapter), Adapter>) {
+    if constexpr (adapt_detail::is_less_adapter_v<Adapter, T>) {
       return Adapter::less(lhs, rhs);
     } else if constexpr (folly::
                              is_invocable_v<std::less<>, const T&, const T&>) {
@@ -753,7 +762,4 @@ struct UnionEquality {
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

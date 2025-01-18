@@ -15,6 +15,7 @@
       "definition_html": "static bool apache::thrift::op::detail::AnyOp&lt; Tag, typename &gt;::put",
       "argsstring_html": "(void *, FieldId, size_t, const Dyn &amp;, const Dyn &amp;)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::AnyOp::put",
       "param": [
         {
           "type_html": "void *"
@@ -35,7 +36,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/AnyOp.h",
         "line": "45",
-        "column": "1",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/AnyOp.h",
         "bodystart": "45",
         "bodyend": "47"
@@ -65,6 +66,7 @@
       "definition_html": "static bool apache::thrift::op::detail::ListOp&lt; VTag, Tag &gt;::put",
       "argsstring_html": "(void *s, FieldId, size_t pos, const Dyn &amp;, const Dyn &amp;v)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::ListOp::put",
       "param": [
         {
           "type_html": "void *",
@@ -88,7 +90,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "100",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "100",
         "bodyend": "111"
@@ -104,116 +106,6 @@
       "filepath": "fns/struct/apache/thrift/op/detail/ListOp/put",
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/ListOp/put",
       "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1ListOp",
-      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
-    },
-    {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a40010069d36a087dc0d545330c757e18",
-      "prot": "public",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "tparams": [
-        {
-          "type_html": "typename J",
-          "defval_html": "<code>K</code>"
-        },
-        {
-          "type_html": "typename U",
-          "defval_html": "<code>V</code>"
-        }
-      ],
-      "type_html": "bool",
-      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-      "argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)",
-      "name_html": "put",
-      "param": [
-        {
-          "type_html": "<code>T</code> &amp;",
-          "declname_html": "self"
-        },
-        {
-          "type_html": "J &amp;&amp;",
-          "declname_html": "key"
-        },
-        {
-          "type_html": "U &amp;&amp;",
-          "declname_html": "val"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "line": "190",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "bodystart": "190",
-        "bodyend": "198"
-      },
-      "definition": {
-        "simple_html": "template &lt;typename J = K, typename U = V&gt;\nstatic bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
-        "simple_raw": "template <typename J = K, typename U = V>\nstatic bool put(T& self, J&& key, U&& val)",
-        "detailed_html": "template &lt;typename J = K, typename U = V&gt;\ninline static bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
-        "detailed_raw": "template <typename J = K, typename U = V>\ninline static bool put(T& self, J&& key, U&& val)",
-        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-        "original_argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
-      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
-    },
-    {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a1d80802209575c1d67c5f2ba9ba8d4fc",
-      "prot": "public",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "type_html": "bool",
-      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-      "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)",
-      "name_html": "put",
-      "param": [
-        {
-          "type_html": "void *",
-          "declname_html": "s"
-        },
-        {
-          "type_html": "<code>FieldId</code>"
-        },
-        {
-          "type_html": "size_t"
-        },
-        {
-          "type_html": "const <code>Dyn</code> &amp;",
-          "declname_html": "k"
-        },
-        {
-          "type_html": "const <code>Dyn</code> &amp;",
-          "declname_html": "v"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "line": "209",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "bodystart": "209",
-        "bodyend": "215"
-      },
-      "definition": {
-        "simple_html": "static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
-        "simple_raw": "static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
-        "detailed_html": "inline static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
-        "detailed_raw": "inline static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
-        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-        "original_argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
       "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
     },
     {
@@ -228,6 +120,7 @@
       "definition_html": "static bool apache::thrift::op::detail::ListOp&lt; VTag, Tag &gt;::put",
       "argsstring_html": "(void *s, FieldId, size_t pos, const Dyn &amp;, const Dyn &amp;v)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::ListOp::put",
       "param": [
         {
           "type_html": "void *",
@@ -251,7 +144,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "100",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "100",
         "bodyend": "111"
@@ -270,116 +163,6 @@
       "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
     },
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a40010069d36a087dc0d545330c757e18",
-      "prot": "public",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "tparams": [
-        {
-          "type_html": "typename J",
-          "defval_html": "<code>K</code>"
-        },
-        {
-          "type_html": "typename U",
-          "defval_html": "<code>V</code>"
-        }
-      ],
-      "type_html": "bool",
-      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-      "argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)",
-      "name_html": "put",
-      "param": [
-        {
-          "type_html": "<code>T</code> &amp;",
-          "declname_html": "self"
-        },
-        {
-          "type_html": "J &amp;&amp;",
-          "declname_html": "key"
-        },
-        {
-          "type_html": "U &amp;&amp;",
-          "declname_html": "val"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "line": "190",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "bodystart": "190",
-        "bodyend": "198"
-      },
-      "definition": {
-        "simple_html": "template &lt;typename J = K, typename U = V&gt;\nstatic bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
-        "simple_raw": "template <typename J = K, typename U = V>\nstatic bool put(T& self, J&& key, U&& val)",
-        "detailed_html": "template &lt;typename J = K, typename U = V&gt;\ninline static bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
-        "detailed_raw": "template <typename J = K, typename U = V>\ninline static bool put(T& self, J&& key, U&& val)",
-        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-        "original_argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
-      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
-    },
-    {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a1d80802209575c1d67c5f2ba9ba8d4fc",
-      "prot": "public",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "type_html": "bool",
-      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-      "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)",
-      "name_html": "put",
-      "param": [
-        {
-          "type_html": "void *",
-          "declname_html": "s"
-        },
-        {
-          "type_html": "<code>FieldId</code>"
-        },
-        {
-          "type_html": "size_t"
-        },
-        {
-          "type_html": "const <code>Dyn</code> &amp;",
-          "declname_html": "k"
-        },
-        {
-          "type_html": "const <code>Dyn</code> &amp;",
-          "declname_html": "v"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "line": "209",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
-        "bodystart": "209",
-        "bodyend": "215"
-      },
-      "definition": {
-        "simple_html": "static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
-        "simple_raw": "static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
-        "detailed_html": "inline static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
-        "detailed_raw": "inline static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
-        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
-        "original_argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
-      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
-    },
-    {
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1SetOp_1a99a9fef5f33074042121e5e5afa7e146",
       "prot": "public",
       "static": "yes",
@@ -391,6 +174,7 @@
       "definition_html": "static bool apache::thrift::op::detail::SetOp&lt; KTag, Tag &gt;::put",
       "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::SetOp::put",
       "param": [
         {
           "type_html": "void *",
@@ -414,7 +198,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "161",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "161",
         "bodyend": "165"
@@ -433,6 +217,230 @@
       "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
     },
     {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a40010069d36a087dc0d545330c757e18",
+      "prot": "public",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "tparams": [
+        {
+          "type_html": "typename J",
+          "defval_html": "<code>K</code>"
+        },
+        {
+          "type_html": "typename U",
+          "defval_html": "<code>V</code>"
+        }
+      ],
+      "type_html": "bool",
+      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+      "argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)",
+      "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::MapOp::put",
+      "param": [
+        {
+          "type_html": "<code>T</code> &amp;",
+          "declname_html": "self"
+        },
+        {
+          "type_html": "J &amp;&amp;",
+          "declname_html": "key"
+        },
+        {
+          "type_html": "U &amp;&amp;",
+          "declname_html": "val"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "line": "190",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "bodystart": "190",
+        "bodyend": "198"
+      },
+      "definition": {
+        "simple_html": "template &lt;typename J = K, typename U = V&gt;\nstatic bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
+        "simple_raw": "template <typename J = K, typename U = V>\nstatic bool put(T& self, J&& key, U&& val)",
+        "detailed_html": "template &lt;typename J = K, typename U = V&gt;\ninline static bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
+        "detailed_raw": "template <typename J = K, typename U = V>\ninline static bool put(T& self, J&& key, U&& val)",
+        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+        "original_argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
+      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a40010069d36a087dc0d545330c757e18",
+      "prot": "public",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "tparams": [
+        {
+          "type_html": "typename J",
+          "defval_html": "<code>K</code>"
+        },
+        {
+          "type_html": "typename U",
+          "defval_html": "<code>V</code>"
+        }
+      ],
+      "type_html": "bool",
+      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+      "argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)",
+      "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::MapOp::put",
+      "param": [
+        {
+          "type_html": "<code>T</code> &amp;",
+          "declname_html": "self"
+        },
+        {
+          "type_html": "J &amp;&amp;",
+          "declname_html": "key"
+        },
+        {
+          "type_html": "U &amp;&amp;",
+          "declname_html": "val"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "line": "190",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "bodystart": "190",
+        "bodyend": "198"
+      },
+      "definition": {
+        "simple_html": "template &lt;typename J = K, typename U = V&gt;\nstatic bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
+        "simple_raw": "template <typename J = K, typename U = V>\nstatic bool put(T& self, J&& key, U&& val)",
+        "detailed_html": "template &lt;typename J = K, typename U = V&gt;\ninline static bool put(T&amp; self, J&amp;&amp; key, U&amp;&amp; val)",
+        "detailed_raw": "template <typename J = K, typename U = V>\ninline static bool put(T& self, J&& key, U&& val)",
+        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+        "original_argsstring_html": "(T &amp;self, J &amp;&amp;key, U &amp;&amp;val)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
+      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a1d80802209575c1d67c5f2ba9ba8d4fc",
+      "prot": "public",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "type_html": "bool",
+      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+      "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)",
+      "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::MapOp::put",
+      "param": [
+        {
+          "type_html": "void *",
+          "declname_html": "s"
+        },
+        {
+          "type_html": "<code>FieldId</code>"
+        },
+        {
+          "type_html": "size_t"
+        },
+        {
+          "type_html": "const <code>Dyn</code> &amp;",
+          "declname_html": "k"
+        },
+        {
+          "type_html": "const <code>Dyn</code> &amp;",
+          "declname_html": "v"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "line": "209",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "bodystart": "209",
+        "bodyend": "215"
+      },
+      "definition": {
+        "simple_html": "static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
+        "simple_raw": "static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
+        "detailed_html": "inline static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
+        "detailed_raw": "inline static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
+        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+        "original_argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
+      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp_1a1d80802209575c1d67c5f2ba9ba8d4fc",
+      "prot": "public",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "type_html": "bool",
+      "definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+      "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)",
+      "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::MapOp::put",
+      "param": [
+        {
+          "type_html": "void *",
+          "declname_html": "s"
+        },
+        {
+          "type_html": "<code>FieldId</code>"
+        },
+        {
+          "type_html": "size_t"
+        },
+        {
+          "type_html": "const <code>Dyn</code> &amp;",
+          "declname_html": "k"
+        },
+        {
+          "type_html": "const <code>Dyn</code> &amp;",
+          "declname_html": "v"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "line": "209",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
+        "bodystart": "209",
+        "bodyend": "215"
+      },
+      "definition": {
+        "simple_html": "static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
+        "simple_raw": "static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
+        "detailed_html": "inline static bool put(void* s, FieldId, size_t, const Dyn&amp; k, const Dyn&amp; v)",
+        "detailed_raw": "inline static bool put(void* s, FieldId, size_t, const Dyn& k, const Dyn& v)",
+        "original_definition_html": "static bool apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::put",
+        "original_argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k, const Dyn &amp;v)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapOp/put",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapOp/put",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapOp",
+      "compoundname_html": "apache::thrift::op::detail::AnyOp::put"
+    },
+    {
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1StructuredOp_1a18ba1d38ae1a3955abe59d352b28db12",
       "prot": "public",
       "static": "yes",
@@ -444,6 +452,7 @@
       "definition_html": "static bool apache::thrift::op::detail::StructuredOp&lt; T, Tag &gt;::put",
       "argsstring_html": "(void *s, FieldId fid, size_t, const Dyn &amp;n, const Dyn &amp;val)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::StructuredOp::put",
       "param": [
         {
           "type_html": "void *",
@@ -468,7 +477,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructOp.h",
         "line": "60",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructOp.h",
         "bodystart": "60",
         "bodyend": "74"
@@ -493,5 +502,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/put",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/put"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/put",
+  "parent_links": [
+    {
+      "text_html": "AnyOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/AnyOp"
+    }
+  ]
 }

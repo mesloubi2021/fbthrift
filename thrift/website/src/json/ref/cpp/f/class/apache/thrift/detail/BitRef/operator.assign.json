@@ -15,6 +15,7 @@
       "definition_html": "void apache::thrift::detail::BitRef&lt; kIsConst &gt;::operator=",
       "argsstring_html": "(bool flag)",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::detail::BitRef::operator=",
       "param": [
         {
           "type_html": "bool",
@@ -23,11 +24,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "216",
-        "column": "1",
+        "line": "210",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "216",
-        "bodyend": "222"
+        "bodystart": "210",
+        "bodyend": "216"
       },
       "definition": {
         "simple_html": "void operator=(bool flag)",
@@ -49,5 +50,11 @@
   "brief_html": "Assignment operator.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/detail/BitRef/operator.assign",
-  "refid": "/ref/cpp/f/class/apache/thrift/detail/BitRef/operator.assign"
+  "refid": "/ref/cpp/f/class/apache/thrift/detail/BitRef/operator.assign",
+  "parent_links": [
+    {
+      "text_html": "BitRef",
+      "href": "/ref/cpp/class/apache/thrift/detail/BitRef"
+    }
+  ]
 }

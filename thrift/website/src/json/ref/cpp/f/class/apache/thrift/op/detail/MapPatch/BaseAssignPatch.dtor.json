@@ -15,10 +15,11 @@
       "definition_html": "apache::thrift::op::detail::BaseAssignPatch&lt; Patch, Derived &gt;::~BaseAssignPatch",
       "argsstring_html": "()=default",
       "name_html": "~BaseAssignPatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseAssignPatch::~BaseAssignPatch",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "181",
-        "column": "1"
+        "line": "210",
+        "column": "3"
       },
       "definition": {
         "simple_html": "~BaseAssignPatch()",
@@ -40,5 +41,11 @@
   "brief_html": "Destructs the BaseAssignPatch.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/BaseAssignPatch.dtor",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/BaseAssignPatch.dtor"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/BaseAssignPatch.dtor",
+  "parent_links": [
+    {
+      "text_html": "MapPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/MapPatch"
+    }
+  ]
 }

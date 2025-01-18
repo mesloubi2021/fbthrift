@@ -15,10 +15,11 @@
       "definition_html": "void apache::thrift::op::DeterministicAccumulator&lt; HasherGenerator &gt;::endOrdered",
       "argsstring_html": "()",
       "name_html": "endOrdered",
+      "qualifiedname_html": "apache::thrift::op::DeterministicAccumulator::endOrdered",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "126",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "197",
         "bodyend": "212"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/DeterministicAccumulator/endOrdered",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/DeterministicAccumulator/endOrdered"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/DeterministicAccumulator/endOrdered",
+  "parent_links": [
+    {
+      "text_html": "DeterministicAccumulator",
+      "href": "/ref/cpp/class/apache/thrift/op/DeterministicAccumulator"
+    }
+  ]
 }

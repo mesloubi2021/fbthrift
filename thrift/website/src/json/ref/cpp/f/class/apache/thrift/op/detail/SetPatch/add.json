@@ -21,6 +21,7 @@
       "definition_html": "void apache::thrift::op::detail::SetPatch&lt; Patch &gt;::add",
       "argsstring_html": "(C &amp;&amp;keys)",
       "name_html": "add",
+      "qualifiedname_html": "apache::thrift::op::detail::SetPatch::add",
       "param": [
         {
           "type_html": "C &amp;&amp;",
@@ -29,11 +30,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "line": "196",
-        "column": "1",
+        "line": "183",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "bodystart": "196",
-        "bodyend": "199"
+        "bodystart": "183",
+        "bodyend": "186"
       },
       "definition": {
         "simple_html": "template &lt;typename C = T&gt;\nvoid add(C&amp;&amp; keys)",
@@ -58,5 +59,11 @@
   "brief_html": "<p>Adds keys. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/add",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/add"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/add",
+  "parent_links": [
+    {
+      "text_html": "SetPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/SetPatch"
+    }
+  ]
 }

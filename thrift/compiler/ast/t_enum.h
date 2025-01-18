@@ -23,14 +23,12 @@
 #include <vector>
 
 #include <thrift/compiler/ast/node_list.h>
-#include <thrift/compiler/ast/t_base_type.h>
 #include <thrift/compiler/ast/t_const.h>
 #include <thrift/compiler/ast/t_enum_value.h>
+#include <thrift/compiler/ast/t_primitive_type.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * Represents an enum definition.
@@ -56,11 +54,15 @@ class t_enum : public t_type {
 
   // The t_consts associated with each value.
   node_list_view<const t_const> consts() const { return constants_; }
+  const t_const* find_const_by_name(std::string_view name) const;
+
+  ~t_enum() override;
 
  private:
   t_enum_value_list values_;
   node_list<t_const> constants_;
   std::map<int32_t, const t_enum_value*> value_map_;
+  std::map<std::string_view, const t_const*> consts_by_name_;
   int32_t unused_ = default_unused;
 
   // TODO(afuller): These methods are only provided for backwards
@@ -76,6 +78,7 @@ class t_enum : public t_type {
     update_unused(enum_value->get_value());
     values_raw_.push_back(enum_value.get());
     value_map_.emplace(enum_value->get_value(), enum_value.get());
+    consts_by_name_.emplace(enum_value->get_name(), constant.get());
     values_.push_back(std::move(enum_value));
     constants_.push_back(std::move(constant));
   }
@@ -91,6 +94,4 @@ class t_enum : public t_type {
   type get_type_value() const override { return type::t_enum; }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

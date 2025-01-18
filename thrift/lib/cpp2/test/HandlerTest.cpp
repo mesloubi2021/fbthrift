@@ -46,14 +46,15 @@ MATCHER(IsMissingResult, "") {
 TEST_F(HandlerTest, async_eb_result_nullptr) {
   struct Handler : apache::thrift::ServiceHandler<HandlerGeneric> {
     void async_eb_get_string_eb(
-        unique_ptr<HandlerCallback<unique_ptr<string>>> callback) override {
+        HandlerCallbackPtr<unique_ptr<string>> callback) override {
       callback->result(unique_ptr<string>(nullptr));
     }
   };
   ScopedServerInterfaceThread runner{make_shared<Handler>()};
   auto client =
       runner.newClient<HandlerGenericAsyncClient>(nullptr, [](auto socket) {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
   EXPECT_THAT(client->semifuture_get_string_eb().getTry(), IsMissingResult());
 }
@@ -61,14 +62,15 @@ TEST_F(HandlerTest, async_eb_result_nullptr) {
 TEST_F(HandlerTest, async_tm_result_nullptr) {
   struct Handler : apache::thrift::ServiceHandler<HandlerGeneric> {
     void async_tm_get_string(
-        unique_ptr<HandlerCallback<unique_ptr<string>>> callback) override {
+        HandlerCallbackPtr<unique_ptr<string>> callback) override {
       callback->result(unique_ptr<string>(nullptr));
     }
   };
   ScopedServerInterfaceThread runner{make_shared<Handler>()};
   auto client =
       runner.newClient<HandlerGenericAsyncClient>(nullptr, [](auto socket) {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
   EXPECT_THAT(client->semifuture_get_string().getTry(), IsMissingResult());
 }
@@ -81,7 +83,8 @@ TEST_F(HandlerTest, co_nullptr) {
   ScopedServerInterfaceThread runner{make_shared<Handler>()};
   auto client =
       runner.newClient<HandlerGenericAsyncClient>(nullptr, [](auto socket) {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
   EXPECT_THAT(client->semifuture_get_string().getTry(), IsMissingResult());
 }
@@ -94,7 +97,8 @@ TEST_F(HandlerTest, future_nullptr) {
   ScopedServerInterfaceThread runner{make_shared<Handler>()};
   auto client =
       runner.newClient<HandlerGenericAsyncClient>(nullptr, [](auto socket) {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
   EXPECT_THAT(client->semifuture_get_string().getTry(), IsMissingResult());
 }
@@ -108,7 +112,8 @@ TEST_F(HandlerTest, semifuture_nullptr) {
   ScopedServerInterfaceThread runner{make_shared<Handler>()};
   auto client =
       runner.newClient<HandlerGenericAsyncClient>(nullptr, [](auto socket) {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
   EXPECT_THAT(client->semifuture_get_string().getTry(), IsMissingResult());
 }

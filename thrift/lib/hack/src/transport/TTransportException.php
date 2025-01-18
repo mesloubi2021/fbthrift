@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @package thrift.transport
  */
+
+// @oss-enable: use namespace FlibSL\{C, Math, Str, Vec};
 
 /**
  * Transport exceptions
@@ -29,7 +30,8 @@
  * @param mixed  $code Code (integer) or values (array)
  * @param string $shortMessage (string)
  */
-class TTransportException extends TException {
+<<Oncalls('thrift')>> // @oss-disable
+final class TTransportException extends TException {
 
   const UNKNOWN = 0;
   const NOT_OPEN = 1;
@@ -49,12 +51,12 @@ class TTransportException extends TException {
     ?string $message = null,
     int $code = 0,
     string $short_message = '',
-  ) {
+  )[] {
     $this->shortMessage = $short_message;
     parent::__construct($message, $code);
   }
 
-  public function getShortMessage(): string {
+  public function getShortMessage()[]: string {
     return $this->shortMessage;
   }
 }

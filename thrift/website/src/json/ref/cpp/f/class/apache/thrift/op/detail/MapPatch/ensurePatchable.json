@@ -15,13 +15,14 @@
       "definition_html": "void apache::thrift::op::detail::MapPatch&lt; Patch &gt;::ensurePatchable",
       "argsstring_html": "()",
       "name_html": "ensurePatchable",
+      "qualifiedname_html": "apache::thrift::op::detail::MapPatch::ensurePatchable",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "line": "474",
-        "column": "1",
+        "line": "462",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "bodystart": "474",
-        "bodyend": "480"
+        "bodystart": "462",
+        "bodyend": "468"
       },
       "definition": {
         "simple_html": "void ensurePatchable()",
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensurePatchable",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensurePatchable"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensurePatchable",
+  "parent_links": [
+    {
+      "text_html": "MapPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/MapPatch"
+    }
+  ]
 }

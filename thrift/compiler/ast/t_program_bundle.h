@@ -24,9 +24,7 @@
 #include <thrift/compiler/ast/node_list.h>
 #include <thrift/compiler/ast/t_program.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * Used to encapsulate a root t_program along with all included dependencies.
@@ -37,7 +35,7 @@ class t_program_bundle {
       std::unique_ptr<t_program> root_program,
       t_program_bundle* already_parsed = nullptr) {
     if (already_parsed) {
-      programs_by_path_ = already_parsed->programs_by_path_;
+      programs_by_full_path_ = already_parsed->programs_by_full_path_;
     }
     add_program(std::move(root_program));
   }
@@ -49,13 +47,13 @@ class t_program_bundle {
   node_list_view<const t_program> programs() const { return programs_; }
   void add_program(std::unique_ptr<t_program> program) {
     programs_raw_.push_back(program.get());
-    programs_by_path_[program->path()] = program.get();
+    programs_by_full_path_[program->full_path()] = program.get();
     programs_.emplace_back(std::move(program));
   }
 
   void add_implicit_includes(std::unique_ptr<t_program_bundle> inc) {
     for (auto* prog : inc->programs_raw_) {
-      programs_by_path_[prog->path()] = prog;
+      programs_by_full_path_[prog->full_path()] = prog;
     }
     std::move(
         inc->programs_.begin(),
@@ -63,9 +61,9 @@ class t_program_bundle {
         std::back_inserter(implicit_includes_));
   }
 
-  t_program* find_program(std::string_view path) {
-    if (auto itr = programs_by_path_.find(path);
-        itr != programs_by_path_.end()) {
+  t_program* find_program_by_full_path(std::string_view full_path) {
+    if (auto itr = programs_by_full_path_.find(full_path);
+        itr != programs_by_full_path_.end()) {
       return itr->second;
     }
     return nullptr;
@@ -74,7 +72,7 @@ class t_program_bundle {
  private:
   node_list<t_program> programs_;
   node_list<t_program> implicit_includes_;
-  std::map<std::string, t_program*, std::less<>> programs_by_path_;
+  std::map<std::string, t_program*, std::less<>> programs_by_full_path_;
 
   // TODO(afuller): Delete everything below here. It is only provided for
   // backwards compatibility.
@@ -86,6 +84,4 @@ class t_program_bundle {
   t_program* get_root_program() const { return programs_raw_[0]; }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

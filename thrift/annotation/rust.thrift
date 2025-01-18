@@ -19,9 +19,271 @@ include "thrift/annotation/scope.thrift"
 package "facebook.com/thrift/annotation/rust"
 
 namespace java com.facebook.thrift.annotation.rust_deprecated
+namespace android com.facebook.thrift.annotation.rust_deprecated
 namespace py.asyncio facebook_thrift_asyncio.annotation.rust
 namespace go thrift.annotation.rust
 namespace py thrift.annotation.rust
+
+// This is scope.Definition minus scope.Const
+@scope.Function
+@scope.EnumValue
+@scope.Enum
+@scope.Structured
+@scope.Field
+@scope.Typedef
+@scope.Service
+@scope.Interaction
+struct Name {
+  // # `rust.Name`
+  //
+  // Override the Thrift identifier of the entity with the given name.
+  1: string name;
+}
+
+@scope.Struct
+struct Copy {
+// # `rust.Copy`
+//
+// Mark the generated struct `#[derive(Copy)]`.
+}
+
+@scope.Service
+struct RequestContext {
+// # `rust.RequestContext`
+//
+// Opt-in to request contexts for your service (which can be used to ensure that
+// only authorized clients can access your service by identity checks against
+// Hipster ACLs).
+}
+
+@scope.Field
+struct Arc {
+// # `rust.Arc`
+//
+// Indicates that a field's value should be shared.
+}
+
+@scope.Field
+struct Box {
+// # `rust.Box`
+//
+// Indicates that a field's value should not be stored on the stack.
+}
+
+@scope.Struct
+@scope.Exception
+struct Exhaustive {
+// # `rust.Exhaustive`
+//
+// Generated struct definitions generally include an additional member to
+// force use of `..Default::default()` when initalizing instances. Use this
+// annotation to prevent this.
+}
+
+@scope.Struct
+@scope.Typedef
+@scope.Union
+struct Ord {
+// # `rust.Ord`
+//
+// Require that the type being defined derive `Ord`.
+}
+
+@scope.Typedef
+struct NewType {
+// # `rust.NewType`
+//
+// Make a newtype from a typedef. For example,
+// ```
+// @rust.NewType
+// typedef binary Sha1
+// ```
+// will result in `pub struct Sha1(pub std::vec::Vec<u8>)`.
+//
+// Another common idiom is to use `rust.Type` and `rust.NewType` together like
+// this:
+// ```
+// @rust.NewType
+// @rust.Type { name =  "smallvec::SmallVec<[u8; 20]>" }
+// typedef binary Sha1
+// ```
+// in this case we'll get `pub struct Sha1(smallvec::SmallVec[u8; 20])`.
+}
+
+@scope.Field
+@scope.Typedef
+struct Type {
+  // # `rust.Type`
+  //
+  // There is a default Rust type associated with each Thrift type. For
+  // example, the default Rust type to represent Thrift `map<>`s is
+  // `std::collections::BTreeMap<>`.
+  //
+  // The `rust.Type` annotation provides an ability to "override"
+  // (substitute) a non-default Rust type in certain circumstances (full
+  // details below). We might say for example, `@rust.Type{name="HashMap"}`
+  // to override an instance of a specific Thrift `map<>`.
+  //
+  // The `rust.Type` annotation can be applied to any type but has no
+  // effect when applied to `string`, `list<>`, `struct` or `enum` types.
+  //
+  // The `name` argument of a `rust.Type` annotation may specify a
+  // "standard" or "nonstandard" type: a name containing a '`::`' is
+  // classified as a nonstandard type whereas, a name without a '`::`' is
+  // classified as standard.
+  //
+  // Standard types that may appear in `@rust.Type` annotations are exactly
+  // types that are (re-)exported from the `fbthrift::builtin_types`
+  // module. For such types, the `fbthift` package provides stock
+  // `fbthrift::Serialize<>` and `fbthrift::Deserialize<>` instances for
+  // them. At the current time the full set of such types is
+  // `std::collections::*`, `bytes::Bytes` and
+  // `ordered_float::OrderedFloat`.
+  //
+  // This is an example of an application of a `@rust.Type` annotation with a
+  // standard type:
+  // ```
+  //   @rust.Type { name = "OrderdedFloat<f64>" }
+  //   typedef double Double
+  //   struct T { 1: Double data; } // `data : fbthrift::builtin_types::OrderedFloat<f64>`
+  // ```
+  //
+  // This is an example of application of a `@rust.Type` annotation with a
+  // nonstandard type:
+  // ```
+  //   @rust.Type { name = "smallvec::SmallVec<[u8; 32]>" }
+  //   typedef binary binary_t
+  //   struct T { 1: binary_t data; } // `data : smallvec::SmallVec<[u8; 32]>`
+  // ```
+  //
+  // Nonstandard types, when they appear in `@rust.Type` annotations
+  // applied to Thrift `map<>`, `set<>` or `binary` types will result in
+  // the generation of `fbthrift::Serialize<>` and
+  // `fbthrift::Deserialize<>` instances for those types. The serialization
+  // code makes assumptions about valid expressions and the existence of
+  // trait implementations for such types that are documented below.
+  //
+  // A nonstandard type say can also be applied to `i64`. In this case, the
+  // resulting generated serialization code assumes the existence of
+  // `fbthrift::Serialize<>` and `fbthrift::Deserialize<>` for that
+  // nonstandard type.
+  //
+  // A nonstandard type applied to Thrift `void`, `bool`, `float`, `byte`,
+  // `i16`, `i32`, `double`, and `float` types will not result in the
+  // generation of any serialization code for the nonstandard type
+  // (rendering nonstandard types applied to these types effectively
+  // unsupported at this time).
+  //
+  // "Codegen" errors or bugs resulting from the use of standard types in
+  // valid positions in `@rust.Type` annotations should be considered the
+  // responsibility of the the Rust Thrift maintainers to address. Less
+  // "formal" support should be expected from the Rust Thrift maintainers
+  // when nonstandard types are involved.
+  //
+  // ## `binary`
+  //
+  // The default Rust type for a Thrift `binary` is
+  // `std::vec::Vec<std::primitive::u8>`. An example override:
+  // ```
+  //   @rust.Type{name = "smallvec::SmallVec<[u8; 32]>"}
+  //   typedef binary binary_t
+  //   struct T {
+  //     1: binary_t data;
+  //   }
+  // ```
+  //
+  // If nonstandard `B` models Thrift `binary`, `b : B`, `other: &[u8]` and
+  // `vec : std::vec::Vec<u8>` then the following expressions are required
+  // to be valid and the following trait instances must exist:
+  //
+  // | expression                                            |
+  // | :---------------------------------------------------- |
+  // | `let _: &[u8]  = b.as_slice()`                        |
+  // | `let _: B = <B>::with_capacity(l)`                    |
+  // | `b.extend_from_slice(other)`                          |
+  //
+  // | type           | traits                               |
+  // | :------------- | :----------------------------------  |
+  // | `B`            | `Debug`, `Default`,                  |
+  // |                | `From<std::vec::Vec<u8>>`            |
+  //
+  // ## `set`
+  //
+  // The default Rust type for a thrift `set` is
+  // `std::collections::BTreeSet<>`. An example override:
+  // ```
+  //   @rust.Type{name = "sorted_vector_map::SortedVectorSet"}
+  //   typedef set<string> set_t
+  //   struct T {
+  //     1: set_t data; // data : sorted_vector_map::SortedVectorSet<string>
+  //   }
+  // ```
+  //
+  // If nonstandard `S` models thrift `set`, `K` is the Rust element type,
+  // `k : K`, `l : usize`, `s : S<K>` and `'a` a lifetime, required valid
+  // expressions and trait implementations are as follows:
+  //
+  // | expression                                            |
+  // | :---------------------------------------------------- |
+  // | `for _ in &s { ... }`                                 |
+  // | `let _: usize = s.len()`                              |
+  // | `let mut _: T<K> = <S<K>>::with_capacity(l);`         |
+  // | `s.insert(k)`                                         |
+  //
+  // | type           | traits                               |
+  // | :------------- | :----------------------------------  |
+  // | `S<K>`         | `Debug`, `Default`                   |
+  // | `&'a S<K>`     | `IntoIterator<Item = &'a K>`         |
+  //
+  // ## `map`
+  //
+  // The default rust type for a thrift `map` is
+  // `std::collections::BTreeMap<>`. An example override:
+  // ```
+  //  @rust.Type{name = "sorted_vector_map::SortedVectorMap"}
+  //  typedef map<string, i64> map_t
+  //  struct T {
+  //    1: map_t data; // data: sorted_vector_map::SortedVectorMap<string, i64>
+  //  }
+  // ```
+  //
+  // If nonstandard `T` models thrift `map`, `K` and `V` are the Rust map
+  // key and value types respectively, `k : K`, `v : V`, `l : usize`, `m :
+  // T<K, V>` and `'a` a lifetime, required valid expressions and trait
+  // implementations are:
+  //
+  // | expression                                            |
+  // | :---------------------------------------------------- |
+  // | `for (key, val) in &m { ... }`                        |
+  // | `let _: usize = m.len()`                              |
+  // | `let mut _: T<K, V> = <T<K, V>>::with_capacity(l);`   |
+  // | `m.insert(k, v)`                                      |
+  //
+  // | type           | traits
+  // | :------------- | :----------------------------------
+  // | `T<K, V>`      | `Debug`, `Default`
+  // | `&'a T<K, V>`  | `IntoIterator<Item = (&'a K, &'a V)>`
+
+  1: string name;
+}
+
+// # `rust.Serde`
+//
+// Selectively enable/disable derivation of serde serialization functions for a
+// given type.
+@scope.Struct
+struct Serde {
+  1: bool enabled;
+}
+
+// # `rust.Mod`
+//
+// Use this annotation to explicitly set a non-default name for the module that
+// contains the services exceptions and error types.
+@scope.Service
+struct Mod {
+  1: string name;
+}
 
 @scope.Field
 @scope.Typedef
@@ -69,7 +331,7 @@ struct Adapter {
   // @scope.Transitive, `crate::` will be replaced with the name of the crate in which the
   // transitive annotation is defined.
   1: string name;
-} (thrift.uri = "facebook.com/thrift/annotation/rust/Adapter")
+}
 
 @scope.Enum
 @scope.Struct
@@ -95,7 +357,7 @@ struct Derive {
   // @scope.Transitive, `crate::` will be replaced with the name of the crate in which the
   // transitive annotation is defined.
   1: list<string> derives;
-} (thrift.uri = "facebook.com/thrift/annotation/rust/Derive")
+}
 
 @scope.Function
 @scope.Service
@@ -149,4 +411,4 @@ struct ServiceExn {
   // }
   // ```
   1: bool anyhow_to_application_exn;
-} (thrift.uri = "facebook.com/thrift/annotation/rust/ServiceExn")
+}

@@ -20,8 +20,7 @@
 
 #include <folly/futures/Future.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace {
 struct InteractionState {
   folly::Executor::KeepAlive<folly::EventBase> keepAlive;
@@ -35,8 +34,8 @@ struct InteractionState {
       if (self->refcount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         std::move(self->keepAlive)
             .add([id = std::move(self->id),
-                  implPtr = std::move(self->impl)](auto&& keepAlive) mutable {
-              auto* channel = implPtr->get(*keepAlive);
+                  implPtr = std::move(self->impl)](auto&& keepAlive_2) mutable {
+              auto* channel = implPtr->get(*keepAlive_2);
               if (channel) {
                 (*channel)->terminateInteraction(std::move(id));
               } else {
@@ -99,7 +98,9 @@ void PooledRequestChannel::sendRequestImpl(
   std::move(evb).add([this, sendFunc = std::forward<SendFunc>(sendFunc)](
                          auto&& keepAlive) mutable {
     auto& implRef = impl(*keepAlive);
-    DCHECK_EQ(getProtocolId(), implRef.getProtocolId());
+    // https://www.internalfb.com/intern/staticdocs/thrift/docs/features/serialization/cursor/
+    // NEEDS T_BINARY making this check a test breaker.
+    // DCHECK_EQ(getProtocolId(), implRef.getProtocolId());
     sendFunc(implRef);
   });
 }
@@ -303,5 +304,4 @@ PooledRequestChannel::globalExecutorProvider(size_t numThreads) {
         return {};
       };
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

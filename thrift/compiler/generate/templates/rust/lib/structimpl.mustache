@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -20,14 +20,14 @@
 #[allow(clippy::derivable_impls)]
 impl ::std::default::Default for self::{{struct:rust_name}} {
     fn default() -> Self {
-        Self {{>lib/block}}{{!
+        Self {{> lib/block}}{{!
         }}{{#struct:fields}}
             {{field:rust_name}}: {{!
                 }}{{#field:default}}{{!
                     }}{{#field:optional?}}{{!
                         }}{{#program:deprecated_optional_with_default_is_some?}}{{!
-                            }}{{#field:has_adapter?}}{{>lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
-                            }}{{>lib/fieldvalue}}{{!
+                            }}{{#field:has_adapter?}}{{> lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                            }}{{> lib/fieldvalue}}{{!
                             }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
                         }}{{/program:deprecated_optional_with_default_is_some?}}{{!
                         }}{{^program:deprecated_optional_with_default_is_some?}}{{!
@@ -35,8 +35,8 @@ impl ::std::default::Default for self::{{struct:rust_name}} {
                         }}{{/program:deprecated_optional_with_default_is_some?}}{{!
                     }}{{/field:optional?}}{{!
                     }}{{^field:optional?}}{{!
-                        }}{{#field:has_adapter?}}{{>lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
-                        }}{{>lib/fieldvalue}}{{!
+                        }}{{#field:has_adapter?}}{{> lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                        }}{{> lib/fieldvalue}}{{!
                         }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
                     }}{{/field:optional?}}{{!
                 }}{{/field:default}}{{!
@@ -45,14 +45,14 @@ impl ::std::default::Default for self::{{struct:rust_name}} {
                         }}::std::option::Option::None{{!
                     }}{{/field:optional?}}{{!
                     }}{{^field:optional?}}{{!
-                        }}{{#field:has_adapter?}}{{>lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                        }}{{#field:has_adapter?}}{{> lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
                         }}::std::default::Default::default(){{!
                         }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
                     }}{{/field:optional?}}{{!
                 }}{{/field:default}}{{!
             }},{{!
         }}{{/struct:fields}}
-            {{>lib/structvalue_epilogue}}
+            {{> lib/structvalue_epilogue}}
 
         }
     }
@@ -76,24 +76,32 @@ impl ::std::fmt::Debug for self::{{struct:rust_name}} {
 unsafe impl ::std::marker::Send for self::{{struct:rust_name}} {}
 unsafe impl ::std::marker::Sync for self::{{struct:rust_name}} {}
 impl ::std::marker::Unpin for self::{{struct:rust_name}} {}
+impl ::std::panic::RefUnwindSafe for self::{{struct:rust_name}} {}
+impl ::std::panic::UnwindSafe for self::{{struct:rust_name}} {}
 
 impl ::fbthrift::GetTType for self::{{struct:rust_name}} {
     const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
 }
-{{!newline}}
 {{#struct:thrift_uri}}
 
 impl ::fbthrift::GetUri for self::{{struct:rust_name}} {
-    fn uri() -> &'static str {
+    fn uri() -> &'static ::std::primitive::str {
         "{{struct:thrift_uri}}"
     }
 }
 {{/struct:thrift_uri}}
 
+impl ::fbthrift::GetTypeNameType for self::{{struct:rust_name}} {
+    fn type_name_type() -> fbthrift::TypeNameType {
+        ::fbthrift::TypeNameType::StructType
+    }
+}
+
 impl<P> ::fbthrift::Serialize<P> for self::{{struct:rust_name}}
 where
     P: ::fbthrift::ProtocolWriter,
 {
+    #[inline]
     fn write(&self, p: &mut P) {
         p.write_struct_begin("{{struct:name}}");{{!
         }}{{#struct:fields}}{{!
@@ -101,11 +109,11 @@ where
         if let ::std::option::Option::Some(some) = &self.{{field:rust_name}} {
             p.write_field_begin({{!
                 }}"{{field:name}}", {{!
-                }}{{#field:type}}{{>lib/ttype}}{{/field:type}}, {{!
+                }}{{#field:type}}{{> lib/ttype}}{{/field:type}}, {{!
                 }}{{field:key}}{{!
             }});
-            {{#field:type}}{{>lib/write}}{{/field:type}}({{!
-            }}{{#field:has_adapter?}}&{{>lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+            {{#field:type}}{{#field:type_annotation?}}{{> lib/annfieldwrite}}{{/field:type_annotation?}}{{^field:type_annotation?}}{{> lib/write}}{{/field:type_annotation?}}{{/field:type}}({{!
+            }}{{#field:has_adapter?}}&{{> lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
             }}some{{!
             }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
             }}, p);
@@ -115,11 +123,11 @@ where
         }}{{^field:optional?}}
         p.write_field_begin({{!
             }}"{{field:name}}", {{!
-            }}{{#field:type}}{{>lib/ttype}}{{/field:type}}, {{!
+            }}{{#field:type}}{{> lib/ttype}}{{/field:type}}, {{!
             }}{{field:key}}{{!
         }});
-        {{#field:type}}{{>lib/write}}{{/field:type}}({{!
-          }}{{#field:has_adapter?}}&{{>lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+        {{#field:type}}{{#field:type_annotation?}}{{> lib/annfieldwrite}}{{/field:type_annotation?}}{{^field:type_annotation?}}{{> lib/write}}{{/field:type_annotation?}}{{/field:type}}({{!
+          }}{{#field:has_adapter?}}&{{> lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
           }}&self.{{field:rust_name}}{{!
           }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
         }}, p);
@@ -135,25 +143,40 @@ impl<P> ::fbthrift::Deserialize<P> for self::{{struct:rust_name}}
 where
     P: ::fbthrift::ProtocolReader,
 {
+    #[inline]
     fn read(p: &mut P) -> ::anyhow::Result<Self> {
         static FIELDS: &[::fbthrift::Field] = &[
             {{#struct:fields_by_name}}
-            ::fbthrift::Field::new("{{field:name}}", {{#field:type}}{{>lib/ttype}}{{/field:type}}, {{field:key}}),
+            ::fbthrift::Field::new("{{field:name}}", {{#field:type}}{{> lib/ttype}}{{/field:type}}, {{field:key}}),
             {{/struct:fields_by_name}}
         ];
+        {{#struct:all_optional?}}
+        #[allow(unused_mut)]
+        let mut fields = Self {{> lib/block}}{{!
+            }}{{#struct:fields}}
+            {{field:rust_name}}: ::std::option::Option::None,{{!
+            }}{{/struct:fields}}
+            {{> lib/structvalue_epilogue}}
+
+        };
+        {{/struct:all_optional?}}
+        {{^struct:all_optional?}}
         {{#struct:fields}}
         let mut field_{{field:name}} = ::std::option::Option::None;
         {{/struct:fields}}
-        let _ = p.read_struct_begin(|_| ())?;
+        {{/struct:all_optional?}}
+        let _ = ::anyhow::Context::context(p.read_struct_begin(|_| ()), "Expected a {{struct:name}}")?;
         loop {
             let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
             match (fty, fid as ::std::primitive::i32) {
                 (::fbthrift::TType::Stop, _) => break,{{!
                 }}{{#struct:fields}}
-                ({{#field:type}}{{>lib/ttype}}{{/field:type}}, {{field:key}}) => {{!
-                    }}field_{{field:name}} = ::std::option::Option::Some({{!
-                    }}{{#field:has_adapter?}}{{>lib/adapter/qualified}}::from_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
-                    }}{{#field:type}}{{>lib/read}}{{/field:type}}(p)?{{!
+                ({{#field:type}}{{> lib/ttype}}{{/field:type}}, {{field:key}}) => {{!
+                    }}{{#struct:all_optional?}}fields.{{field:rust_name}}{{/struct:all_optional?}}{{!
+                    }}{{^struct:all_optional?}}field_{{field:name}}{{/struct:all_optional?}}{{!
+                    }} = ::std::option::Option::Some({{!
+                    }}{{#field:has_adapter?}}{{> lib/adapter/qualified}}::from_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                    }}{{#field:type}}{{#field:type_annotation?}}{{> lib/annfieldread}}{{/field:type_annotation?}}{{^field:type_annotation?}}{{> lib/read}}{{/field:type_annotation?}}{{/field:type}}(p)?{{!
                     }}{{#field:has_adapter?}}, {{field:key}})?{{/field:has_adapter?}}{{!
                     }}),{{!
                 }}{{/struct:fields}}
@@ -162,23 +185,27 @@ where
             p.read_field_end()?;
         }
         p.read_struct_end()?;
-        ::std::result::Result::Ok(Self {{>lib/block}}{{!
+        {{#struct:all_optional?}}
+        ::std::result::Result::Ok(fields)
+        {{/struct:all_optional?}}
+        {{^struct:all_optional?}}
+        ::std::result::Result::Ok(Self {{> lib/block}}{{!
             }}{{#struct:fields}}
             {{field:rust_name}}: field_{{field:name}}{{!
                 }}{{^field:optional?}}{{!
                     }}{{#field:has_adapter?}}{{!
-                        }}.unwrap_or_else(|| {{>lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{!
-                        }}{{#field:default}}{{>lib/value}}{{/field:default}}{{!
+                        }}.unwrap_or_else(|| {{> lib/adapter/qualified}}::from_thrift_default::<{{struct:rust_name}}>({{!
+                        }}{{#field:default}}{{> lib/value}}{{/field:default}}{{!
                         }}{{^field:default}}::std::default::Default::default(){{/field:default}}{{!
                         }}, {{field:key}})){{!
                     }}{{/field:has_adapter?}}{{!
                     }}{{^field:has_adapter?}}{{!
                         }}{{#field:default}}{{!
                             }}{{#value:simpleLiteral?}}{{!
-                                }}.unwrap_or({{>lib/value}}){{!
+                                }}.unwrap_or({{> lib/value}}){{!
                             }}{{/value:simpleLiteral?}}{{!
                             }}{{^value:simpleLiteral?}}{{!
-                                }}.unwrap_or_else(|| {{>lib/value}}){{!
+                                }}.unwrap_or_else(|| {{> lib/value}}){{!
                             }}{{/value:simpleLiteral?}}{{!
                         }}{{/field:default}}{{!
                         }}{{^field:default}}{{!
@@ -188,14 +215,14 @@ where
                 }}{{/field:optional?}}{{!
             }},{{!
             }}{{/struct:fields}}
-            {{>lib/structvalue_epilogue}}
+            {{> lib/structvalue_epilogue}}
 
         })
+        {{/struct:all_optional?}}
     }
 }
 
 {{#program:rust_gen_native_metadata?}}
-{{>lib/metadata/struct}}
+{{> lib/metadata/struct}}
 {{/program:rust_gen_native_metadata?}}
 {{/struct:union?}}
-{{!newline}}

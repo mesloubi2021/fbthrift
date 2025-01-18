@@ -24,10 +24,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"libfb/go/thriftbase"
 	"thrift/conformance/rpc"
+	"thrift/lib/go/thrift"
 
 	"github.com/golang/glog"
 )
@@ -42,54 +41,52 @@ func main() {
 
 	handler := &rpcConformanceServiceHandler{}
 	proc := rpc.NewRPCConformanceServiceProcessor(handler)
-	ts, err := thriftbase.ServerContext(
+	ts, addr, err := newServer(
 		proc,
-		thriftbase.ServerSSLPolicy(thriftbase.SSLPolicyDisabled),
-		thriftbase.BindAddr("[::]:0"),
+		"[::]:0",
 	)
 	if err != nil {
 		glog.Fatalf("failed to start server: %v", err)
 	}
 
+	fmt.Println(addr.(*net.TCPAddr).Port)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		err := ts.Serve()
+		err := ts.ServeContext(ctx)
 		if err != nil {
 			glog.Fatalf("failed to start server")
 		}
 	}()
 
-	for i := 1; i < 10; i++ {
-		// Unfortunately there is currently no way to tell
-		// if the server has started listening :(
-		time.Sleep(1 * time.Second)
-		addr := ts.ServerTransport().Addr()
-		if addr != nil {
-			// Print port for the test runner
-			fmt.Println(addr.(*net.TCPAddr).Port)
-			break
-		}
-	}
-
 	<-sigc
+	cancel()
 	os.Exit(0)
 }
 
+func newServer(processor thrift.Processor, addr string) (thrift.Server, net.Addr, error) {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	return thrift.NewServer(processor, listener, thrift.TransportIDRocket), listener.Addr(), nil
+}
+
 type rpcConformanceServiceHandler struct {
-	result      *rpc.ServerTestResult_
+	result      *rpc.ServerTestResult
 	instruction *rpc.ServerInstruction
 }
 
 func (h *rpcConformanceServiceHandler) RequestResponseBasic(ctx context.Context, request *rpc.Request) (*rpc.Response, error) {
-	requestValue := rpc.NewRequestResponseBasicServerTestResult_().
+	requestValue := rpc.NewRequestResponseBasicServerTestResult().
 		SetRequest(request)
-	h.result = rpc.NewServerTestResult_().
+	h.result = rpc.NewServerTestResult().
 		SetRequestResponseBasic(requestValue)
 	return h.instruction.RequestResponseBasic.Response, nil
 }
 
 func (h *rpcConformanceServiceHandler) RequestResponseNoArgVoidResponse(ctx context.Context) error {
-	requestValue := rpc.NewRequestResponseNoArgVoidResponseServerTestResult_()
-	h.result = rpc.NewServerTestResult_().
+	requestValue := rpc.NewRequestResponseNoArgVoidResponseServerTestResult()
+	h.result = rpc.NewServerTestResult().
 		SetRequestResponseNoArgVoidResponse(requestValue)
 	return nil
 }
@@ -99,17 +96,17 @@ func (h *rpcConformanceServiceHandler) RequestResponseTimeout(ctx context.Contex
 }
 
 func (h *rpcConformanceServiceHandler) RequestResponseDeclaredException(ctx context.Context, request *rpc.Request) error {
-	requestValue := rpc.NewRequestResponseDeclaredExceptionServerTestResult_().
+	requestValue := rpc.NewRequestResponseDeclaredExceptionServerTestResult().
 		SetRequest(request)
-	h.result = rpc.NewServerTestResult_().
+	h.result = rpc.NewServerTestResult().
 		SetRequestResponseDeclaredException(requestValue)
 	return rpc.NewUserException().SetMsg(h.instruction.RequestResponseDeclaredException.UserException.Msg)
 }
 
 func (h *rpcConformanceServiceHandler) RequestResponseUndeclaredException(ctx context.Context, request *rpc.Request) error {
-	requestValue := rpc.NewRequestResponseUndeclaredExceptionServerTestResult_().
+	requestValue := rpc.NewRequestResponseUndeclaredExceptionServerTestResult().
 		SetRequest(request)
-	h.result = rpc.NewServerTestResult_().
+	h.result = rpc.NewServerTestResult().
 		SetRequestResponseUndeclaredException(requestValue)
 	return errors.New(
 		h.instruction.RequestResponseUndeclaredException.ExceptionMessage,
@@ -121,7 +118,7 @@ func (h *rpcConformanceServiceHandler) SendTestCase(ctx context.Context, testCas
 	return nil
 }
 
-func (h *rpcConformanceServiceHandler) GetTestResult_(ctx context.Context) (*rpc.ServerTestResult_, error) {
+func (h *rpcConformanceServiceHandler) GetTestResult(ctx context.Context) (*rpc.ServerTestResult, error) {
 	return h.result, nil
 }
 
@@ -129,6 +126,6 @@ func (h *rpcConformanceServiceHandler) GetTestCase(ctx context.Context) (*rpc.Rp
 	return nil, errors.New("not implemented")
 }
 
-func (h *rpcConformanceServiceHandler) SendTestResult_(ctx context.Context, result *rpc.ClientTestResult_) error {
+func (h *rpcConformanceServiceHandler) SendTestResult(ctx context.Context, result *rpc.ClientTestResult) error {
 	return errors.New("not implemented")
 }

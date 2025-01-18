@@ -15,17 +15,15 @@
  */
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
-#include <boost/algorithm/string.hpp>
 
-#include <thrift/compiler/detail/mustache/mstch.h>
 #include <thrift/compiler/generate/json.h>
 #include <thrift/compiler/generate/mstch_objects.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
+#include <thrift/compiler/whisker/mstch_compat.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 namespace {
 
 struct json_codegen_data {
@@ -48,8 +46,8 @@ std::string get_filepath(
   if (auto full_path = sm.found_include_file(path)) {
     path = std::move(*full_path);
   }
-  return boost::filesystem::relative(
-             boost::filesystem::canonical(boost::filesystem::path(path)),
+  return std::filesystem::relative(
+             std::filesystem::canonical(std::filesystem::path(path)),
              compiler_path)
       .generic_string();
 }
@@ -59,7 +57,6 @@ class t_json_experimental_generator : public t_mstch_generator {
   using t_mstch_generator::t_mstch_generator;
 
   std::string template_prefix() const override { return "json"; }
-  bool convert_delimiter() const override { return true; }
 
   void generate_program() override;
 
@@ -89,7 +86,13 @@ class json_experimental_program : public mstch_program {
             {"program:normalized_include_prefix",
              &json_experimental_program::include_prefix},
         });
+
+    // To allow rendering a brace not surrounded by whitespace, without
+    // interfering with the `{{` `}}` used by the mustache syntax.
+    register_method("open_object", [] { return mstch::node("{"); });
+    register_method("close_object", [] { return mstch::node("}"); });
   }
+
   mstch::node get_py_namespace() { return program_->get_namespace("py"); }
   mstch::node has_includes() { return !program_->includes().empty(); }
   mstch::node includes() {
@@ -124,7 +127,7 @@ class json_experimental_program : public mstch_program {
           domain_prefix.end(), domain.begin(), std::prev(domain.end()));
       result.push_back(mstch::map{
           {"key", std::string("domain_prefix")},
-          {"value", boost::join(domain_prefix, ".")},
+          {"value", fmt::format("{}", fmt::join(domain_prefix, "."))},
           {"last?", false}});
       result.push_back(mstch::map{
           {"key", std::string("domain_suffix")},
@@ -134,7 +137,7 @@ class json_experimental_program : public mstch_program {
     if (!package.path().empty()) {
       result.push_back(mstch::map{
           {"key", std::string("path")},
-          {"value", boost::join(package.path(), "/")},
+          {"value", fmt::format("{}", fmt::join(package.path(), "/"))},
           {"last?", false}});
     }
     result.push_back(mstch::map{
@@ -151,7 +154,7 @@ class json_experimental_program : public mstch_program {
     if (prefix.empty()) {
       return std::string();
     }
-    return boost::filesystem::path(prefix).has_root_directory()
+    return std::filesystem::path(prefix).has_root_directory()
         ? context_.options["include_prefix"]
         : prefix;
   }
@@ -392,6 +395,10 @@ class json_experimental_const_value : public mstch_const_value {
     register_methods(
         this,
         {
+            {"value:integer_or_enum?",
+             &json_experimental_const_value::is_integer_or_enum},
+            {"value:bool_integer_value",
+             &json_experimental_const_value::get_bool_integer_value},
             {"value:lineno", &json_experimental_const_value::get_lineno},
             {"value:type_name", &json_experimental_const_value::get_type_name},
             {"value:qualified_name",
@@ -401,6 +408,14 @@ class json_experimental_const_value : public mstch_const_value {
             {"value:docstring?", &json_experimental_const_value::has_docstring},
             {"value:docstring", &json_experimental_const_value::get_docstring},
         });
+  }
+  mstch::node is_integer_or_enum() {
+    // Enums are represented with CV_INTEGER with const_value_->is_enum().
+    return type_ == cv::CV_INTEGER;
+  }
+  mstch::node get_bool_integer_value() {
+    return type_ == cv::CV_BOOL ? (const_value_->get_bool() ? 1 : 0)
+                                : mstch::node();
   }
   mstch::node get_lineno() {
     return compiler::get_lineno(*current_const_, source_mgr_);
@@ -427,7 +442,7 @@ void t_json_experimental_generator::generate_program() {
   out_dir_base_ = "gen-json_experimental";
   const auto* program = get_program();
   data_.current_program = program;
-  data_.compiler_path = boost::filesystem::current_path().generic_string();
+  data_.compiler_path = std::filesystem::current_path().generic_string();
   data_.sm = &source_mgr_;
   set_mstch_factories();
   auto mstch_program = mstch_context_.program_factory->make_mstch_object(
@@ -451,6 +466,4 @@ void t_json_experimental_generator::set_mstch_factories() {
 THRIFT_REGISTER_GENERATOR(json_experimental, "JSON_EXPERIMENTAL", "");
 
 } // namespace
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

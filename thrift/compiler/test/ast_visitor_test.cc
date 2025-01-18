@@ -21,14 +21,38 @@
 
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <thrift/compiler/ast/t_base_type.h>
+#include <thrift/compiler/ast/t_primitive_type.h>
 #include <thrift/compiler/ast/t_type.h>
-#include <thrift/compiler/test/ast_testing.h>
 
 namespace apache::thrift::compiler {
-namespace {
 
-class VisitorContextTest : public test::BaseVisitorTest {};
+class base_program_test : public testing::Test {
+ protected:
+  t_program program_{"path/to/program.thrift", "/root/path/to/program.thrift"};
+
+  template <typename T>
+  T& create_def(const std::string& name, fmt::string_view uri = {}) {
+    return program_.add_def(std::make_unique<T>(&program_, name), uri);
+  }
+
+  t_struct& create_annotation(const std::string& name, fmt::string_view uri) {
+    return create_def<t_struct>(name, uri);
+  }
+
+  t_struct& create_annotation(const std::string& name) {
+    return create_annotation(name, "facebook.com/thrift/annotation/" + name);
+  }
+
+  std::unique_ptr<t_const> create_const(const t_struct& type) {
+    auto value = t_const_value::make_map();
+    value->set_ttype(type);
+    return std::make_unique<t_const>(&program_, type, "", std::move(value));
+  }
+
+  void add_annot(const t_struct& type, t_named& node) {
+    node.add_structured_annotation(create_const(type));
+  }
+};
 
 // A helper class for keeping track of visitation expectations.
 class MockAstVisitor {
@@ -36,6 +60,7 @@ class MockAstVisitor {
   MOCK_METHOD(void, visit_interface, (const t_interface*));
   MOCK_METHOD(void, visit_structured_definition, (const t_structured*));
   MOCK_METHOD(void, visit_root_definition, (const t_named*));
+  MOCK_METHOD(void, visit_named, (const t_named*));
   MOCK_METHOD(void, visit_definition, (const t_named*));
   MOCK_METHOD(void, visit_container, (const t_container*));
 
@@ -73,6 +98,8 @@ class MockAstVisitor {
         [this](const t_named& node) { visit_root_definition(&node); });
     visitor.add_definition_visitor(
         [this](const t_named& node) { visit_definition(&node); });
+    visitor.add_named_visitor(
+        [this](const t_named& node) { visit_named(&node); });
     visitor.add_container_visitor(
         [this](const t_container& node) { visit_container(&node); });
 
@@ -91,8 +118,8 @@ class MockAstVisitor {
     visitor.add_stream_visitor(
         [this](const t_stream& node) { visit_stream(&node); });
 
-    visitor.add_structured_visitor(
-        [this](const t_structured& node) { visit_structured(&node); });
+    visitor.add_struct_visitor(
+        [this](const t_struct& node) { visit_structured(&node); });
     visitor.add_union_visitor(
         [this](const t_union& node) { visit_union(&node); });
     visitor.add_exception_visitor(
@@ -148,7 +175,7 @@ class OverloadedVisitor {
 };
 
 template <typename V>
-class AstVisitorTest : public test::BaseProgramTest {
+class AstVisitorTest : public base_program_test {
  public:
   AstVisitorTest() noexcept : overload_visitor_(&overload_mock_) {}
 
@@ -162,18 +189,19 @@ class AstVisitorTest : public test::BaseProgramTest {
     visitor_.add_structured_definition_visitor(overload_visitor_);
     visitor_.add_root_definition_visitor(overload_visitor_);
     visitor_.add_definition_visitor(overload_visitor_);
+    visitor_.add_named_visitor(overload_visitor_);
     visitor_.add_container_visitor(overload_visitor_);
 
     // Add baseline expectations.
     EXPECT_CALL(this->mock_, visit_program(&this->program_));
-    EXPECT_CALL(this->mock_, visit_definition(&this->program_));
+    EXPECT_CALL(this->mock_, visit_named(&this->program_));
   }
 
   void TearDown() override { visitor_(program_); }
 
  protected:
-  ::testing::StrictMock<MockAstVisitor> mock_;
-  ::testing::StrictMock<MockAstVisitor> overload_mock_;
+  testing::StrictMock<MockAstVisitor> mock_;
+  testing::StrictMock<MockAstVisitor> overload_mock_;
   t_scope scope_;
 
  private:
@@ -181,15 +209,13 @@ class AstVisitorTest : public test::BaseProgramTest {
   OverloadedVisitor overload_visitor_;
 };
 
-using AstVisitorTypes = ::testing::Types<ast_visitor, const_ast_visitor>;
-TYPED_TEST_SUITE(AstVisitorTest, AstVisitorTypes);
+using ast_visitor_types = testing::Types<ast_visitor, const_ast_visitor>;
+TYPED_TEST_SUITE(AstVisitorTest, ast_visitor_types);
 
-TYPED_TEST(AstVisitorTest, EmptyProgram) {}
-
-TYPED_TEST(AstVisitorTest, Interaction) {
+TYPED_TEST(AstVisitorTest, interaction) {
   auto interaction =
       std::make_unique<t_interaction>(&this->program_, "Interaction");
-  auto void_ref = t_type_ref::from_req_ptr(&t_base_type::t_void());
+  auto void_ref = t_type_ref::from_req_ptr(&t_primitive_type::t_void());
   auto func1 =
       std::make_unique<t_function>(&this->program_, void_ref, "function1");
   func1->set_exceptions(std::make_unique<t_throws>());
@@ -199,27 +225,30 @@ TYPED_TEST(AstVisitorTest, Interaction) {
   EXPECT_CALL(this->mock_, visit_function(func1.get()));
   EXPECT_CALL(this->mock_, visit_throws(func1->exceptions()));
   EXPECT_CALL(this->mock_, visit_function(func2.get()));
-  // Matches: definition.
+  // Matches: definition, named.
+  EXPECT_CALL(this->mock_, visit_named(func1.get()));
+  EXPECT_CALL(this->mock_, visit_named(func2.get()));
   EXPECT_CALL(this->mock_, visit_definition(func1.get()));
   EXPECT_CALL(this->mock_, visit_definition(func2.get()));
-  EXPECT_CALL(this->overload_mock_, visit_function(func1.get()));
-  EXPECT_CALL(this->overload_mock_, visit_function(func2.get()));
+  EXPECT_CALL(this->overload_mock_, visit_function(func1.get())).Times(2);
+  EXPECT_CALL(this->overload_mock_, visit_function(func2.get())).Times(2);
   interaction->add_function(std::move(func1));
   interaction->add_function(std::move(func2));
 
   EXPECT_CALL(this->mock_, visit_interaction(interaction.get()));
-  // Matches: interface, root definition, definition.
+  // Matches: interface, root definition, definition, named
   EXPECT_CALL(this->mock_, visit_interface(interaction.get()));
   EXPECT_CALL(this->mock_, visit_root_definition(interaction.get()));
+  EXPECT_CALL(this->mock_, visit_named(interaction.get()));
   EXPECT_CALL(this->mock_, visit_definition(interaction.get()));
   EXPECT_CALL(this->overload_mock_, visit_interaction(interaction.get()))
-      .Times(3);
-  this->program_.add_interaction(std::move(interaction));
+      .Times(4);
+  this->program_.add_definition(std::move(interaction));
 }
 
-TYPED_TEST(AstVisitorTest, Service) {
+TYPED_TEST(AstVisitorTest, service) {
   auto service = std::make_unique<t_service>(&this->program_, "Service");
-  auto void_ref = t_type_ref::from_req_ptr(&t_base_type::t_void());
+  auto void_ref = t_type_ref::from_req_ptr(&t_primitive_type::t_void());
   auto func1 =
       std::make_unique<t_function>(&this->program_, void_ref, "function1");
   func1->set_exceptions(std::make_unique<t_throws>());
@@ -229,162 +258,177 @@ TYPED_TEST(AstVisitorTest, Service) {
   EXPECT_CALL(this->mock_, visit_function(func1.get()));
   EXPECT_CALL(this->mock_, visit_throws(func1->exceptions()));
   EXPECT_CALL(this->mock_, visit_function(func2.get()));
-  // Matches: definition.
+  // Matches: definition, named
   EXPECT_CALL(this->mock_, visit_definition(func1.get()));
   EXPECT_CALL(this->mock_, visit_definition(func2.get()));
-  EXPECT_CALL(this->overload_mock_, visit_function(func1.get()));
-  EXPECT_CALL(this->overload_mock_, visit_function(func2.get()));
+  EXPECT_CALL(this->mock_, visit_named(func1.get()));
+  EXPECT_CALL(this->mock_, visit_named(func2.get()));
+  EXPECT_CALL(this->overload_mock_, visit_function(func1.get())).Times(2);
+  EXPECT_CALL(this->overload_mock_, visit_function(func2.get())).Times(2);
   service->add_function(std::move(func1));
   service->add_function(std::move(func2));
 
   EXPECT_CALL(this->mock_, visit_service(service.get()));
-  // Matches: interface, root definition, definition.
+  // Matches: interface, root definition, definition, named
   EXPECT_CALL(this->mock_, visit_interface(service.get()));
   EXPECT_CALL(this->mock_, visit_root_definition(service.get()));
   EXPECT_CALL(this->mock_, visit_definition(service.get()));
-  EXPECT_CALL(this->overload_mock_, visit_service(service.get())).Times(3);
-  this->program_.add_service(std::move(service));
+  EXPECT_CALL(this->mock_, visit_named(service.get()));
+  EXPECT_CALL(this->overload_mock_, visit_service(service.get())).Times(4);
+  this->program_.add_definition(std::move(service));
 }
 
-TYPED_TEST(AstVisitorTest, Struct) {
+TYPED_TEST(AstVisitorTest, struct) {
   auto tstruct = std::make_unique<t_struct>(&this->program_, "Struct");
   auto field =
-      std::make_unique<t_field>(&t_base_type::t_i32(), "struct_field", 1);
+      std::make_unique<t_field>(&t_primitive_type::t_i32(), "struct_field", 1);
   EXPECT_CALL(this->mock_, visit_field(field.get()));
-  // Matches: definition.
+  // Matches: definition, named
   EXPECT_CALL(this->mock_, visit_definition(field.get()));
-  EXPECT_CALL(this->overload_mock_, visit_field(field.get()));
+  EXPECT_CALL(this->mock_, visit_named(field.get()));
+  EXPECT_CALL(this->overload_mock_, visit_field(field.get())).Times(2);
   tstruct->append(std::move(field));
 
   EXPECT_CALL(this->mock_, visit_structured(tstruct.get()));
-  // Matches: structured_definition, root definition, definition.
+  // Matches: structured_definition, root definition, definition, named
   EXPECT_CALL(this->mock_, visit_structured_definition(tstruct.get()));
   EXPECT_CALL(this->mock_, visit_root_definition(tstruct.get()));
   EXPECT_CALL(this->mock_, visit_definition(tstruct.get()));
-  EXPECT_CALL(this->overload_mock_, visit_structured(tstruct.get())).Times(3);
-  this->program_.add_struct(std::move(tstruct));
+  EXPECT_CALL(this->mock_, visit_named(tstruct.get()));
+  EXPECT_CALL(this->overload_mock_, visit_structured(tstruct.get())).Times(4);
+  this->program_.add_definition(std::move(tstruct));
 }
 
-TYPED_TEST(AstVisitorTest, Union) {
+TYPED_TEST(AstVisitorTest, union) {
   auto tunion = std::make_unique<t_union>(&this->program_, "Union");
   auto field =
-      std::make_unique<t_field>(&t_base_type::t_i32(), "union_field", 1);
+      std::make_unique<t_field>(&t_primitive_type::t_i32(), "union_field", 1);
   EXPECT_CALL(this->mock_, visit_field(field.get()));
-  // Matches: definition.
+  // Matches: definition, named.
   EXPECT_CALL(this->mock_, visit_definition(field.get()));
-  EXPECT_CALL(this->overload_mock_, visit_field(field.get()));
+  EXPECT_CALL(this->mock_, visit_named(field.get()));
+  EXPECT_CALL(this->overload_mock_, visit_field(field.get())).Times(2);
   tunion->append(std::move(field));
 
   EXPECT_CALL(this->mock_, visit_union(tunion.get()));
-  // Matches: structured_definition, root definition, definition.
+  // Matches: structured_definition, root definition, definition, named
   EXPECT_CALL(this->mock_, visit_structured_definition(tunion.get()));
   EXPECT_CALL(this->mock_, visit_root_definition(tunion.get()));
   EXPECT_CALL(this->mock_, visit_definition(tunion.get()));
-  EXPECT_CALL(this->overload_mock_, visit_union(tunion.get())).Times(3);
-  this->program_.add_struct(std::move(tunion));
+  EXPECT_CALL(this->mock_, visit_named(tunion.get()));
+  EXPECT_CALL(this->overload_mock_, visit_union(tunion.get())).Times(4);
+  this->program_.add_definition(std::move(tunion));
 }
 
-TYPED_TEST(AstVisitorTest, Exception) {
+TYPED_TEST(AstVisitorTest, exception) {
   auto except = std::make_unique<t_exception>(&this->program_, "Exception");
-  auto field =
-      std::make_unique<t_field>(&t_base_type::t_i32(), "exception_field", 1);
+  auto field = std::make_unique<t_field>(
+      &t_primitive_type::t_i32(), "exception_field", 1);
   EXPECT_CALL(this->mock_, visit_field(field.get()));
-  // Matches: definition.
+  // Matches: definition, named.
   EXPECT_CALL(this->mock_, visit_definition(field.get()));
-  EXPECT_CALL(this->overload_mock_, visit_field(field.get()));
+  EXPECT_CALL(this->mock_, visit_named(field.get()));
+  EXPECT_CALL(this->overload_mock_, visit_field(field.get())).Times(2);
   except->append(std::move(field));
 
   EXPECT_CALL(this->mock_, visit_exception(except.get()));
-  // Matches: structured_definition, root definition, definition.
+  // Matches: structured_definition, root definition, definition, named
   EXPECT_CALL(this->mock_, visit_structured_definition(except.get()));
   EXPECT_CALL(this->mock_, visit_root_definition(except.get()));
   EXPECT_CALL(this->mock_, visit_definition(except.get()));
-  EXPECT_CALL(this->overload_mock_, visit_exception(except.get())).Times(3);
-  this->program_.add_exception(std::move(except));
+  EXPECT_CALL(this->mock_, visit_named(except.get()));
+  EXPECT_CALL(this->overload_mock_, visit_exception(except.get())).Times(4);
+  this->program_.add_definition(std::move(except));
 }
 
-TYPED_TEST(AstVisitorTest, Enum) {
+TYPED_TEST(AstVisitorTest, enum) {
   auto tenum = std::make_unique<t_enum>(&this->program_, "Enum");
   auto tenum_value = std::make_unique<t_enum_value>("EnumValue");
   EXPECT_CALL(this->mock_, visit_enum_value(tenum_value.get()));
-  // Matches: definition.
+  // Matches: definition, named
   EXPECT_CALL(this->mock_, visit_definition(tenum_value.get()));
-  EXPECT_CALL(this->overload_mock_, visit_enum_value(tenum_value.get()));
+  EXPECT_CALL(this->mock_, visit_named(tenum_value.get()));
+  EXPECT_CALL(this->overload_mock_, visit_enum_value(tenum_value.get()))
+      .Times(2);
   tenum->append(std::move(tenum_value));
 
   EXPECT_CALL(this->mock_, visit_enum(tenum.get()));
-  // Matches: root definition, definition.
+  // Matches: root definition, definition, named
   EXPECT_CALL(this->mock_, visit_root_definition(tenum.get()));
   EXPECT_CALL(this->mock_, visit_definition(tenum.get()));
-  EXPECT_CALL(this->overload_mock_, visit_enum(tenum.get())).Times(2);
-  this->program_.add_enum(std::move(tenum));
+  EXPECT_CALL(this->mock_, visit_named(tenum.get()));
+  EXPECT_CALL(this->overload_mock_, visit_enum(tenum.get())).Times(3);
+  this->program_.add_definition(std::move(tenum));
 }
 
-TYPED_TEST(AstVisitorTest, Const) {
+TYPED_TEST(AstVisitorTest, constant) {
   auto tconst = std::make_unique<t_const>(
-      &this->program_, &t_base_type::t_i32(), "Const", nullptr);
+      &this->program_, &t_primitive_type::t_i32(), "Const", nullptr);
   EXPECT_CALL(this->mock_, visit_const(tconst.get()));
-  // Matches: root definition, definition.
+  // Matches: root definition, definition, named
   EXPECT_CALL(this->mock_, visit_root_definition(tconst.get()));
   EXPECT_CALL(this->mock_, visit_definition(tconst.get()));
-  EXPECT_CALL(this->overload_mock_, visit_const(tconst.get())).Times(2);
-  this->program_.add_const(std::move(tconst));
+  EXPECT_CALL(this->mock_, visit_named(tconst.get()));
+  EXPECT_CALL(this->overload_mock_, visit_const(tconst.get())).Times(3);
+  this->program_.add_definition(std::move(tconst));
 }
 
-TYPED_TEST(AstVisitorTest, Typedef) {
+TYPED_TEST(AstVisitorTest, typedef) {
   auto ttypedef = std::make_unique<t_typedef>(
-      &this->program_, &t_base_type::t_i32(), "Typedef", nullptr);
+      &this->program_, &t_primitive_type::t_i32(), "Typedef", nullptr);
   EXPECT_CALL(this->mock_, visit_typedef(ttypedef.get()));
-  // Matches: root definition, definition.
+  // Matches: root definition, definition, named.
   EXPECT_CALL(this->mock_, visit_root_definition(ttypedef.get()));
   EXPECT_CALL(this->mock_, visit_definition(ttypedef.get()));
-  EXPECT_CALL(this->overload_mock_, visit_typedef(ttypedef.get())).Times(2);
-  this->program_.add_typedef(std::move(ttypedef));
+  EXPECT_CALL(this->mock_, visit_named(ttypedef.get()));
+  EXPECT_CALL(this->overload_mock_, visit_typedef(ttypedef.get())).Times(3);
+  this->program_.add_definition(std::move(ttypedef));
 }
 
-TYPED_TEST(AstVisitorTest, Set) {
-  auto set = std::make_unique<t_set>(&t_base_type::t_i32());
+TYPED_TEST(AstVisitorTest, set) {
+  auto set = std::make_unique<t_set>(&t_primitive_type::t_i32());
   EXPECT_CALL(this->mock_, visit_set(set.get()));
   EXPECT_CALL(this->mock_, visit_container(set.get()));
   EXPECT_CALL(this->overload_mock_, visit_set(set.get()));
   this->program_.add_type_instantiation(std::move(set));
 }
 
-TYPED_TEST(AstVisitorTest, List) {
-  auto list = std::make_unique<t_list>(&t_base_type::t_i32());
+TYPED_TEST(AstVisitorTest, list) {
+  auto list = std::make_unique<t_list>(&t_primitive_type::t_i32());
   EXPECT_CALL(this->mock_, visit_list(list.get()));
   EXPECT_CALL(this->mock_, visit_container(list.get()));
   EXPECT_CALL(this->overload_mock_, visit_list(list.get()));
   this->program_.add_type_instantiation(std::move(list));
 }
 
-TYPED_TEST(AstVisitorTest, Map) {
-  auto map =
-      std::make_unique<t_map>(&t_base_type::t_i32(), &t_base_type::t_i32());
+TYPED_TEST(AstVisitorTest, map) {
+  auto map = std::make_unique<t_map>(
+      &t_primitive_type::t_i32(), &t_primitive_type::t_i32());
   EXPECT_CALL(this->mock_, visit_map(map.get()));
   EXPECT_CALL(this->mock_, visit_container(map.get()));
   EXPECT_CALL(this->overload_mock_, visit_map(map.get()));
   this->program_.add_type_instantiation(std::move(map));
 }
 
-TEST(AstVisitorTest, Sink) {
-  auto sink1 =
-      std::make_unique<t_sink>(t_base_type::t_i32(), t_base_type::t_i32());
+TEST(AstVisitorTest, sink) {
+  auto sink1 = std::make_unique<t_sink>(
+      t_primitive_type::t_i32(), t_primitive_type::t_i32());
   auto sink1ptr = sink1.get();
   sink1->set_sink_exceptions(std::make_unique<t_throws>());
-  auto sink2 =
-      std::make_unique<t_sink>(t_base_type::t_i32(), t_base_type::t_i32());
+  auto sink2 = std::make_unique<t_sink>(
+      t_primitive_type::t_i32(), t_primitive_type::t_i32());
   auto sink2ptr = sink2.get();
   sink2->set_final_response_exceptions(std::make_unique<t_throws>());
 
-  auto program = t_program("path/to/program.thrift");
+  auto program =
+      t_program("path/to/program.thrift", "/root/path/to/program.thrift");
   auto service = std::make_unique<t_service>(&program, "Service");
   auto ret = t_type_ref();
   service->add_function(std::make_unique<t_function>(
       &program, ret, "f1", nullptr, std::move(sink1)));
   service->add_function(std::make_unique<t_function>(
       &program, ret, "f2", nullptr, std::move(sink2)));
-  program.add_service(std::move(service));
+  program.add_definition(std::move(service));
 
   auto visitor = ast_visitor();
   auto responses = std::vector<const t_sink*>();
@@ -395,28 +439,29 @@ TEST(AstVisitorTest, Sink) {
       [&](const t_throws& node) { throws.push_back(&node); });
   visitor(program);
 
-  EXPECT_THAT(responses, ::testing::ElementsAre(sink1ptr, sink2ptr));
+  EXPECT_THAT(responses, testing::ElementsAre(sink1ptr, sink2ptr));
   EXPECT_THAT(
       throws,
-      ::testing::ElementsAre(
+      testing::ElementsAre(
           sink1ptr->sink_exceptions(), sink2ptr->final_response_exceptions()));
 }
 
-TEST(AstVisitorTest, StreamResponse) {
-  auto stream1 = std::make_unique<t_stream>(t_base_type::t_i32());
+TEST(AstVisitorTest, stream) {
+  auto stream1 = std::make_unique<t_stream>(t_primitive_type::t_i32());
   auto stream1ptr = stream1.get();
   stream1->set_exceptions(std::make_unique<t_throws>());
-  auto stream2 = std::make_unique<t_stream>(t_base_type::t_i32());
+  auto stream2 = std::make_unique<t_stream>(t_primitive_type::t_i32());
   auto stream2ptr = stream2.get();
 
-  auto program = t_program("path/to/program.thrift");
+  auto program =
+      t_program("path/to/program.thrift", "/root/path/to/program.thrift");
   auto service = std::make_unique<t_service>(&program, "Service");
   auto ret = t_type_ref();
   service->add_function(std::make_unique<t_function>(
       &program, ret, "f1", nullptr, std::move(stream1)));
   service->add_function(std::make_unique<t_function>(
       &program, ret, "f2", nullptr, std::move(stream2)));
-  program.add_service(std::move(service));
+  program.add_definition(std::move(service));
 
   auto visitor = ast_visitor();
   auto responses = std::vector<const t_stream*>();
@@ -427,12 +472,12 @@ TEST(AstVisitorTest, StreamResponse) {
       [&](const t_throws& node) { throws.push_back(&node); });
   visitor(program);
 
-  EXPECT_THAT(responses, ::testing::ElementsAre(stream1ptr, stream2ptr));
-  EXPECT_THAT(throws, ::testing::ElementsAre(stream1ptr->exceptions()));
+  EXPECT_THAT(responses, testing::ElementsAre(stream1ptr, stream2ptr));
+  EXPECT_THAT(throws, testing::ElementsAre(stream1ptr->exceptions()));
 }
 
-TEST(AstVisitorTest, Modifications) {
-  t_program program("path/to/program.thrift");
+TEST(AstVisitorTest, modifications) {
+  t_program program("path/to/program.thrift", "/root/path/to/program.thrift");
   program.create_def<t_union>(&program, "Union1");
   program.create_def<t_union>(&program, "Union2");
   std::vector<std::string> seen;
@@ -451,53 +496,55 @@ TEST(AstVisitorTest, Modifications) {
 
   EXPECT_THAT(
       seen,
-      ::testing::ElementsAre(
+      testing::ElementsAre(
           "Union1", "Union2", "Union1a", "Union1b", "Union2a", "Union2b"));
 }
 
-class MockObserver {
+class mock_visitor {
  public:
   MOCK_METHOD(void, begin_visit, (t_node&));
   MOCK_METHOD(void, end_visit, (t_node&));
 };
 
-class ObserverTest : public test::BaseProgramTest {};
+class ContextTest : public base_program_test {};
 
-TEST_F(ObserverTest, OrderOfCalls) {
-  static_assert(ast_detail::is_observer<MockObserver&>::value, "");
+TEST_F(ContextTest, order_of_calls) {
+  static_assert(ast_detail::has_visit_methods<mock_visitor&>::value, "");
   using test_ast_visitor =
-      basic_ast_visitor<false, MockObserver&, int, MockObserver&>;
+      basic_ast_visitor<false, mock_visitor&, int, mock_visitor&>;
 
   auto& tunion = create_def<t_union>("Union");
-  auto& field = tunion.create_field(&t_base_type::t_i32(), "union_field", 1);
-  MockObserver m1, m2;
+  auto& field =
+      tunion.create_field(&t_primitive_type::t_i32(), "union_field", 1);
+  mock_visitor m1, m2;
   {
-    ::testing::InSequence ins;
-    EXPECT_CALL(m1, begin_visit(::testing::Ref(program_)));
-    EXPECT_CALL(m2, begin_visit(::testing::Ref(program_)));
-    EXPECT_CALL(m1, begin_visit(::testing::Ref(tunion)));
-    EXPECT_CALL(m2, begin_visit(::testing::Ref(tunion)));
-    EXPECT_CALL(m1, begin_visit(::testing::Ref(field)));
-    EXPECT_CALL(m2, begin_visit(::testing::Ref(field)));
+    testing::InSequence ins;
+    EXPECT_CALL(m1, begin_visit(testing::Ref(program_)));
+    EXPECT_CALL(m2, begin_visit(testing::Ref(program_)));
+    EXPECT_CALL(m1, begin_visit(testing::Ref(tunion)));
+    EXPECT_CALL(m2, begin_visit(testing::Ref(tunion)));
+    EXPECT_CALL(m1, begin_visit(testing::Ref(field)));
+    EXPECT_CALL(m2, begin_visit(testing::Ref(field)));
 
     // End is called in reverse order.
-    EXPECT_CALL(m2, end_visit(::testing::Ref(field)));
-    EXPECT_CALL(m1, end_visit(::testing::Ref(field)));
-    EXPECT_CALL(m2, end_visit(::testing::Ref(tunion)));
-    EXPECT_CALL(m1, end_visit(::testing::Ref(tunion)));
-    EXPECT_CALL(m2, end_visit(::testing::Ref(program_)));
-    EXPECT_CALL(m1, end_visit(::testing::Ref(program_)));
+    EXPECT_CALL(m2, end_visit(testing::Ref(field)));
+    EXPECT_CALL(m1, end_visit(testing::Ref(field)));
+    EXPECT_CALL(m2, end_visit(testing::Ref(tunion)));
+    EXPECT_CALL(m1, end_visit(testing::Ref(tunion)));
+    EXPECT_CALL(m2, end_visit(testing::Ref(program_)));
+    EXPECT_CALL(m1, end_visit(testing::Ref(program_)));
   }
   test_ast_visitor visitor;
   visitor(m1, 1, m2, program_);
 }
 
-TEST_F(ObserverTest, VisitContext) {
-  static_assert(ast_detail::is_observer<visitor_context&>::value, "");
+TEST_F(ContextTest, visit_context) {
+  static_assert(ast_detail::has_visit_methods<visitor_context&>::value, "");
   using ctx_ast_visitor = basic_ast_visitor<false, visitor_context&>;
 
   auto& tunion = create_def<t_union>("Union");
-  auto& field = tunion.create_field(&t_base_type::t_i32(), "union_field", 1);
+  auto& field =
+      tunion.create_field(&t_primitive_type::t_i32(), "union_field", 1);
 
   int calls = 0;
   ctx_ast_visitor visitor;
@@ -523,5 +570,4 @@ TEST_F(ObserverTest, VisitContext) {
   EXPECT_EQ(calls, 3);
 }
 
-} // namespace
 } // namespace apache::thrift::compiler

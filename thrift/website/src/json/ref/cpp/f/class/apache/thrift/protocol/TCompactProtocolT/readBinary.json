@@ -20,6 +20,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::readBinary",
       "argsstring_html": "(String_ &amp;str)",
       "name_html": "readBinary",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::readBinary",
       "param": [
         {
           "type_html": "String_ &amp;",
@@ -29,7 +30,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "243",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "698",
         "bodyend": "739"
@@ -57,5 +58,11 @@
   "brief_html": "<p>Read a byte[] from the wire. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readBinary",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readBinary"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readBinary",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

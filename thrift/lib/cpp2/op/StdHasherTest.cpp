@@ -22,9 +22,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
+namespace apache::thrift::op {
 
 TEST(StdHasherTest, checkCombineBool) {
   StdHasher hasher;
@@ -114,23 +112,6 @@ TEST(StdHasherTest, checkCombineDouble) {
   EXPECT_NE(previousResult, hasher.getResult());
 }
 
-TEST(StdHasherDeprecatedTest, checkCombineIOBuf) {
-  StdHasherDeprecated hasher;
-  auto previousResult = hasher.getResult();
-  auto bufA = folly::IOBuf::wrapBuffer(folly::range("abc"));
-  hasher.combine(*bufA);
-  EXPECT_NE(previousResult, hasher.getResult());
-  previousResult = hasher.getResult();
-  auto hasherCopy = hasher;
-  auto bufB = folly::IOBuf::wrapBuffer(folly::range("def"));
-  hasherCopy.combine(*bufA);
-  hasherCopy.combine(*bufB);
-  EXPECT_NE(hasherCopy.getResult(), hasher.getResult());
-  bufA->prependChain(std::move(bufB));
-  hasher.combine(*bufA);
-  EXPECT_EQ(hasherCopy.getResult(), hasher.getResult());
-}
-
 TEST(StdHasherTest, checkCombineIOBuf) {
   StdHasher hasher1, hasher2;
   auto bufA = folly::IOBuf::wrapBuffer("abc", 3);
@@ -181,6 +162,4 @@ TEST(StdHasherTest, checkFinalize) {
   EXPECT_EQ(previousResult, hasher.getResult());
 }
 
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op

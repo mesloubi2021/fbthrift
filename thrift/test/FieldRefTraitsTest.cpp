@@ -15,6 +15,7 @@
  */
 
 #include <thrift/lib/cpp2/FieldRefTraits.h>
+#include <thrift/lib/cpp2/type/Field.h>
 #include <thrift/test/gen-cpp2/References_types.h>
 #include <thrift/test/terse_write/gen-cpp2/terse_write_types.h>
 #include <thrift/test/testset/gen-cpp2/testset_types.h>
@@ -29,14 +30,14 @@ using Optional = decltype(struct_optional_list_i32{}.field_1());
 using Required = decltype(struct_required_list_i32{}.field_1());
 using Box = decltype(struct_optional_list_i32_box{}.field_1());
 using Union = decltype(union_list_i32{}.field_1_ref());
-using Unique = std::remove_reference_t<decltype(
-    struct_optional_list_i32_cpp_ref{}.field_1_ref())>;
-using Shared = std::remove_reference_t<decltype(
-    struct_optional_list_i32_shared_cpp_ref{}.field_1_ref())>;
-using InternBox = std::remove_reference_t<decltype(
-    cpp2::StructuredAnnotation{}.intern_box_field())>;
-using TerseInternBox = std::remove_reference_t<decltype(
-    terse_write::CppRefTerseStruct{}.intern_boxed_field())>;
+using Unique = std::remove_reference_t<
+    decltype(struct_optional_list_i32_cpp_ref{}.field_1_ref())>;
+using Shared = std::remove_reference_t<
+    decltype(struct_optional_list_i32_shared_cpp_ref{}.field_1_ref())>;
+using InternBox = std::remove_reference_t<
+    decltype(cpp2::StructuredAnnotation{}.intern_box_field())>;
+using TerseInternBox = std::remove_reference_t<
+    decltype(terse_write::CppRefTerseStruct{}.intern_boxed_field())>;
 using Terse =
     std::remove_reference_t<decltype(terse_write::MyStruct{}.field1())>;
 
@@ -160,6 +161,70 @@ static_assert(is_shared_or_unique_ptr_v<Shared>);
 static_assert(!is_shared_or_unique_ptr_v<InternBox>);
 static_assert(!is_shared_or_unique_ptr_v<TerseInternBox>);
 static_assert(!is_shared_or_unique_ptr_v<Terse>);
+
+// Test for type::is_optional_or_union_field_v
+// non-optional
+static_assert(
+    !type::is_optional_or_union_field_v<struct_list_i32, type::field_id<1>>);
+static_assert( //
+    !type::is_optional_or_union_field_v<
+        struct_required_list_i32,
+        type::field_id<1>>);
+// Terse.
+static_assert( //
+    !type::
+        is_optional_or_union_field_v<terse_write::MyStruct, type::field_id<1>>);
+static_assert( //
+    type::is_terse_field_v<terse_write::MyStruct, type::field_id<1>>);
+// Intern Box.
+static_assert( //
+    !type::is_optional_or_union_field_v<
+        cpp2::StructuredAnnotation,
+        type::field_id<4>>);
+// Terse Intern Box.
+static_assert( //
+    !type::is_optional_or_union_field_v<
+        terse_write::CppRefTerseStruct,
+        type::field_id<4>>);
+static_assert( //
+    type::is_terse_field_v<terse_write::CppRefTerseStruct, type::field_id<4>>);
+// Terse cpp.ref
+static_assert( //
+    type::is_terse_field_v<terse_write::CppRefTerseStruct, type::field_id<1>>);
+static_assert( //
+    type::is_terse_field_v<terse_write::CppRefTerseStruct, type::field_id<2>>);
+static_assert( //
+    type::is_terse_field_v<terse_write::CppRefTerseStruct, type::field_id<3>>);
+// non-optional cpp.ref
+static_assert( //
+    !type::is_optional_or_union_field_v<
+        struct_list_i32_cpp_ref,
+        type::field_id<1>>);
+static_assert( //
+    !type::is_optional_or_union_field_v<
+        struct_list_i32_shared_cpp_ref,
+        type::field_id<1>>);
+
+// optional
+static_assert( //
+    type::is_optional_or_union_field_v<
+        struct_optional_list_i32,
+        type::field_id<1>>);
+static_assert(
+    type::is_optional_or_union_field_v<union_list_i32, type::field_id<1>>);
+static_assert( //
+    type::is_optional_or_union_field_v<
+        struct_optional_list_i32_box,
+        type::field_id<1>>);
+// optional cpp.ref
+static_assert( //
+    type::is_optional_or_union_field_v<
+        struct_optional_list_i32_cpp_ref,
+        type::field_id<1>>);
+static_assert( //
+    type::is_optional_or_union_field_v<
+        struct_optional_list_i32_shared_cpp_ref,
+        type::field_id<1>>);
 
 } // namespace
 } // namespace apache::thrift::test::testset

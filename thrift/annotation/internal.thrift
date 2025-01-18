@@ -22,6 +22,7 @@ include "thrift/annotation/thrift.thrift"
 package "facebook.com/thrift/annotation"
 
 namespace java com.facebook.thrift.annotation_deprecated
+namespace android com.facebook.thrift.annotation_deprecated
 namespace py.asyncio facebook_thrift_asyncio.annotation.internal
 namespace go thrift.annotation.internals
 namespace py thrift.annotation.internal
@@ -48,4 +49,4 @@ namespace py thrift.annotation.internal
 @thrift.Experimental
 struct InjectMetadataFields {
   1: string type;
-} (thrift.uri = "facebook.com/thrift/annotation/InjectMetadataFields")
+}

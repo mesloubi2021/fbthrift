@@ -15,6 +15,7 @@
       "definition_html": "static Ptr apache::thrift::op::detail::SetOp&lt; KTag, Tag &gt;::get",
       "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k)",
       "name_html": "get",
+      "qualifiedname_html": "apache::thrift::op::detail::SetOp::get",
       "param": [
         {
           "type_html": "void *",
@@ -34,7 +35,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "152",
-        "column": "1",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "152",
         "bodyend": "159"
@@ -59,5 +60,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/get",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/get"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/SetOp/get",
+  "parent_links": [
+    {
+      "text_html": "SetOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/SetOp"
+    }
+  ]
 }

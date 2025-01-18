@@ -32,8 +32,7 @@
 #include <thrift/lib/cpp2/transport/core/ThriftRequest.h>
 #include <thrift/lib/cpp2/util/Checksum.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 ThriftProcessor::ThriftProcessor(ThriftServer& server) : server_(server) {}
 
@@ -46,9 +45,11 @@ void ThriftProcessor::onThriftRequest(
   DCHECK(channel);
 
   auto& processorFactory = server_.getDecoratedProcessorFactory();
-  if (processor_ == nullptr) {
-    processor_ = processorFactory.getProcessor();
-  }
+  const auto& processor = processor_.try_emplace_with([&] {
+    auto p = processorFactory.getProcessor();
+    p->coalesceWithServerScopedLegacyEventHandlers(server_);
+    return p;
+  });
 
   auto worker = connContext->getWorker();
   worker->getEventBase()->dcheckIsInEventBaseThread();
@@ -100,7 +101,8 @@ void ThriftProcessor::onThriftRequest(
   auto reqContext = request->getRequestContext();
 
   Cpp2Worker::dispatchRequest(
-      processor_.get(),
+      processorFactory,
+      processor.get(),
       std::move(request),
       SerializedCompressedRequest(std::move(payload)),
       methodMetadataResult,
@@ -109,5 +111,4 @@ void ThriftProcessor::onThriftRequest(
       server_.getThreadManager_deprecated().get(),
       &server_);
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

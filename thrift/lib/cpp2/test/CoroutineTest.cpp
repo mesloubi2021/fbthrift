@@ -16,8 +16,8 @@
 
 #include <exception>
 
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Coroutine.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Coroutine.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GTest.h>
 
@@ -157,13 +157,13 @@ class CoroutineServiceHandlerFuture
       std::unique_ptr<SumRequest> /* request */) override {
     return folly::makeFuture<std::unique_ptr<SumResponse>>(
         folly::exception_wrapper(
-            folly::in_place, std::runtime_error("Not implemented")));
+            std::in_place, std::runtime_error("Not implemented")));
   }
 
   folly::Future<int32_t> future_computeSumThrowsPrimitive(
       int32_t, int32_t) override {
     return folly::makeFuture<int32_t>(folly::exception_wrapper(
-        folly::in_place, std::runtime_error("Not implemented")));
+        std::in_place, std::runtime_error("Not implemented")));
   }
 
   folly::Future<int32_t> future_noParameters() override {
@@ -195,13 +195,13 @@ class CoroutineServiceHandlerFuture
   folly::Future<std::unique_ptr<SumResponse>> future_computeSumThrowsUserEx(
       std::unique_ptr<SumRequest> /* request */) override {
     return folly::makeFuture<std::unique_ptr<SumResponse>>(
-        folly::exception_wrapper(folly::in_place, Ex()));
+        folly::exception_wrapper(std::in_place, Ex()));
   }
 
   folly::Future<int32_t> future_computeSumThrowsUserExPrimitive(
       int32_t, int32_t) override {
     return folly::makeFuture<int32_t>(
-        folly::exception_wrapper(folly::in_place, Ex()));
+        folly::exception_wrapper(std::in_place, Ex()));
   }
 
   folly::Promise<int32_t> onewayRequestPromise;
@@ -663,6 +663,9 @@ TEST(CoroutineExceptionTest, completesHandlerCallback) {
       apache::thrift::HandlerCallback<std::unique_ptr<SumResponse>>>(
       nullptr,
       nullptr,
+      "" /* serviceName */,
+      "" /* definingServiceName */,
+      "" /* methodName */,
       nullptr,
       nullptr,
       0,
@@ -674,6 +677,9 @@ TEST(CoroutineExceptionTest, completesHandlerCallback) {
   auto cb2 = std::make_unique<apache::thrift::HandlerCallback<int32_t>>(
       nullptr,
       nullptr,
+      "" /* serviceName */,
+      "" /* definingServiceName */,
+      "" /* methodName */,
       nullptr,
       nullptr,
       0,
@@ -682,8 +688,16 @@ TEST(CoroutineExceptionTest, completesHandlerCallback) {
       &cpp2reqCtx);
   handler.async_tm_computeSumThrowsPrimitive(std::move(cb2), 0, 0);
 
-  auto cb3 = std::make_unique<apache::thrift::HandlerCallbackBase>(
-      nullptr, nullptr, nullptr, ebt.getEventBase(), tm.get(), &cpp2reqCtx);
+  auto cb3 = std::make_unique<apache::thrift::HandlerCallbackOneWay>(
+      nullptr,
+      nullptr,
+      "" /* serviceName */,
+      "" /* definingServiceName */,
+      "" /* methodName */,
+      nullptr,
+      ebt.getEventBase(),
+      tm.get(),
+      &cpp2reqCtx);
   handler.async_tm_onewayRequest(std::move(cb3), 0);
 }
 

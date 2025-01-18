@@ -26,9 +26,7 @@
 #include <thrift/lib/cpp2/protocol/TableBasedSerializerImpl.h>
 #include <thrift/lib/python/types.h>
 
-namespace apache {
-namespace thrift {
-namespace python {
+namespace apache::thrift::python {
 
 template <typename Writer>
 std::unique_ptr<folly::IOBuf> serialize_type(
@@ -38,7 +36,7 @@ std::unique_ptr<folly::IOBuf> serialize_type(
   writer.setOutput(&queue);
   auto value = typeInfo.get(&object, typeInfo);
   if (value.hasValue()) {
-    detail::write(&writer, typeInfo, value.value());
+    detail::writeThriftValue(&writer, typeInfo, value.value());
   }
   return queue.move();
 }
@@ -50,20 +48,20 @@ PyObject* deserialize_type(
   reader.setInput(buf);
   detail::ProtocolReaderStructReadState<Reader> readState;
   PyObject* obj = nullptr;
-  detail::read(&reader, typeInfo, readState, &obj);
+  detail::readThriftValue(&reader, typeInfo, readState, &obj);
   return obj;
 }
 
 std::unique_ptr<folly::IOBuf> serialize_type(
     const detail::TypeInfo& typeInfo,
     const PyObject* object,
-    PROTOCOL_TYPES protocol) {
+    protocol::PROTOCOL_TYPES protocol) {
   switch (protocol) {
-    case PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
       return serialize_type<CompactProtocolWriter>(typeInfo, object);
-    case PROTOCOL_TYPES::T_BINARY_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_BINARY_PROTOCOL:
       return serialize_type<BinaryProtocolWriter>(typeInfo, object);
-    case PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
       return serialize_type<SimpleJSONProtocolWriter>(typeInfo, object);
     default:
       throw TProtocolException(
@@ -74,13 +72,13 @@ std::unique_ptr<folly::IOBuf> serialize_type(
 PyObject* deserialize_type(
     const detail::TypeInfo& typeInfo,
     const folly::IOBuf* buf,
-    PROTOCOL_TYPES protocol) {
+    protocol::PROTOCOL_TYPES protocol) {
   switch (protocol) {
-    case PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
       return deserialize_type<CompactProtocolReader>(typeInfo, buf);
-    case PROTOCOL_TYPES::T_BINARY_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_BINARY_PROTOCOL:
       return deserialize_type<BinaryProtocolReader>(typeInfo, buf);
-    case PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
+    case protocol::PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
       return deserialize_type<SimpleJSONProtocolReader>(typeInfo, buf);
     default:
       throw TProtocolException(
@@ -88,6 +86,4 @@ PyObject* deserialize_type(
   }
 }
 
-} // namespace python
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::python

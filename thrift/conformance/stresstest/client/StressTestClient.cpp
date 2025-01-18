@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+#include <folly/synchronization/CallOnce.h>
 #include <thrift/conformance/stresstest/client/StressTestClient.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/Sleep.h>
 
 namespace apache {
 namespace thrift {
@@ -47,8 +49,34 @@ folly::coro::Task<void> ThriftStressTestClient::co_ping() {
 folly::coro::Task<std::string> ThriftStressTestClient::co_echo(
     const std::string& x) {
   std::string ret;
-  co_await timedExecute(
-      [&]() -> folly::coro::Task<void> { ret = co_await client_->co_echo(x); });
+  co_await timedExecute([&]() -> folly::coro::Task<void> {
+    RpcOptions rpcOptions;
+    if (enableChecksum_) {
+      static folly::once_flag flag;
+
+      folly::call_once(flag, [] {
+        LOG(INFO) << "Initializing checksum payload serializer" << std::endl;
+        rocket::PayloadSerializer::initialize(
+            rocket::ChecksumPayloadSerializerStrategy<
+                rocket::LegacyPayloadSerializerStrategy>(
+                rocket::ChecksumPayloadSerializerStrategyOptions{
+                    .recordChecksumFailure =
+                        [] { LOG(FATAL) << "Checksum failure detected"; },
+                    .recordChecksumSuccess =
+                        [] {
+                          LOG_EVERY_N(INFO, 1'000)
+                              << "Checksum success detected";
+                        },
+                    .recordChecksumCalculated =
+                        [] {
+                          LOG_EVERY_N(INFO, 1'000) << "Checksum calculated";
+                        }}));
+      });
+
+      rpcOptions.setChecksum(RpcOptions::Checksum::XXH3_64);
+    }
+    ret = co_await client_->co_echo(rpcOptions, x);
+  });
   co_return ret;
 }
 
@@ -56,7 +84,32 @@ folly::coro::Task<std::string> ThriftStressTestClient::co_echoEb(
     const std::string& x) {
   std::string ret;
   co_await timedExecute([&]() -> folly::coro::Task<void> {
-    ret = co_await client_->co_echoEb(x);
+    RpcOptions rpcOptions;
+    if (enableChecksum_) {
+      static folly::once_flag flag;
+
+      folly::call_once(flag, [] {
+        LOG(INFO) << "Initializing checksum payload serializer" << std::endl;
+        rocket::PayloadSerializer::initialize(
+            rocket::ChecksumPayloadSerializerStrategy<
+                rocket::LegacyPayloadSerializerStrategy>(
+                rocket::ChecksumPayloadSerializerStrategyOptions{
+                    .recordChecksumFailure =
+                        [] { LOG(FATAL) << "Checksum failure detected"; },
+                    .recordChecksumSuccess =
+                        [] {
+                          LOG_EVERY_N(INFO, 1'000)
+                              << "Checksum success detected";
+                        },
+                    .recordChecksumCalculated =
+                        [] {
+                          LOG_EVERY_N(INFO, 1'000) << "Checksum calculated";
+                        }}));
+      });
+
+      rpcOptions.setChecksum(RpcOptions::Checksum::XXH3_64);
+    }
+    ret = co_await client_->co_echoEb(rpcOptions, x);
   });
   co_return ret;
 }
@@ -103,6 +156,15 @@ folly::coro::Task<void> ThriftStressTestClient::co_sinkTm(
   });
 }
 
+folly::coro::Task<double> ThriftStressTestClient::co_calculateSquares(
+    int32_t count) {
+  double ret;
+  co_await timedExecute([&]() -> folly::coro::Task<void> {
+    ret = co_await client_->co_calculateSquares(count);
+  });
+  co_return ret;
+}
+
 template <class Fn>
 folly::coro::Task<void> ThriftStressTestClient::timedExecute(Fn&& fn) {
   if (!connectionGood_) {
@@ -120,8 +182,8 @@ folly::coro::Task<void> ThriftStressTestClient::timedExecute(Fn&& fn) {
     LOG(ERROR) << e.what();
     connectionGood_ = false;
     co_return;
-  } catch (std::exception& e) {
-    LOG(WARNING) << "Request failed: " << e.what();
+  } catch (...) {
+    // LOG(1) << "Request failed: " << e.what();
     stats_.numFailure++;
     co_return;
   }

@@ -23,13 +23,22 @@
 
 #include <thrift/lib/cpp2/transport/rocket/client/RequestContext.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 class RequestContextQueue {
  public:
+  /*
+    T185092424: the combination of Xcode 15.1-15.3 and boost 1.77 - 1.79
+    causes a memory corruption bug in rrContextBuckets_ where buckets
+    are initialized as non-empty, which results in walking a null pointer
+    during construction. Disable optimisation until either Xcode 16 or
+    boost 1.80 is available.
+  */
+#ifdef __APPLE__
+  RequestContextQueue() __attribute__((optnone)) = default;
+#else
   RequestContextQueue() = default;
+#endif // __APPLE__
 
   ~RequestContextQueue() {
     DCHECK(writeScheduledQueue_.empty());
@@ -172,6 +181,4 @@ class RequestContextQueue {
   void growBuckets();
 };
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

@@ -20,10 +20,13 @@
 #include <folly/init/Init.h>
 
 #include <thrift/conformance/stresstest/client/TestRunner.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 
 namespace apache {
 namespace thrift {
 namespace stress {
+
+using namespace apache::thrift::rocket;
 
 // Stress tests may override the default main() behavior by defining this weak
 // symbol.
@@ -44,6 +47,7 @@ int main(int argc, char* argv[]) {
 
   // create a test runner instance
   auto clientCfg = ClientConfig::createFromFlags();
+
   TestRunner testRunner(std::move(clientCfg));
   testRunner.runTests();
 

@@ -15,6 +15,7 @@
       "definition_html": "void apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::setStringSizeLimit",
       "argsstring_html": "(int32_t string_limit)",
       "name_html": "setStringSizeLimit",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::setStringSizeLimit",
       "param": [
         {
           "type_html": "int32_t",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "122",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "122",
         "bodyend": "124"
@@ -49,5 +50,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/setStringSizeLimit",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/setStringSizeLimit"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/setStringSizeLimit",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

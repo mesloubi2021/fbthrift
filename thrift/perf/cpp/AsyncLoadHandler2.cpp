@@ -27,8 +27,7 @@ using apache::thrift::concurrency::Util;
 namespace apache {
 namespace thrift {
 
-void AsyncLoadHandler2::async_eb_noop(
-    std::unique_ptr<HandlerCallback<void>> callback) {
+void AsyncLoadHandler2::async_eb_noop(HandlerCallbackPtr<void> callback) {
   // Note that we could have done this with a sync function,
   // but an inline async op is faster, and we want to maintain
   // parity with the old loadgen for comparison testing
@@ -36,21 +35,23 @@ void AsyncLoadHandler2::async_eb_noop(
 }
 
 void AsyncLoadHandler2::async_eb_onewayNoop(
-    std::unique_ptr<HandlerCallbackBase> /* callback */) {}
+    HandlerCallbackOneWay::Ptr callback) {
+  HandlerCallbackOneWay::CompletionGuard completionGuard{std::move(callback)};
+}
 
-void AsyncLoadHandler2::async_eb_asyncNoop(
-    std::unique_ptr<HandlerCallback<void>> callback) {
+void AsyncLoadHandler2::async_eb_asyncNoop(HandlerCallbackPtr<void> callback) {
   callback->done();
 }
 
 void AsyncLoadHandler2::async_eb_sleep(
-    std::unique_ptr<HandlerCallback<void>> callback, int64_t microseconds) {
+    HandlerCallbackPtr<void> callback, int64_t microseconds) {
   // May leak if task never finishes
-  HandlerCallback<void>* callbackp = callback.release();
+  HandlerCallback<void>* callbackp = callback.unsafeRelease();
   callbackp->getEventBase()->runInEventBaseThread([=]() {
     callbackp->getEventBase()->tryRunAfterDelay(
         [=]() {
-          std::unique_ptr<HandlerCallback<void>> cb(callbackp);
+          HandlerCallbackPtr<void> cb(
+              HandlerCallbackPtr<void>::UnsafelyFromRawPointer(), callbackp);
           cb->done();
         },
         microseconds / Util::US_PER_MS);
@@ -58,13 +59,12 @@ void AsyncLoadHandler2::async_eb_sleep(
 }
 
 void AsyncLoadHandler2::async_eb_onewaySleep(
-    std::unique_ptr<HandlerCallbackBase> callback, int64_t microseconds) {
-  auto callbackp = callback.release();
+    HandlerCallbackOneWay::Ptr callback, int64_t microseconds) {
   // May leak if task never finishes
-  auto eb = callbackp->getEventBase();
+  auto eb = callback->getEventBase();
   eb->runInEventBaseThread([=]() {
     eb->tryRunAfterDelay(
-        [=]() { delete callbackp; }, microseconds / Util::US_PER_MS);
+        [=]() { callback->done(); }, microseconds / Util::US_PER_MS);
   });
 }
 
@@ -106,27 +106,27 @@ folly::Future<folly::Unit> AsyncLoadHandler2::future_onewayBurn(
 }
 
 void AsyncLoadHandler2::async_eb_badSleep(
-    std::unique_ptr<HandlerCallback<void>> callback, int64_t microseconds) {
+    HandlerCallbackPtr<void> callback, int64_t microseconds) {
   usleep(microseconds);
   callback->done();
 }
 
 void AsyncLoadHandler2::async_eb_badBurn(
-    std::unique_ptr<HandlerCallback<void>> callback, int64_t microseconds) {
+    HandlerCallbackPtr<void> callback, int64_t microseconds) {
   // This is a true (bad) async call.
   sync_burn(microseconds);
   callback->done();
 }
 
 void AsyncLoadHandler2::async_eb_throwError(
-    std::unique_ptr<HandlerCallback<void>> callback, int32_t code) {
+    HandlerCallbackPtr<void> callback, int32_t code) {
   LoadError error;
   *error.code_ref() = code;
   callback->exception(error);
 }
 
 void AsyncLoadHandler2::async_eb_throwUnexpected(
-    std::unique_ptr<HandlerCallback<void>> callback, int32_t /* code */) {
+    HandlerCallbackPtr<void> callback, int32_t /* code */) {
   // FIXME: it isn't possible to implement this behavior with the async code
   //
   // Actually throwing an exception from the handler is bad, and EventBase
@@ -135,31 +135,32 @@ void AsyncLoadHandler2::async_eb_throwUnexpected(
 }
 
 void AsyncLoadHandler2::async_eb_onewayThrow(
-    std::unique_ptr<HandlerCallbackBase> callback, int32_t code) {
+    HandlerCallbackOneWay::Ptr callback, int32_t code) {
   LoadError error;
   *error.code_ref() = code;
   callback->exception(error);
 }
 
 void AsyncLoadHandler2::async_eb_send(
-    std::unique_ptr<HandlerCallback<void>> callback,
+    HandlerCallbackPtr<void> callback,
     std::unique_ptr<std::string> /* data */) {
   callback->done();
 }
 
 void AsyncLoadHandler2::async_eb_onewaySend(
-    std::unique_ptr<HandlerCallbackBase> /* callback */,
-    std::unique_ptr<std::string> /* data */) {}
+    HandlerCallbackOneWay::Ptr callback,
+    std::unique_ptr<std::string> /* data */) {
+  callback->done();
+}
 
 void AsyncLoadHandler2::async_eb_recv(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<std::string>>> callback,
-    int64_t bytes) {
+    HandlerCallbackPtr<std::unique_ptr<std::string>> callback, int64_t bytes) {
   std::unique_ptr<std::string> ret(new std::string(bytes, 'a'));
   callback->result(std::move(ret));
 }
 
 void AsyncLoadHandler2::async_eb_sendrecv(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<std::string>>> callback,
+    HandlerCallbackPtr<std::unique_ptr<std::string>> callback,
     std::unique_ptr<std::string> /* data */,
     int64_t recvBytes) {
   std::unique_ptr<std::string> ret(new std::string(recvBytes, 'a'));
@@ -191,14 +192,13 @@ folly::Future<std::unique_ptr<std::string>> AsyncLoadHandler2::future_echo(
 }
 
 void AsyncLoadHandler2::async_eb_largeContainer(
-    std::unique_ptr<HandlerCallback<void>> callback,
+    HandlerCallbackPtr<void> callback,
     std::unique_ptr<std::vector<BigStruct>>) {
   callback->done();
 }
 
 void AsyncLoadHandler2::async_eb_iterAllFields(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<std::vector<BigStruct>>>>
-        callback,
+    HandlerCallbackPtr<std::unique_ptr<std::vector<BigStruct>>> callback,
     std::unique_ptr<std::vector<BigStruct>> items) {
   std::string x;
   for (auto& item : *items) {
@@ -211,7 +211,7 @@ void AsyncLoadHandler2::async_eb_iterAllFields(
 }
 
 void AsyncLoadHandler2::async_eb_add(
-    std::unique_ptr<HandlerCallback<int64_t>> callback, int64_t a, int64_t b) {
+    HandlerCallbackPtr<int64_t> callback, int64_t a, int64_t b) {
   callback->result(a + b);
 }
 

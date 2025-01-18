@@ -18,9 +18,7 @@
   ],
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "T",
-      "defname_html": "T"
+      "type_html": "typename T"
     }
   ],
   "functions": [
@@ -36,10 +34,11 @@
       "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
       "argsstring_html": "()=default",
       "name_html": "BitSet",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "102",
-        "column": "1"
+        "line": "95",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BitSet()",
@@ -64,6 +63,7 @@
       "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
       "argsstring_html": "(T value)",
       "name_html": "BitSet",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
       "param": [
         {
           "type_html": "T",
@@ -72,11 +72,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "104",
-        "column": "1",
+        "line": "97",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "104",
-        "bodyend": "104"
+        "bodystart": "97",
+        "bodyend": "97"
       },
       "definition": {
         "simple_html": "BitSet(T value)",
@@ -101,6 +101,7 @@
       "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
       "argsstring_html": "(const BitSet &amp;)=default",
       "name_html": "BitSet",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
       "param": [
         {
           "type_html": "const <code>BitSet</code> &amp;"
@@ -108,8 +109,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "106",
-        "column": "1"
+        "line": "99",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BitSet(const BitSet&amp;)",
@@ -123,6 +124,41 @@
       "href": "/ref/cpp/fns/class/apache/thrift/detail/BitSet/BitSet"
     },
     {
+      "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a816d6b61db78314e3c702603267f7aee",
+      "prot": "public",
+      "static": "no",
+      "const": "no",
+      "explicit": "no",
+      "inline": "no",
+      "virtual": "non-virtual",
+      "type_html": "<code>BitSet</code> &amp;",
+      "definition_html": "BitSet &amp; apache::thrift::detail::BitSet&lt; T &gt;::operator=",
+      "argsstring_html": "(const BitSet &amp;other)=default",
+      "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::operator=",
+      "param": [
+        {
+          "type_html": "const <code>BitSet</code> &amp;",
+          "declname_html": "other"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
+        "line": "100",
+        "column": "10"
+      },
+      "definition": {
+        "simple_html": "BitSet&amp; operator=(const BitSet&amp; other)",
+        "simple_raw": "BitSet& operator=(const BitSet& other)",
+        "detailed_html": "BitSet&amp; operator=(const BitSet&amp; other) = default",
+        "detailed_raw": "BitSet& operator=(const BitSet& other) = default",
+        "original_definition_html": "BitSet &amp; apache::thrift::detail::BitSet&lt; T &gt;::operator=",
+        "original_argsstring_html": "(const BitSet &amp;other)=default"
+      },
+      "filepath": "fns/class/apache/thrift/detail/BitSet/operator.assign",
+      "href": "/ref/cpp/fns/class/apache/thrift/detail/BitSet/operator.assign"
+    },
+    {
       "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a0e7dc0d68780d94b40365b9e69c6aa47",
       "prot": "public",
       "static": "no",
@@ -134,6 +170,7 @@
       "definition_html": "bool apache::thrift::detail::BitSet&lt; T &gt;::operator[]",
       "argsstring_html": "(const uint8_t bit) const",
       "name_html": "operator[]",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::operator[]",
       "param": [
         {
           "type_html": "const uint8_t",
@@ -142,11 +179,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "130",
-        "column": "1",
+        "line": "124",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "130",
-        "bodyend": "133"
+        "bodystart": "124",
+        "bodyend": "127"
       },
       "definition": {
         "simple_html": "bool operator[](const uint8_t bit) const",
@@ -171,6 +208,7 @@
       "definition_html": "reference apache::thrift::detail::BitSet&lt; T &gt;::operator[]",
       "argsstring_html": "(const uint8_t bit)",
       "name_html": "operator[]",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::operator[]",
       "param": [
         {
           "type_html": "const uint8_t",
@@ -179,11 +217,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "135",
-        "column": "1",
+        "line": "129",
+        "column": "13",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "135",
-        "bodyend": "138"
+        "bodystart": "129",
+        "bodyend": "132"
       },
       "definition": {
         "simple_html": "reference operator[](const uint8_t bit)",
@@ -197,7 +235,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/detail/BitSet/operator.at"
     },
     {
-      "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a5d3c006e204229226dc41e8dc2096ea2",
+      "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1af2b775aa74a9538b834d46d4ccd803bd",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -205,30 +243,31 @@
       "inline": "yes",
       "virtual": "non-virtual",
       "type_html": "T &amp;",
-      "definition_html": "T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+      "definition_html": "T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
       "argsstring_html": "()",
       "name_html": "value",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::value",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "140",
-        "column": "1",
+        "line": "134",
+        "column": "5",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "140",
-        "bodyend": "140"
+        "bodystart": "134",
+        "bodyend": "134"
       },
       "definition": {
         "simple_html": "T&amp; value()",
         "simple_raw": "T& value()",
         "detailed_html": "inline T&amp; value()",
         "detailed_raw": "inline T& value()",
-        "original_definition_html": "T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+        "original_definition_html": "T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
         "original_argsstring_html": "()"
       },
       "filepath": "fns/class/apache/thrift/detail/BitSet/value",
       "href": "/ref/cpp/fns/class/apache/thrift/detail/BitSet/value"
     },
     {
-      "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a53819aff0af68f5d41e1e1e78ada4e93",
+      "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1aef9db6670241bf4ca80b98a414b3efba",
       "prot": "public",
       "static": "no",
       "const": "yes",
@@ -236,23 +275,24 @@
       "inline": "yes",
       "virtual": "non-virtual",
       "type_html": "const T &amp;",
-      "definition_html": "const T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+      "definition_html": "const T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
       "argsstring_html": "() const",
       "name_html": "value",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::value",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "142",
-        "column": "1",
+        "line": "136",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "142",
-        "bodyend": "142"
+        "bodystart": "136",
+        "bodyend": "136"
       },
       "definition": {
         "simple_html": "const T&amp; value() const",
         "simple_raw": "const T& value() const",
         "detailed_html": "inline const T&amp; value() const",
         "detailed_raw": "inline const T& value() const",
-        "original_definition_html": "const T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+        "original_definition_html": "const T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
         "original_argsstring_html": "() const"
       },
       "filepath": "fns/class/apache/thrift/detail/BitSet/value",
@@ -275,6 +315,7 @@
       "definition_html": "static bool apache::thrift::detail::BitSet&lt; T &gt;::get",
       "argsstring_html": "(U u, std::size_t bit)",
       "name_html": "get",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::get",
       "param": [
         {
           "type_html": "U",
@@ -287,11 +328,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "146",
-        "column": "1",
+        "line": "140",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "146",
-        "bodyend": "148"
+        "bodystart": "140",
+        "bodyend": "142"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic bool get(U u, std::size_t bit)",
@@ -321,6 +362,7 @@
       "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::set",
       "argsstring_html": "(U &amp;u, std::size_t bit)",
       "name_html": "set",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::set",
       "param": [
         {
           "type_html": "U &amp;",
@@ -333,11 +375,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "151",
-        "column": "1",
+        "line": "145",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "151",
-        "bodyend": "153"
+        "bodystart": "145",
+        "bodyend": "147"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic void set(U&amp; u, std::size_t bit)",
@@ -367,6 +409,7 @@
       "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::reset",
       "argsstring_html": "(U &amp;u, std::size_t bit)",
       "name_html": "reset",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
       "param": [
         {
           "type_html": "U &amp;",
@@ -379,11 +422,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "156",
-        "column": "1",
+        "line": "150",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "156",
-        "bodyend": "158"
+        "bodystart": "150",
+        "bodyend": "152"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic void reset(U&amp; u, std::size_t bit)",
@@ -413,6 +456,7 @@
       "definition_html": "static bool apache::thrift::detail::BitSet&lt; T &gt;::get",
       "argsstring_html": "(const std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
       "name_html": "get",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::get",
       "param": [
         {
           "type_html": "const std::atomic&lt; U &gt; &amp;",
@@ -425,11 +469,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "164",
-        "column": "1",
+        "line": "158",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "164",
-        "bodyend": "166"
+        "bodystart": "158",
+        "bodyend": "160"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic bool get(const std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -459,6 +503,7 @@
       "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::set",
       "argsstring_html": "(std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
       "name_html": "set",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::set",
       "param": [
         {
           "type_html": "std::atomic&lt; U &gt; &amp;",
@@ -471,11 +516,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "169",
-        "column": "1",
+        "line": "163",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "169",
-        "bodyend": "171"
+        "bodystart": "163",
+        "bodyend": "165"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic void set(std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -505,6 +550,7 @@
       "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::reset",
       "argsstring_html": "(std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
       "name_html": "reset",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
       "param": [
         {
           "type_html": "std::atomic&lt; U &gt; &amp;",
@@ -517,11 +563,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "174",
-        "column": "1",
+        "line": "168",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "174",
-        "bodyend": "176"
+        "bodystart": "168",
+        "bodyend": "170"
       },
       "definition": {
         "simple_html": "template &lt;class U&gt;\nstatic void reset(std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -546,6 +592,7 @@
       "definition_html": "bool apache::thrift::detail::BitSet&lt; T &gt;::get",
       "argsstring_html": "(std::size_t bit) const",
       "name_html": "get",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::get",
       "param": [
         {
           "type_html": "std::size_t",
@@ -554,11 +601,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "178",
-        "column": "1",
+        "line": "172",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "178",
-        "bodyend": "178"
+        "bodystart": "172",
+        "bodyend": "172"
       },
       "definition": {
         "simple_html": "bool get(std::size_t bit) const",
@@ -583,6 +630,7 @@
       "definition_html": "void apache::thrift::detail::BitSet&lt; T &gt;::set",
       "argsstring_html": "(std::size_t bit)",
       "name_html": "set",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::set",
       "param": [
         {
           "type_html": "std::size_t",
@@ -591,11 +639,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "179",
-        "column": "1",
+        "line": "173",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "179",
-        "bodyend": "179"
+        "bodystart": "173",
+        "bodyend": "173"
       },
       "definition": {
         "simple_html": "void set(std::size_t bit)",
@@ -620,6 +668,7 @@
       "definition_html": "void apache::thrift::detail::BitSet&lt; T &gt;::reset",
       "argsstring_html": "(std::size_t bit)",
       "name_html": "reset",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
       "param": [
         {
           "type_html": "std::size_t",
@@ -628,11 +677,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "180",
-        "column": "1",
+        "line": "174",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "180",
-        "bodyend": "180"
+        "bodystart": "174",
+        "bodyend": "174"
       },
       "definition": {
         "simple_html": "void reset(std::size_t bit)",
@@ -648,11 +697,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-    "line": "100",
+    "line": "93",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-    "bodystart": "100",
-    "bodyend": "185"
+    "bodystart": "93",
+    "bodyend": "179"
   },
   "namespacednames_html": [
     "apache",
@@ -672,12 +721,13 @@
       "definition_html": "IntWrapper&lt;T&gt; apache::thrift::detail::BitSet&lt; T &gt;::int_",
       "argsstring_html": "",
       "name_html": "int_",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::int_",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "182",
-        "column": "1",
+        "line": "176",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "182",
+        "bodystart": "176",
         "bodyend": "-1"
       }
     },
@@ -685,18 +735,20 @@
       "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a6bc96dbd67114f787d53d4df96aadaf2",
       "prot": "private",
       "static": "yes",
+      "constexpr": "yes",
       "mutable": "no",
-      "type_html": "constexpr int",
-      "definition_html": "constexpr int apache::thrift::detail::BitSet&lt; T &gt;::NUM_BITS",
+      "type_html": "int",
+      "definition_html": "int apache::thrift::detail::BitSet&lt; T &gt;::NUM_BITS",
       "argsstring_html": "",
       "name_html": "NUM_BITS",
+      "qualifiedname_html": "apache::thrift::detail::BitSet::NUM_BITS",
       "initializer_html": "= sizeof(T) * CHAR_BIT",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "184",
-        "column": "1",
+        "line": "178",
+        "column": "24",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "184",
+        "bodystart": "178",
         "bodyend": "-1"
       }
     }
@@ -727,10 +779,11 @@
               "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
               "argsstring_html": "()=default",
               "name_html": "BitSet",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "102",
-                "column": "1"
+                "line": "95",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "BitSet()",
@@ -758,6 +811,7 @@
               "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
               "argsstring_html": "(T value)",
               "name_html": "BitSet",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
               "param": [
                 {
                   "type_html": "T",
@@ -766,11 +820,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "104",
-                "column": "1",
+                "line": "97",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "104",
-                "bodyend": "104"
+                "bodystart": "97",
+                "bodyend": "97"
               },
               "definition": {
                 "simple_html": "BitSet(T value)",
@@ -798,6 +852,7 @@
               "definition_html": "apache::thrift::detail::BitSet&lt; T &gt;::BitSet",
               "argsstring_html": "(const BitSet &amp;)=default",
               "name_html": "BitSet",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::BitSet",
               "param": [
                 {
                   "type_html": "const <code>BitSet</code> &amp;"
@@ -805,8 +860,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "106",
-                "column": "1"
+                "line": "99",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "BitSet(const BitSet&amp;)",
@@ -829,7 +884,70 @@
           "brief_html": "Constructs the BitSet.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/BitSet",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/BitSet"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/BitSet",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
+        },
+        {
+          "kind": "overloadset",
+          "name_html": "operator=",
+          "compoundname_html": "apache::thrift::detail::BitSet::operator=",
+          "functions": [
+            {
+              "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a816d6b61db78314e3c702603267f7aee",
+              "prot": "public",
+              "static": "no",
+              "const": "no",
+              "explicit": "no",
+              "inline": "no",
+              "virtual": "non-virtual",
+              "type_html": "<code>BitSet</code> &amp;",
+              "definition_html": "BitSet &amp; apache::thrift::detail::BitSet&lt; T &gt;::operator=",
+              "argsstring_html": "(const BitSet &amp;other)=default",
+              "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::operator=",
+              "param": [
+                {
+                  "type_html": "const <code>BitSet</code> &amp;",
+                  "declname_html": "other"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
+                "line": "100",
+                "column": "10"
+              },
+              "definition": {
+                "simple_html": "BitSet&amp; operator=(const BitSet&amp; other)",
+                "simple_raw": "BitSet& operator=(const BitSet& other)",
+                "detailed_html": "BitSet&amp; operator=(const BitSet&amp; other) = default",
+                "detailed_raw": "BitSet& operator=(const BitSet& other) = default",
+                "original_definition_html": "BitSet &amp; apache::thrift::detail::BitSet&lt; T &gt;::operator=",
+                "original_argsstring_html": "(const BitSet &amp;other)=default"
+              },
+              "filepath": "fns/class/apache/thrift/detail/BitSet/operator.assign",
+              "href": "/ref/cpp/fns/class/apache/thrift/detail/BitSet/operator.assign",
+              "parentid": "classapache_1_1thrift_1_1detail_1_1BitSet",
+              "compoundname_html": "apache::thrift::detail::BitSet::operator="
+            }
+          ],
+          "filepath": "f/class/apache/thrift/detail/BitSet/operator.assign",
+          "minprot": "public",
+          "displayname_html": "operator=",
+          "brief_html": "Assignment operator.",
+          "groupname_html": "",
+          "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/operator.assign",
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/operator.assign",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -848,6 +966,7 @@
               "definition_html": "bool apache::thrift::detail::BitSet&lt; T &gt;::operator[]",
               "argsstring_html": "(const uint8_t bit) const",
               "name_html": "operator[]",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::operator[]",
               "param": [
                 {
                   "type_html": "const uint8_t",
@@ -856,11 +975,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "130",
-                "column": "1",
+                "line": "124",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "130",
-                "bodyend": "133"
+                "bodystart": "124",
+                "bodyend": "127"
               },
               "definition": {
                 "simple_html": "bool operator[](const uint8_t bit) const",
@@ -887,6 +1006,7 @@
               "definition_html": "reference apache::thrift::detail::BitSet&lt; T &gt;::operator[]",
               "argsstring_html": "(const uint8_t bit)",
               "name_html": "operator[]",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::operator[]",
               "param": [
                 {
                   "type_html": "const uint8_t",
@@ -895,11 +1015,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "135",
-                "column": "1",
+                "line": "129",
+                "column": "13",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "135",
-                "bodyend": "138"
+                "bodystart": "129",
+                "bodyend": "132"
               },
               "definition": {
                 "simple_html": "reference operator[](const uint8_t bit)",
@@ -921,7 +1041,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/operator.at",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/operator.at"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/operator.at",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -929,7 +1055,7 @@
           "compoundname_html": "apache::thrift::detail::BitSet::value",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a5d3c006e204229226dc41e8dc2096ea2",
+              "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1af2b775aa74a9538b834d46d4ccd803bd",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -937,23 +1063,24 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "T &amp;",
-              "definition_html": "T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+              "definition_html": "T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
               "argsstring_html": "()",
               "name_html": "value",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::value",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "140",
-                "column": "1",
+                "line": "134",
+                "column": "5",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "140",
-                "bodyend": "140"
+                "bodystart": "134",
+                "bodyend": "134"
               },
               "definition": {
                 "simple_html": "T&amp; value()",
                 "simple_raw": "T& value()",
                 "detailed_html": "inline T&amp; value()",
                 "detailed_raw": "inline T& value()",
-                "original_definition_html": "T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+                "original_definition_html": "T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
                 "original_argsstring_html": "()"
               },
               "filepath": "fns/class/apache/thrift/detail/BitSet/value",
@@ -962,7 +1089,7 @@
               "compoundname_html": "apache::thrift::detail::BitSet::value"
             },
             {
-              "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1a53819aff0af68f5d41e1e1e78ada4e93",
+              "refid": "classapache_1_1thrift_1_1detail_1_1BitSet_1aef9db6670241bf4ca80b98a414b3efba",
               "prot": "public",
               "static": "no",
               "const": "yes",
@@ -970,23 +1097,24 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "const T &amp;",
-              "definition_html": "const T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+              "definition_html": "const T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
               "argsstring_html": "() const",
               "name_html": "value",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::value",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "142",
-                "column": "1",
+                "line": "136",
+                "column": "11",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "142",
-                "bodyend": "142"
+                "bodystart": "136",
+                "bodyend": "136"
               },
               "definition": {
                 "simple_html": "const T&amp; value() const",
                 "simple_raw": "const T& value() const",
                 "detailed_html": "inline const T&amp; value() const",
                 "detailed_raw": "inline const T& value() const",
-                "original_definition_html": "const T&amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
+                "original_definition_html": "const T &amp; apache::thrift::detail::BitSet&lt; T &gt;::value",
                 "original_argsstring_html": "() const"
               },
               "filepath": "fns/class/apache/thrift/detail/BitSet/value",
@@ -1001,7 +1129,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/value",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/value"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/value",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1025,6 +1159,7 @@
               "definition_html": "static bool apache::thrift::detail::BitSet&lt; T &gt;::get",
               "argsstring_html": "(U u, std::size_t bit)",
               "name_html": "get",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::get",
               "param": [
                 {
                   "type_html": "U",
@@ -1037,11 +1172,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "146",
-                "column": "1",
+                "line": "140",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "146",
-                "bodyend": "148"
+                "bodystart": "140",
+                "bodyend": "142"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic bool get(U u, std::size_t bit)",
@@ -1073,6 +1208,7 @@
               "definition_html": "static bool apache::thrift::detail::BitSet&lt; T &gt;::get",
               "argsstring_html": "(const std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
               "name_html": "get",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::get",
               "param": [
                 {
                   "type_html": "const std::atomic&lt; U &gt; &amp;",
@@ -1085,11 +1221,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "164",
-                "column": "1",
+                "line": "158",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "164",
-                "bodyend": "166"
+                "bodystart": "158",
+                "bodyend": "160"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic bool get(const std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -1116,6 +1252,7 @@
               "definition_html": "bool apache::thrift::detail::BitSet&lt; T &gt;::get",
               "argsstring_html": "(std::size_t bit) const",
               "name_html": "get",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::get",
               "param": [
                 {
                   "type_html": "std::size_t",
@@ -1124,11 +1261,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "178",
-                "column": "1",
+                "line": "172",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "178",
-                "bodyend": "178"
+                "bodystart": "172",
+                "bodyend": "172"
               },
               "definition": {
                 "simple_html": "bool get(std::size_t bit) const",
@@ -1150,7 +1287,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/get",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/get"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/get",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1174,6 +1317,7 @@
               "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::set",
               "argsstring_html": "(U &amp;u, std::size_t bit)",
               "name_html": "set",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::set",
               "param": [
                 {
                   "type_html": "U &amp;",
@@ -1186,11 +1330,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "151",
-                "column": "1",
+                "line": "145",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "151",
-                "bodyend": "153"
+                "bodystart": "145",
+                "bodyend": "147"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic void set(U&amp; u, std::size_t bit)",
@@ -1222,6 +1366,7 @@
               "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::set",
               "argsstring_html": "(std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
               "name_html": "set",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::set",
               "param": [
                 {
                   "type_html": "std::atomic&lt; U &gt; &amp;",
@@ -1234,11 +1379,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "169",
-                "column": "1",
+                "line": "163",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "169",
-                "bodyend": "171"
+                "bodystart": "163",
+                "bodyend": "165"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic void set(std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -1265,6 +1410,7 @@
               "definition_html": "void apache::thrift::detail::BitSet&lt; T &gt;::set",
               "argsstring_html": "(std::size_t bit)",
               "name_html": "set",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::set",
               "param": [
                 {
                   "type_html": "std::size_t",
@@ -1273,11 +1419,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "179",
-                "column": "1",
+                "line": "173",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "179",
-                "bodyend": "179"
+                "bodystart": "173",
+                "bodyend": "173"
               },
               "definition": {
                 "simple_html": "void set(std::size_t bit)",
@@ -1299,7 +1445,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/set",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/set"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/set",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1323,6 +1475,7 @@
               "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::reset",
               "argsstring_html": "(U &amp;u, std::size_t bit)",
               "name_html": "reset",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
               "param": [
                 {
                   "type_html": "U &amp;",
@@ -1335,11 +1488,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "156",
-                "column": "1",
+                "line": "150",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "156",
-                "bodyend": "158"
+                "bodystart": "150",
+                "bodyend": "152"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic void reset(U&amp; u, std::size_t bit)",
@@ -1371,6 +1524,7 @@
               "definition_html": "static void apache::thrift::detail::BitSet&lt; T &gt;::reset",
               "argsstring_html": "(std::atomic&lt; U &gt; &amp;u, std::size_t bit)",
               "name_html": "reset",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
               "param": [
                 {
                   "type_html": "std::atomic&lt; U &gt; &amp;",
@@ -1383,11 +1537,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "174",
-                "column": "1",
+                "line": "168",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "174",
-                "bodyend": "176"
+                "bodystart": "168",
+                "bodyend": "170"
               },
               "definition": {
                 "simple_html": "template &lt;class U&gt;\nstatic void reset(std::atomic&lt;U&gt;&amp; u, std::size_t bit)",
@@ -1414,6 +1568,7 @@
               "definition_html": "void apache::thrift::detail::BitSet&lt; T &gt;::reset",
               "argsstring_html": "(std::size_t bit)",
               "name_html": "reset",
+              "qualifiedname_html": "apache::thrift::detail::BitSet::reset",
               "param": [
                 {
                   "type_html": "std::size_t",
@@ -1422,11 +1577,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "180",
-                "column": "1",
+                "line": "174",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "180",
-                "bodyend": "180"
+                "bodystart": "174",
+                "bodyend": "174"
               },
               "definition": {
                 "simple_html": "void reset(std::size_t bit)",
@@ -1448,7 +1603,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/detail/BitSet/reset",
-          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/reset"
+          "refid": "/ref/cpp/f/class/apache/thrift/detail/BitSet/reset",
+          "parent_links": [
+            {
+              "text_html": "BitSet",
+              "href": "/ref/cpp/class/apache/thrift/detail/BitSet"
+            }
+          ]
         }
       ]
     }

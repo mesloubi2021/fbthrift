@@ -19,17 +19,15 @@
 // NOTE: link_whole is enabled for this file, all symbols won't be dropped from
 // the binary. Please keep it as small as possible.
 
-namespace apache {
-namespace thrift {
-namespace type {
+namespace apache::thrift::type {
 namespace {
-FOLLY_MAYBE_UNUSED const auto registerPrimitiveTypes = [] {
+[[maybe_unused]] const auto registerPrimitiveTypes = [] {
   auto registry = [](auto tag) {
     op::registerStdSerializers<
         decltype(tag),
         StandardProtocol::SimpleJson,
         StandardProtocol::Compact,
-        StandardProtocol::Binary>(detail::getGeneratedTypeRegistry());
+        StandardProtocol::Binary>(detail::getGeneratedTypeRegistry(), true);
   };
 
   registry(bool_t{});
@@ -43,7 +41,5 @@ FOLLY_MAYBE_UNUSED const auto registerPrimitiveTypes = [] {
   registry(binary_t{});
   return 0;
 }();
-}
-} // namespace type
-} // namespace thrift
-} // namespace apache
+} // namespace
+} // namespace apache::thrift::type

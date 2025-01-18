@@ -53,6 +53,7 @@ pub mod serialize;
 pub mod simplejson_protocol;
 pub mod thrift_protocol;
 pub mod ttype;
+pub mod type_name_type;
 pub mod uri;
 
 mod bufext;
@@ -66,12 +67,6 @@ mod tests;
 
 #[doc(hidden)]
 pub mod help;
-
-pub mod types {
-    // Define ApplicationException as if it were a normal generated type to make things simpler
-    // for codegen.
-    pub use crate::application_exception::ApplicationException;
-}
 
 pub use crate::application_exception::ApplicationException;
 pub use crate::application_exception::ApplicationExceptionErrorCode;
@@ -117,6 +112,8 @@ pub use crate::thrift_protocol::MessageType;
 pub use crate::thrift_protocol::ProtocolID;
 pub use crate::ttype::GetTType;
 pub use crate::ttype::TType;
+pub use crate::type_name_type::GetTypeNameType;
+pub use crate::type_name_type::TypeNameType;
 pub use crate::uri::GetUri;
 
 pub trait ThriftEnum: Sized {
@@ -125,4 +122,7 @@ pub trait ThriftEnum: Sized {
     fn variants() -> &'static [&'static str];
 
     fn variant_values() -> &'static [Self];
+
+    /// The numerical representation of this variant.
+    fn inner_value(&self) -> i32;
 }

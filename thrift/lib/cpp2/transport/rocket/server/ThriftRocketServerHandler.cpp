@@ -31,9 +31,9 @@
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/async/AsyncProcessorHelper.h>
 #include <thrift/lib/cpp2/async/ResponseChannel.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
+#include <thrift/lib/cpp2/server/LoggingEvent.h>
 #include <thrift/lib/cpp2/server/LoggingEventHelper.h>
 #include <thrift/lib/cpp2/server/MonitoringMethodNames.h>
 #include <thrift/lib/cpp2/transport/core/RpcMetadataUtil.h>
@@ -41,8 +41,10 @@
 #include <thrift/lib/cpp2/transport/rocket/FdSocket.h>
 #include <thrift/lib/cpp2/transport/rocket/PayloadUtils.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
+#include <thrift/lib/cpp2/transport/rocket/compression/CompressionManager.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/ErrorCode.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Frames.h>
+#include <thrift/lib/cpp2/transport/rocket/server/InteractionOverload.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnection.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerFrameContext.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketSinkClientCallback.h>
@@ -59,9 +61,7 @@ const int64_t kRocketServerMinVersion = 8;
 THRIFT_FLAG_DEFINE_bool(rocket_server_legacy_protocol_key, true);
 THRIFT_FLAG_DEFINE_int64(rocket_server_max_version, kRocketServerMaxVersion);
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 thread_local uint32_t ThriftRocketServerHandler::sample_{0};
 
@@ -70,13 +70,26 @@ bool isMetadataValid(const RequestRpcMetadata& metadata, RpcKind expectedKind) {
   return metadata.protocol_ref() && metadata.name_ref() &&
       metadata.kind_ref() && metadata.kind_ref() == expectedKind;
 }
+
+// The reason we have separate helper functions is for some minor perf
+// optimization: calling THRIFT_REQUEST_EVENT will attempt to fetch the handler
+// from a global map, the result of which is cached at the function that invokes
+// it. That's why we have a simple helper function here to save the cost of
+// repeactedly looking up the handler from the map.
+int64_t getDefaultLogSampleRatio() {
+  return THRIFT_REQUEST_EVENT(success).shouldLog();
+}
+int64_t getDefaultLogErrorSampleRatio() {
+  return THRIFT_REQUEST_EVENT(error).shouldLog();
+}
 } // namespace
 
 ThriftRocketServerHandler::ThriftRocketServerHandler(
     std::shared_ptr<Cpp2Worker> worker,
     const folly::SocketAddress& clientAddress,
     folly::AsyncTransport* transport,
-    const std::vector<std::unique_ptr<SetupFrameHandler>>& handlers)
+    const std::vector<std::unique_ptr<SetupFrameHandler>>& handlers,
+    const std::vector<std::unique_ptr<SetupFrameInterceptor>>& interceptors)
     : worker_(std::move(worker)),
       connectionGuard_(worker_->getActiveRequestsGuard()),
       transport_(transport),
@@ -86,8 +99,10 @@ ThriftRocketServerHandler::ThriftRocketServerHandler(
           nullptr, /* eventBaseManager */
           nullptr, /* x509PeerCert */
           worker_->getServer()->getClientIdentityHook(),
-          worker_.get()),
+          worker_.get(),
+          worker_->getServer()->getServiceInterceptors().size()),
       setupFrameHandlers_(handlers),
+      setupFrameInterceptors_(interceptors),
       version_(static_cast<int32_t>(std::min(
           kRocketServerMaxVersion, THRIFT_FLAG(rocket_server_max_version)))),
       maxResponseWriteTime_(worker_->getServer()
@@ -101,12 +116,16 @@ ThriftRocketServerHandler::ThriftRocketServerHandler(
 }
 
 ThriftRocketServerHandler::~ThriftRocketServerHandler() {
+  invokeServiceInterceptorsOnConnectionClosed();
+
   for (const auto& handler : worker_->getServer()->getEventHandlersUnsafe()) {
     handler->connectionDestroyed(&connContext_);
   }
   // Ensure each connAccepted() call has a matching connClosed()
   if (auto* observer = worker_->getServer()->getObserver()) {
-    observer->connClosed();
+    observer->connClosed(server::TServerObserver::ConnectionInfo(
+        reinterpret_cast<uint64_t>(transport_),
+        connContext_.getSecurityProtocol()));
   }
 }
 
@@ -120,7 +139,13 @@ ThriftRocketServerHandler::shouldSample(const transport::THeader& header) {
   if (const auto& loggingContext = header.loggingContext()) {
     logSampleRatio = *loggingContext->logSampleRatio();
     logErrorSampleRatio = *loggingContext->logErrorSampleRatio();
+  } else {
+    // use sampling ratios from the server config if client doesn't set the
+    // logging context
+    logSampleRatio = getDefaultLogSampleRatio();
+    logErrorSampleRatio = getDefaultLogErrorSampleRatio();
   }
+
   return apache::thrift::server::TServerObserver::SamplingStatus(
       isServerSamplingEnabled, logSampleRatio, logErrorSampleRatio);
 }
@@ -152,17 +177,16 @@ void ThriftRocketServerHandler::handleSetupFrame(
     }
   }
 
+  RequestSetupMetadata meta;
   try {
-    CompactProtocolReader reader;
-    reader.setInput(cursor);
-    RequestSetupMetadata meta;
-    // Throws on read error
-    meta.read(&reader);
-    if (reader.getCursorPosition() > frame.payload().metadataSize()) {
+    if (PayloadSerializer::getInstance()->unpack(
+            meta, cursor, frame.encodeMetadataUsingBinary()) !=
+        frame.payload().metadataSize()) {
       return connection.close(folly::make_exception_wrapper<RocketException>(
           ErrorCode::INVALID_SETUP,
           "Error deserializing SETUP payload: underflow"));
     }
+
     connContext_.readSetupMetadata(meta);
 
     auto minVersion = meta.minVersion_ref().value_or(0);
@@ -189,7 +213,24 @@ void ThriftRocketServerHandler::handleSetupFrame(
           ErrorCode::INVALID_SETUP, "Unsupported MIME types"));
     }
 
+    SCOPE_EXIT {
+      if (processor_) {
+        processor_->coalesceWithServerScopedLegacyEventHandlers(
+            *worker_->getServer());
+      }
+    };
+
     eventBase_ = connContext_.getTransport()->getEventBase();
+    serverConfigs_ = worker_->getServer();
+
+    for (const auto& i : setupFrameInterceptors_) {
+      auto frameAccepted = i->acceptSetup(meta, connContext_);
+      if (frameAccepted.hasError()) {
+        return connection.close(folly::make_exception_wrapper<RocketException>(
+            ErrorCode::INVALID_SETUP, frameAccepted.error().what()));
+      }
+    }
+
     for (const auto& h : setupFrameHandlers_) {
       auto processorInfo = h->tryHandle(meta);
       if (processorInfo) {
@@ -203,7 +244,6 @@ void ThriftRocketServerHandler::handleSetupFrame(
             (!!(threadManager_ = std::move(processorInfo->threadManager_)) ||
              processorInfo->useResourcePool_ ||
              !worker_->getServer()->resourcePoolSet().empty());
-        valid &= !!(serverConfigs_ = &processorInfo->serverConfigs_);
         requestsRegistry_ = processorInfo->requestsRegistry_ != nullptr
             ? processorInfo->requestsRegistry_
             : worker_->getRequestsRegistry();
@@ -230,7 +270,6 @@ void ThriftRocketServerHandler::handleSetupFrame(
     if (worker_->getServer()->resourcePoolSet().empty()) {
       threadManager_ = worker_->getServer()->getThreadManager_deprecated();
     }
-    serverConfigs_ = worker_->getServer();
     requestsRegistry_ = worker_->getRequestsRegistry();
 
     if (auto* observer = serverConfigs_->getObserver()) {
@@ -243,12 +282,8 @@ void ThriftRocketServerHandler::handleSetupFrame(
     serverMeta.set_setupResponse();
     serverMeta.setupResponse_ref()->version_ref() = version_;
     serverMeta.setupResponse_ref()->zstdSupported_ref() = true;
-    CompactProtocolWriter compactProtocolWriter;
-    folly::IOBufQueue queue;
-    compactProtocolWriter.setOutput(&queue);
-    serverMeta.write(&compactProtocolWriter);
-    connection.sendMetadataPush(std::move(queue).move());
-
+    connection.sendMetadataPush(
+        PayloadSerializer::getInstance()->packCompact(serverMeta));
   } catch (const std::exception& e) {
     return connection.close(folly::make_exception_wrapper<RocketException>(
         ErrorCode::INVALID_SETUP,
@@ -256,6 +291,8 @@ void ThriftRocketServerHandler::handleSetupFrame(
             "Error deserializing SETUP payload: {}",
             folly::exceptionStr(e).toStdString())));
   }
+
+  invokeServiceInterceptorsOnConnection(connection);
 }
 
 void ThriftRocketServerHandler::handleRequestResponseFrame(
@@ -284,7 +321,8 @@ void ThriftRocketServerHandler::handleRequestResponseFrame(
   handleRequestCommon(
       std::move(frame.payload()),
       std::move(makeRequestResponse),
-      RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE);
+      RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE,
+      context.connection().isDecodingMetadataUsingBinaryProtocol());
 }
 
 void ThriftRocketServerHandler::handleRequestFnfFrame(
@@ -310,7 +348,8 @@ void ThriftRocketServerHandler::handleRequestFnfFrame(
   handleRequestCommon(
       std::move(frame.payload()),
       std::move(makeRequestFnf),
-      RpcKind::SINGLE_REQUEST_NO_RESPONSE);
+      RpcKind::SINGLE_REQUEST_NO_RESPONSE,
+      context.connection().isDecodingMetadataUsingBinaryProtocol());
 }
 
 void ThriftRocketServerHandler::handleRequestStreamFrame(
@@ -337,7 +376,8 @@ void ThriftRocketServerHandler::handleRequestStreamFrame(
   handleRequestCommon(
       std::move(frame.payload()),
       std::move(makeRequestStream),
-      RpcKind::SINGLE_REQUEST_STREAMING_RESPONSE);
+      RpcKind::SINGLE_REQUEST_STREAMING_RESPONSE,
+      context.connection().isDecodingMetadataUsingBinaryProtocol());
 }
 
 void ThriftRocketServerHandler::handleRequestChannelFrame(
@@ -362,7 +402,10 @@ void ThriftRocketServerHandler::handleRequestChannelFrame(
   };
 
   handleRequestCommon(
-      std::move(frame.payload()), std::move(makeRequestSink), RpcKind::SINK);
+      std::move(frame.payload()),
+      std::move(makeRequestSink),
+      RpcKind::SINK,
+      context.connection().isDecodingMetadataUsingBinaryProtocol());
 }
 
 void ThriftRocketServerHandler::connectionClosing() {
@@ -374,13 +417,19 @@ void ThriftRocketServerHandler::connectionClosing() {
 
 template <class F>
 void ThriftRocketServerHandler::handleRequestCommon(
-    Payload&& payload, F&& makeRequest, RpcKind expectedKind) {
-  std::chrono::steady_clock::time_point readEnd =
-      std::chrono::steady_clock::now();
+    Payload&& payload,
+    F&& makeRequest,
+    RpcKind expectedKind,
+    bool decodeMetadataUsingBinary) {
+  std::chrono::steady_clock::time_point readEnd{
+      std::chrono::steady_clock::now()};
+  auto wiredPayloadSize = payload.metadataAndDataSize();
 
   rocket::Payload debugPayload = payload.clone();
   auto requestPayloadTry =
-      unpackAsCompressed<RequestPayload>(std::move(payload));
+      rocket::PayloadSerializer::getInstance()
+          ->unpackAsCompressed<RequestPayload>(
+              std::move(payload), decodeMetadataUsingBinary);
 
   auto makeActiveRequest = [&](auto&& md, auto&& payload, auto&& reqCtx) {
     serverConfigs_->incActiveRequests();
@@ -405,6 +454,11 @@ void ThriftRocketServerHandler::handleRequestCommon(
   auto& data = requestPayloadTry->payload;
   auto& metadata = requestPayloadTry->metadata;
 
+  ChecksumAlgorithm checksumAlgorithm = ChecksumAlgorithm::NONE;
+  if (auto checksum = metadata.checksum()) {
+    checksumAlgorithm = *checksum->algorithm();
+  }
+
   // Extract FDs as early as possible to avoid holding them open if the
   // request fails.
   //
@@ -422,15 +476,12 @@ void ThriftRocketServerHandler::handleRequestCommon(
       if (auto* observer = serverConfigs_->getObserver()) {
         observer->taskKilled();
       }
-      makeActiveRequest(
-          std::move(metadata),
-          std::move(debugPayload),
-          createDefaultRequestContext())
-          ->sendErrorWrapped(
-              folly::make_exception_wrapper<TApplicationException>(
-                  TApplicationException::UNKNOWN,
-                  tryFds.exception().what().toStdString()),
-              kRequestParsingErrorCode);
+      handleRequestWithFdsExtractionFailure(
+          makeActiveRequest(
+              std::move(metadata),
+              std::move(debugPayload),
+              createDefaultRequestContext()),
+          tryFds.exception().what().toStdString());
       return;
     }
   }
@@ -474,7 +525,8 @@ void ThriftRocketServerHandler::handleRequestCommon(
   if (metadata.crc32c_ref()) {
     try {
       if (auto compression = metadata.compression_ref()) {
-        data = uncompressBuffer(std::move(data), *compression);
+        data = CompressionManager().uncompressBuffer(
+            std::move(data), *compression);
       }
     } catch (...) {
       handleDecompressionFailure(
@@ -482,7 +534,7 @@ void ThriftRocketServerHandler::handleRequestCommon(
               std::move(metadata),
               rocket::Payload{},
               createDefaultRequestContext()),
-          folly::exceptionStr(std::current_exception()).toStdString());
+          folly::exceptionStr(folly::current_exception()).toStdString());
       return;
     }
   }
@@ -542,6 +594,30 @@ void ThriftRocketServerHandler::handleRequestCommon(
       : std::make_shared<folly::RequestContext>(rootid);
   folly::RequestContextScopeGuard rctx(reqCtx);
 
+  auto interactionIdOpt = metadata.interactionId().to_optional();
+  auto interactionCreateOpt = metadata.interactionCreate().to_optional();
+  auto crc32Opt = metadata.crc32c().to_optional();
+  auto compressionOpt = metadata.compression().to_optional();
+  auto frameworkMetadataPtr = metadata.frameworkMetadata()
+      ? (*metadata.frameworkMetadata())->clone()
+      : nullptr;
+
+  if (interactionIdOpt &&
+      THRIFT_FLAG(enable_interaction_overload_protection_server)) {
+    if (auto* interaction =
+            apache::thrift::detail::Cpp2ConnContextInternalAPI(connContext_)
+                .findTile(*interactionIdOpt)) {
+      if (auto* overloadPolicy =
+              apache::thrift::detail::TileInternalAPI(*interaction)
+                  .getOverloadPolicy();
+          overloadPolicy && !overloadPolicy->allowNewRequest()) {
+        handleInteractionLoadshedded(makeActiveRequest(
+            std::move(metadata), std::move(debugPayload), std::move(reqCtx)));
+        return;
+      }
+    }
+  }
+
   // A request should not be active until the overload checking is done.
   auto request = makeRequest(
       std::move(metadata), std::move(debugPayload), std::move(reqCtx));
@@ -550,11 +626,18 @@ void ThriftRocketServerHandler::handleRequestCommon(
   const auto& headers = request->getTHeader().getHeaders();
   const auto& name = request->getMethodName();
 
-  auto overloadResult = serverConfigs_->checkOverload(&headers, &name);
+  auto overloadResult = serverConfigs_->checkOverload(headers, name);
   serverConfigs_->incActiveRequests();
   if (UNLIKELY(overloadResult.has_value())) {
-    auto [errorCode, errorMessage] = overloadResult.value();
-    handleRequestOverloadedServer(std::move(request), errorCode, errorMessage);
+    if ((interactionCreateOpt || interactionIdOpt) &&
+        shouldTerminateInteraction(
+            interactionCreateOpt.has_value(),
+            interactionIdOpt,
+            &connContext_)) {
+      overloadResult->errorCode = mapToTerminalError(overloadResult->errorCode);
+    }
+    handleRequestOverloadedServer(
+        std::move(request), std::move(*overloadResult));
     return;
   }
 
@@ -566,22 +649,11 @@ void ThriftRocketServerHandler::handleRequestCommon(
   auto preprocessResult =
       serverConfigs_->preprocess({headers, name, connContext_, request.get()});
   if (UNLIKELY(!std::holds_alternative<std::monostate>(preprocessResult))) {
-    folly::variant_match(
-        preprocessResult,
-        [&](AppClientException& ace) {
-          handleAppError(
-              std::move(request), ace.name(), ace.getMessage(), true);
-        },
-        [&](AppOverloadedException& aoe) {
-          handleRequestOverloadedServer(
-              std::move(request), kAppOverloadedErrorCode, aoe.getMessage());
-        },
-        [&](const AppServerException& ase) {
-          handleAppError(
-              std::move(request), ase.name(), ase.getMessage(), false);
-        },
-        [](std::monostate&) { folly::assume_unreachable(); });
-
+    handlePreprocessResult(
+        std::move(request),
+        std::move(preprocessResult),
+        interactionCreateOpt.has_value(),
+        interactionIdOpt);
     return;
   }
 
@@ -602,7 +674,7 @@ void ThriftRocketServerHandler::handleRequestCommon(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->admittedRequest(&request->getMethodName());
     // Expensive operations; happens only when sampling is enabled
-    if (samplingStatus.isEnabledByServer()) {
+    if (samplingStatus.isServerSamplingEnabled()) {
       if (threadManager_) {
         observer->queuedRequests(threadManager_->pendingUpstreamTaskCount());
       } else if (!serverConfigs_->resourcePoolSet().empty()) {
@@ -611,27 +683,32 @@ void ThriftRocketServerHandler::handleRequestCommon(
       observer->activeRequests(serverConfigs_->getActiveRequests());
     }
   }
-  const auto protocolId = request->getProtoId();
-  if (auto interactionId = metadata.interactionId_ref()) {
-    cpp2ReqCtx->setInteractionId(*interactionId);
+  if (interactionIdOpt) {
+    cpp2ReqCtx->setInteractionId(*interactionIdOpt);
   }
-  if (auto interactionCreate = metadata.interactionCreate_ref()) {
-    cpp2ReqCtx->setInteractionCreate(*interactionCreate);
+  if (interactionCreateOpt) {
+    cpp2ReqCtx->setInteractionCreate(*interactionCreateOpt);
     DCHECK_EQ(cpp2ReqCtx->getInteractionId(), 0);
-    cpp2ReqCtx->setInteractionId(*interactionCreate->interactionId_ref());
+    cpp2ReqCtx->setInteractionId(*interactionCreateOpt->interactionId_ref());
   }
 
-  if (auto frameworkMetadata = metadata.frameworkMetadata_ref()) {
-    cpp2ReqCtx->setFrameworkMetadata(std::move(**frameworkMetadata));
+  cpp2ReqCtx->setRpcKind(expectedKind);
+
+  if (frameworkMetadataPtr) {
+    cpp2ReqCtx->setFrameworkMetadata(std::move(*frameworkMetadataPtr));
   }
+
+  cpp2ReqCtx->setWiredRequestBytes(wiredPayloadSize);
 
   auto serializedCompressedRequest = SerializedCompressedRequest(
       std::move(data),
-      metadata.crc32c_ref()
-          ? CompressionAlgorithm::NONE
-          : metadata.compression_ref().value_or(CompressionAlgorithm::NONE));
+      crc32Opt ? CompressionAlgorithm::NONE
+               : compressionOpt.value_or(CompressionAlgorithm::NONE),
+      checksumAlgorithm);
 
+  const auto protocolId = request->getProtoId();
   Cpp2Worker::dispatchRequest(
+      *processorFactory_,
       processor_.get(),
       std::move(request),
       std::move(serializedCompressedRequest),
@@ -639,7 +716,43 @@ void ThriftRocketServerHandler::handleRequestCommon(
       protocolId,
       cpp2ReqCtx,
       threadManager_.get(),
-      serverConfigs_);
+      worker_->getServer());
+}
+
+void ThriftRocketServerHandler::handlePreprocessResult(
+    ThriftRequestCoreUniquePtr request,
+    PreprocessResult&& preprocessResult,
+    bool isInteractionCreatePresent,
+    std::optional<int64_t>& interactionIdOpt) {
+  folly::variant_match(
+      preprocessResult,
+      [&](AppClientException& ace) { handleAppError(std::move(request), ace); },
+      [&](const AppServerException& ase) {
+        handleAppError(std::move(request), ase);
+      },
+      [&](AppOverloadedException& aoe) {
+        std::string_view exCode = kAppOverloadedErrorCode;
+        if ((isInteractionCreatePresent || interactionIdOpt) &&
+            shouldTerminateInteraction(
+                isInteractionCreatePresent, interactionIdOpt, &connContext_)) {
+          exCode = kInteractionLoadsheddedAppOverloadErrorCode;
+        }
+        handleRequestOverloadedServer(
+            std::move(request),
+            OverloadResult{
+                std::string(exCode), aoe.getMessage(), LoadShedder::CUSTOM});
+      },
+      [&](AppQuotaExceededException& aqe) {
+        handleQuotaExceededException(
+            std::move(request),
+            kTenantQuotaExceededErrorCode,
+            aqe.getMessage());
+      },
+      [&](AppTenantBlocklistedException& atb) {
+        handleQuotaExceededException(
+            std::move(request), kTenantBlocklistedErrorCode, atb.getMessage());
+      },
+      [](std::monostate&) { folly::assume_unreachable(); });
 }
 
 void ThriftRocketServerHandler::handleRequestWithBadMetadata(
@@ -647,6 +760,7 @@ void ThriftRocketServerHandler::handleRequestWithBadMetadata(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
           TApplicationException::UNSUPPORTED_CLIENT_TYPE,
@@ -659,6 +773,7 @@ void ThriftRocketServerHandler::handleRequestWithBadChecksum(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
           TApplicationException::CHECKSUM_MISMATCH, "Checksum mismatch"),
@@ -670,6 +785,7 @@ void ThriftRocketServerHandler::handleDecompressionFailure(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
           TApplicationException::INVALID_TRANSFORM,
@@ -678,36 +794,64 @@ void ThriftRocketServerHandler::handleDecompressionFailure(
 }
 
 void ThriftRocketServerHandler::handleRequestOverloadedServer(
-    ThriftRequestCoreUniquePtr request,
-    const std::string& errorCode,
-    const std::string& errorMessage) {
+    ThriftRequestCoreUniquePtr request, OverloadResult&& overloadResult) {
   if (auto* observer = serverConfigs_->getObserver()) {
-    observer->serverOverloaded();
+    observer->serverOverloaded(overloadResult.loadShedder);
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
-          TApplicationException::LOADSHEDDING, errorMessage),
-      errorCode);
+          TApplicationException::LOADSHEDDING,
+          std::move(overloadResult.errorMessage)),
+      std::move(overloadResult.errorCode));
   if (request->includeInRecentRequests()) {
     requestsRegistry_->getRequestCounter().incrementOverloadCount();
   }
 }
 
-void ThriftRocketServerHandler::handleAppError(
+void ThriftRocketServerHandler::handleQuotaExceededException(
     ThriftRequestCoreUniquePtr request,
-    const std::string& name,
-    const std::string& message,
-    bool isClientError) {
+    const std::string& errorCode,
+    const std::string& errorMessage) {
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
-  auto header = request->getRequestContext()->getHeader();
-  header->setHeader(std::string(apache::thrift::detail::kHeaderUex), name);
-  header->setHeader(std::string(apache::thrift::detail::kHeaderUexw), message);
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
-          TApplicationException::UNKNOWN, std::move(message)),
-      isClientError ? kAppClientErrorCode : kAppServerErrorCode);
+          TApplicationException::TENANT_QUOTA_EXCEEDED, errorMessage),
+      errorCode);
+}
+
+void ThriftRocketServerHandler::handleAppError(
+    ThriftRequestCoreUniquePtr request,
+    const PreprocessResult& appErrorResult) {
+  if (auto* observer = serverConfigs_->getObserver()) {
+    observer->taskKilled();
+  }
+
+  folly::variant_match(
+      appErrorResult,
+      [&](const AppClientException& ace) {
+        request->sendErrorWrapped(ace, kAppClientErrorCode);
+      },
+      [&](const AppServerException& ase) {
+        request->sendErrorWrapped(ase, kAppServerErrorCode);
+      },
+      [&](const auto&) { folly::assume_unreachable(); });
+}
+
+void ThriftRocketServerHandler::handleRequestWithFdsExtractionFailure(
+    ThriftRequestCoreUniquePtr request, std::string&& errorMessage) {
+  if (auto* observer = serverConfigs_->getObserver()) {
+    observer->taskKilled();
+  }
+
+  request->sendErrorWrapped(
+      folly::make_exception_wrapper<TApplicationException>(
+          TApplicationException::UNKNOWN, std::move(errorMessage)),
+      kRequestParsingErrorCode);
+  return;
 }
 
 void ThriftRocketServerHandler::handleServerNotReady(
@@ -715,6 +859,7 @@ void ThriftRocketServerHandler::handleServerNotReady(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
           TApplicationException::LOADSHEDDING, "server not ready"),
@@ -726,10 +871,24 @@ void ThriftRocketServerHandler::handleServerShutdown(
   if (auto* observer = serverConfigs_->getObserver()) {
     observer->taskKilled();
   }
+
   request->sendErrorWrapped(
       folly::make_exception_wrapper<TApplicationException>(
           TApplicationException::LOADSHEDDING, "server shutting down"),
       kQueueOverloadedErrorCode);
+}
+
+void ThriftRocketServerHandler::handleInteractionLoadshedded(
+    ThriftRequestCoreUniquePtr request) {
+  if (auto* observer = serverConfigs_->getObserver()) {
+    observer->taskKilled();
+  }
+
+  request->sendErrorWrapped(
+      folly::make_exception_wrapper<TApplicationException>(
+          TApplicationException::LOADSHEDDING,
+          "Interaction already loadshedded"),
+      kInteractionLoadsheddedErrorCode);
 }
 
 void ThriftRocketServerHandler::handleInjectedFault(
@@ -739,6 +898,7 @@ void ThriftRocketServerHandler::handleInjectedFault(
       if (auto* observer = serverConfigs_->getObserver()) {
         observer->taskKilled();
       }
+
       request->sendErrorWrapped(
           folly::make_exception_wrapper<TApplicationException>(
               TApplicationException::INJECTED_FAILURE, "injected failure"),
@@ -769,6 +929,58 @@ void ThriftRocketServerHandler::terminateInteraction(int64_t id) {
 void ThriftRocketServerHandler::onBeforeHandleFrame() {
   worker_->getServer()->touchRequestTimestamp();
 }
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+
+void ThriftRocketServerHandler::invokeServiceInterceptorsOnConnection(
+    RocketServerConnection& connection) noexcept {
+#if FOLLY_HAS_COROUTINES
+  const auto& serviceInterceptorsInfo =
+      worker_->getServer()->getServiceInterceptors();
+  std::vector<std::pair<std::size_t, std::exception_ptr>> exceptions;
+  didExecuteServiceInterceptorsOnConnection_ = true;
+
+  for (std::size_t i = 0; i < serviceInterceptorsInfo.size(); ++i) {
+    ServiceInterceptorBase::ConnectionInfo connectionInfo{
+        &connContext_,
+        connContext_.getStorageForServiceInterceptorOnConnectionByIndex(i)};
+    try {
+      serviceInterceptorsInfo[i].interceptor->internal_onConnection(
+          std::move(connectionInfo));
+    } catch (...) {
+      exceptions.emplace_back(i, folly::current_exception());
+    }
+  }
+  if (!exceptions.empty()) {
+    std::string message = fmt::format(
+        "ServiceInterceptor::onConnection threw exceptions:\n[{}] {}\n",
+        serviceInterceptorsInfo[exceptions[0].first].qualifiedName,
+        folly::exceptionStr(exceptions[0].second));
+    for (std::size_t i = 1; i < exceptions.size(); ++i) {
+      message += fmt::format(
+          "[{}] {}\n",
+          serviceInterceptorsInfo[exceptions[i].first].qualifiedName,
+          folly::exceptionStr(exceptions[i].second));
+    }
+    return connection.close(folly::make_exception_wrapper<RocketException>(
+        ErrorCode::REJECTED_SETUP, std::move(message)));
+  }
+#endif // FOLLY_HAS_COROUTINES
+}
+
+void ThriftRocketServerHandler::
+    invokeServiceInterceptorsOnConnectionClosed() noexcept {
+#if FOLLY_HAS_COROUTINES
+  if (didExecuteServiceInterceptorsOnConnection_) {
+    const auto& serviceInterceptorsInfo =
+        worker_->getServer()->getServiceInterceptors();
+    for (std::size_t i = 0; i < serviceInterceptorsInfo.size(); ++i) {
+      ServiceInterceptorBase::ConnectionInfo connectionInfo{
+          &connContext_,
+          connContext_.getStorageForServiceInterceptorOnConnectionByIndex(i)};
+      serviceInterceptorsInfo[i].interceptor->internal_onConnectionClosed(
+          connectionInfo);
+    }
+  }
+#endif // FOLLY_HAS_COROUTINES
+}
+
+} // namespace apache::thrift::rocket

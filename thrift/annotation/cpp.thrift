@@ -20,32 +20,83 @@ include "thrift/annotation/thrift.thrift"
 package "facebook.com/thrift/annotation/cpp"
 
 namespace java com.facebook.thrift.annotation.cpp_deprecated
+namespace android com.facebook.thrift.annotation.cpp_deprecated
 namespace js thrift.annotation.cpp
 namespace py.asyncio facebook_thrift_asyncio.annotation.cpp
 namespace go thrift.annotation.cpp
 namespace py thrift.annotation.cpp
 
+// start
+
 /**
- * Changes the native type of a Thrift object.
- * `name` and `template` correspond to `cpp.type` and `cpp.template` respecively.
+ * Changes the name of the definition in generated C++ code.
+ * In most cases a much better solution is to rename the problematic Thrift field itself. Only use the `@cpp.Name` annotation if such renaming is problematic,
+ * e.g. when the field name appears in code as a string, particularly when using JSON serialization, and it is hard to change all usage sites.
+ */
+@scope.Definition
+struct Name {
+  1: string value;
+}
+
+/**
+ * Changes the native type of a Thrift object (the C++ type used in codegen) to the value of the `name` field.
+ * Container types may instead provide the `template` field, in which case template parameters will be filled in by thrift.
+ * (e.g. `template = "folly::sorted_vector_set"` is equivalent to `type = "folly::sorted_vector_set<T>"` on `set<T>`)
+ *
+ * It is also possible to add `cpp_include` to bring in additional data structures and use them here.
+ * It is required that the custom type matches the specified Thrift type even for internal container types.
+ * Prefer types that can leverage `reserve(size_t)` as Thrift makes uses these optimizations.
+ * *Special Case*: This annotation can be used to define a string/binary type as `IOBuf` or `unique_ptr<IOBuf>` so that you can leverage Thrift's support for zero-copy buffer manipulation through `IOBuf`.
+ * During deserialization, thrift receives a buffer that is used to allocate the appropriate fields in the struct. When using smart pointers, instead of making a copy of the data, it only modifies the pointer to point to the address that is used by the buffer.
+ *
+ * The custom type must provide the following methods
+ * * `list`: `push_back(T)`
+ * * `map`: `insert(std::pair<T1, T2>)`
+ * * `set`: `insert(T)`
  */
 @scope.Typedef
 @scope.Field
 struct Type {
   1: string name;
-  2: string template (cpp.name = "template_");
+
+  @Name{value = "template_"}
+  2: string template;
 }
 
-enum RefType {
-  Unique = 0,
-  Shared = 1,
-  SharedMutable = 2,
-}
-
+/**
+ * Allocates a field on the heap instead of inline.
+ * This annotation is added to support recursive types. However, you can also use it to turn a field from a value to a smart pointer.
+ * `@cpp.Ref` is equivalent having type`@cpp.RefType.Unique`.
+ *
+ * NOTE: A struct may transitively contain itself as a field only if at least one of the fields in the inclusion chain is either an optional Ref field or a container. Otherwise the struct would have infinite size.
+ */
 @scope.Field
 struct Ref {
-  1: RefType type;
+  1: RefType type; /// Optional, defaults to Unique
 }
+enum RefType {
+  Unique = 0, /// `std::unique_ptr<T>`
+  Shared = 1, /// `std::shared_ptr<const T> `
+  SharedMutable = 2, /// `std::shared_ptr<T>`
+}
+
+/**
+  Lazily deserialize large field on first access.
+
+  ```
+  FooWithLazyField foo;
+  apache::thrift::CompactSerializer::deserialize(serializedData, foo);
+
+  // large_field is lazy field, it will be deserialized on first access
+  // The data will be deserialized in method call large_field_ref()
+  LOG(INFO) << foo.large_field_ref()->size();
+
+  // Result will be cached, we won't deserialize again
+  LOG(INFO) << foo.large_field_ref()->size();
+  ```
+
+  Read more: /doc/fb/languages/cpp/lazy.md
+*/
 
 @scope.Field
 struct Lazy {
@@ -128,37 +179,49 @@ struct Adapter {
   5: bool moveOnly;
 }
 
+/**
+* Packs isset bits into fewer bytes to save space at the cost of making access more expensive.
+* Passing `atomic = false` reduces the access cost while making concurrent writes UB.
+* Read more: /doc/fb/languages/cpp/isset-bitpacking.md
+*/
 @scope.Struct
 struct PackIsset {
   1: bool atomic = true;
 }
 
-@scope.Struct
-struct MinimizePadding {}
+/**
+  This annotation enables reordering of fields in the generated C++ struct to minimize padding.
+  This is achieved by placing the fields in the order of decreasing alignments. The order of fields with the same alignment is preserved.
 
+  ```
+  @cpp.MinimizePadding
+  struct Padded {
+    1: byte small
+    2: i64 big
+    3: i16 medium
+    4: i32 biggish
+    5: byte tiny
+  }
+  ```
+
+  For example, the C++ fields for the `Padded` Thrift struct above will be generated in the following order:
+
+  ```
+  int64_t big;
+  int32_t biggish;
+  int16_t medium;
+  int8_t small;
+  int8_t tiny;
+  ```
+
+  which gives the size of 16 bytes compared to 32 bytes if `cpp.MinimizePadding` was not specified.
+*/
 @scope.Struct
-struct TriviallyRelocatable {}
+@scope.Exception
+struct MinimizePadding {}
 
 @scope.Union
 struct ScopedEnumAsUnionType {}
-
-/**
- * Indicates a typedef should be 'strong', and require an explicit cast to
- * the underlying type.
- *
- * Currently only works for integer typedefs, for example:
- *
- *     @cpp.StrongType
- *     typedef i32 MyId;
- *
- * Will cause an enum class to be used instead of a typedef in the genearte code, for example:
- *
- *     enum class MyId : ::std::int32_t {};
- *
- */
-@thrift.Experimental
-@scope.Typedef
-struct StrongType {}
 
 /**
  * An annotation that intercepts field access with C++ field interceptor.
@@ -207,6 +270,7 @@ struct UseOpEncode {}
 /**
  * Enum in C++ by default uses signed 32 bit integer. There is no need to specify
  * underlying type for signed 32 bit integer.
+ * 64-bit is not supported to avoid truncation since enums are sent as 32-bit integers over the wire.
  */
 enum EnumUnderlyingType {
   /** ::std::int8_t */
@@ -255,3 +319,74 @@ struct Frozen2Exclude {}
  */
 @scope.Typedef
 struct Frozen2RequiresCompleteContainerParams {}
+
+/**
+ * Causes C++ handler code to run inline on the EventBase thread.
+ * Disables overload protection, use with caution.
+ * Cannot be applied to individual functions in interactions.
+ *
+ * Causes the request to be executed on the event base thread directly instead of rescheduling onto a thread manager thread, provided the async_eb_ handler method is implemented.
+ * You should only execute the request on the event base thread if it is very fast and you have measured that rescheduling is a substantial chunk of your service's CPU usage.
+ * If a request executing on the event base thread blocks or takes a long time, all other requests sharing the same event base are affected and latency will increase significantly.
+ * We strongly discourage the use of this annotation unless strictly necessary. You will have to implement the harder-to-use async_eb_ handler method.
+ * This also disables queue timeouts, an important form of overload protection.
+ */
+@scope.Function
+@scope.Interaction
+struct ProcessInEbThreadUnsafe {}
+
+/**
+ * Applies to structured annotation that need to be accessed in Runtime.
+ */
+@scope.Struct
+struct RuntimeAnnotation {}
+
+/**
+ * Causes uses of the given structured type to be replaced with `CursorSerializationWrapper` to allow use of cursor-based serialization.
+ * Must add `cpp_include "thrift/lib/cpp2/protocol/CursorBasedSerializer.h"` to files that use this annotation.
+ * See documentation for this class in CursorBasedSerializer.h
+ * Can only be applied to top-level structs (used as return type or sole argument to an RPC or serialized directly), not to types used as struct fields or container elements.
+ */
+@scope.Struct
+@scope.Union
+@scope.Typedef
+@scope.Transitive
+@Adapter{name = "::apache::thrift::CursorSerializationAdapter"}
+struct UseCursorSerialization {}
+
+/**
+ * Given either of the following Thrift service definitions:
+ *
+ *     @cpp.GenerateDeprecatedHeaderClientMethods
+ *     service Foo {
+ *       void bar();
+ *     }
+ *
+ *     service Foo {
+ *       @cpp.GenerateDeprecatedHeaderClientMethods
+ *       void bar();
+ *     }
+ *
+ * This annotation instructs the compiler to generate the following (now deprecated) client method variants:
+ *   - apache::thrift::Client<Foo>::header_future_bar
+ *   - apache::thrift::Client<Foo>::header_semifuture_bar
+ */
+@scope.Service
+@scope.Function
+struct GenerateDeprecatedHeaderClientMethods {}
+
+/**
+ * Allows the field to be annotated @cpp.Ref (or cpp[2].ref[_type]) even if it
+ * is not optional (or in a union, which is effectively optional).
+ *
+ * This annotation is provided for a limited time, to exempt pre-existing fields
+ * while rolling out a stricter enforcement of the condition above.
+ *
+ * Reminder: reference fields should be optional because the corresponding smart
+ * pointers (std::unique_ptr, std::shared_ptr) can always be reset or set to
+ * nullptr by the clients. If the field is not optional, this leads to a
+ * confusing (or non-sensical) situation, wherein a field that should always
+ * have a value has nullptr instead.
+ */
+@scope.Field
+struct AllowLegacyNonOptionalRef {}

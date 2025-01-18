@@ -15,6 +15,7 @@
       "definition_html": "static bool apache::thrift::op::detail::StructuredOp&lt; T, Tag &gt;::put",
       "argsstring_html": "(void *s, FieldId fid, size_t, const Dyn &amp;n, const Dyn &amp;val)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::StructuredOp::put",
       "param": [
         {
           "type_html": "void *",
@@ -39,7 +40,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructOp.h",
         "line": "60",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructOp.h",
         "bodystart": "60",
         "bodyend": "74"
@@ -64,5 +65,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StructuredOp/put",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StructuredOp/put"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StructuredOp/put",
+  "parent_links": [
+    {
+      "text_html": "StructuredOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/StructuredOp"
+    }
+  ]
 }

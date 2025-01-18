@@ -16,8 +16,32 @@
 
 #include <thrift/lib/cpp2/transport/rocket/framing/Parser.h>
 
-// Add a flag to enable strategy based parser. Default strategy right now uses.
-THRIFT_FLAG_DEFINE_bool(rocket_strategy_parser, false);
+// rocket_frame_parser flag specify which frame parser rocket transport decide
+// to use. It can take three values
+// - "strategy": rocket transport will use FrameLengthParserStrategy to parse
+// rocket frames. This parsing strategy reads the rocket frame length (first 3
+// bytes) and immediately hands off frames to downstream as soon as a full frame
+// is available.
+// - "allocating": frame parser that can take a custom allocator, we also
+// guarantee buffer returned are not chained (meaning continuous). This can
+// provide performance benefits when using cursor-based serialization.
+THRIFT_FLAG_DEFINE_string(rocket_frame_parser, "strategy");
 
-// Add a flag to enable allocating strategy based parser.
-THRIFT_FLAG_DEFINE_bool(rocket_allocating_strategy_parser, false);
+namespace apache::thrift::rocket::detail {
+ParserAllocatorType& getDefaultAllocator() {
+  static folly::Indestructible<ParserAllocatorType> defaultAllocator;
+  return *defaultAllocator;
+}
+
+ParserMode stringToMode(const std::string& modeStr) noexcept {
+  if (modeStr == "strategy") {
+    return ParserMode::STRATEGY;
+  } else if (modeStr == "allocating") {
+    return ParserMode::ALLOCATING;
+  }
+
+  LOG(WARNING) << "Invalid parser mode: '" << modeStr
+               << ", default to ParserMode::STRATEGY";
+  return ParserMode::STRATEGY;
+}
+} // namespace apache::thrift::rocket::detail

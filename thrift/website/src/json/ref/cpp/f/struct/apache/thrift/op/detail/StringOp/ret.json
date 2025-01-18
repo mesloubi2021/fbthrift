@@ -23,6 +23,7 @@
       "definition_html": "static Ptr apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ret",
       "argsstring_html": "(T &amp;&amp;val)",
       "name_html": "ret",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ret",
       "param": [
         {
           "type_html": "<code>T</code> &amp;&amp;",
@@ -32,7 +33,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "60",
-        "column": "1",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "60",
         "bodyend": "62"
@@ -70,6 +71,7 @@
       "definition_html": "static Ptr apache::thrift::op::detail::BaseOp&lt; Tag &gt;::ret",
       "argsstring_html": "(RTag, T &amp;&amp;val)",
       "name_html": "ret",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::ret",
       "param": [
         {
           "type_html": "RTag"
@@ -82,7 +84,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "64",
-        "column": "1",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "64",
         "bodyend": "66"
@@ -107,5 +109,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringOp/ret",
+  "parent_links": [
+    {
+      "text_html": "StringOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/StringOp"
+    }
+  ]
 }

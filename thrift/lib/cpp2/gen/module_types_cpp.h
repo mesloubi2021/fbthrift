@@ -19,14 +19,15 @@
 #include <algorithm>
 #include <atomic>
 #include <memory>
+#include <string_view>
 #include <type_traits>
 
 #include <folly/Indestructible.h>
 #include <folly/Memory.h>
 #include <folly/Portability.h>
-#include <folly/Range.h>
 #include <folly/Traits.h>
 #include <folly/container/F14Map.h>
+#include <folly/container/Reserve.h>
 #include <folly/lang/Align.h>
 #include <folly/lang/Exception.h>
 #include <folly/synchronization/AtomicUtil.h>
@@ -34,19 +35,18 @@
 #include <thrift/lib/cpp/protocol/TType.h>
 #include <thrift/lib/cpp2/Thrift.h>
 #include <thrift/lib/cpp2/op/Compare.h>
+#include <thrift/lib/cpp2/protocol/detail/protocol_methods.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 namespace st {
 
 template <typename Int>
 struct alignas(folly::cacheline_align_v) enum_find {
   struct find_name_result {
-    folly::StringPiece result{nullptr, nullptr};
+    std::string_view result{};
     find_name_result() = default;
-    explicit constexpr find_name_result(folly::StringPiece r) noexcept
+    explicit constexpr find_name_result(std::string_view r) noexcept
         : result{r} {}
     explicit constexpr operator bool() const noexcept {
       return result.data() != nullptr;
@@ -65,12 +65,12 @@ struct alignas(folly::cacheline_align_v) enum_find {
   struct metadata {
     std::size_t const size{};
     const Int* const values{};
-    const folly::StringPiece* const names{};
+    const std::string_view* const names{};
   };
 
   // the fast path cache types
-  using find_name_map_t = folly::F14FastMap<Int, folly::StringPiece>;
-  using find_value_map_t = folly::F14FastMap<folly::StringPiece, Int>;
+  using find_name_map_t = folly::F14FastMap<Int, std::string_view>;
+  using find_value_map_t = folly::F14FastMap<std::string_view, Int>;
 
   // an approximate state of the fast-path caches; approximately mutex-like
   struct cache_state {
@@ -142,14 +142,14 @@ struct alignas(folly::cacheline_align_v) enum_find {
   }
 
   FOLLY_ERASE find_value_result
-  find_value_fast(folly::StringPiece const name) noexcept {
+  find_value_fast(std::string_view const name) noexcept {
     using result = find_value_result;
     const auto& map = reinterpret_cast<bidi_cache&>(cache).find_value_index;
     const auto found = map.find(name);
     return found == map.end() ? result() : result(found->second);
   }
   FOLLY_NOINLINE find_value_result
-  find_value_scan(folly::StringPiece const name) noexcept {
+  find_value_scan(std::string_view const name) noexcept {
     using result = find_value_result;
     // reverse order to simulate loop-map-insert then map-find
     const auto range = folly::range(meta.names, meta.names + meta.size);
@@ -158,7 +158,7 @@ struct alignas(folly::cacheline_align_v) enum_find {
   }
   // param order optimizes outline findValue by minimizing native instructions
   FOLLY_NOINLINE static find_value_result find_value(
-      folly::StringPiece const name, enum_find& self) noexcept {
+      std::string_view const name, enum_find& self) noexcept {
     // with two likelinesses v.s. one, gets the right code layout
     return FOLLY_LIKELY(self.state.ready()) || FOLLY_LIKELY(self.try_prepare())
         ? self.find_value_fast(name)
@@ -179,14 +179,14 @@ FOLLY_EXPORT FOLLY_ALWAYS_INLINE enum_find<U>& enum_find_instance() {
 
 template <typename E, typename U = std::underlying_type_t<E>>
 FOLLY_ERASE bool enum_find_name(
-    E const value, folly::StringPiece* const out) noexcept {
+    E const value, std::string_view* const out) noexcept {
   const auto r = enum_find<U>::find_name(U(value), enum_find_instance<E>());
   return r && ((*out = r.result), true);
 }
 
 template <typename E, typename U = std::underlying_type_t<E>>
 FOLLY_ERASE bool enum_find_value(
-    folly::StringPiece const name, E* const out) noexcept {
+    std::string_view const name, E* const out) noexcept {
   const auto uout = reinterpret_cast<U*>(out);
   const auto r = enum_find<U>::find_value(name, enum_find_instance<E>());
   return r && ((*uout = r.result), true);
@@ -201,7 +201,7 @@ FOLLY_ERASE bool enum_find_value(
 template <typename TypeClass>
 struct copy_field_fn;
 template <typename TypeClass>
-FOLLY_INLINE_VARIABLE constexpr copy_field_fn<TypeClass> copy_field{};
+inline constexpr copy_field_fn<TypeClass> copy_field{};
 
 template <typename>
 struct copy_field_rec {
@@ -216,6 +216,7 @@ struct copy_field_rec<type_class::list<ValueTypeClass>> {
   template <typename T>
   T operator()(T const& t) const {
     T result;
+    folly::reserve_if_available(result, t.size());
     for (const auto& e : t) {
       result.push_back(copy_field<ValueTypeClass>(e));
     }
@@ -228,6 +229,7 @@ struct copy_field_rec<type_class::set<ValueTypeClass>> {
   template <typename T>
   T operator()(T const& t) const {
     T result;
+    folly::reserve_if_available(result, t.size());
     for (const auto& e : t) {
       result.emplace_hint(result.end(), copy_field<ValueTypeClass>(e));
     }
@@ -240,6 +242,7 @@ struct copy_field_rec<type_class::map<KeyTypeClass, MappedTypeClass>> {
   template <typename T>
   T operator()(T const& t) const {
     T result;
+    folly::reserve_if_available(result, t.size());
     for (const auto& pair : t) {
       result.emplace_hint(
           result.end(),
@@ -271,13 +274,13 @@ struct copy_field_fn : copy_field_rec<TypeClass> {
 
 struct translate_field_name_table {
   size_t size;
-  const folly::StringPiece* names;
+  const std::string_view* names;
   const int16_t* ids;
   const protocol::TType* types;
 };
 
 void translate_field_name(
-    folly::StringPiece fname,
+    std::string_view fname,
     int16_t& fid,
     protocol::TType& ftype,
     const translate_field_name_table& table) noexcept;
@@ -350,8 +353,8 @@ struct gen_check_rec<type_class::map<KeyTypeClass, MappedTypeClass>> {
   using MappedTraits = gen_check_rec<MappedTypeClass>;
   template <typename Get, typename Type>
   static constexpr bool apply =
-      KeyTraits::template apply<Get, typename Type::key_type>&&
-          MappedTraits::template apply<Get, typename Type::mapped_type>;
+      KeyTraits::template apply<Get, typename Type::key_type> &&
+      MappedTraits::template apply<Get, typename Type::mapped_type>;
 };
 struct gen_check_rec_structure_variant {
   template <typename Get, typename Type>
@@ -404,6 +407,10 @@ bool pointer_less(const T& lhs, const T& rhs) {
   return lhs && rhs ? *lhs < *rhs : lhs < rhs;
 }
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail
+
+// __fbthrift_static_init_* are referenced using extern prototypes to keep them
+// private. This triggers the following warning, which is suppressed.
+// Helpfully, clang triggers this warning for C++ but gcc not only does not but
+// also errors if you try to suppress it, so we only suppress for clang.
+FOLLY_CLANG_DISABLE_WARNING("-Wmissing-prototypes")

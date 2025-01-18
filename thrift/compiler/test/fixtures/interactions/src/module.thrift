@@ -19,6 +19,10 @@ namespace java.swift test.fixtures.interactions
 namespace py test.fixtures.interactions
 namespace py3 test.fixtures.interactions
 
+include "shared.thrift"
+include "thrift/annotation/cpp.thrift"
+include "thrift/annotation/thrift.thrift"
+
 exception CustomException {
   1: string message;
 }
@@ -30,16 +34,18 @@ interaction MyInteraction {
   set<i32>, sink<string, binary> encode();
 }
 
+@cpp.ProcessInEbThreadUnsafe
 interaction MyInteractionFast {
   i32 frobnicate();
   oneway void ping();
   stream<bool> truthify();
   set<i32>, sink<string, binary> encode();
-} (process_in_event_base)
+}
 
+@thrift.Serial
 interaction SerialInteraction {
   void frobnicate();
-} (serial)
+}
 
 service MyService {
   performs MyInteraction;
@@ -50,4 +56,37 @@ service MyService {
   MyInteraction interact(1: i32 arg);
   MyInteractionFast, i32 interactFast();
   SerialInteraction, i32, stream<i32> serialize();
+}
+
+service Factories {
+  void foo();
+
+  MyInteraction interact(1: i32 arg);
+  MyInteractionFast, i32 interactFast();
+  SerialInteraction, i32, stream<i32> serialize();
+}
+
+service Perform {
+  performs MyInteraction;
+  performs MyInteractionFast;
+  performs SerialInteraction;
+  void foo();
+}
+
+service InteractWithShared {
+  shared.DoSomethingResult do_some_similar_things();
+  performs MyInteraction;
+  performs shared.SharedInteraction;
+}
+
+struct ShouldBeBoxed {
+  1: string sessionId;
+}
+
+interaction BoxedInteraction {
+  ShouldBeBoxed getABox();
+}
+
+service BoxService {
+  BoxedInteraction, ShouldBeBoxed getABoxSession(1: ShouldBeBoxed req);
 }

@@ -18,15 +18,13 @@
 
 #include <Python.h>
 
+#include <folly/Executor.h>
+#include <folly/coro/AsyncGenerator.h>
 #include <folly/futures/Future.h>
-#include <folly/python/AsyncioExecutor.h>
-#include <folly/python/async_generator.h>
-#include <folly/python/executor.h>
 
 #if FOLLY_HAS_COROUTINES
 
-namespace thrift {
-namespace python {
+namespace thrift::python {
 
 void cancelPythonIterator(PyObject*);
 
@@ -37,7 +35,11 @@ folly::coro::AsyncGenerator<TChunk&&> toAsyncGenerator(
     folly::Function<void(PyObject*, folly::Promise<std::optional<TChunk>>)>
         genNext) {
   Py_INCREF(iter);
-  auto guard = folly::makeGuard([iter] { Py_DECREF(iter); });
+  auto guard =
+      folly::makeGuard([iter, executor = folly::getKeepAliveToken(executor)] {
+        // Ensure the Python async generator is destroyed on a Python thread
+        executor->add([iter] { Py_DECREF(iter); });
+      });
 
   return folly::coro::co_invoke(
       [iter,
@@ -61,8 +63,8 @@ folly::coro::AsyncGenerator<TChunk&&> toAsyncGenerator(
               folly::makePromiseContract<std::optional<TChunk>>(executor);
           folly::via(
               executor,
-              [&genNext, iter, promise = std::move(promise)]() mutable {
-                genNext(iter, std::move(promise));
+              [&genNext, iter, promise_ = std::move(promise)]() mutable {
+                genNext(iter, std::move(promise_));
               });
           auto val = co_await std::move(future);
           if (!val) {
@@ -72,8 +74,7 @@ folly::coro::AsyncGenerator<TChunk&&> toAsyncGenerator(
         }
       });
 }
-} // namespace python
-} // namespace thrift
+} // namespace thrift::python
 
 #else /* !FOLLY_HAS_COROUTINES */
 #error  Thrift sink type support needs C++ coroutines, which are not currently available. \

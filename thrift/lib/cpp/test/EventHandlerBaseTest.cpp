@@ -18,6 +18,8 @@
 
 #include <folly/portability/GTest.h>
 
+#include <thrift/lib/cpp2/runtime/Init.h>
+
 using namespace std;
 using namespace folly;
 using namespace apache::thrift;
@@ -48,18 +50,29 @@ class EventHandler : public TProcessorEventHandler {
 };
 
 template <class E>
-exception_ptr to_eptr(const E& e) {
+std::exception_ptr to_eptr(const E& e) {
   try {
     throw e;
   } catch (E&) {
-    return current_exception();
+    return std::current_exception();
   }
 }
 
 class TProcessorEventHandlerTest : public testing::Test {};
 
-class TProcessorTester : public TProcessorBase {};
-class TClientTester : public TClientBase {};
+class TClientTester : public TClientBase {
+ public:
+  static std::size_t count() {
+    TClientTester tct;
+    return tct.getEventHandlers().size();
+  }
+  static std::size_t countOf(
+      const std::shared_ptr<TProcessorEventHandler>& handler) {
+    TClientTester tct;
+    return std::count(
+        tct.getEventHandlers().begin(), tct.getEventHandlers().end(), handler);
+  }
+};
 
 } // namespace
 
@@ -100,35 +113,31 @@ TEST_F(TProcessorEventHandlerTest, with_wrap_declared) {
 
 TEST_F(TProcessorEventHandlerTest, registerProcessorHandler) {
   auto countProcessor = [](const auto& h) {
-    TProcessorTester tpt;
     return std::count(
-        tpt.getEventHandlers().begin(), tpt.getEventHandlers().end(), h);
-  };
-  auto countClient = [](const auto& h) {
-    TClientTester tct;
-    return std::count(
-        tct.getEventHandlers().begin(), tct.getEventHandlers().end(), h);
+        TProcessorBase::getHandlers().begin(),
+        TProcessorBase::getHandlers().end(),
+        h);
   };
 
   auto h = std::make_shared<EventHandler>();
   EXPECT_FALSE(countProcessor(h));
-  EXPECT_FALSE(countClient(h));
+  EXPECT_FALSE(TClientTester::countOf(h));
   TProcessorBase::addProcessorEventHandler(h);
   EXPECT_TRUE(countProcessor(h));
-  EXPECT_FALSE(countClient(h));
+  EXPECT_FALSE(TClientTester::countOf(h));
   TClientBase::addClientEventHandler(h);
   EXPECT_TRUE(countProcessor(h));
-  EXPECT_TRUE(countClient(h));
+  EXPECT_TRUE(TClientTester::countOf(h));
   TProcessorBase::removeProcessorEventHandler(h);
   EXPECT_FALSE(countProcessor(h));
-  EXPECT_TRUE(countClient(h));
+  EXPECT_TRUE(TClientTester::countOf(h));
   TClientBase::removeClientEventHandler(h);
   EXPECT_FALSE(countProcessor(h));
-  EXPECT_FALSE(countClient(h));
+  EXPECT_FALSE(TClientTester::countOf(h));
 }
 
 TEST_F(TProcessorEventHandlerTest, registrationActivity) {
-  auto count = []() { return TProcessorTester().getEventHandlers().size(); };
+  auto count = []() { return TProcessorBase::getHandlers().size(); };
 
   auto h1 = std::make_shared<EventHandler>();
   auto h2 = std::make_shared<EventHandler>();
@@ -151,4 +160,21 @@ TEST_F(TProcessorEventHandlerTest, registrationActivity) {
   EXPECT_EQ(count(), 1);
   TProcessorBase::removeProcessorEventHandler(h2);
   EXPECT_EQ(count(), 0);
+}
+
+TEST_F(TProcessorEventHandlerTest, RuntimeInitClientHandlers) {
+  auto h1 = std::make_shared<EventHandler>();
+  auto h2 = std::make_shared<EventHandler>();
+
+  apache::thrift::runtime::InitOptions options;
+  options.legacyClientEventHandlers.push_back(h1);
+  apache::thrift::runtime::init(std::move(options));
+
+  EXPECT_EQ(TClientTester::count(), 1);
+  EXPECT_EQ(TClientTester::countOf(h1), 1);
+
+  TClientBase::addClientEventHandler(h2);
+  EXPECT_EQ(TClientTester::count(), 2);
+  EXPECT_EQ(TClientTester::countOf(h1), 1);
+  EXPECT_EQ(TClientTester::countOf(h2), 1);
 }

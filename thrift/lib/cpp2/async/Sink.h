@@ -21,8 +21,8 @@
 
 #include <folly/Portability.h>
 #include <folly/Try.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/Task.h>
 
 #include <thrift/lib/cpp/TApplicationException.h>
 #include <thrift/lib/cpp2/async/ClientSinkBridge.h>
@@ -30,8 +30,7 @@
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class FOLLY_EXPORT SinkThrew : public TApplicationException {
  public:
@@ -154,5 +153,4 @@ class ResponseAndSinkConsumer {
   SinkConsumer<SinkElement, FinalResponse> sinkConsumer;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

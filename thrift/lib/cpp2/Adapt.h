@@ -25,9 +25,7 @@
 #include <thrift/lib/cpp/Field.h>
 #include <thrift/lib/cpp2/Thrift.h>
 
-namespace apache {
-namespace thrift {
-namespace adapt_detail {
+namespace apache::thrift::adapt_detail {
 
 // Identical to std::declval<const T&>.
 template <typename T>
@@ -38,9 +36,9 @@ using is_mutable_ref = folly::Conjunction<
     std::is_reference<T>,
     folly::Negation<std::is_const<std::remove_reference_t<T>>>>;
 
-// The type returned by the adapter for the given thrift type.
+// The type returned by the adapter for the given Thrift type.
 template <typename Adapter, typename ThriftT>
-using adapted_t = decltype(Adapter::fromThrift(std::declval<ThriftT&&>()));
+using adapted_t = decltype(Adapter::fromThrift(std::declval<ThriftT>()));
 
 // Used to detect if Adapter has the fromThriftField function which takes an
 // additional FieldContext argument.
@@ -83,6 +81,34 @@ using if_ctor_adapter =
 template <typename Adapter, typename AdaptedT, typename Context>
 using if_not_ctor_adapter =
     std::enable_if_t<!is_ctor_adapter_v<Adapter, AdaptedT, Context>>;
+
+// Used to detect if Adapter has an equal override.
+template <typename Adapter, typename AdaptedT>
+using EqualType = decltype(Adapter::equal(
+    std::declval<const AdaptedT&>(), std::declval<const AdaptedT&>()));
+template <typename Adapter, typename AdaptedT>
+constexpr bool is_equal_adapter_v =
+    folly::is_detected_v<EqualType, Adapter, AdaptedT>;
+template <typename Adapter, typename AdaptedT, typename R = void>
+using if_equal_adapter =
+    std::enable_if_t<is_equal_adapter_v<Adapter, AdaptedT>, R>;
+template <typename Adapter, typename AdaptedT, typename R = void>
+using if_not_equal_adapter =
+    std::enable_if_t<!is_equal_adapter_v<Adapter, AdaptedT>, R>;
+
+// Used to detect if Adapter has a less override.
+template <typename Adapter, typename AdaptedT>
+using LessType = decltype(Adapter::less(
+    std::declval<AdaptedT&>(), std::declval<const AdaptedT&>()));
+template <typename Adapter, typename AdaptedT>
+constexpr bool is_less_adapter_v =
+    folly::is_detected_v<LessType, Adapter, AdaptedT>;
+template <typename Adapter, typename AdaptedT, typename R = void>
+using if_less_adapter =
+    std::enable_if_t<is_less_adapter_v<Adapter, AdaptedT>, R>;
+template <typename Adapter, typename AdaptedT, typename R = void>
+using if_not_less_adapter =
+    std::enable_if_t<!is_less_adapter_v<Adapter, AdaptedT>, R>;
 
 // Used to detect if Adapter has a clear function override.
 template <typename Adapter, typename AdaptedT>
@@ -133,7 +159,7 @@ constexpr if_not_field_adapter<Adapter, ThriftT, Struct> fromThriftField(
 // The type returned by the adapter for the given thrift type of a struct field.
 template <typename Adapter, int16_t FieldId, typename ThriftT, typename Struct>
 using adapted_field_t = decltype(fromThriftField<Adapter, FieldId>(
-    std::declval<ThriftT&&>(), std::declval<Struct&>()));
+    std::declval<ThriftT>(), std::declval<Struct&>()));
 
 // The type returned by the adapter for the given adapted type.
 template <typename Adapter, typename AdaptedT>
@@ -217,7 +243,7 @@ template <typename Adapter, typename AdaptedT>
 struct adapter_equal<
     Adapter,
     AdaptedT,
-    folly::void_t<decltype(Adapter::equal(cr<AdaptedT>(), cr<AdaptedT>()))>> {
+    folly::void_t<EqualType<Adapter, AdaptedT>>> {
   constexpr bool operator()(const AdaptedT& lhs, const AdaptedT& rhs) const {
     return Adapter::equal(lhs, rhs);
   }
@@ -251,7 +277,7 @@ template <typename Adapter, typename AdaptedT>
 struct adapter_less<
     Adapter,
     AdaptedT,
-    folly::void_t<decltype(Adapter::less(cr<AdaptedT>(), cr<AdaptedT>()))>> {
+    folly::void_t<LessType<Adapter, AdaptedT>>> {
   constexpr bool operator()(const AdaptedT& lhs, const AdaptedT& rhs) const {
     return Adapter::less(lhs, rhs);
   }
@@ -501,8 +527,8 @@ struct adapter_serialized_size<
             Adapter,
             AdaptedT,
             Protocol> &&
-        std::is_arithmetic<decltype(Adapter::toThrift(
-            std::declval<AdaptedT&>()))>::value>> {
+        std::is_arithmetic_v<decltype(Adapter::toThrift(
+            std::declval<AdaptedT&>()))>>> {
   uint32_t operator()(Protocol& prot, const AdaptedT&, FallbackF) {
     return serializedSizeFixed(
         prot, decltype(Adapter::toThrift(std::declval<AdaptedT&>()))(0));
@@ -526,6 +552,4 @@ uint32_t serializedSize(Protocol& prot, const AdaptedT& val, FallbackF f) {
       FallbackF>()(prot, val, f);
 }
 
-} // namespace adapt_detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::adapt_detail

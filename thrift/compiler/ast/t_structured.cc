@@ -19,15 +19,13 @@
 
 #include <thrift/compiler/ast/t_structured.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
 template <typename C>
 // Returns a pair<iterator, bool> of (lower bound iterator, id found?).
-auto find_by_id(const C& fields_id_order, int32_t id) {
+auto find_by_id(const C& fields_id_order, t_field_id id) {
   auto lower = std::partition_point(
       fields_id_order.begin(), fields_id_order.end(), [id](const auto& field) {
         return field->id() < id;
@@ -45,7 +43,7 @@ bool t_structured::try_append_field(std::unique_ptr<t_field>& field) {
   }
 
   if (!field->name().empty()) {
-    fields_by_name_.put(*field);
+    fields_by_name_[field->name()] = field.get();
   }
   fields_id_order_.emplace(existing.first, field.get());
 
@@ -66,7 +64,7 @@ void t_structured::append_field(std::unique_ptr<t_field> field) {
   }
 }
 
-const t_field* t_structured::get_field_by_id(int32_t id) const {
+const t_field* t_structured::get_field_by_id(t_field_id id) const {
   auto existing = find_by_id(fields_id_order_, id);
   return existing.second ? *existing.first : nullptr;
 }
@@ -85,12 +83,12 @@ void t_structured::append(std::unique_ptr<t_field> field) {
   // TODO(afuller): Figure out why some code relies on adding multiple id:0
   // fields, fix the code, and remove this hack.
   if (!field->get_name().empty()) {
-    fields_by_name_.put(*field);
+    fields_by_name_[field->name()] = field.get();
   }
   fields_raw_.push_back(field.get());
   fields_.push_back(std::move(field));
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+t_structured::~t_structured() = default;
+
+} // namespace apache::thrift::compiler

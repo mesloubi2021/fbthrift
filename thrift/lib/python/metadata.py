@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 
 from __future__ import annotations
 
@@ -327,11 +329,12 @@ class ThriftFieldProxy:
 
     @property
     def pyname(self) -> str:
-        if self.thriftType.unstructured_annotations is None:
-            raise TypeError(
-                'The pyname field requires the thrift option `thrift_cpp2_options = ["deprecated_unstructured_annotations_in_metadata"]` to be enabled'
-            )
-        return self.thriftType.unstructured_annotations.get("py3.name", self.name)
+        if self.thriftType.structured_annotations is not None:
+            for annotation in self.thriftType.structured_annotations:
+                if annotation.type.name == "python.Name":
+                    return annotation.fields["name"].cv_string
+
+        return self.name
 
 
 class ThriftStructProxy(ThriftTypeProxy):
@@ -556,7 +559,7 @@ def gen_metadata(
         Type[GeneratedError],
         ServiceInterface,
         Type[ServiceInterface],
-    ]
+    ],
 ) -> Union[ThriftStructProxy, ThriftExceptionProxy, ThriftServiceProxy]:
     if hasattr(obj_or_cls, "getThriftModuleMetadata"):
         return obj_or_cls.getThriftModuleMetadata()

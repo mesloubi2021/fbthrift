@@ -1,5 +1,11 @@
 # Thrift Patch
 
+:::note
+
+This is the contributor guide to Thrift Patch, meant for someone implementing Thrift Patch features one of the Thrift Languages. If you're looking for a user guide, see [this page](../fb/features/patch.md).
+
+:::
+
 Thrift Patch implementation **must** contain 2 parts.
 
 1. Functionalities of apply/merge without schema.
@@ -105,7 +111,7 @@ Patch for [primitive types](../idl/#primitive-types) are defined [here](https://
 
 Thrift Compiler generates multiple patch structures for a given thrift struct. Considering the following thrift struct
 
-```
+```thrift
 struct Foo {
   1: [optional] Type1 field1;
   2: [optional] Type2 field2:
@@ -115,7 +121,7 @@ struct Foo {
 
 Thrift Compiler generates the following structs.
 
-```
+```thrift
 // All fields are optional. Original qualifier will be ignored.
 struct FooEnsureStruct {
   1: optional Type1 field1;
@@ -124,7 +130,7 @@ struct FooEnsureStruct {
 
 // All fields are terse. Original qualifier will be ignored.
 @thrift.TerseWrite
-struct FooFieldPatch {
+struct Foo_fbthrift_FieldPatch {
   1: Type1Patch field1;
   2: Type2Patch field2:
   ...
@@ -139,13 +145,13 @@ struct FooPatch {
   2: bool clear;
 
   // Patch each field in Foo
-  3: FooFieldPatch patchPrior;
+  3: Foo_fbthrift_FieldPatch patchPrior;
 
   // Ensure each field in Foo
   5: FooEnsureStruct ensure;
 
   // Patch each field in Foo
-  6: FooFieldPatch patch;
+  6: Foo_fbthrift_FieldPatch patch;
 }
 ```
 
@@ -169,7 +175,7 @@ A Patch **must** satisfy the following restructions, otherwise it’s considered
 
 The following functionality should be provided in the target language.
 
-```
+```cpp
 void apply(const Object& patch, Value& value);
 ```
 
@@ -177,15 +183,16 @@ It applies patch to a thrift value and returns the patched value. Note that this
 
 ### Behavior of each `PatchOp` for each value type
 
-|                                    | Assign                | Clear               | PatchPrior                     | EnsureUnion           | EnsureStruct              | PatchAfter         | Remove          | Add                | Put                              |
-| ---                                | ---                   | ---                 | ---                            | ---                   | ---                       | ---                | ---             | ---                | ---                              |
-| bool                               | Replace the value     | Clear the value     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | N/A                | Invert the value                 |
-| byte, i16, i32, i64, float, double  |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | Increase the value | N/A                              |
-| string/binary                      |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | Prepend the string | Append the string                |
-| list                               |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | N/A                | Append elements                  |
-| set                                |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | Remove elements | Insert elements    | N/A                              |
-| map                                |                       |                     | Patch values in the map        | N/A                   | Insert key/value pairs    | Same as PatchPrior | Remove keys     | N/A                | Insert or assign key/value pairs |
-| struct/union                       |                       |                     | Patch fields in the struct      | Set the active member | Ensure fields              | Same as PatchPrior | Remove fields    | N/A                | N/A                              |
+|                                    | Assign                | Clear               | PatchPrior                     | EnsureUnion           | EnsureStruct              | PatchAfter         | Remove          | Add                | Put                              | PatchIfTypeIsPrior (from V2)           | EnsureAny (from V2)           | PatchIfTypeIsAfter (from V2)           |
+| ---                                | ---                   | ---                 | ---                            | ---                   | ---                       | ---                | ---             | ---                | ---                              | ---                                    | ---                           | ---                                    |
+| bool                               | Replace the value     | Clear the value     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | N/A                | Invert the value                 | N/A                              | N/A                              | N/A                              |
+| byte, i16, i32, i64, float, double  |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | Increase the value | N/A                              | N/A                              | N/A                              | N/A                              |
+| string/binary                      |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | Prepend the string | Append the string                | N/A                              | N/A                              | N/A                              |
+| list                               |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A             | N/A                | Append elements                  | N/A                              | N/A                              | N/A                              |
+| set                                |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | Remove elements  | Insert elements    | N/A                              | N/A                              | N/A                                       | N/A                              |
+| map                                |                       |                     | Patch values in the map        | N/A                   | Insert key/value pairs    | Same as PatchPrior | Remove keys      | N/A                | Insert or assign key/value pairs | N/A                              | N/A                                       | N/A                              |
+| struct/union                       |                       |                     | Patch fields in the struct      | Set the active member | Ensure fields              | Same as PatchPrior | Remove fields     | N/A                | N/A                              | N/A                              | N/A                                       | N/A                              |
+| Thrift Any                         |                       |                     | N/A                            | N/A                   | N/A                       | N/A                | N/A         | N/A                | N/A                              | Patch the value in Thrift Any    | Ensure the type and value in Thrift Any   | Same as PatchIfTypeIsPrior       |
 
 
 [^1]: If Assign PatchOp exists, all other PatchOp are ignored.
@@ -202,15 +209,16 @@ It applies patch to a thrift value and returns the patched value. Note that this
 
 The type of each PatchOps in `Patch` is based on Patch type. e.g., for BoolPatch, the `Assign` PatchOp must be `boolean`. Here is the summary of PatchOp's type based on Patch type.
 
-|                                    | Assign        | Clear  | PatchPrior           | EnsureUnion       | EnsureStruct      | PatchAfter           | Remove                            | Add             | Put             |
-| ---                                | ---           | ---    | ---                  | ---               | ---               | ---                  | ---                               | ---             | ---             |
-| bool                               | Same of value | `Bool` | N/A                  | N/A               | N/A               | N/A                  | N/A                               | N/A             | `Bool`          |
-| byte, i16, i32, i64, float, double |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | Same as value   | N/A             |
-| string/binary                      |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | Same as value   | Same as value   |
-| list                               |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | N/A             | Same as value   |
-| set                                |               |        | N/A                  | N/A               | N/A               | N/A                  | `list<Element>` or `set<Element>` | `list<Element>` | `list<Element>` |
-| map                                |               |        | `map<Key, ValPatch>` | N/A               | Same as value     | `map<Key, ValPatch>` | `list<Key>` or `set<Key>`         | N/A             | Same as value   |
-| struct/union                       |               |        | `FooFieldPatch`      | `FooEnsureStruct` | `FooEnsureStruct` | `FooFieldPatch`      | N/A                               | N/A             | N/A             |
+|                                    | Assign        | Clear  | PatchPrior           | EnsureUnion       | EnsureStruct      | PatchAfter           | Remove                            | Add             | Put             | PatchIfTypeIsPrior (from V2)           | EnsureAny (from V2)           | PatchIfTypeIsAfter (from V2)           |
+| ---                                | ---           | ---    | ---                  | ---               | ---               | ---                  | ---                               | ---             | ---             | ---                                    | ---                           | ---                                    |
+| bool                               | Same of value | `Bool` | N/A                  | N/A               | N/A               | N/A                  | N/A                               | N/A             | `Bool`          | ---                                    | ---                           | ---                                    |
+| byte, i16, i32, i64, float, double |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | Same as value   | N/A             | ---                                    | ---                           | ---                                    |
+| string/binary                      |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | Same as value   | Same as value   | ---                                    | ---                           | ---                                    |
+| list                               |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | N/A             | Same as value   | ---                                    | ---                           | ---                                    |
+| set                                |               |        | N/A                  | N/A               | N/A               | N/A                  | `list<Element>` or `set<Element>` | `list<Element>` | `list<Element>` | ---                                    | ---                           | ---                                    |
+| map                                |               |        | `map<Key, ValPatch>` | N/A               | Same as value     | `map<Key, ValPatch>` | `list<Key>` or `set<Key>`         | N/A             | Same as value   | ---                                    | ---                           | ---                                    |
+| struct/union                       |               |        | `Foo_fbthrift_FieldPatch`      | `FooEnsureStruct` | `FooEnsureStruct` | `Foo_fbthrift_FieldPatch`      | N/A                               | N/A             | N/A             | ---                                    | ---                           | ---                                    |
+| Thrift Any                         |               |        | N/A                  | N/A               | N/A               | N/A                  | N/A                               | N/A             | N/A             | `list<TypeToPatchInternalDoNotUse>`    | `any.Any`                     | `list<TypeToPatchInternalDoNotUse>`    |
 
 The corresponding C++ implementation can be found here: [Patch.cpp](https://github.com/facebook/fbthrift/blob/v2023.01.16.00/thrift/lib/cpp2/protocol/Patch.cpp#L126-L164).
 
@@ -228,67 +236,36 @@ O(size of patched fields + size of patch)
 
 The following functionality should be provided in the target language.
 
-```
+```cpp
 Object merge(Object patch1, Object patch2);
 ```
 
 so that
 
-```
+```cpp
 apply(patch1, value)
 apply(patch2, value)
 ```
 
 **must** be equivalent to
 
-```
+```cpp
 apply(merge(patch1, patch2), value)
 ```
 
 Note that this API needs to work with dynamic patch, thus both input and output are Thrift.Object.
-
-### Implementation
-
-Overall, we want to figure out the Patch type first (but it's not strictly necessary),
-then we can merge two Patch accordingly.
-However, unlike `apply` which we can get patch type from value type,
-here we need to deduce Patch type based on PatchOp type. Steps:
-
-1. If `Assign` or `Clear` fields exist in patch2, return patch2.
-    1. In this case patch1’s change will be discarded anyway.
-2. Otherwise, `Assign` or `Clear` fields don’t exist in patch2. If `Put` field is a bool, we just need to merge two BoolPatch.
-    1. We can set `patch1.Put = patch1.Put XOR patch2.Put` and return patch1.
-3. Otherwise, if `Add` field is a numeric, we just need to merge two NumericPatch.
-    1. We can set `patch1.Add += patch2.Add` and return patch1
-4. Otherwise, if `Add` or `Put` field is a string/binary, we just need to merge two StringPatch/BinaryPatch.
-    1. We can set `patch1.Add = patch2.Add + patch1.Add` and `patch1.Put += patch2.Put`, then return patch1.
-5. Otherwise, if `Add` or `Put` is a list, it can be list patch or set patch.
-    1. If `PatchPrior` field exists, it’s a ListPatch. To merge two ListPatch, we need to
-        1. Apply `PatchPrior` field in patch2 to `Add` and `Put` field in patch1, since those newly prepend/append elements will be patched immediately in patch2.
-        2. Merge `PatchPrior` between patch1 and patch2, recursively.
-        3. Similar to string/binary, set `patch1.Add = patch2.Add + patch1.Add` and `patch1.Put += patch2.Put`, then return patch1.
-    2. Otherwise, if `Remove` field exists, it’s a set patch. In this case, we can treat `Remove` and `Add` fields as set.
-        1. The new `Remove` field should be `patch1.Remove - patch1.Add + patch2.Remove`.
-        2. The new `Add` field should be `patch1.Add - patch2.Remove + patch2.Add`.
-        3. Here `+` means intersection, `-` means difference in set theory.
-    3. Otherwise, set `patch1.Add = patch2.Add + patch1.Add` and `patch1.Put += patch2.Put`, then return patch1. This works for both list and set patch.
-6. Otherwise, if `EnsureStruct` field exists, this is a `StructPatch`. In this case
-    1. For each field, check whether `patch2.PatchPrior` cleared the field.
-        1. If the field is cleared, we can ignore patch1 for this field and copy all PatchOp in patch2 to the final patch (Since whatever changes made by patch1 will be cleared)
-    2. Otherwise, check whether this field exists in `patch1.EnsureStruct`.
-        1. If so, this field won’t be cleared later, since `patch1.PatchAfter` can’t clear it (see the restriction section), and `patch2.PatchPrior` won’t clear it.
-        2. In this case, `patch2.EnsureStruct` will be a no-op for this field, we can merge `patch1.PatchAfter`, `patch2.PatchPrior` and `patch2.PatchAfter` into `PatchAfter` field in merged patch. It’s worth noting `PatchAfter` in merged patch would never clear this field.
-    3. Otherwise, `patch1.EnsureStruct` is a no-op for this field, we merge `patch1.PatchPrior`, `patch1.PatchAfter` and `patch2.PatchPrior` into `PatchPrior` field in merged patch.
-7. Otherwise, if `EnsureUnion` field exists, this is a `UnionPatch`. In this case
-    1. Assume we have exactly one field `X` in `EnsureUnion`, we can add `Clear` field to all fields in `patch2.PatchPrior` if the field is not `X`.
-        1. This is because `EnsureUnion` will always clear other fields except `X`.
-        2. After this change, the behavior of merged patch would be identical to `StructPatch`, in which case we can just use the same algorithm as `StructPatch`.
-8. Otherwise, we can not tell whether the patch is a `StructPatch` or `UnionPatch`. However, we can use the same merge algorithm that we used to merge `StructPatch`, and the result would be the correct regardless whether patch is a `StructPatch` or `UnionPatch`.
-
-If Schema is available, a strongly typed API can be provided to simplify the implementation and detect type mismatch on compile-time.
 
 ### Complexity
 
 ```
 O(size of patch1 + size of patch2)
 ```
+
+## SafePatch
+
+When Thrift Patch is serialized (i.e. sent over the wire or stored), Thrift SafePatch must be used. It provides safe means to transport Thrift Patch over the wire and guarantees that, for any combination of producer and consumer, any serialized instance will either be correctly applied or will fail clearly and deterministically. Thrift SafePatch provides backward compatiblity as well as protection from invalid forward consumption. Thrift SafePatch encodes the minimum Thrift SafePatch version that is required to safely and successfully process the patch. For example, Thrift AnyPatch is available from V2. Even if AnyPatch is available for the binary, if only V1 operations (i.e. `assign`), Thrift SafePatch will encode V1 instead of V2.
+
+## Thrift Patch Changelog
+### V2
+#### Added
+* Support for AnyPatch

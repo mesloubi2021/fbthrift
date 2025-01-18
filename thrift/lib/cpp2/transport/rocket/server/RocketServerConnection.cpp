@@ -40,8 +40,8 @@
 
 #include <thrift/lib/cpp/TApplicationException.h>
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
+#include <thrift/lib/cpp2/server/LoggingEventTransportMetadata.h>
 #include <thrift/lib/cpp2/transport/rocket/FdSocket.h>
-#include <thrift/lib/cpp2/transport/rocket/PayloadUtils.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Frames.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Util.h>
@@ -52,24 +52,24 @@
 #include <thrift/lib/cpp2/transport/rocket/server/RocketStreamClientCallback.h>
 
 THRIFT_FLAG_DEFINE_bool(enable_rocket_connection_observers, false);
+THRIFT_FLAG_DEFINE_bool(enable_stream_graceful_shutdown, true);
+THRIFT_FLAG_DEFINE_bool(thrift_enable_stream_counters, true);
 
-namespace apache {
-namespace thrift {
-namespace rocket {
-
-constexpr std::chrono::seconds RocketServerConnection::SocketDrainer::kTimeout;
+namespace apache::thrift::rocket {
 
 RocketServerConnection::RocketServerConnection(
     folly::AsyncTransport::UniquePtr socket,
     std::unique_ptr<RocketServerHandler> frameHandler,
     MemoryTracker& ingressMemoryTracker,
     MemoryTracker& egressMemoryTracker,
+    StreamMetricCallback& streamMetricCallback,
     const Config& cfg)
     : evb_(*socket->getEventBase()),
       socket_(std::move(socket)),
       rawSocket_(
           socket_ ? socket_->getUnderlyingTransport<folly::AsyncSocket>()
                   : nullptr),
+      parser_(*this, cfg.parserAllocator),
       frameHandler_(std::move(frameHandler)),
       streamStarvationTimeout_(cfg.streamStarvationTimeout),
       egressBufferBackpressureThreshold_(cfg.egressBufferBackpressureThreshold),
@@ -84,6 +84,8 @@ RocketServerConnection::RocketServerConnection(
       socketDrainer_(*this),
       ingressMemoryTracker_(ingressMemoryTracker),
       egressMemoryTracker_(egressMemoryTracker),
+      streamMetricCallback_(streamMetricCallback),
+      enableObservers_(THRIFT_FLAG(enable_rocket_connection_observers)),
       observerContainer_(this) {
   CHECK(socket_);
   CHECK(frameHandler_);
@@ -113,6 +115,14 @@ RocketServerConnection::RocketServerConnection(
   }
 }
 
+namespace {
+StreamMetricCallback& getNoopStreamMetricCallback() {
+  static folly::Indestructible<NoopStreamMetricCallback>
+      kNoopStreamMetricCallback;
+  return *kNoopStreamMetricCallback;
+}
+} // namespace
+
 RocketStreamClientCallback* FOLLY_NULLABLE
 RocketServerConnection::createStreamClientCallback(
     StreamId streamId,
@@ -123,7 +133,12 @@ RocketServerConnection::createStreamClientCallback(
     return nullptr;
   }
   auto cb = std::make_unique<RocketStreamClientCallback>(
-      streamId, connection, initialRequestN);
+      streamId,
+      connection,
+      initialRequestN,
+      THRIFT_FLAG(thrift_enable_stream_counters)
+          ? streamMetricCallback_
+          : getNoopStreamMetricCallback());
   auto cbPtr = cb.get();
   it->second = std::move(cb);
   return cbPtr;
@@ -185,19 +200,25 @@ void RocketServerConnection::flushWritesWithFds(
     auto write = writesQ.split(fdsOffset - prevOffset);
     DCHECK_EQ(fdsOffset - prevOffset, write->computeChainDataLength());
 
-    // Our writeSuccess / writeError handlers require that every write to
-    // the socket be preceded by a matched queue entry.  To avoid complex
-    // unbatching of `WriteBatchContext`s in `WriteBatcher::enqueueWrite`,
-    // let's make the first N-1 queue entries empty dummies, and use the
-    // full batched context for the last write.
-    inflightWritesQueue_.push_back(
-        writesQ.empty() ? std::move(context) : WriteBatchContext{});
-    // KEEP THIS INVARIANT: For the receiver to correctly match FDs to a
-    // message, the FDs must be sent with the IOBuf ending with the FINAL
-    // fragment of that message.  Today, message fragments are not
-    // interleaved, so there is no explicit logic around this, but this
-    // invariant must be preserved going forward.
-    writeChainWithFds(socket_.get(), this, std::move(write), std::move(fds));
+    if (writesQ.empty()) {
+      // Our writeSuccess / writeError handlers require that every write to
+      // the socket be preceded by a matched queue entry.  To avoid complex
+      // unbatching of `WriteBatchContext`s in `WriteBatcher::enqueueWrite`,
+      // let's make the first N-1 queue entries empty dummies, and use the
+      // full batched context for the last write.
+      inflightWritesQueue_.push_back(std::move(context));
+      // KEEP THIS INVARIANT: For the receiver to correctly match FDs to a
+      // message, the FDs must be sent with the IOBuf ending with the FINAL
+      // fragment of that message.  Today, message fragments are not
+      // interleaved, so there is no explicit logic around this, but this
+      // invariant must be preserved going forward.
+      writeChainWithFds(socket_.get(), this, std::move(write), std::move(fds));
+      // Return here so clangtidy linter won't think the context is moved twice
+      return;
+    } else {
+      inflightWritesQueue_.push_back(WriteBatchContext{});
+      writeChainWithFds(socket_.get(), this, std::move(write), std::move(fds));
+    }
 
     prevOffset = fdsOffset;
   }
@@ -221,6 +242,19 @@ void RocketServerConnection::send(
 
   writeBatcher_.enqueueWrite(
       std::move(data), std::move(cb), streamId, std::move(fds));
+}
+
+void RocketServerConnection::sendErrorAfterDrain(
+    StreamId streamId, RocketException&& rex) {
+  evb_.dcheckIsInEventBaseThread();
+  DCHECK(
+      state_ == ConnectionState::CLOSING || state_ == ConnectionState::CLOSED);
+
+  writeBatcher_.enqueueWrite(
+      ErrorFrame(streamId, std::move(rex)).serialize(),
+      nullptr,
+      streamId,
+      folly::SocketFds{});
 }
 
 RocketServerConnection::~RocketServerConnection() {
@@ -247,6 +281,19 @@ RocketServerConnection::~RocketServerConnection() {
   }
 }
 
+namespace {
+StreamRpcError getStreamConnectionClosingError() {
+  StreamRpcError streamRpcError;
+  streamRpcError.code_ref() = StreamRpcErrorCode::SERVER_CLOSING_CONNECTION;
+  streamRpcError.name_utf8_ref() =
+      apache::thrift::TEnumTraits<StreamRpcErrorCode>::findName(
+          StreamRpcErrorCode::SERVER_CLOSING_CONNECTION);
+  streamRpcError.what_utf8_ref() =
+      "Server closing connection, cancelling stream";
+  return streamRpcError;
+}
+} // namespace
+
 void RocketServerConnection::closeIfNeeded() {
   if (state_ == ConnectionState::DRAINING && inflightRequests_ == 0 &&
       inflightSinkFinalResponses_ == 0) {
@@ -260,7 +307,8 @@ void RocketServerConnection::closeIfNeeded() {
           .ensure()
           .drainCompleteCode_ref()
           .from_optional(drainCompleteCode_);
-      sendMetadataPush(packCompact(std::move(serverMeta)));
+      sendMetadataPush(
+          PayloadSerializer::getInstance()->packCompact(serverMeta));
       // Send CONNECTION_ERROR error in case client doesn't support
       // DrainCompletePush
       sendError(StreamId{0}, RocketException(ErrorCode::CONNECTION_ERROR));
@@ -298,7 +346,15 @@ void RocketServerConnection::closeIfNeeded() {
     // Calling application callback may trigger rehashing.
     folly::variant_match(
         callback,
-        [](const std::unique_ptr<RocketStreamClientCallback>& callback) {
+        [&](const std::unique_ptr<RocketStreamClientCallback>& callback) {
+          if (THRIFT_FLAG(enable_stream_graceful_shutdown)) {
+            sendErrorAfterDrain(
+                callback->getStreamId(),
+                RocketException(
+                    ErrorCode::CANCELED,
+                    PayloadSerializer::getInstance()->packCompact(
+                        getStreamConnectionClosingError())));
+          }
           callback->onStreamCancel();
         },
         [](const std::unique_ptr<RocketSinkClientCallback>& callback) {
@@ -334,18 +390,22 @@ void RocketServerConnection::handleFrame(std::unique_ptr<folly::IOBuf> frame) {
       return close(folly::make_exception_wrapper<RocketException>(
           ErrorCode::INVALID_SETUP, "First frame must be SETUP frame"));
     }
+    DCHECK(!decodeMetadataUsingBinary_.has_value());
     setupFrameReceived_ = true;
   } else {
     if (UNLIKELY(frameType == FrameType::SETUP)) {
       return close(folly::make_exception_wrapper<RocketException>(
           ErrorCode::INVALID_SETUP, "More than one SETUP frame received"));
     }
+    DCHECK(decodeMetadataUsingBinary_.has_value());
   }
 
   switch (frameType) {
     case FrameType::SETUP: {
-      return frameHandler_->handleSetupFrame(
-          SetupFrame(std::move(frame)), *this);
+      auto setupFrame = SetupFrame(std::move(frame));
+      decodeMetadataUsingBinary_.emplace(
+          setupFrame.encodeMetadataUsingBinary());
+      return frameHandler_->handleSetupFrame(std::move(setupFrame), *this);
     }
 
     case FrameType::REQUEST_RESPONSE: {
@@ -447,9 +507,9 @@ void RocketServerConnection::handleUntrackedFrame(
       return;
     }
     case FrameType::CANCEL:
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case FrameType::REQUEST_N:
-      FOLLY_FALLTHROUGH;
+      [[fallthrough]];
     case FrameType::ERROR:
       return;
 
@@ -469,7 +529,8 @@ void RocketServerConnection::handleUntrackedFrame(
       MetadataPushFrame metadataFrame(std::move(frame));
       ClientPushMetadata clientMeta;
       try {
-        unpackCompact(clientMeta, metadataFrame.metadata());
+        PayloadSerializer::getInstance()->unpack(
+            clientMeta, metadataFrame.metadata(), false);
       } catch (...) {
         close(folly::make_exception_wrapper<RocketException>(
             ErrorCode::INVALID, "Failed to deserialize metadata push frame"));
@@ -504,15 +565,11 @@ void RocketServerConnection::handleUntrackedFrame(
           if (auto context = frameHandler_->getCpp2ConnContext()) {
             auto md =
                 clientMeta.transportMetadataPush_ref()->transportMetadata_ref();
-            THRIFT_CONNECTION_EVENT(transport.metadata).log(*context, [&] {
-              folly::dynamic transportMetadata = folly::dynamic::object;
-              if (md) {
-                for (auto p : *md) {
-                  transportMetadata[p.first] = p.second;
-                }
-              }
-              return transportMetadata;
-            });
+            std::optional<folly::F14NodeMap<std::string, std::string>> metadata;
+            if (md) {
+              metadata = std::move(*md);
+            }
+            logTransportMetadata(*context, std::move(metadata));
           }
           break;
         }
@@ -618,7 +675,8 @@ void RocketServerConnection::handleSinkFrame(
       bool notViolateContract = true;
       if (next) {
         auto streamPayload =
-            rocket::unpack<StreamPayload>(std::move(*fullPayload));
+            PayloadSerializer::getInstance()->unpack<StreamPayload>(
+                std::move(*fullPayload), decodeMetadataUsingBinary_.value());
         if (streamPayload.hasException()) {
           notViolateContract =
               clientCallback.onSinkError(std::move(streamPayload.exception()));
@@ -723,13 +781,15 @@ void RocketServerConnection::close(folly::exception_wrapper ew) {
 
   socketDrainer_.activate();
 
-  if (!ew.with_exception<RocketException>([this](RocketException rex) {
-        sendError(StreamId{0}, std::move(rex));
-      })) {
-    auto rex = ew
-        ? RocketException(ErrorCode::CONNECTION_ERROR, ew.what())
-        : RocketException(ErrorCode::CONNECTION_CLOSE, "Closing connection");
-    sendError(StreamId{0}, std::move(rex));
+  if (!socket_->error()) {
+    if (!ew.with_exception<RocketException>([this](RocketException rex) {
+          sendError(StreamId{0}, std::move(rex));
+        })) {
+      auto rex = ew
+          ? RocketException(ErrorCode::CONNECTION_ERROR, ew.what())
+          : RocketException(ErrorCode::CONNECTION_CLOSE, "Closing connection");
+      sendError(StreamId{0}, std::move(rex));
+    }
   }
 
   state_ = ConnectionState::CLOSING;
@@ -773,6 +833,8 @@ void RocketServerConnection::startDrain(
 }
 
 void RocketServerConnection::dropConnection(const std::string& errorMsg) {
+  DestructorGuard dg(this);
+
   // Subtle: skip the socket draining process and stop new reads
   socketDrainer_.drainComplete();
   // Subtle: flush pending writes to ensure isBusy() returns false
@@ -898,8 +960,20 @@ void RocketServerConnection::onEgressBuffered() {
     if (exceeds && rawSocket_->good()) {
       DestructorGuard dg(this);
       FB_LOG_EVERY_MS(ERROR, 1000) << fmt::format(
-          "Dropping connection: exceeded egress memory limit ({})",
-          getPeerAddress().describe());
+          "Dropping connection for ({}): exceeded egress memory limit ({}). The config value of min increment size: ({})",
+          getPeerAddress().describe(),
+          egressMemoryTracker_.getMemLimit(),
+          egressMemoryTracker_.getMinIncrementSize());
+      if (auto context = frameHandler_->getCpp2ConnContext()) {
+        THRIFT_CONNECTION_EVENT(exceeded_egress_mem_limit).log(*context, [&] {
+          folly::dynamic metadata = folly::dynamic::object;
+          metadata["mem_limit"] = egressMemoryTracker_.getMemLimit();
+          metadata["min_increment_size"] =
+              egressMemoryTracker_.getMinIncrementSize();
+          return metadata;
+        });
+      }
+
       rawSocket_->closeNow(); // triggers writeErr() events now
       return;
     }
@@ -1062,7 +1136,7 @@ void RocketServerConnection::applyQosMarking(
   } catch (...) {
     FB_LOG_EVERY_MS(WARNING, 60 * 1000)
         << "Failed to apply DSCP to socket: "
-        << folly::exceptionStr(std::current_exception());
+        << folly::exceptionStr(folly::current_exception());
   }
 }
 
@@ -1141,6 +1215,28 @@ void RocketServerConnection::resumeStreams() {
   }
 }
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+bool RocketServerConnection::incMemoryUsage(uint32_t memSize) {
+  if (!ingressMemoryTracker_.increment(memSize)) {
+    ingressMemoryTracker_.decrement(memSize);
+    socket_->setReadCB(nullptr);
+    startDrain(DrainCompleteCode::EXCEEDED_INGRESS_MEM_LIMIT);
+    FB_LOG_EVERY_MS(ERROR, 1000) << fmt::format(
+        "Dropping connection for ({}): exceeded ingress memory limit ({}). The config value of min increment size: ({})",
+        getPeerAddress().describe(),
+        ingressMemoryTracker_.getMemLimit(),
+        ingressMemoryTracker_.getMinIncrementSize());
+    if (auto context = frameHandler_->getCpp2ConnContext()) {
+      THRIFT_CONNECTION_EVENT(exceeded_ingress_mem_limit).log(*context, [&] {
+        folly::dynamic metadata = folly::dynamic::object;
+        metadata["mem_limit"] = ingressMemoryTracker_.getMemLimit();
+        metadata["min_increment_size"] =
+            ingressMemoryTracker_.getMinIncrementSize();
+        return metadata;
+      });
+    }
+    return false;
+  }
+  return true;
+}
+
+} // namespace apache::thrift::rocket

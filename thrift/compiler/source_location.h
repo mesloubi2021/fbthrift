@@ -26,9 +26,7 @@
 #include <variant>
 #include <vector>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class source_manager;
 
@@ -66,7 +64,15 @@ class source_location {
 };
 
 struct source_range {
+  /**
+   * Beginning of this range in source file, inclusive.
+   */
   source_location begin;
+
+  /**
+   * Beginning of this range in source file, exclusive (i.e., one past the last
+   * location included in this range, if any)..
+   */
   source_location end;
 };
 
@@ -132,6 +138,8 @@ class source_manager {
   // Makes use of the result of previous calls to find_include_file.
   std::optional<source> get_file(const std::string& file_name);
 
+  std::string get_file_path(const std::string& file_name) const;
+
   // Adds a virtual file with the specified name and content.
   source add_virtual_file(const std::string& file_name, const std::string& src);
 
@@ -145,6 +153,20 @@ class source_manager {
   // if the location is invalid.
   const char* get_text(source_location loc) const;
 
+  /**
+   * Returns a view of the given source text range.
+   *
+   * Preconditions:
+   *   * Both (inclusive) begin and (exclusive) `end` locations of the given
+   *     `range` must be from the same source.
+   *   * The range must be well defined (eg., both endpoints must be valid,
+   *     `end` must not come before `begin`, etc.)
+   *
+   * The behavior is undefined if preconditions are not met (if assertions are
+   * enabled, the process should abort).
+   */
+  std::string_view get_text_range(const source_range& range) const;
+
   // Locates a filename among the include paths.
   // The resolved path is made available to get_file.
   using path_or_error = std::variant<std::string, std::string>;
@@ -157,6 +179,4 @@ class source_manager {
       const std::string& filename) const;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

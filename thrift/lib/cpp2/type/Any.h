@@ -22,8 +22,7 @@
 #include <thrift/lib/cpp2/type/detail/Wrap.h>
 #include <thrift/lib/thrift/gen-cpp2/any_rep_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace type {
 
 // TODO(afuller): Add an 'Any' class that can be any of:
@@ -74,6 +73,23 @@ class AnyData : public detail::Wrap<AnyStruct> {
     get<infer_tag<T>>(v);
   }
 
+  template <typename Tag>
+  bool contains() const {
+    // TODO(dokwon): Check the type hash.
+    return type() == Type::get<Tag>();
+  }
+
+  template <typename Tag>
+  type::native_type<Tag> get() const {
+    type::native_type<Tag> v;
+    get<Tag>(v);
+    return v;
+  }
+
+  bool isValid() const noexcept { return isValid(data_); }
+
+  static bool isValid(const AnyStruct& any) noexcept;
+
  private:
   friend bool operator==(AnyData lhs, AnyData rhs) noexcept {
     return lhs.data_ == rhs.data_;
@@ -109,14 +125,15 @@ AnyData AnyData::toAny(const native_type<Tag>& v) {
   SemiAny builder;
   builder.data() = queue.moveAsValue();
   builder.protocol() = Protocol;
-  builder.type() = Tag{};
+  builder.type() = Type::get<Tag>();
   return AnyData{std::move(builder)};
 }
 
 template <typename Tag>
 void AnyData::get(native_type<Tag>& v) const {
-  if (type() != Type{Tag{}}) {
-    throwTypeMismatchException(Type{Tag{}}, type());
+  // TODO(dokwon): Check the type hash.
+  if (type() != Type::get<Tag>()) {
+    throwTypeMismatchException(Type::get<Tag>(), type());
   }
 
   if (protocol() == Protocol::get<StandardProtocol::Binary>()) {
@@ -131,6 +148,13 @@ void AnyData::get(native_type<Tag>& v) const {
     folly::throw_exception<std::runtime_error>(
         "Unsupported protocol: " + std::string(protocol().name()));
   }
+}
+
+inline bool AnyData::isValid(const AnyStruct& any) noexcept {
+  if (any.data()->empty()) {
+    return true;
+  }
+  return any.type()->isValid() && !any.protocol()->empty();
 }
 
 } // namespace type
@@ -168,5 +192,4 @@ class Cpp2Ops<type::AnyData> {
   }
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

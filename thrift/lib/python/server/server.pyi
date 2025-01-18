@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 import ipaddress
 import os
 from enum import Enum
@@ -47,4 +49,5 @@ class ThriftServer(ThriftServer_py3):
         port: int = 0,
         ip: Optional[IPAddress | str] = None,
         path: Optional[Path] = None,
+        socket_fd: Optional[int] = None,
     ) -> None: ...

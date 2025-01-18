@@ -17,7 +17,7 @@
 #include <thrift/lib/python/client/OmniClient.h>
 
 #include <fmt/format.h>
-#include <folly/experimental/coro/BlockingWait.h>
+#include <folly/coro/BlockingWait.h>
 #include <folly/futures/Promise.h>
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp/ContextStack.h>
@@ -31,9 +31,7 @@
 #include <thrift/lib/cpp2/async/RpcOptions.h>
 #include <thrift/lib/cpp2/util/MethodMetadata.h>
 
-namespace thrift {
-namespace python {
-namespace client {
+namespace thrift::python::client {
 
 namespace {
 
@@ -48,6 +46,9 @@ makeOmniClientRequestContext(
     std::shared_ptr<
         std::vector<std::shared_ptr<apache::thrift::TProcessorEventHandler>>>
         handlers,
+    const std::shared_ptr<
+        std::vector<std::shared_ptr<apache::thrift::ClientInterceptorBase>>>&
+        clientInterceptors,
     const std::string& serviceName,
     const std::string& functionName) {
   auto header = std::make_shared<apache::thrift::transport::THeader>(
@@ -55,7 +56,7 @@ makeOmniClientRequestContext(
   header->setProtocolId(protocolId);
   header->setHeaders(std::move(headers));
   auto ctx = apache::thrift::ContextStack::createWithClientContextCopyNames(
-      handlers, serviceName, functionName, *header);
+      handlers, clientInterceptors, serviceName, functionName, *header);
 
   return {std::move(ctx), std::move(header)};
 }
@@ -266,14 +267,14 @@ folly::SemiFuture<OmniClientResponseWithHeaders> OmniClient::semifuture_send(
     rpcOptions.setWriteHeader(entry.first, entry.second);
   }
 
-  struct SemiFutureCallbackWithExecutor : public SemiFutureCallback {
+  struct SemiFutureCallbackWithExecutor : public LegacySemiFutureCallback {
     folly::Executor::KeepAlive<> executor_;
 
     explicit SemiFutureCallbackWithExecutor(
         folly::Promise<ClientReceiveState>&& promise,
         std::shared_ptr<apache::thrift::RequestChannel> channel,
         folly::Executor::KeepAlive<> executor)
-        : SemiFutureCallback(std::move(promise), std::move(channel)),
+        : LegacySemiFutureCallback(std::move(promise), std::move(channel)),
           executor_(std::move(executor)) {}
 
     folly::Executor::KeepAlive<> getExecutor() const override {
@@ -390,6 +391,8 @@ void OmniClient::sendImpl(
       channel_->getProtocolId(),
       rpcOptions.releaseWriteHeaders(),
       handlers_,
+      // TODO(praihan): Enable ClientInterceptors for Python
+      nullptr, /* clientInterceptors */
       serviceName,
       functionName);
   RequestCallback::Context callbackContext;
@@ -528,6 +531,4 @@ createOmniInteractionClient(
       });
 }
 
-} // namespace client
-} // namespace python
-} // namespace thrift
+} // namespace thrift::python::client

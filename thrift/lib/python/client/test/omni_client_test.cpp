@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 
 #include <folly/SocketAddress.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Task.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <thrift/lib/cpp/server/TServerEventHandler.h>
@@ -50,7 +50,7 @@ class TestServiceHandler
     : virtual public apache::thrift::ServiceHandler<TestService> {
  public:
   TestServiceHandler() {}
-  virtual ~TestServiceHandler() override {}
+  ~TestServiceHandler() override {}
   int add(int num1, int num2) override { return num1 + num2; }
   void oneway() override {}
   void readHeader(
@@ -259,7 +259,7 @@ class OmniClientTest : public ::testing::Test {
   template <class S, typename T>
   void testContains(folly::IOBuf buf, const T& expected) {
     std::string expectedStr = S::template serialize<std::string>(expected);
-    std::string result = buf.moveToFbString().toStdString();
+    std::string result = buf.to<std::string>();
     // Contains instead of equals because of the envelope around the response.
     EXPECT_THAT(result, testing::HasSubstr(expectedStr));
   }

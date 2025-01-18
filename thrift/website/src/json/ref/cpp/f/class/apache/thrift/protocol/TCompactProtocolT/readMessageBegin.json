@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::readMessageBegin",
       "argsstring_html": "(std::string &amp;name, TMessageType &amp;messageType, int32_t &amp;seqid)",
       "name_html": "readMessageBegin",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::readMessageBegin",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -32,7 +33,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "206",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "413",
         "bodyend": "438"
@@ -60,5 +61,11 @@
   "brief_html": "<p>Read a message header. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readMessageBegin",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readMessageBegin"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readMessageBegin",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

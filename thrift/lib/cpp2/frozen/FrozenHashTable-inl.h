@@ -16,7 +16,9 @@
 
 // IWYU pragma: private, include "thrift/lib/cpp2/frozen/Frozen.h"
 
+#include <type_traits>
 #include <thrift/lib/cpp2/FieldRef.h>
+#include <thrift/lib/cpp2/frozen/Fast64BitRemainderCalculator.h>
 
 namespace apache {
 namespace thrift {
@@ -79,6 +81,7 @@ struct Layout<apache::thrift::frozen::detail::Block>
     : apache::thrift::frozen::detail::BlockLayout {};
 
 namespace detail {
+
 /**
  * Layout specialization for range types which support unique hash lookup.
  */
@@ -256,13 +259,15 @@ struct HashTableLayout : public ArrayLayout<T, Item> {
     typedef typename Layout<std::vector<Block>>::View TableView;
 
     TableView table_;
+    Fast64BitRemainderCalculator remainderCalculator_;
 
    public:
     View() {}
     View(const LayoutSelf* layout, ViewPosition self)
         : Base::View(layout, self),
           table_(layout->sparseTableField.layout.view(
-              self(layout->sparseTableField.pos))) {}
+              self(layout->sparseTableField.pos))),
+          remainderCalculator_(table_.size() * Block::bits) {}
 
     typedef typename Base::View::iterator iterator;
 
@@ -279,40 +284,30 @@ struct HashTableLayout : public ArrayLayout<T, Item> {
     }
 
     iterator find(const KeyView& key) const {
-      auto h = KeyLayout::hash(key);
-      h *= 5; // spread out clumped values
-      auto blocks = table_.size();
-      auto buckets = blocks * Block::bits;
-      for (size_t p = 0; p < buckets; h += ++p) { // quadratic probing
-        auto bucket = h % buckets;
-        auto major = bucket / Block::bits;
-        auto minor = bucket % Block::bits;
-        auto block = table_[major];
-        auto mask = block.mask();
-        auto offset = block.offset();
-        for (;;) {
-          if (0 == (1 & (mask >> minor))) {
-            return this->end();
-          }
-          size_t subOffset = folly::popcount(mask & ((1ULL << minor) - 1));
-          auto index = offset + subOffset;
-          auto found = this->begin() + index;
-          if (KeyExtractor::getViewKey(*found) == key) {
-            return found;
-          }
-          minor += ++p;
-          if (LIKELY(minor < Block::bits)) {
-            h += p; // same block shortcut
-          } else {
-            --p; // undo
-            break;
-          }
-        }
-      }
-      return this->end();
+      size_t hash = KeyLayout::hash(key);
+      return findImpl(key, hash);
     }
 
-    size_t count(const KeyView& key) const {
+    /// Finds an element with key that compares equivalent to the value `key`.
+    /// This allows finding a frozen element in the hash table without freezing
+    /// the key. Similar to heterogenous lookups in C++20.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    iterator find(const K& key) const {
+      size_t hash = Layout<K>::hash(key);
+      return findImpl(key, hash);
+    }
+
+    size_t count(const KeyView& key) const { return count<KeyView, void>(key); }
+
+    /// Finds the number of elements with key that compares equivalent to the
+    /// value `key`. This allows finding a frozen element in the hash table
+    /// without freezing the key. Similar to heterogenous lookups in C++20.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    size_t count(const K& key) const {
       return find(key) == this->end() ? 0 : 1;
     }
 
@@ -321,6 +316,38 @@ struct HashTableLayout : public ArrayLayout<T, Item> {
       static_cast<const HashTableLayout*>(this->layout_)
           ->thaw(this->position_, ret);
       return ret;
+    }
+
+   private:
+    template <typename K>
+    iterator findImpl(const K& key, const size_t keyHash) const {
+      const auto buckets = table_.size() * Block::bits;
+      auto bucket = keyHash * 5; // spread out clumped values
+      for (size_t p = 0; p < buckets; bucket += ++p) { // quadratic probing
+        bucket = remainderCalculator_.remainder(bucket, buckets);
+        const auto& block = table_[bucket / Block::bits]; // major block
+        auto mask = block.mask();
+        auto offset = block.offset();
+        auto minor = bucket % Block::bits;
+        for (;;) {
+          if (0 == (1 & (mask >> minor))) {
+            return this->end();
+          }
+          auto found = this->begin() + offset +
+              folly::popcount(mask & ((1ULL << minor) - 1)) /* subOffset */;
+          if (KeyExtractor::getViewKey(*found) == key) {
+            return found;
+          }
+          minor += ++p;
+          if (LIKELY(minor < Block::bits)) {
+            bucket += p; // same block shortcut
+          } else {
+            --p; // undo
+            break;
+          }
+        }
+      }
+      return this->end();
     }
   };
 

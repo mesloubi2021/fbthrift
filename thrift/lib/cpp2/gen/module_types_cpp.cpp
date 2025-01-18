@@ -16,21 +16,17 @@
 
 #include <thrift/lib/cpp2/gen/module_types_cpp.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
-
-namespace st {
+namespace apache::thrift::detail::st {
 
 template struct enum_find<int>;
 
 static_assert(
-    folly::detail::is_instantiation_of_v<
+    folly::is_instantiation_of_v<
         folly::F14FastMap,
         enum_find<int>::find_name_map_t>,
     "mismatch");
 static_assert(
-    folly::detail::is_instantiation_of_v<
+    folly::is_instantiation_of_v<
         folly::F14FastMap,
         enum_find<int>::find_value_map_t>,
     "mismatch");
@@ -40,7 +36,7 @@ static_assert(
     "oversized");
 
 FOLLY_NOINLINE void translate_field_name(
-    folly::StringPiece fname,
+    std::string_view fname,
     int16_t& fid,
     protocol::TType& ftype,
     const translate_field_name_table& table) noexcept {
@@ -53,8 +49,4 @@ FOLLY_NOINLINE void translate_field_name(
   }
 }
 
-} // namespace st
-
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail::st

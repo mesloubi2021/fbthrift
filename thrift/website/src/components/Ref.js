@@ -12,7 +12,27 @@ import Admonition from '@theme/Admonition';
 //import MDXHeading from '@theme/Heading';
 //return MDXHeading("h3")({children: "Lorum ipsum"});
 
-// Heading
+
+export function ParentLinks({data}) {
+  const parents = data.parent_links || [];
+  if (parents.length == 0) {
+    return null;
+  }
+
+  return (
+    <span className={styles.refhighlight} >
+      <small>
+        &nbsp;
+        {parents.map(pl => {
+          return (
+            <span><Link to={pl.href} dangerouslySetInnerHTML={{__html: pl.text_html}} />&nbsp;&gt;&nbsp;</span>
+          );
+        })}
+      </small>
+    </span>
+  );
+}
+
 export function Heading({data}) {
   return (
     <h1>
@@ -208,6 +228,64 @@ export function MemberFunctions({data}) {
         Member functions
       </h3>
       {overloadgroups.map(og => <Overloadgroup data={og} />)}
+    </div>
+  );
+}
+
+export function FreeClasses({data}) {
+  const freeClasses = data.innerclass || []
+  const unDetail = freeClasses.filter(c => !c.text_html.includes("detail::") && c.href && !c.is_transitive_innerclass);
+  if (unDetail.length == 0) {
+    return null;
+  }
+  return (
+    <div>
+      <h3>
+        Classes
+      </h3>
+      <table class={styles.refTable}>
+        <tbody>
+          {unDetail.map(cr => {
+            return (
+              <tr>
+                <td>
+                  <Link to={cr.href}>
+                    <code dangerouslySetInnerHTML={{__html: cr.text_html}} />
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function FreeTypedefs({data}) {
+  const freeTypedefs = data.free_typedefs || []
+  const toShow = freeTypedefs.filter(t => t.prot == "public")
+  if (toShow.length == 0) {
+    return null;
+  }
+  return (
+    <div>
+      <h3>
+        Typedefs
+      </h3>
+      <table class={styles.refTable}>
+        <tbody>
+          {toShow.map(t => {
+            return (
+              <tr>
+                <td>
+                  <code dangerouslySetInnerHTML={{__html: t.definition_html}} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -463,6 +541,7 @@ export function Contribute({empty}) {
 export function Class({data}) {
   return (
     <div>
+      <ParentLinks data={data} />
       <Heading data={data} />
       <Decl data={data} />
       <Desc data={data} />
@@ -484,6 +563,7 @@ export function Struct({data}) {
 export function Overloadset({data}) {
   return (
     <div>
+      <ParentLinks data={data} />
       <Heading data={data} />
       <MethodDecls data={data} />
       <MethodDescriptions data={data} />
@@ -496,10 +576,13 @@ export function Overloadset({data}) {
 export function File({data}) {
   return (
     <div>
+      <ParentLinks data={data} />
       <Heading data={data} />
       <Include data={data} />
       <Desc data={data} />
       <Macros data={data} />
+      <FreeClasses data={data} />
+      <FreeTypedefs data={data} />
       <FreeFunctions data={data} />
       <FreeVariables data={data} />
       <Example refcode={(data.description || {}).refcode} />

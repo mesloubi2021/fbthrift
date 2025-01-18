@@ -17,14 +17,14 @@
 #pragma once
 
 #include <functional>
-#include <boost/optional.hpp>
+#include <optional>
+
 #include <fmt/core.h>
+
 #include <thrift/compiler/parse/token.h>
 #include <thrift/compiler/source_location.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class diagnostics_engine;
 
@@ -76,6 +76,9 @@ class lexer {
   comment_lex_result lex_block_comment();
   comment_lex_result lex_whitespace_or_comment();
 
+  bool check_utf8_continue(unsigned char c);
+  void check_utf8_literal(const char* begin, const char* end);
+
   static void ignore_comments(std::string_view, source_range) {}
 
  public:
@@ -88,12 +91,10 @@ class lexer {
 
   // Lexes the content of a string literal and returns its value with escape
   // sequences translated or an empty optional on error.
-  boost::optional<std::string> lex_string_literal(token literal);
+  std::optional<std::string> lex_string_literal(token literal);
 
   // Lexes and returns the next token.
   token get_next_token();
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -1,7 +1,12 @@
 #!/bin/bash
 
+cd "$(hg root)/fbcode/thrift/website" || exit
+
+# Install doxygen
+feature install fb_doxygen
+
 # Copy js components
-cp -r ../../../xplat/staticdocs/websites/fbcref/src/components src
+cp -r ../../../fbcode/staticdocs/websites/fbcref/src/components src
 
 # Generate API documentation
 # note the .*: --allowlist accepts python regexes
@@ -17,7 +22,8 @@ buck2 run //fbcref/docgen:maker -- \
     'thrift/lib/cpp/protocol/TCompactProtocol.*' \
     'thrift/lib/cpp2/protocol/Patch.h' \
     'thrift/lib/cpp2/FieldRef.h' \
-    'thrift/lib/cpp2/op/.*'
+    'thrift/lib/cpp2/op/.*' \
+    'thrift/lib/thrift/detail/.*'
 
 # Make the table of contents
 toc=$(cat << EOTOC
@@ -52,9 +58,10 @@ Static Patch
   cpp/class/apache/thrift/op/detail/BinaryPatch
   cpp/class/apache/thrift/op/detail/NumberPatch
   cpp/class/apache/thrift/op/detail/BoolPatch
+  cpp/class/apache/thrift/op/detail/AnyPatch
 
 Dynamic Patch
   cpp/file/thrift/lib/cpp2/protocol/Patch.h
 EOTOC
 )
-python3.6 ../../fbcref/docgen/tocgen.py "$toc" > src/json/cpp_api_toc.json
+python3 ../../fbcref/docgen/tocgen.py "$toc" > src/json/cpp_api_toc.json

@@ -15,40 +15,39 @@
  */
 
 #include <thrift/lib/cpp2/async/tests/util/TestStreamService.h>
+#include <thrift/lib/cpp2/transport/rocket/server/RocketStreamClientCallback.h>
 
-#include <folly/experimental/coro/AsyncScope.h>
+#include <folly/coro/AsyncScope.h>
 #include <folly/portability/GTest.h>
 
-namespace testutil {
-namespace testservice {
+namespace apache::thrift::detail::test {
 
-apache::thrift::ServerStream<int32_t> TestStreamGeneratorService::range(
+ServerStream<int32_t> TestStreamGeneratorService::range(
     int32_t from, int32_t to) {
   for (int i = from; i <= to; i++) {
-    co_yield std::move(i);
+    co_yield int(i);
   }
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamGeneratorService::rangeThrow(
+ServerStream<int32_t> TestStreamGeneratorService::rangeThrow(
     int32_t from, int32_t to) {
   for (int i = from; i <= to; i++) {
-    co_yield std::move(i);
+    co_yield int(i);
   }
   throw std::runtime_error("I am a search bar");
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamGeneratorService::rangeThrowUDE(
+ServerStream<int32_t> TestStreamGeneratorService::rangeThrowUDE(
     int32_t from, int32_t to) {
   for (int i = from; i <= to; i++) {
-    co_yield std::move(i);
+    co_yield int(i);
   }
   throw UserDefinedException();
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamPublisherService::range(
+ServerStream<int32_t> TestStreamPublisherService::range(
     int32_t from, int32_t to) {
-  auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisher([] {});
+  auto [stream, publisher] = ServerStream<int32_t>::createPublisher([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(i);
@@ -58,10 +57,9 @@ apache::thrift::ServerStream<int32_t> TestStreamPublisherService::range(
   return std::move(stream);
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamPublisherService::rangeThrow(
+ServerStream<int32_t> TestStreamPublisherService::rangeThrow(
     int32_t from, int32_t to) {
-  auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisher([] {});
+  auto [stream, publisher] = ServerStream<int32_t>::createPublisher([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(i);
@@ -71,10 +69,9 @@ apache::thrift::ServerStream<int32_t> TestStreamPublisherService::rangeThrow(
   return std::move(stream);
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamPublisherService::rangeThrowUDE(
+ServerStream<int32_t> TestStreamPublisherService::rangeThrowUDE(
     int32_t from, int32_t to) {
-  auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisher([] {});
+  auto [stream, publisher] = ServerStream<int32_t>::createPublisher([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(i);
@@ -84,13 +81,11 @@ apache::thrift::ServerStream<int32_t> TestStreamPublisherService::rangeThrowUDE(
   return std::move(stream);
 }
 
-using RichPayload = apache::thrift::detail::RichPayloadToSend<int32_t>;
-using MessageVariant = apache::thrift::detail::MessageVariant<int32_t>;
-using apache::thrift::detail::OrderedHeader;
-using apache::thrift::detail::UnorderedHeader;
+using RichPayload = RichPayloadToSend<int32_t>;
+using MessageVariant = MessageVariant<int32_t>;
 
-apache::thrift::ServerStream<int32_t>
-TestStreamGeneratorWithHeaderService::range(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamGeneratorWithHeaderService::range(
+    int32_t from, int32_t to) {
   return folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<MessageVariant&&> {
         for (int i = from; i <= to; i++) {
@@ -101,8 +96,8 @@ TestStreamGeneratorWithHeaderService::range(int32_t from, int32_t to) {
       });
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamGeneratorWithHeaderService::rangeThrow(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamGeneratorWithHeaderService::rangeThrow(
+    int32_t from, int32_t to) {
   return folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<MessageVariant&&> {
         for (int i = from; i <= to; i++) {
@@ -114,8 +109,8 @@ TestStreamGeneratorWithHeaderService::rangeThrow(int32_t from, int32_t to) {
       });
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamGeneratorWithHeaderService::rangeThrowUDE(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamGeneratorWithHeaderService::rangeThrowUDE(
+    int32_t from, int32_t to) {
   return folly::coro::co_invoke(
       [=]() -> folly::coro::AsyncGenerator<MessageVariant&&> {
         for (int i = from; i <= to; i++) {
@@ -127,10 +122,10 @@ TestStreamGeneratorWithHeaderService::rangeThrowUDE(int32_t from, int32_t to) {
       });
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamPublisherWithHeaderService::range(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamPublisherWithHeaderService::range(
+    int32_t from, int32_t to) {
   auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisherWithHeader([] {});
+      ServerStream<int32_t>::createPublisherWithHeader([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(RichPayload{i, {{"val", std::to_string(i)}}, {}});
@@ -142,10 +137,10 @@ TestStreamPublisherWithHeaderService::range(int32_t from, int32_t to) {
   return std::move(stream);
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamPublisherWithHeaderService::rangeThrow(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamPublisherWithHeaderService::rangeThrow(
+    int32_t from, int32_t to) {
   auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisherWithHeader([] {});
+      ServerStream<int32_t>::createPublisherWithHeader([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(RichPayload{i, {{"val", std::to_string(i)}}, {}});
@@ -157,10 +152,10 @@ TestStreamPublisherWithHeaderService::rangeThrow(int32_t from, int32_t to) {
   return std::move(stream);
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamPublisherWithHeaderService::rangeThrowUDE(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamPublisherWithHeaderService::rangeThrowUDE(
+    int32_t from, int32_t to) {
   auto [stream, publisher] =
-      apache::thrift::ServerStream<int32_t>::createPublisherWithHeader([] {});
+      ServerStream<int32_t>::createPublisherWithHeader([] {});
 
   for (int i = from; i <= to; i++) {
     publisher.next(RichPayload{i, {{"val", std::to_string(i)}}, {}});
@@ -172,28 +167,27 @@ TestStreamPublisherWithHeaderService::rangeThrowUDE(int32_t from, int32_t to) {
   return std::move(stream);
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamMultiPublisherService::range(
+ServerStream<int32_t> TestStreamMultiPublisherService::range(
     int32_t from, int32_t to) {
   return range(from, to, false, folly::exception_wrapper());
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherService::rangeWaitForCancellation(
+ServerStream<int32_t> TestStreamMultiPublisherService::rangeWaitForCancellation(
     int32_t from, int32_t to) {
   return range(from, to, true, folly::exception_wrapper());
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherService::rangeThrow(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamMultiPublisherService::rangeThrow(
+    int32_t from, int32_t to) {
   return range(from, to, false, std::runtime_error("oops"));
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherService::rangeThrowUDE(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamMultiPublisherService::rangeThrowUDE(
+    int32_t from, int32_t to) {
   return range(from, to, false, UserDefinedException());
 }
 
-apache::thrift::ServerStream<int32_t>
+ServerStream<int32_t>
 TestStreamMultiPublisherService::uncompletedPublisherDestructor() {
   auto stream = multipub_.addStream();
   EXPECT_DEATH(
@@ -202,16 +196,16 @@ TestStreamMultiPublisherService::uncompletedPublisherDestructor() {
   return stream;
 }
 
-apache::thrift::ServerStream<int32_t>
+ServerStream<int32_t>
 TestStreamMultiPublisherService::uncompletedPublisherMoveAssignment() {
   auto stream = multipub_.addStream();
   EXPECT_DEATH(
-      multipub_ = apache::thrift::ServerStreamMultiPublisher<int32_t>(),
+      multipub_ = ServerStreamMultiPublisher<int32_t>(),
       "StreamMultiPublisher must be completed or all streams must be cancelled");
   return stream;
 }
 
-apache::thrift::ServerStream<int32_t> TestStreamMultiPublisherService::range(
+ServerStream<int32_t> TestStreamMultiPublisherService::range(
     int32_t from,
     int32_t to,
     bool waitForCancellation,
@@ -240,30 +234,28 @@ apache::thrift::ServerStream<int32_t> TestStreamMultiPublisherService::range(
   return stream;
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherWithHeaderService::range(int32_t from, int32_t to) {
+ServerStream<int32_t> TestStreamMultiPublisherWithHeaderService::range(
+    int32_t from, int32_t to) {
   return range(from, to, false, folly::exception_wrapper());
 }
 
-apache::thrift::ServerStream<int32_t>
+ServerStream<int32_t>
 TestStreamMultiPublisherWithHeaderService::rangeWaitForCancellation(
     int32_t from, int32_t to) {
   return range(from, to, true, folly::exception_wrapper());
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherWithHeaderService::rangeThrow(
+ServerStream<int32_t> TestStreamMultiPublisherWithHeaderService::rangeThrow(
     int32_t from, int32_t to) {
   return range(from, to, false, std::runtime_error("oops"));
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherWithHeaderService::rangeThrowUDE(
+ServerStream<int32_t> TestStreamMultiPublisherWithHeaderService::rangeThrowUDE(
     int32_t from, int32_t to) {
   return range(from, to, false, UserDefinedException());
 }
 
-apache::thrift::ServerStream<int32_t>
+ServerStream<int32_t>
 TestStreamMultiPublisherWithHeaderService::uncompletedPublisherDestructor() {
   auto stream = multipub_.addStream();
   EXPECT_DEATH(
@@ -271,19 +263,17 @@ TestStreamMultiPublisherWithHeaderService::uncompletedPublisherDestructor() {
       "StreamMultiPublisher must be completed or all streams must be cancelled");
   return stream;
 }
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherWithHeaderService::
+ServerStream<int32_t> TestStreamMultiPublisherWithHeaderService::
     uncompletedPublisherMoveAssignment() {
   auto stream = multipub_.addStream();
-  auto multipub = apache::thrift::ServerStreamMultiPublisher<int32_t, true>();
+  auto multipub = ServerStreamMultiPublisher<int32_t, true>();
   EXPECT_DEATH(
       multipub_ = std::move(multipub),
       "StreamMultiPublisher must be completed or all streams must be cancelled");
   return stream;
 }
 
-apache::thrift::ServerStream<int32_t>
-TestStreamMultiPublisherWithHeaderService::range(
+ServerStream<int32_t> TestStreamMultiPublisherWithHeaderService::range(
     int32_t from,
     int32_t to,
     bool waitForCancellation,
@@ -315,5 +305,139 @@ TestStreamMultiPublisherWithHeaderService::range(
   return stream;
 }
 
-} // namespace testservice
-} // namespace testutil
+class TestProducerCallback : public ServerGeneratorStream::ProducerCallback {
+ public:
+  TestProducerCallback(
+      int32_t from,
+      int32_t to,
+      folly::exception_wrapper&& ew,
+      folly::Executor::KeepAlive<> executor,
+      StreamElementEncoder<int32_t>* encoder)
+      : from_(from),
+        to_(to),
+        ew_(std::move(ew)),
+        executor_(executor),
+        encoder_(encoder) {}
+
+  void provideStream(ServerGeneratorStream::Ptr stream) override {
+    stream_ = std::move(stream);
+    executor_->add([this] { run(); });
+  }
+
+  void run() {
+    SCOPE_EXIT {
+      stream_->serverClose();
+      delete this;
+    };
+    for (int i = from_; i <= to_; ++i) {
+      if (credits_ == 0 && updateCreditsOrCancel()) {
+        return;
+      }
+      stream_->publish((*encoder_)(int(i)));
+      --credits_;
+    }
+    if (ew_) {
+      stream_->publish((*encoder_)(std::move(ew_)));
+    } else {
+      stream_->publish({});
+    }
+  }
+
+  // returns true iff stream was cancelled by client
+  bool updateCreditsOrCancel() {
+    ServerStreamConsumerBaton<folly::Baton<>> consumer;
+    if (stream_->wait(&consumer)) {
+      consumer.baton.wait();
+    }
+
+    auto queue = stream_->getMessages();
+    while (!queue.empty()) {
+      auto next = queue.front();
+      queue.pop();
+      switch (next) {
+        case StreamControl::CANCEL:
+          return true;
+        case StreamControl::PAUSE:
+        case StreamControl::RESUME:
+          // ignore pause/resume events
+          continue;
+        default:
+          credits_ += next;
+          break;
+      }
+    }
+    return false;
+  }
+
+ private:
+  int32_t from_;
+  int32_t to_;
+  uint64_t credits_{0};
+  folly::exception_wrapper ew_;
+  ServerGeneratorStream::Ptr stream_;
+  folly::Executor::KeepAlive<> executor_;
+  StreamElementEncoder<int32_t>* encoder_;
+};
+
+ServerStream<int32_t> TestStreamProducerCallbackService::range(
+    int32_t from, int32_t to) {
+  return ServerStream<int32_t>(
+      [from, to](
+          folly::Executor::KeepAlive<> executor,
+          StreamElementEncoder<int32_t>* encoder) mutable {
+        return ServerGeneratorStream::fromProducerCallback(
+            new TestProducerCallback(from, to, {}, executor, encoder));
+      });
+}
+
+ServerStream<int32_t> TestStreamProducerCallbackService::rangeThrow(
+    int32_t from, int32_t to) {
+  return ServerStream<int32_t>([from, to](
+                                   folly::Executor::KeepAlive<> executor,
+                                   StreamElementEncoder<int32_t>*
+                                       encoder) mutable {
+    return ServerGeneratorStream::fromProducerCallback(new TestProducerCallback(
+        from,
+        to,
+        folly::make_exception_wrapper<std::runtime_error>("I am a search bar"),
+        executor,
+        encoder));
+  });
+}
+
+ServerStream<int32_t> TestStreamProducerCallbackService::rangeThrowUDE(
+    int32_t from, int32_t to) {
+  return ServerStream<int32_t>(
+      [from, to](
+          folly::Executor::KeepAlive<> executor,
+          StreamElementEncoder<int32_t>* encoder) mutable {
+        return ServerGeneratorStream::fromProducerCallback(
+            new TestProducerCallback(
+                from,
+                to,
+                folly::make_exception_wrapper<UserDefinedException>(),
+                executor,
+                encoder));
+      });
+}
+
+ServerStream<int32_t> TestStreamClientCallbackService::range(
+    int32_t from, int32_t to) {
+  auto [stream, publisher] = ServerStream<int32_t>::createPublisher([] {});
+  for (int i = from; i <= to; i++) {
+    publisher.next(i);
+  }
+  streamPublisher_ = std::move(publisher);
+  return std::move(stream);
+}
+
+folly::coro::Task<int32_t> TestStreamClientCallbackService::co_test() {
+  rocket::RocketStreamClientCallback* cb =
+      static_cast<rocket::RocketStreamClientCallback*>(
+          streamPublisher_->impl_->streamClientCallback_);
+  EXPECT_EQ("range", cb->getRpcMethodName());
+  std::move(*streamPublisher_).complete();
+  co_return 0;
+}
+
+} // namespace apache::thrift::detail::test

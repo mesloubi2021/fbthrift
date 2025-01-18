@@ -15,6 +15,7 @@
       "definition_html": "static Ptr apache::thrift::op::detail::MapOp&lt; KTag, VTag, Tag &gt;::get",
       "argsstring_html": "(void *s, FieldId, size_t, const Dyn &amp;k)",
       "name_html": "get",
+      "qualifiedname_html": "apache::thrift::op::detail::MapOp::get",
       "param": [
         {
           "type_html": "void *",
@@ -34,7 +35,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "line": "226",
-        "column": "1",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerOp.h",
         "bodystart": "226",
         "bodyend": "233"
@@ -59,5 +60,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/get",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/get"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4/get",
+  "parent_links": [
+    {
+      "text_html": "AnyOp&lt; type::map&lt; KTag, VTag &gt; &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1map_3_01KTag_00_01VTag_01_4_01_4"
+    }
+  ]
 }

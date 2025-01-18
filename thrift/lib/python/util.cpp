@@ -23,8 +23,7 @@
 
 #if FOLLY_HAS_COROUTINES
 
-namespace thrift {
-namespace python {
+namespace thrift::python {
 
 namespace {
 
@@ -37,10 +36,10 @@ void do_import() {
 } // namespace
 
 void cancelPythonIterator(PyObject* iter) {
-  FOLLY_MAYBE_UNUSED static bool done = (do_import(), false);
+  [[maybe_unused]] static bool done = (do_import(), false);
   cancelAsyncGenerator(iter);
 }
 
-} // namespace python
-} // namespace thrift
+} // namespace thrift::python
+
 #endif

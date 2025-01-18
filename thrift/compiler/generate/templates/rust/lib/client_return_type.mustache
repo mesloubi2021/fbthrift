@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -19,13 +19,19 @@
 
     }}{{#function:return_type}}{{!
         }}{{#function:creates_interaction?}}{{!
-            }}{{#type:void?}}{{!
-                }}crate::client::{{function:interaction_name}}Client{{!
-            }}{{/type:void?}}{{^type:void?}}{{!
-                }}(crate::client::{{function:interaction_name}}Client, {{>lib/return_type}}){{!
-            }}{{/type:void?}}{{!
+            }}{{#function:stream?}}{{!
+                }}({{program:crate}}::client::{{function:interaction_name}}Client, {{> lib/return_type}}){{!
+            }}{{/function:stream?}}{{!
+            }}{{^function:stream?}}{{!
+                }}{{#type:void?}}{{!
+                    }}{{program:crate}}::client::{{function:interaction_name}}Client{{!
+                }}{{/type:void?}}{{!
+                }}{{^type:void?}}{{!
+                    }}({{program:crate}}::client::{{function:interaction_name}}Client, {{> lib/return_type}}){{!
+                }}{{/type:void?}}{{!
+            }}{{/function:stream?}}{{!
         }}{{/function:creates_interaction?}}{{^function:creates_interaction?}}{{!
-            }}{{>lib/return_type}}{{!
+            }}{{> lib/return_type}}{{!
         }}{{/function:creates_interaction?}}{{!
     }}{{/function:return_type}}{{!
 

@@ -33,16 +33,13 @@
 #include <thrift/lib/cpp2/type/Tag.h>
 #include <thrift/lib/cpp2/type/ThriftType.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 
 // Gets a (potentally const&) value representing the default.
 //
 // C++'s default for the underlying native type, is the default for all
 // unstructured types.
-template <typename Tag, typename = void>
+template <typename Tag>
 struct GetDefault {
   static_assert(!type::is_a_v<Tag, type::structured_c>, "");
   constexpr auto operator()() const { return type::native_type<Tag>{}; }
@@ -51,7 +48,7 @@ struct GetDefault {
 // Gets a (potentally const&) value representing the **intrinsic** default.
 //
 // This is the same as the default for all non-structured types.
-template <typename Tag, typename = void>
+template <typename Tag>
 struct GetIntrinsicDefault : GetDefault<Tag> {
   static_assert(!type::is_a_v<Tag, type::structured_c>, "");
 };
@@ -142,7 +139,9 @@ struct ThriftClearDefault {
   const auto& operator()() const {
     static const auto& obj = *[] {
       auto* p = new type::native_type<Tag>();
-      SCOPE_FAIL { delete p; };
+      SCOPE_FAIL {
+        delete p;
+      };
       apache::thrift::clear(*p);
       return p;
     }();
@@ -213,7 +212,9 @@ struct GetDefault<
     static const auto& obj = *[] {
       // TODO(afuller): Remove or move this logic to the adapter.
       auto* s = new Struct{};
-      SCOPE_FAIL { delete s; };
+      SCOPE_FAIL {
+        delete s;
+      };
       auto* adapted = new type::native_type<Tag>(op::create<Tag>(*s));
       folly::lsan_ignore_object(s);
       return adapted;
@@ -249,12 +250,16 @@ struct GetIntrinsicDefault<adapted_field_tag<Adapter, UTag, Struct, FieldId>> {
     static const auto& obj = *[] {
       // TODO(afuller): Remove or move this logic to the adapter.
       auto* s = new Struct{};
-      SCOPE_FAIL { delete s; };
+      SCOPE_FAIL {
+        delete s;
+      };
       apache::thrift::clear(*s);
       auto adapted = new type::native_type<Tag>(AdapterT::fromThriftField(
           folly::copy(GetIntrinsicDefault<UTag>{}()),
           FieldContext<Struct, FieldId>{*s}));
-      SCOPE_FAIL { delete adapted; };
+      SCOPE_FAIL {
+        delete adapted;
+      };
       adapt_detail::construct<Adapter, FieldId>(adapted, *s);
       folly::lsan_ignore_object(s);
       return adapted;
@@ -337,14 +342,6 @@ struct ClearOptionalField {
   void operator()(terse_intern_boxed_field_ref<T> field, Struct&) const {
     field.reset();
   }
-  template <typename T, typename Struct>
-  void operator()(std::shared_ptr<T>& field, Struct&) const {
-    field = nullptr;
-  }
-  template <typename T, typename Struct>
-  void operator()(std::unique_ptr<T>& field, Struct&) const {
-    field = nullptr;
-  }
 };
 
 template <typename>
@@ -367,6 +364,26 @@ struct ClearField<type::field<Tag, Context>> : ClearOptionalField {
   template <typename T, typename Struct>
   void operator()(field_ref<T> field, Struct&) const {
     Clear<Tag>{}(*field);
+  }
+  template <typename T, typename Struct>
+  void operator()(std::shared_ptr<T>& field, Struct&) const {
+    if constexpr (apache::thrift::detail::qualifier::is_cpp_ref_field_optional<
+                      Struct,
+                      apache::thrift::field_id<Context::kFieldId>>::value) {
+      field = nullptr;
+    } else if (field) {
+      Clear<Tag>{}(*field);
+    }
+  }
+  template <typename T, typename Struct>
+  void operator()(std::unique_ptr<T>& field, Struct&) const {
+    if constexpr (apache::thrift::detail::qualifier::is_cpp_ref_field_optional<
+                      Struct,
+                      apache::thrift::field_id<Context::kFieldId>>::value) {
+      field = nullptr;
+    } else if (field) {
+      Clear<Tag>{}(*field);
+    }
   }
 };
 
@@ -391,6 +408,26 @@ struct ClearField<adapted_field_tag<Adapter, UTag, Struct, FieldId>>
   void operator()(field_ref<T> field, Struct& s) const {
     ::apache::thrift::adapt_detail::clear<Adapter, FieldId>(*field, s);
   }
+  template <typename T>
+  void operator()(std::shared_ptr<T>& field, Struct& s) const {
+    if constexpr (apache::thrift::detail::qualifier::is_cpp_ref_field_optional<
+                      Struct,
+                      apache::thrift::field_id<FieldId>>::value) {
+      field = nullptr;
+    } else if (field) {
+      ::apache::thrift::adapt_detail::clear<Adapter, FieldId>(*field, s);
+    }
+  }
+  template <typename T>
+  void operator()(std::unique_ptr<T>& field, Struct& s) const {
+    if constexpr (apache::thrift::detail::qualifier::is_cpp_ref_field_optional<
+                      Struct,
+                      apache::thrift::field_id<FieldId>>::value) {
+      field = nullptr;
+    } else if (field) {
+      ::apache::thrift::adapt_detail::clear<Adapter, FieldId>(*field, s);
+    }
+  }
 };
 
 template <typename Id, typename Tag>
@@ -403,7 +440,4 @@ struct Clear<Id, Tag, type::if_thrift_type_tag<Tag>> {
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

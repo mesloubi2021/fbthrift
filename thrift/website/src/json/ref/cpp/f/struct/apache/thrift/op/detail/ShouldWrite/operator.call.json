@@ -20,6 +20,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(field_ref&lt; T &gt;) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; T &gt;"
@@ -27,11 +28,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "860",
-        "column": "1",
+        "line": "489",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "860",
-        "bodyend": "862"
+        "bodystart": "489",
+        "bodyend": "491"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(field_ref&lt;T&gt;) const",
@@ -63,6 +64,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(required_field_ref&lt; T &gt;) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/required_field_ref\">required_field_ref</a>&lt; T &gt;"
@@ -70,11 +72,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "864",
-        "column": "1",
+        "line": "493",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "864",
-        "bodyend": "866"
+        "bodystart": "493",
+        "bodyend": "495"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(required_field_ref&lt;T&gt;) const",
@@ -106,6 +108,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(optional_field_ref&lt; T &gt; opt) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/optional_field_ref\">optional_field_ref</a>&lt; T &gt;",
@@ -114,11 +117,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "868",
-        "column": "1",
+        "line": "497",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "868",
-        "bodyend": "870"
+        "bodystart": "497",
+        "bodyend": "499"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(optional_field_ref&lt;T&gt; opt) const",
@@ -150,6 +153,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(optional_boxed_field_ref&lt; T &gt; opt) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/optional_boxed_field_ref\">optional_boxed_field_ref</a>&lt; T &gt;",
@@ -158,11 +162,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "872",
-        "column": "1",
+        "line": "501",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "872",
-        "bodyend": "874"
+        "bodystart": "501",
+        "bodyend": "503"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(optional_boxed_field_ref&lt;T&gt; opt) const",
@@ -194,6 +198,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(union_field_ref&lt; T &gt; opt) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/union_field_ref\">union_field_ref</a>&lt; T &gt;",
@@ -202,11 +207,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "876",
-        "column": "1",
+        "line": "505",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "876",
-        "bodyend": "878"
+        "bodystart": "505",
+        "bodyend": "507"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(union_field_ref&lt;T&gt; opt) const",
@@ -238,6 +243,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(terse_field_ref&lt; T &gt; val) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; T &gt;",
@@ -246,11 +252,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "880",
-        "column": "1",
+        "line": "509",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "880",
-        "bodyend": "882"
+        "bodystart": "509",
+        "bodyend": "511"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(terse_field_ref&lt;T&gt; val) const",
@@ -282,6 +288,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(terse_intern_boxed_field_ref&lt; T &gt; val) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_intern_boxed_field_ref\">terse_intern_boxed_field_ref</a>&lt; T &gt;",
@@ -290,11 +297,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "884",
-        "column": "1",
+        "line": "513",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "884",
-        "bodyend": "886"
+        "bodystart": "513",
+        "bodyend": "515"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(terse_intern_boxed_field_ref&lt;T&gt; val) const",
@@ -326,6 +333,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(const std::unique_ptr&lt; T &gt; &amp;ptr) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "const std::unique_ptr&lt; T &gt; &amp;",
@@ -334,11 +342,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "888",
-        "column": "1",
+        "line": "517",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "888",
-        "bodyend": "890"
+        "bodystart": "517",
+        "bodyend": "519"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(const std::unique_ptr&lt;T&gt;&amp; ptr) const",
@@ -370,6 +378,7 @@
       "definition_html": "bool apache::thrift::op::detail::ShouldWrite&lt; Tag &gt;::operator()",
       "argsstring_html": "(const std::shared_ptr&lt; T &gt; &amp;ptr) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ShouldWrite::operator()",
       "param": [
         {
           "type_html": "const std::shared_ptr&lt; T &gt; &amp;",
@@ -378,11 +387,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "892",
-        "column": "1",
+        "line": "521",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "892",
-        "bodyend": "894"
+        "bodystart": "521",
+        "bodyend": "523"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nbool operator()(const std::shared_ptr&lt;T&gt;&amp; ptr) const",
@@ -404,5 +413,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/ShouldWrite/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ShouldWrite/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ShouldWrite/operator.call",
+  "parent_links": [
+    {
+      "text_html": "ShouldWrite",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/ShouldWrite"
+    }
+  ]
 }

@@ -22,8 +22,7 @@ from libc.stdint cimport uint32_t
 from libcpp.utility cimport move as cmove
 from libcpp.string cimport string
 from thrift.python.client.request_channel cimport (
-    sync_createThriftChannelTCP,
-    sync_createThriftChannelUnix,
+    DefaultChannelFactory
 )
 from thrift.python.client.request_channel import ClientType
 
@@ -39,16 +38,17 @@ cdef RequestChannel create_channel(
     double ssl_timeout,
 ):
     endpoint = b''
-    if client_type == ClientType.THRIFT_HTTP_CLIENT_TYPE:
+    if client_type in (ClientType.THRIFT_HTTP_CLIENT_TYPE, ClientType.THRIFT_HTTP2_CLIENT_TYPE):
         if host is None or port is None:
-            raise ValueError("Must set host and port when using ClientType.THRIFT_HTTP_CLIENT_TYPE")
+            raise ValueError("Must set host and port when using HTTP clients")
         if path is None:
-            raise ValueError("use path='/endpoint' when using ClientType.THRIFT_HTTP_CLIENT_TYPE")
+            raise ValueError("use path='/endpoint' when using HTTP clients")
         endpoint = os.fsencode(path)
         path = None
 
     cdef uint32_t _timeout_ms = int(timeout * 1000)
     cdef uint32_t _ssl_timeout_ms = int(ssl_timeout * 1000)
+    cdef DefaultChannelFactory channel_factory
 
     if host is not None and port is not None:
         if path is not None:
@@ -63,7 +63,7 @@ cdef RequestChannel create_channel(
             host = str(host)
 
         if ssl_context:
-            return RequestChannel.create(thrift_ssl.sync_createThriftChannelTCP(
+            return RequestChannel.create(channel_factory.sync_createThriftChannelSSL(
                 ssl_context._cpp_obj,
                 host,
                 port,
@@ -74,12 +74,12 @@ cdef RequestChannel create_channel(
                 endpoint,
             ))
         else:
-            return RequestChannel.create(sync_createThriftChannelTCP(
+            return RequestChannel.create(channel_factory.sync_createThriftChannelTCP(
                 host, port, _timeout_ms, client_type, protocol, endpoint
             ))
     elif path is not None:
         fspath = os.fsencode(path)
-        return RequestChannel.create(sync_createThriftChannelUnix(
+        return RequestChannel.create(channel_factory.sync_createThriftChannelUnix(
             cmove[string](fspath), _timeout_ms, client_type, protocol
         ))
     else:

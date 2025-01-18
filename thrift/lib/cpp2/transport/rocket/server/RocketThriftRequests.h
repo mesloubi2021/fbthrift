@@ -23,6 +23,7 @@
 #include <folly/Function.h>
 
 #include <thrift/lib/cpp2/server/RequestsRegistry.h>
+#include <thrift/lib/cpp2/server/ServiceInterceptorStorage.h>
 #include <thrift/lib/cpp2/transport/core/ThriftRequest.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerFrameContext.h>
@@ -32,8 +33,7 @@ class EventBase;
 class IOBuf;
 } // namespace folly
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class AsyncProcessor;
 class RocketSinkClientCallback;
@@ -45,17 +45,43 @@ class Payload;
 class RocketServerFrameContext;
 
 class RocketThriftRequest : public ThriftRequestCore {
+ protected:
+  using ServiceInterceptorsStorage =
+      apache::thrift::detail::ServiceInterceptorRequestStorageContext;
+  using ColocatedConstructionParams =
+      RequestsRegistry::ColocatedData<ServiceInterceptorsStorage>;
+
  public:
+  folly::EventBase* getEventBase() noexcept final { return &evb_; }
+
+  template <typename... Args>
+  static auto colocateWithDebugStub(
+      RequestsRegistry::DebugStubColocator& alloc,
+      folly::EventBase&,
+      server::ServerConfigs& server,
+      Args&...) {
+    auto numServiceInterceptors = server.getServiceInterceptors().size();
+    using RequestStorage =
+        apache::thrift::detail::ServiceInterceptorOnRequestStorage;
+    return [numServiceInterceptors,
+            onRequest = alloc.array<RequestStorage>(numServiceInterceptors)](
+               auto make) mutable {
+      return ServiceInterceptorsStorage{
+          numServiceInterceptors,
+          make(std::move(onRequest), [] { return RequestStorage(); }),
+      };
+    };
+  }
+
+ protected:
   RocketThriftRequest(
       server::ServerConfigs& serverConfigs,
       RequestRpcMetadata&& metadata,
       Cpp2ConnContext& connContext,
+      ServiceInterceptorsStorage serviceInterceptorsStorage,
       folly::EventBase& evb,
       RocketServerFrameContext&& context);
 
-  folly::EventBase* getEventBase() noexcept final { return &evb_; }
-
- protected:
   folly::EventBase& evb_;
   RocketServerFrameContext context_;
 };
@@ -65,7 +91,7 @@ class RocketThriftRequest : public ThriftRequestCore {
 class ThriftServerRequestResponse final : public RocketThriftRequest {
  public:
   ThriftServerRequestResponse(
-      RequestsRegistry::DebugStub& debugStubToInit,
+      ColocatedConstructionParams colocationParams,
       folly::EventBase& evb,
       server::ServerConfigs& serverConfigs,
       RequestRpcMetadata&& metadata,
@@ -107,7 +133,7 @@ class ThriftServerRequestResponse final : public RocketThriftRequest {
 class ThriftServerRequestFnf final : public RocketThriftRequest {
  public:
   ThriftServerRequestFnf(
-      RequestsRegistry::DebugStub& debugStubToInit,
+      ColocatedConstructionParams colocationParams,
       folly::EventBase& evb,
       server::ServerConfigs& serverConfigs,
       RequestRpcMetadata&& metadata,
@@ -147,7 +173,7 @@ class ThriftServerRequestFnf final : public RocketThriftRequest {
 class ThriftServerRequestStream final : public RocketThriftRequest {
  public:
   ThriftServerRequestStream(
-      RequestsRegistry::DebugStub& debugStubToInit,
+      ColocatedConstructionParams colocationParams,
       folly::EventBase& evb,
       server::ServerConfigs& serverConfigs,
       RequestRpcMetadata&& metadata,
@@ -183,7 +209,7 @@ class ThriftServerRequestStream final : public RocketThriftRequest {
       std::unique_ptr<folly::IOBuf>,
       StreamServerCallbackPtr) noexcept override;
 
-  virtual void sendStreamThriftResponse(
+  void sendStreamThriftResponse(
       ResponseRpcMetadata&&,
       std::unique_ptr<folly::IOBuf>,
       ::apache::thrift::detail::ServerStreamFactory&&) noexcept override;
@@ -204,7 +230,7 @@ class ThriftServerRequestStream final : public RocketThriftRequest {
 class ThriftServerRequestSink final : public RocketThriftRequest {
  public:
   ThriftServerRequestSink(
-      RequestsRegistry::DebugStub& debugStubToInit,
+      ColocatedConstructionParams colocationParams,
       folly::EventBase& evb,
       server::ServerConfigs& serverConfigs,
       RequestRpcMetadata&& metadata,
@@ -267,5 +293,4 @@ THRIFT_PLUGGABLE_FUNC_DECLARE(
 } // namespace detail
 
 } // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

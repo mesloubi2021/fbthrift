@@ -32,41 +32,33 @@
     size_t operator()(const T& x) const; \
   };                                     \
   }
-#define THRIFT_IMPL_HASH(T)                                         \
-  namespace std {                                                   \
-  size_t hash<T>::operator()(const T& x) const { return x.hash(); } \
+#define THRIFT_IMPL_HASH(T)                      \
+  namespace std {                                \
+  size_t hash<T>::operator()(const T& x) const { \
+    return x.hash();                             \
+  }                                              \
   }
 
-namespace apache {
-namespace thrift {
-namespace frozen {
-namespace schema {
+namespace apache::thrift::frozen::schema {
 
 class MemoryField;
 class MemoryLayoutBase;
 class MemoryLayout;
 class MemorySchema;
 
-} // namespace schema
-} // namespace frozen
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::frozen::schema
 
 THRIFT_DECLARE_HASH(apache::thrift::frozen::schema::MemoryField)
 THRIFT_DECLARE_HASH(apache::thrift::frozen::schema::MemoryLayoutBase)
 THRIFT_DECLARE_HASH(apache::thrift::frozen::schema::MemoryLayout)
 THRIFT_DECLARE_HASH(apache::thrift::frozen::schema::MemorySchema)
 
-namespace apache {
-namespace thrift {
-namespace frozen {
-namespace schema {
+namespace apache::thrift::frozen::schema {
 
 // Trivially copyable, hashed bytewise.
 class MemoryField {
  public:
   MemoryField() = default;
-  ~MemoryField() = default;
 
   inline size_t hash() const {
     return folly::hash::hash_combine(id, layoutId, offset);
@@ -218,7 +210,4 @@ struct SchemaInfo {
 void convert(Schema&& schema, MemorySchema& memSchema);
 void convert(const MemorySchema& memSchema, Schema& schema);
 
-} // namespace schema
-} // namespace frozen
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::frozen::schema

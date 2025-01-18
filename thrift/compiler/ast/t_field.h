@@ -17,9 +17,9 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
-#include <boost/optional.hpp>
 
 #include <thrift/compiler/ast/node_list.h>
 #include <thrift/compiler/ast/t_const.h>
@@ -27,9 +27,7 @@
 #include <thrift/compiler/ast/t_named.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_struct;
 
@@ -61,19 +59,19 @@ class t_field final : public t_named {
    * @param name - The symbolic name of the field
    * @param id  - The numeric identifier of the field
    */
-  t_field(
-      t_type_ref type, std::string name, boost::optional<t_field_id> id = {})
+  t_field(t_type_ref type, std::string name, std::optional<t_field_id> id = {})
       : t_named(nullptr, std::move(name)),
         type_(std::move(type)),
         id_(id.value_or(0)),
         explicit_id_(id) {}
 
   t_field(t_field&&) = delete;
+  ~t_field() override;
   t_field& operator=(t_field&&) = delete;
 
   const t_type_ref& type() const { return type_; }
   t_field_id id() const { return id_; }
-  boost::optional<t_field_id> explicit_id() const { return explicit_id_; }
+  std::optional<t_field_id> explicit_id() const { return explicit_id_; }
   bool is_injected() const { return injected_; }
   void set_injected_id(t_field_id id) {
     id_ = id;
@@ -118,7 +116,7 @@ class t_field final : public t_named {
  private:
   t_type_ref type_;
   t_field_id id_;
-  boost::optional<t_field_id> explicit_id_;
+  std::optional<t_field_id> explicit_id_;
 
   t_field_qualifier qual_ = {};
   std::unique_ptr<t_const_value> value_;
@@ -185,6 +183,4 @@ class t_field final : public t_named {
 
 using t_field_list = node_list<t_field>;
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

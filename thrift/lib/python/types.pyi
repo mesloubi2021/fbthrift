@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
+import enum
 import typing
+from typing import Never
+
+from folly.iobuf import IOBuf
 
 from thrift.python.adapter import Adapter
 from thrift.python.exceptions import GeneratedError
@@ -32,6 +38,14 @@ class IntegerTypeInfo:
 class StringTypeInfo:
     pass
 
+class IOBufTypeInfo:
+    pass
+
+class FieldQualifier(enum.Enum):
+    Unqualified: FieldQualifier = ...
+    Optional: FieldQualifier = ...
+    Terse: FieldQualifier = ...
+
 typeinfo_bool: TypeInfo
 typeinfo_byte: IntegerTypeInfo
 typeinfo_i16: IntegerTypeInfo
@@ -45,17 +59,42 @@ typeinfo_binary: TypeInfo
 StructOrError = typing.Union[Struct, GeneratedError]
 
 AnyTypeInfo = typing.Union[
-    StructTypeInfo, ListTypeInfo, SetTypeInfo, MapTypeInfo, EnumTypeInfo
+    StructTypeInfo,
+    ListTypeInfo,
+    SetTypeInfo,
+    MapTypeInfo,
+    EnumTypeInfo,
+    TypeInfo,
+    IntegerTypeInfo,
+    StringTypeInfo,
 ]
+
+class FieldInfo:
+    def __init__(
+        self,
+        id: int,
+        qualifier: FieldQualifier,
+        name: str,
+        py_name: str,
+        type_info: AnyTypeInfo | typing.Callable[[], AnyTypeInfo],
+        default_value: object,
+        adapter_info: typing.Optional[tuple[object, Struct]],
+        is_primitive: bool,
+        idl_type: int = -1,
+    ) -> None: ...
 
 class ListTypeInfo:
     def __init__(self, val_info: AnyTypeInfo) -> None: ...
+    def get_val_info(self) -> AnyTypeInfo: ...
 
 class SetTypeInfo:
     def __init__(self, val_info: AnyTypeInfo) -> None: ...
+    def get_val_info(self) -> AnyTypeInfo: ...
 
 class MapTypeInfo:
     def __init__(self, key_info: AnyTypeInfo, val_info: AnyTypeInfo) -> None: ...
+    def get_key_info(self) -> AnyTypeInfo: ...
+    def get_val_info(self) -> AnyTypeInfo: ...
 
 class StructTypeInfo:
     def __init__(self, klass: typing.Type[sT]) -> None: ...
@@ -70,15 +109,15 @@ class AdaptedTypeInfo:
         self,
         orig_type_info: AnyTypeInfo,
         adapter_class: typing.Type[TAdapter],
-        transitive_annotation: typing.Callable[[], typing.Optional[Struct]],
+        transitive_annotation_factory: typing.Callable[[], typing.Optional[Struct]],
     ) -> None: ...
 
 # Parent class for structs and unions
 class StructOrUnion(typing.Hashable):
-    def __eq__(self: usT, other: usT) -> bool: ...
+    def __eq__(self: usT, other: object) -> bool: ...
     def __hash__(self) -> int: ...
-    def __lt__(self: usT, other: usT) -> bool: ...
-    def __le__(self: usT, other: usT) -> bool: ...
+    def __lt__(self: usT, other: object) -> bool: ...
+    def __le__(self: usT, other: object) -> bool: ...
     @staticmethod
     def __get_thrift_uri__() -> typing.Optional[str]: ...
 
@@ -94,33 +133,49 @@ class Union(
     StructOrUnion,
     metaclass=UnionMeta,
 ):
-    # pyre-ignore[4]: it can be anything
-    type: typing.Any
-    # pyre-ignore[4]: it can be anything
-    value: typing.Any
+    # these types are made more specific in gencode, so can't be `Final` here
+    type: enum.Enum
+    value: object
+    # these are added to avoid naming collisions with `type` and `value` arms
+    fbthrift_current_value: object
+    fbthrift_current_field: enum.Enum
     def __bool__(self) -> bool: ...
 
 class StructMeta(type, typing.Iterable[typing.Tuple[str, typing.Any]]): ...
 class UnionMeta(type): ...
 
-class EnumMeta(type):
-    def __iter__(cls: typing.Type[eT]) -> typing.Iterator[eT]: ...
-    def __reversed__(cls: typing.Type[eT]) -> typing.Iterator[eT]: ...
-    def __getitem__(cls: typing.Type[eT], name: str) -> eT: ...
-    def __len__(cls) -> int: ...
+class EnumMeta(enum.EnumMeta):
+    def __call__(
+        cls: typing.Type[eT], value: typing.Union[int, typing.SupportsInt]
+    ) -> eT: ...
     @property
     def __members__(self: typing.Type[eT]) -> typing.Mapping[str, eT]: ...
 
-class Enum(metaclass=EnumMeta):
+    # the following methods are inherited from enum.EnumMeta:
+    # def __iter__(cls: typing.Type[eT]) -> typing.Iterator[eT]: ...
+    # def __reversed__(cls: typing.Type[eT]) -> typing.Iterator[eT]: ...
+    # def __contains__(cls: typing.Type[eT], item: object) -> bool: ...
+    # def __getitem__(cls: typing.Type[eT], name: str) -> eT: ...
+    # def __len__(cls) -> int: ...
+
+class Enum(typing.SupportsInt, metaclass=EnumMeta):
     name: typing.Final[str]
     value: typing.Final[int]
     @staticmethod
     def __get_thrift_name__() -> str: ...
     @staticmethod
     def __get_thrift_uri__() -> typing.Optional[str]: ...
-    def __init__(self, val: int) -> None: ...
+    def __init__(self, value: typing.Union[eT, int]) -> None: ...
+    def __hash__(self) -> int: ...
+    # note that __int__ and __index are defined:
+    #   - in thrift-python, via `int` base of each generated enum
+    #   - in thrift-py3, in each generated enum
+    def __int__(self) -> int: ...
+    def __index__(self) -> int: ...
 
 class Flag(Enum):
+    # pyre-fixme[14]: `__contains__` overrides method defined in `EnumMeta`
+    #  inconsistently.
     def __contains__(self: eT, other: eT) -> bool: ...
     # pyre-ignore[15]: This is a pyre bug ignore
     def __or__(self: eT, other: eT) -> eT: ...
@@ -129,7 +184,7 @@ class Flag(Enum):
     def __invert__(self: eT) -> eT: ...
 
 class BadEnum(typing.SupportsInt):
-    enum: typing.Type[Enum]
+    enum: typing.Final[typing.Type[Enum]]
     name: typing.Final[str]
     value: typing.Final[int]
     def __init__(self, the_enum: typing.Type[Enum], value: int) -> None: ...
@@ -147,13 +202,35 @@ def update_nested_field(
     obj: sT, path_to_values: typing.Mapping[str, typing.Any]
 ) -> sT: ...
 
+_DefaultFieldValue = typing.Union[
+    bool,
+    int,
+    float,
+    str,
+    bytes,
+    IOBuf,
+    Enum,
+    Struct,
+    Union,
+    GeneratedError,
+    typing.Sequence[Never],
+    typing.AbstractSet[Never],
+    typing.Mapping[Never, Never],
+]
+
+def get_standard_immutable_default_value_for_type(
+    type_info: AnyTypeInfo,
+) -> _DefaultFieldValue: ...
+
 class _fbthrift_ResponseStreamResult(Struct, typing.Generic[TChunk]):
     success: typing.Final[TChunk]
 
 class ServiceInterface:
     @staticmethod
     def service_name() -> bytes: ...
-    def getFunctionTable(self) -> typing.Mapping[bytes, typing.Callable[..., ...]]: ...
+    def getFunctionTable(
+        self,
+    ) -> typing.Mapping[bytes, typing.Callable[..., object]]: ...
     # pyre-ignore[3]: it can return anything
     async def __aenter__(self) -> typing.Any: ...
     async def __aexit__(

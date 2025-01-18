@@ -15,10 +15,11 @@
       "definition_html": "apache::thrift::op::DeterministicAccumulator&lt; HasherGenerator &gt;::Context::Context",
       "argsstring_html": "()=default",
       "name_html": "Context",
+      "qualifiedname_html": "apache::thrift::op::DeterministicAccumulator::Context::Context",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "132",
-        "column": "1"
+        "column": "5"
       },
       "definition": {
         "simple_html": "Context()",
@@ -46,6 +47,7 @@
       "definition_html": "apache::thrift::op::DeterministicAccumulator&lt; HasherGenerator &gt;::Context::Context",
       "argsstring_html": "(bool has_unordered_ctx)",
       "name_html": "Context",
+      "qualifiedname_html": "apache::thrift::op::DeterministicAccumulator::Context::Context",
       "param": [
         {
           "type_html": "bool",
@@ -55,7 +57,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "133",
-        "column": "1",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "133",
         "bodyend": "134"
@@ -81,5 +83,11 @@
   "brief_html": "Constructs the Context.",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/DeterministicAccumulator/Context/Context",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/DeterministicAccumulator/Context/Context"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/DeterministicAccumulator/Context/Context",
+  "parent_links": [
+    {
+      "text_html": "Context",
+      "href": "/ref/cpp/struct/apache/thrift/op/DeterministicAccumulator/Context"
+    }
+  ]
 }

@@ -21,9 +21,7 @@
 
 #include <thrift/compiler/ast/t_program.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * String concatenation based generator.
@@ -95,9 +93,9 @@ class t_concat_generator : public t_generator {
    * Get the full thrift typename of a (possibly complex) type.
    */
   virtual std::string thrift_type_name(const t_type* ttype) {
-    if (ttype->is_base_type()) {
-      t_base_type* tbase = (t_base_type*)ttype;
-      return t_base_type::t_base_name(tbase->get_base());
+    if (ttype->is_primitive_type()) {
+      t_primitive_type* tbase = (t_primitive_type*)ttype;
+      return t_primitive_type::t_primitive_name(tbase->primitive_type());
     }
 
     if (ttype->is_container()) {
@@ -150,7 +148,7 @@ class t_concat_generator : public t_generator {
    * Creates a unique temporary variable name, which is just "name" with a
    * number appended to it (i.e. name35)
    */
-  std::string tmp(std::string name) {
+  std::string tmp(const std::string& name) {
     std::ostringstream out;
     out << name << tmp_++;
     return out.str();
@@ -341,9 +339,6 @@ class t_concat_generator : public t_generator {
         " */\n";
   }
 
- private:
-  void validate_union_members(const t_union& union_node);
-
  protected:
   /**
    * Quick accessor for formatted service name that is currently being
@@ -373,7 +368,6 @@ class t_concat_generator : public t_generator {
   int tmp_ = 0;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler
+
 #endif // T_CONCAT_GENERATOR_H

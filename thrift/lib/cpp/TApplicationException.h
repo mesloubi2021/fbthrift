@@ -57,6 +57,7 @@ class FOLLY_EXPORT TApplicationException : public TException {
     CHECKSUM_MISMATCH = 14,
     INTERRUPTION = 15,
     TENANT_QUOTA_EXCEEDED = 16,
+    TENANT_BLOCKLISTED = 17,
   };
 
   TApplicationException() : type_(UNKNOWN) {}
@@ -64,12 +65,26 @@ class FOLLY_EXPORT TApplicationException : public TException {
   explicit TApplicationException(TApplicationExceptionType type)
       : type_(type) {}
 
+  TApplicationException(const TApplicationException&) = default;
+  TApplicationException(TApplicationException&& other) noexcept
+      : message_(std::move(other.message_)), type_(other.type_) {}
+
+  TApplicationException& operator=(const TApplicationException&) = default;
+  TApplicationException& operator=(TApplicationException&& other) noexcept {
+    message_ = std::move(other.message_);
+    type_ = other.type_;
+    return *this;
+  }
+
   explicit TApplicationException(const std::string& message)
       : message_(message), type_(UNKNOWN) {}
 
   TApplicationException(
       TApplicationExceptionType type, const std::string& message)
       : message_(message), type_(type) {}
+
+  TApplicationException(TApplicationExceptionType type, std::string&& message)
+      : message_(std::move(message)), type_(type) {}
 
   ~TApplicationException() noexcept override {}
 
@@ -124,9 +139,11 @@ class FOLLY_EXPORT TApplicationException : public TException {
           return "TApplicationException: interruption";
         case TENANT_QUOTA_EXCEEDED:
           return "TApplicationException: Tenant quota exceeded";
+        case TENANT_BLOCKLISTED:
+          return "TApplicationException: Tenant blocklisted";
         default:
           return "TApplicationException: (Invalid exception type)";
-      };
+      }
     } else {
       return message_.c_str();
     }
@@ -310,6 +327,34 @@ struct FOLLY_EXPORT AppOverloadedException : TApplicationException {
 
  private:
   std::string name_;
+};
+
+/*
+ * @AppQuotaExceededError
+ * An error Thrift application can return from preprocess callback.
+ * Indicates the client is overbooked for quota and is rejecting the request
+ * before processing starts.
+ */
+struct FOLLY_EXPORT AppQuotaExceededException : TApplicationException {
+  explicit AppQuotaExceededException(const std::string& tenantId)
+      : TApplicationException(
+            fmt::format("Tenant {} has exceeded the quota", tenantId)),
+        tenantId_(tenantId) {}
+  const std::string tenantId_;
+};
+
+/*
+ * @AppTenantBlocklistedError
+ * An error Thrift application can return from preprocess callback.
+ * Indicates the tenant is not permitted to make a request. The request is
+ * rejected before processing starts.
+ */
+struct FOLLY_EXPORT AppTenantBlocklistedException : TApplicationException {
+  explicit AppTenantBlocklistedException(const std::string& blockedTenantId)
+      : TApplicationException(
+            fmt::format("Tenant {} enforced", blockedTenantId)),
+        blockedTenantId(blockedTenantId) {}
+  const std::string blockedTenantId;
 };
 
 } // namespace thrift

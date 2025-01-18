@@ -22,8 +22,7 @@
 
 #include <folly/ExceptionWrapper.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace {
 class ChannelKeepAlive : public RequestClientCallback {
@@ -58,21 +57,23 @@ class ChannelKeepAliveStream : public StreamClientCallback {
       FirstResponsePayload&& firstResponsePayload,
       folly::EventBase* evb,
       StreamServerCallback* serverCallback) override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     serverCallback->resetClientCallback(clientCallback_);
     return clientCallback_.onFirstResponse(
         std::move(firstResponsePayload), evb, serverCallback);
   }
   void onFirstResponseError(folly::exception_wrapper ew) override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     return clientCallback_.onFirstResponseError(std::move(ew));
   }
 
-  virtual bool onStreamNext(StreamPayload&&) override { std::terminate(); }
-  virtual void onStreamError(folly::exception_wrapper) override {
-    std::terminate();
-  }
-  virtual void onStreamComplete() override { std::terminate(); }
+  bool onStreamNext(StreamPayload&&) override { std::terminate(); }
+  void onStreamError(folly::exception_wrapper) override { std::terminate(); }
+  void onStreamComplete() override { std::terminate(); }
   void resetServerCallback(StreamServerCallback&) override { std::terminate(); }
 
  private:
@@ -91,21 +92,25 @@ class ChannelKeepAliveSink : public SinkClientCallback {
       FirstResponsePayload&& firstResponsePayload,
       folly::EventBase* evb,
       SinkServerCallback* serverCallback) override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     serverCallback->resetClientCallback(clientCallback_);
     return clientCallback_.onFirstResponse(
         std::move(firstResponsePayload), evb, serverCallback);
   }
   void onFirstResponseError(folly::exception_wrapper ew) override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     return clientCallback_.onFirstResponseError(std::move(ew));
   }
 
-  virtual void onFinalResponse(StreamPayload&&) override { std::terminate(); }
-  virtual void onFinalResponseError(folly::exception_wrapper) override {
+  void onFinalResponse(StreamPayload&&) override { std::terminate(); }
+  void onFinalResponseError(folly::exception_wrapper) override {
     std::terminate();
   }
-  virtual bool onSinkRequestN(uint64_t) override { std::terminate(); }
+  bool onSinkRequestN(uint64_t) override { std::terminate(); }
   void resetServerCallback(SinkServerCallback&) override { std::terminate(); }
 
  private:
@@ -359,5 +364,4 @@ void ReconnectingRequestChannel::sendQueuedRequests() {
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -21,6 +21,7 @@
       "definition_html": "void apache::thrift::op::detail::MapPatch&lt; Patch &gt;::put",
       "argsstring_html": "(C &amp;&amp;entries)",
       "name_html": "put",
+      "qualifiedname_html": "apache::thrift::op::detail::MapPatch::put",
       "param": [
         {
           "type_html": "C &amp;&amp;",
@@ -29,11 +30,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "line": "305",
-        "column": "1",
+        "line": "291",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "bodystart": "305",
-        "bodyend": "315"
+        "bodystart": "291",
+        "bodyend": "301"
       },
       "definition": {
         "simple_html": "template &lt;typename C = T&gt;\nvoid put(C&amp;&amp; entries)",
@@ -58,5 +59,11 @@
   "brief_html": "<p>Inserts entries. Override entries if exists. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/put",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/put"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/put",
+  "parent_links": [
+    {
+      "text_html": "MapPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/MapPatch"
+    }
+  ]
 }

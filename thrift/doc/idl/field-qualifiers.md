@@ -24,7 +24,7 @@ Do not use in the new code. They are not backward or forward compatible. They do
 
 ## Fields annotated with `@thrift.TerseWrite`
 
-* It is a [structured annotation](./standard-thrift-annotation-library#thrifttersewrite) that has similar semantics to a field qualifier which makes the field **terse**.
+* It is a [structured annotation](./annotations.md#thrift-annotations) that has similar semantics to a field qualifier which makes the field **terse**.
 * Will only be written when serializing a structure if the field is not equal to its [intrinsic default value](./#intrinsic-default-values).
 * Will be cleared to the [intrinsic default value](./#intrinsic-default-values) when deserializing a structure if the field isn't present in the serialized data.
 
@@ -38,8 +38,9 @@ For non-primitive types: In languages where fields may be set to null (`thrift-p
 
 For primitive types: Fields must be set to `optional` to be nullable in PHP.
 
-NOTE: In thrift-py-deprecated, [**all** fields are nullable](https://www.internalfb.com/intern/wiki/Thrift_in_Python/Migrate_from_thrift-py/Types/#unqualified-fields-in-th).
-
+:::note
+In thrift-py-deprecated, [**all** fields are nullable](https://www.internalfb.com/intern/wiki/Thrift_in_Python/Migrate_from_thrift-py/Types/#unqualified-fields-in-th).
+:::
 
 #### Terse Writes (Compiler Option)
 
@@ -49,7 +50,7 @@ The `deprecated_terse_writes` compiler option is deprecated. Please use `@thrift
 
 :::
 
-Some of the space savings of `optional` fields can be obtained with `default` storage (not `optional`, not `required`) by passing the `deprecated_terse_writes` option to the compiler. `deprecated_terse_writes` will suppress serializing fields where the values are the same as their present default value, when doing that comparison is cheap (e.g. i32/i64, empty strings/list/map). This will lead to smaller output and lower deserialization cost - particularly when fields are sparsely used.
+Some of the space savings of `optional` fields can be obtained with unqualified fields by passing the `deprecated_terse_writes` option to the compiler (deprecated and C++ only) or using the `@thrift.TerseWrite` annotation to suppress serialization of fields equal to their default value (standard / intrinsic, respectively), which will lead to smaller output and lower deserialization cost - particularly when fields are sparsely used.
 
 ## Practical Recommendations
 

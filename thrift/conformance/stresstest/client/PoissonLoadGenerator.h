@@ -20,8 +20,8 @@
 #include <chrono>
 #include <cmath>
 #include <random>
-#include <folly/experimental/FunctionScheduler.h>
-#include <folly/experimental/coro/SmallUnboundedQueue.h>
+#include <folly/coro/SmallUnboundedQueue.h>
+#include <folly/executors/FunctionScheduler.h>
 #include <thrift/conformance/stresstest/client/BaseLoadGenerator.h>
 
 namespace apache {

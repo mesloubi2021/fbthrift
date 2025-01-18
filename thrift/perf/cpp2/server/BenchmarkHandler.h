@@ -28,6 +28,8 @@ namespace benchmarks {
 
 using apache::thrift::HandlerCallback;
 using apache::thrift::HandlerCallbackBase;
+using apache::thrift::HandlerCallbackOneWay;
+using apache::thrift::HandlerCallbackPtr;
 using apache::thrift::ServerStream;
 
 class BenchmarkHandler
@@ -53,13 +55,14 @@ class BenchmarkHandler
     chunk_.data()->append(FLAGS_chunk_size);
   }
 
-  void async_eb_noop(std::unique_ptr<HandlerCallback<void>> callback) override {
+  void async_eb_noop(HandlerCallbackPtr<void> callback) override {
     stats_->add(kNoop_);
     callback->done();
   }
 
-  void async_eb_onewayNoop(std::unique_ptr<HandlerCallbackBase>) override {
+  void async_eb_onewayNoop(HandlerCallbackOneWay::Ptr callback) override {
     stats_->add(kNoop_);
+    callback->done();
   }
 
   // Make the async/worker thread sleep
@@ -69,7 +72,7 @@ class BenchmarkHandler
   }
 
   void async_eb_sum(
-      std::unique_ptr<HandlerCallback<std::unique_ptr<TwoInts>>> callback,
+      HandlerCallbackPtr<std::unique_ptr<TwoInts>> callback,
       std::unique_ptr<TwoInts> input) override {
     stats_->add(kSum_);
     auto result = std::make_unique<TwoInts>();

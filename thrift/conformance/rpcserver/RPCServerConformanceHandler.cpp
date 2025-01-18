@@ -19,7 +19,7 @@
 #include <chrono>
 #include <exception>
 
-#include <folly/experimental/coro/AsyncGenerator.h>
+#include <folly/coro/AsyncGenerator.h>
 
 namespace apache::thrift::conformance {
 
@@ -162,6 +162,75 @@ RPCServerConformanceHandler::sinkChunkTimeout(std::unique_ptr<Request> req) {
       .setChunkTimeout(std::chrono::milliseconds{*testCase_->serverInstruction()
                                                       ->sinkChunkTimeout_ref()
                                                       ->chunkTimeoutMs()});
+}
+
+apache::thrift::ResponseAndSinkConsumer<Response, Request, Response>
+RPCServerConformanceHandler::sinkInitialResponse(std::unique_ptr<Request> req) {
+  result_.sinkInitialResponse_ref().emplace().request() = *req;
+  return {
+      *testCase_->serverInstruction()
+           ->sinkInitialResponse_ref()
+           ->initialResponse(),
+      apache::thrift::SinkConsumer<Request, Response>{
+          [&](folly::coro::AsyncGenerator<Request&&> gen)
+              -> folly::coro::Task<Response> {
+            while (auto item = co_await gen.next()) {
+              result_.sinkInitialResponse_ref()->sinkPayloads()->push_back(
+                  std::move(*item));
+            }
+            co_return *testCase_->serverInstruction()
+                ->sinkInitialResponse_ref()
+                ->finalResponse();
+          },
+          static_cast<uint64_t>(*testCase_->serverInstruction()
+                                     ->sinkInitialResponse_ref()
+                                     ->bufferSize())}};
+}
+
+apache::thrift::SinkConsumer<Request, Response>
+RPCServerConformanceHandler::sinkDeclaredException(
+    std::unique_ptr<Request> req) {
+  auto& result = result_.sinkDeclaredException_ref().emplace();
+  result.request() = *req;
+  return {
+      [&](folly::coro::AsyncGenerator<Request&&> gen)
+          -> folly::coro::Task<Response> {
+        try {
+          std::ignore = co_await gen.next();
+        } catch (const UserException& e) {
+          result.userException() = e;
+          throw;
+        }
+        throw std::logic_error("Publisher didn't throw");
+      },
+      static_cast<uint64_t>(*testCase_->serverInstruction()
+                                 ->sinkDeclaredException_ref()
+                                 ->bufferSize())};
+}
+
+apache::thrift::SinkConsumer<Request, Response>
+RPCServerConformanceHandler::sinkUndeclaredException(
+    std::unique_ptr<Request> req) {
+  auto& result = result_.sinkUndeclaredException_ref().emplace();
+  result.request() = *req;
+  return {
+      [&](folly::coro::AsyncGenerator<Request&&> gen)
+          -> folly::coro::Task<Response> {
+        try {
+          std::ignore = co_await gen.next();
+          throw std::logic_error("Publisher didn't throw");
+        } catch (const TApplicationException& e) {
+          result.exceptionMessage() = e.getMessage();
+          throw;
+        } catch (...) {
+          result.exceptionMessage() =
+              folly::exceptionStr(std::current_exception());
+          throw;
+        }
+      },
+      static_cast<uint64_t>(*testCase_->serverInstruction()
+                                 ->sinkUndeclaredException_ref()
+                                 ->bufferSize())};
 }
 
 // =================== Interactions ===================

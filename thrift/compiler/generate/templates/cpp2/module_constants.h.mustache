@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,37 +14,46 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%><% > Autogen%>
+}}
+{{> Autogen}}
 #pragma once
 
 #include <thrift/lib/cpp2/gen/module_constants_h.h>
-<%#program:interning?%>
-#include <thrift/lib/cpp2/gen/intern_list.h>
-<%/program:interning?%>
 
-#include "<%program:include_prefix%><%program:name%>_types.h"
+#include "{{program:include_prefix}}{{program:name}}_types.h"
 
-<% > common/namespace_cpp2_begin%>
+namespace {{program:qualified_namespace}} {
+{{> common/program_docblock}}
+namespace {{program:name}}_constants {
 
-
-struct <%program:name%>_constants {
-
-<%#program:constants%><%#constant:type%><%#constant:value%>
-<%^constant:outline_init?%>
-  static constexpr <% > types/const_value_type%> const <%constant:name%>_ = <% > common/const_value%>;
-  static constexpr <% > types/const_value_type%> <%constant:name%>() {
-    return <%constant:name%>_;
+{{#program:constants}}{{#constant:type}}{{#constant:value}}
+{{^constant:outline_init?}}
+{{! The generated constants check is intended to cover the schema constant, where the _sinit.cpp target has to use external linkage to break a dependency cycle. }}
+{{^constant:generated?}}
+{{^type:binary?}}
+{{> common/const_docblock}}  constexpr {{> types/const_value_type}} const {{constant:name}}_ = {{> common/const_value}};
+{{/type:binary?}}
+{{#type:binary?}}
+{{> common/const_docblock}}  constexpr ::std::string_view {{constant:name}}_{"{{value:string_value}}", {{value:string_length}}};
+{{/type:binary?}}
+{{> common/const_docblock}}  constexpr {{> types/const_value_type}} {{constant:name}}() {
+    return {{constant:name}}_;
   }
-<%/constant:outline_init?%>
-<%#constant:outline_init?%>
-  static <%constant:cpp_type%> const& <%constant:name%>();
-<%/constant:outline_init?%>
+{{/constant:generated?}}
+{{#constant:generated?}}
+  FOLLY_EXPORT {{> types/const_value_type}} {{constant:name}}();
+{{/constant:generated?}}
+{{/constant:outline_init?}}
+{{#constant:outline_init?}}
+{{> common/const_docblock}}  {{constant:cpp_type}} const& {{constant:name}}();
+{{/constant:outline_init?}}
 
-<%/constant:value%><%/constant:type%><%/program:constants%>
-<%#program:interning?%>
+{{/constant:value}}{{/constant:type}}{{/program:constants}}
+{{! Generate empty schema const if none was injected. }}
+{{^program:has_schema?}}
+  FOLLY_EXPORT ::std::string_view {{program:schema_name}}();
+{{/program:has_schema?}}
+  FOLLY_EXPORT ::folly::Range<const ::std::string_view*> {{program:schema_name}}_includes();
 
-  static const ::apache::thrift::type::AnyValue& getValue(::apache::thrift::type::ValueId id);
-<%/program:interning?%>
-};
-
-<% > common/namespace_cpp2_end%>
+} // namespace {{program:name}}_constants
+} // namespace {{program:qualified_namespace}}

@@ -15,13 +15,14 @@
       "definition_html": "void apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::Applier::clear",
       "argsstring_html": "()",
       "name_html": "clear",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::Applier::clear",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "108",
-        "column": "1",
+        "line": "118",
+        "column": "10",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "108",
-        "bodyend": "108"
+        "bodystart": "118",
+        "bodyend": "118"
       },
       "definition": {
         "simple_html": "void clear()",
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/clear",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/clear"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier/clear",
+  "parent_links": [
+    {
+      "text_html": "Applier",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/BaseEnsurePatch/Applier"
+    }
+  ]
 }

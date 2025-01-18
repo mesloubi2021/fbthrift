@@ -39,7 +39,7 @@
 #include <folly/container/F14Map-fwd.h>
 #include <folly/container/F14Set-fwd.h>
 #include <folly/container/heap_vector_types.h>
-#include <folly/experimental/Bits.h>
+#include <folly/lang/BitsClass.h>
 #include <folly/hash/Hash.h>
 #include <folly/lang/Bits.h>
 #include <folly/sorted_vector_types.h>
@@ -50,9 +50,9 @@
 #include <thrift/lib/cpp2/frozen/schema/MemorySchema.h>
 #include <thrift/lib/thrift/gen-cpp2/frozen_types.h>
 
-namespace apache {
-namespace thrift {
-namespace frozen {
+
+
+namespace apache::thrift::frozen {
 /**
  *          \__  __/             \__  __/             \__  __/
  *          /_/  \_\             /_/  \_\             /_/  \_\
@@ -340,7 +340,7 @@ struct FieldBase {
   virtual void clear() = 0;
 };
 
-template <class T, class Layout = Layout<typename std::decay<T>::type>>
+template <class T, class Layout = Layout<std::decay_t<T>>>
 struct Field final : public FieldBase {
   Layout layout;
 
@@ -791,7 +791,7 @@ class LayoutRoot : public FieldCycleHolder {
   size_t cursor_;
   std::unordered_map<uintptr_t, std::shared_ptr<FieldBase>> sharedFields_;
   std::unordered_map<uintptr_t, LayoutPosition> positions_;
-}; // namespace frozen
+};
 
 /**
  * LayoutException is thrown if freezing is attempted without a sufficient
@@ -975,7 +975,7 @@ class Bundled : public Base {
 
   Bundled& operator=(Bundled&&) = default;
 
-  template <class T, class Decayed = typename std::decay<T>::type>
+  template <class T, class Decayed = std::decay_t<T>>
   Decayed* hold(T&& t) {
     std::unique_ptr<HolderImpl<Decayed>> holder(
         new HolderImpl<Decayed>(std::forward<T>(t)));
@@ -989,7 +989,7 @@ class Bundled : public Base {
     holds_.push_back(std::move(holder));
   }
 
-  template <typename T, class Decayed = typename std::decay<T>::type>
+  template <typename T, class Decayed = std::decay_t<T>>
   const Decayed* findFirstOfType() const {
     for (const auto& h : holds_) {
       if (auto p = dynamic_cast<const HolderImpl<Decayed>*>(h.get())) {
@@ -1063,7 +1063,7 @@ void thawField(ViewPosition self, const Field<T>& f, field_ref<T&> ref) {
 template <
     class T,
     class D,
-    std::enable_if_t<!std::is_same<T, folly::IOBuf>::value>>
+    std::enable_if_t<!std::is_same_v<T, folly::IOBuf>>>
 void thawField(
     ViewPosition self,
     const Field<std::unique_ptr<T, D>>& f,
@@ -1101,9 +1101,9 @@ void thawField(
 template <class T>
 using View = typename Layout<T>::View;
 
-} // namespace frozen
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::frozen
+
+
 
 #include <thrift/lib/cpp2/frozen/FrozenFixedSizeString-inl.h> // @nolint
 #include <thrift/lib/cpp2/frozen/FrozenTrivial-inl.h> // @nolint

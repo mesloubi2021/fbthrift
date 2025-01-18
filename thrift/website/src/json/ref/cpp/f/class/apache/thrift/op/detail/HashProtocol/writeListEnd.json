@@ -15,10 +15,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeListEnd",
       "argsstring_html": "()",
       "name_html": "writeListEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeListEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "138",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "138",
         "bodyend": "138"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd",
+  "parent_links": [
+    {
+      "text_html": "HashProtocol",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+    }
+  ]
 }

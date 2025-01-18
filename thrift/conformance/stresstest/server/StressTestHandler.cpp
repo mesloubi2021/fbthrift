@@ -16,9 +16,10 @@
 
 #include <thrift/conformance/stresstest/server/StressTestHandler.h>
 
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/Sleep.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/Sleep.h>
+#include <folly/coro/Task.h>
 
 namespace apache {
 namespace thrift {
@@ -26,13 +27,12 @@ namespace stress {
 
 StressTestHandler::StressTestHandler() {}
 
-void StressTestHandler::async_eb_ping(
-    std::unique_ptr<HandlerCallback<void>> callback) {
+void StressTestHandler::async_eb_ping(HandlerCallbackPtr<void> callback) {
   callback->done();
 }
 
 void StressTestHandler::async_tm_requestResponseTm(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<BasicResponse>>> callback,
+    HandlerCallbackPtr<std::unique_ptr<BasicResponse>> callback,
     std::unique_ptr<BasicRequest> request) {
   if (request->processInfo()->processingMode() == ProcessingMode::Async) {
     auto* tm = callback->getThreadManager();
@@ -47,7 +47,7 @@ void StressTestHandler::async_tm_requestResponseTm(
 }
 
 void StressTestHandler::async_eb_requestResponseEb(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<BasicResponse>>> callback,
+    HandlerCallbackPtr<std::unique_ptr<BasicResponse>> callback,
     std::unique_ptr<BasicRequest> request) {
   if (request->processInfo()->processingMode() == ProcessingMode::Async) {
     auto* evb = callback->getEventBase();
@@ -109,7 +109,7 @@ StressTestHandler::sinkTm(std::unique_ptr<StreamRequest> request) {
 }
 
 void StressTestHandler::requestResponseImpl(
-    std::unique_ptr<HandlerCallback<std::unique_ptr<BasicResponse>>> callback,
+    HandlerCallbackPtr<std::unique_ptr<BasicResponse>> callback,
     std::unique_ptr<BasicRequest> request) const {
   simulateWork(
       *request->processInfo()->processingTimeMs(),
@@ -164,6 +164,45 @@ BasicResponse StressTestHandler::makeBasicResponse(int64_t payloadSize) const {
     chunk.payload() = std::string('x', payloadSize);
   }
   return chunk;
+}
+
+folly::coro::Task<double> StressTestHandler::co_calculateSquares(
+    int32_t count) {
+  auto calculate = [&]() -> folly::coro::AsyncGenerator<double> {
+    double d = folly::Random::randDouble(-100'000, 100'000);
+    for (int i = 0; i < count; i++) {
+      co_await folly::coro::co_reschedule_on_current_executor;
+      d += (std::sqrt(i)) / (d + i) / (i + 1);
+      co_yield d;
+    }
+  };
+
+  auto sum = [&]() -> folly::coro::Task<double> {
+    double total = 0;
+    auto generator = calculate();
+    while (auto next = co_await generator.next()) {
+      total += *next;
+    }
+
+    co_return total;
+  };
+
+  auto fanOut = [&]() -> folly::coro::Task<double> {
+    std::vector<folly::coro::Task<double>> tasks;
+    for (int i = 0; i < count; i++) {
+      tasks.emplace_back(sum());
+    }
+
+    auto results = co_await folly::coro::collectAllRange(std::move(tasks));
+
+    double ret = 0;
+    for (auto& result : results) {
+      ret += result;
+    }
+    co_return ret;
+  };
+
+  co_return co_await fanOut();
 }
 
 } // namespace stress

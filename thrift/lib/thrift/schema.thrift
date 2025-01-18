@@ -21,6 +21,7 @@ include "thrift/lib/thrift/id.thrift"
 include "thrift/lib/thrift/standard.thrift"
 include "thrift/lib/thrift/protocol.thrift"
 include "thrift/lib/thrift/type.thrift"
+include "thrift/annotation/python.thrift"
 
 /**
  * The canonical representations for a Thrift schema.
@@ -38,6 +39,7 @@ include "thrift/lib/thrift/type.thrift"
  * the source file in to the representations found in this file.
  */
 @thrift.Experimental
+@thrift.TerseWrite
 package "facebook.com/thrift/type"
 
 namespace cpp2 apache.thrift.type
@@ -49,23 +51,26 @@ namespace go thrift.lib.thrift.schema
  * An unordered set of value ids, that can contain *at most one* value of any type.
  * Values correspond to the struct StructuredAnnotation.
  */
+@python.Py3Hidden
 @thrift.Experimental // TODO(afuller): Adapt!
-typedef set<id.ValueId> AnnotationIds (py3.hidden)
+typedef set<id.ValueId> AnnotationIds
 
 /**
  * An instance of an annotation, applied to some definition.
  */
+@python.Py3Hidden
 struct Annotation {
   1: map<string, protocol.Value> fields;
-} (py3.hidden)
+}
 
 /**
  * An instance of an annotation, applied to some definition.
  */
+@python.Py3Hidden
 struct StructuredAnnotation {
   1: standard.TypeUri type;
   2: map<string, protocol.Value> fields;
-} (py3.hidden)
+}
 
 /**
  * An list of definition ids, in the order they were declared in the IDL/AST.
@@ -73,8 +78,9 @@ struct StructuredAnnotation {
  * Changing the order of definitions is always backward compatible.
  */
 // TODO(afuller): Add conformance tests to make sure this is true.
+@python.Py3Hidden
 @thrift.Experimental // TODO(afuller): Adapt!
-typedef list<id.DefinitionId> DefinitionIds (py3.hidden)
+typedef list<id.DefinitionId> DefinitionIds
 
 /**
  * An list of programs ids, in the order they were included in the IDL/AST.
@@ -82,14 +88,16 @@ typedef list<id.DefinitionId> DefinitionIds (py3.hidden)
  * Changing the order of include is always backwards compatible.
  */
 // TODO(afuller): Add conformance tests to make sure this is true.
+@python.Py3Hidden
 @thrift.Experimental // TODO(afuller): Adapt!
-typedef list<id.ProgramId> IncludeIds (py3.hidden)
+typedef list<id.ProgramId> IncludeIds
 
 /**
  * A decoded URI.
  *
  *   {scheme}://{domain}/{path}?{query}#{fragment}
  */
+@python.Py3Hidden
 @thrift.Experimental
 struct DecodedUri {
   /** The scheme, if present. */
@@ -106,9 +114,10 @@ struct DecodedUri {
 
   /** The fragment, if present. */
   6: string fragment;
-} (py3.hidden)
+}
 
 /** The attributes that can be associated with any Thrift definition. */
+@python.Py3Hidden
 struct DefinitionAttrs {
   /**
    * The un-scoped 'name' for this definition.
@@ -145,7 +154,7 @@ struct DefinitionAttrs {
    * URI can no longer be deserialized.
    */
   // TODO(afuller): Support aliases to help with renaming.
-  2: standard.Uri uri;
+  2: string uri;
 
   /**
    * DEPRECATED! Prefer `annotations`.
@@ -154,9 +163,10 @@ struct DefinitionAttrs {
   3: AnnotationIds structuredAnnotations;
 
   /**
-   * The structured annotations associated with this definition.
+   * The structured annotations associated with this definition indexed by
+   * their universal names.
    */
-  8: map<standard.Uri, Annotation> annotations;
+  8: map<string, Annotation> annotations;
 
   /**
    * The unstructured annotations (deprecated) associated with this definition.
@@ -168,25 +178,27 @@ struct DefinitionAttrs {
 
   /** The source range containing the definition (excluding its docblock). */
   7: SourceRange sourceRange;
-} (py3.hidden)
+}
 
 // A lightweight source range that can be resolved into the file name,
 // line and column when the schema is produced from an IDL file.
+@python.Py3Hidden
 struct SourceRange {
   1: id.ProgramId programId;
   2: i32 beginLine;
   3: i32 beginColumn;
   4: i32 endLine;
   5: i32 endColumn;
-} (py3.hidden)
+}
 
 /**
  * Information about the comment preceding a definition (like this one!).
  */
+@python.Py3Hidden
 struct DocBlock {
   1: string contents;
   2: SourceRange sourceRange;
-} (py3.hidden)
+}
 
 /**
  * A reference to a Thrift interface type.
@@ -204,6 +216,7 @@ struct InterfaceRef {
  *       {attrs.name} = {value}
  *     }
  */
+@python.Py3Hidden
 struct EnumValue {
   /** The definition attributes. */
   @thrift.Mixin
@@ -217,13 +230,14 @@ struct EnumValue {
   // TODO(afuller): Consider adding support for specifying aliases by specifying
   // multiple definitions for the same value in the IDL.
   2: i32 value;
-} (py3.hidden)
+}
 
 /**
  * A Thrift enum.
  *
  *     enum {attrs.name} { ... values ... }
  */
+@python.Py3Hidden
 struct Enum {
   /** The definition attributes. */
   @thrift.Mixin
@@ -235,17 +249,17 @@ struct Enum {
    * Changing the order of values is always backward compatible.
    */
   2: list<EnumValue> values;
-} (py3.hidden)
+}
 
 /** The field qualifier. */
 enum FieldQualifier {
-  /** `Terse` v1+, `Fill` pre-v1. */
+  /** Unqualified: always written. */
   Default = 0,
-  /** Written if explicitly 'set'. */
+  /** `optional`: written if explicitly 'set'. */
   Optional = 1,
-  /** Written if not 'empty'. */
+  /** `@thrift.TerseWrite`: written if not 'empty'. */
   Terse = 2,
-  /** Always written. */
+  /** `required`: always written, not actually required. */
   Fill = 3,
 }
 
@@ -254,6 +268,7 @@ enum FieldQualifier {
  *
  *     {id}: {qualifier} {type} {attrs.name} = {customDefault}
  */
+@python.Py3Hidden
 struct Field {
   /**
    * The static ID specified for the field.
@@ -281,7 +296,7 @@ struct Field {
    */
   // TODO(afuller): Document compatibility semantics, and add conformance tests.
   5: id.ValueId customDefault;
-} (py3.hidden)
+}
 
 /**
  * A container for the fields of a structured type (e.g. struct, union, exception).
@@ -290,14 +305,16 @@ struct Field {
  */
 // TODO(afuller): Add native wrappers that provide O(1) access to fields by id,
 // name, type, etc.
+@python.Py3Hidden
 @thrift.Experimental // TODO: Adapt!
-typedef list<Field> Fields (py3.hidden)
+typedef list<Field> Fields
 
 /**
  * A Thrift struct.
  *
  *     struct {attrs.name} { ... fields ... }
  */
+@python.Py3Hidden
 struct Struct {
   /** The definition attributes. */
   @thrift.Mixin
@@ -309,13 +326,14 @@ struct Struct {
    * Changing the order of the fields is always backward compatible.
    */
   2: Fields fields;
-} (py3.hidden)
+}
 
 /**
  * A Thrift union.
  *
  *   union {attrs.name} { ... fields ... }
  */
+@python.Py3Hidden
 struct Union {
   /** The definition attributes. */
   @thrift.Mixin
@@ -327,7 +345,7 @@ struct Union {
    * Changing the order of the fields is always backward compatible.
    */
   2: Fields fields;
-} (py3.hidden)
+}
 
 /** The error kind. */
 enum ErrorKind {
@@ -364,6 +382,7 @@ enum ErrorSafety {
  *
  *  {safety} {kind} {blame} exception {attrs.name} { ... fields ... }
  */
+@python.Py3Hidden
 struct Exception {
   /** The definition attributes. */
   @thrift.Mixin
@@ -384,21 +403,23 @@ struct Exception {
 
   /** The fault attribution of the exception. */
   5: ErrorBlame blame;
-} (py3.hidden)
+}
 
 /**
  * A container of exceptions.
  *
  * Changing the order of exceptions is always backward compatible.
  */
+@python.Py3Hidden
 @thrift.Experimental // TODO: Adapt!
-typedef list<Field> Exceptions (py3.hidden)
+typedef list<Field> Exceptions
 
 /**
  * A Thrift Param list. A param list is unnamed.
  */
 // TODO(dokwon): Ensure a param list is unnamed.
 // TODO(dokwon): Consider replacing (or removing) 'Paramlist' with 'Fields'.
+@python.Py3Hidden
 struct Paramlist {
   /**
    * The fields, in the order as defined in the IDL/AST.
@@ -406,7 +427,7 @@ struct Paramlist {
    * Changing the order of the fields is always backward compatible.
    */
   1: Fields fields;
-} (py3.hidden)
+}
 
 /** The function qualifier. */
 enum FunctionQualifier {
@@ -424,12 +445,13 @@ enum FunctionQualifier {
  *
  *     stream<{payload} throws (... exceptions ...)>
  */
+@python.Py3Hidden
 struct Stream {
   /** The payload from the stream. */
   1: type.Type payload;
   /** The exceptions from the stream. */
   2: Exceptions exceptions;
-} (py3.hidden)
+}
 
 /**
  * A Thrift sink type.
@@ -437,6 +459,7 @@ struct Stream {
  *     sink<{payload} throws (... clientExceptions ...),
  *          {finalResponse} throws (... serverExceptions ...)>
  */
+@python.Py3Hidden
 struct Sink {
   /** The payload from the sink. */
   1: type.Type payload;
@@ -446,13 +469,14 @@ struct Sink {
   3: type.Type finalResponse;
   /** The exceptions from the server. */
   4: Exceptions serverExceptions;
-} (py3.hidden)
+}
 
 /**
  * A Thrift interaction.
  *
  *     interaction {attrs.name} { ... functions ... }
  */
+@python.Py3Hidden
 struct Interaction {
   /** The definition attributes. */
   @thrift.Mixin
@@ -464,10 +488,11 @@ struct Interaction {
    * Changing the order of the fields is always backward compatible.
    */
   2: Functions functions;
-} (py3.hidden)
+}
 
 /** A Thrift function return type. */
 // TODO (T161963504): rename to StreamOrSink
+@python.Py3Hidden
 union ReturnType {
   // DEPRECATED
   1: type.Type thriftType;
@@ -477,16 +502,18 @@ union ReturnType {
   3: Sink sinkType;
   /** DEPRECATED: The interaction return type. */
   4: id.DefinitionId interactionType;
-} (py3.hidden)
+}
 
 /** A container of Thrift function return type. */
-typedef list<ReturnType> ReturnTypes (py3.hidden)
+@python.Py3Hidden
+typedef list<ReturnType> ReturnTypes
 
 /**
  * A Thrift function.
  *
  *     {qualifier} { ... returnTypes ... } {attrs.name}({paramlist}) throws ( ... exceptions ... )
  */
+@python.Py3Hidden
 @hack.Name{name = "TFunction"}
 struct Function {
   /** The qualifier for the function. */
@@ -514,21 +541,23 @@ struct Function {
 
   /** The interaction type created by the function. */
   8: InterfaceRef interactionType;
-} (py3.hidden)
+}
 
 /**
  * A container for the functions of a interface type (e.g. service and interaction).
  *
  * Changing the order of fields is always backward compatible.
  */
+@python.Py3Hidden
 @thrift.Experimental // TODO: Adapt!
-typedef list<Function> Functions (py3.hidden)
+typedef list<Function> Functions
 
 /**
  * A Thrift service.
  *
  *     service {attrs.name} [extends {baseService}] { ... functions ... }
  */
+@python.Py3Hidden
 struct Service {
   /** The definition attributes. */
   @thrift.Mixin
@@ -543,13 +572,14 @@ struct Service {
 
   /** The service that it inherits functions from. */
   3: InterfaceRef baseService;
-} (py3.hidden)
+}
 
 /**
  * A Thrift constant.
  *
  *     const {type} {attrs.name} = {value}
  */
+@python.Py3Hidden
 @hack.Name{name = "TConst"}
 struct Const {
   /** The definition attributes. */
@@ -561,13 +591,14 @@ struct Const {
 
   /** The value the const is initialized to. */
   3: id.ValueId value;
-} (py3.hidden)
+}
 
 /**
  * A Thrift typedef.
  *
  *     typedef {type} {attrs.name}
  */
+@python.Py3Hidden
 struct Typedef {
   /** The definition attributes. */
   @thrift.Mixin
@@ -575,13 +606,14 @@ struct Typedef {
 
   /** The underlying type. */
   2: type.Type type;
-} (py3.hidden)
+}
 
 /**
  * Any Thrift definition.
  *
  * Each type must have DefinitionAttrs.
  */
+@python.Py3Hidden
 union Definition {
   1: Struct structDef;
   2: Union unionDef;
@@ -591,10 +623,25 @@ union Definition {
   6: Const constDef;
   7: Service serviceDef;
   8: Interaction interactionDef;
-} (py3.hidden)
+}
 
 /** A list of definitions (Structs, Enums, Services, etc), accessible by `DefinitionId`. */
-typedef list<Definition> DefinitionList (py3.hidden)
+@python.Py3Hidden
+typedef list<Definition> DefinitionList
+
+/**
+ * An opaque, unstable identifier for a `Definition`.
+ *
+ * Opaque: don't try to parse it, and the format may change.
+ * Unstable: consistent within a single snapshot of a schema,
+ *  but not across different schemas including the definition
+ *  nor across different snapshots of the same schema.
+ */
+typedef standard.ByteString DefinitionKey
+
+/** A map of definitions (Structs, Enums, Services, etc), accessible by `DefinitionKey`. */
+@python.Py3Hidden
+typedef map<DefinitionKey, Definition> DefinitionMap
 
 /**
  * A Thrift program.
@@ -607,6 +654,7 @@ typedef list<Definition> DefinitionList (py3.hidden)
  *
  *       ... {definitions} ...
  */
+@python.Py3Hidden
 struct Program {
   /**
    * The definition attributes.
@@ -614,6 +662,13 @@ struct Program {
    */
   @thrift.Mixin
   1: DefinitionAttrs attrs;
+
+  /**
+  * The id of the program in this snapshot of the schema.
+  * In hash mode we still store programs as a list so the root program can be easily identified.
+  * This field would otherwise be the key into the map of programs.
+  **/
+  2: id.ProgramId id;
 
   /**
    * The included programs, in the order included in the IDL/AST.
@@ -633,6 +688,11 @@ struct Program {
   4: DefinitionIds definitions;
 
   /**
+ * As above, but for accessing `definitionsMap`
+ */
+  8: list<DefinitionKey> definitionKeys;
+
+  /**
    * The raw path used to identify this program's file to the compiler.
    */
   5: string path;
@@ -648,10 +708,15 @@ struct Program {
    * The key matches the IDL ("cpp2", "java.swift").
    */
   7: map<string, string> namespaces;
-} (py3.hidden)
+}
 
 /** A list of programs, accessible by `ProgramId`. */
-typedef list<Program> ProgramList (py3.hidden)
+@python.Py3Hidden
+typedef list<Program> ProgramList
+
+/** A hash of the value, but stored internally as ValueId */
+@python.Py3Hidden
+typedef id.ValueId ValueKey
 
 /**
  * A Thrift schema represented as a collection of Thrift programs and associated
@@ -660,18 +725,84 @@ typedef list<Program> ProgramList (py3.hidden)
 // TODO(afuller): Add native wrappers/adapters that 'index' all the stored
 // information and maybe even converts stored `ExternId`s into pointers to the
 // values owned by the schema.
+@python.Py3Hidden
 @thrift.Experimental // TODO(afuller): Adapt!
 @cpp.UseOpEncode
 struct Schema {
-  /** The programs included in the schema, accessible by `ProgramId`. */
+  /**
+  * The programs included in the schema, accessible by `ProgramId`.
+   * The first program in the program list must be the main file,
+   * with (recursively) included programs listed after it.
+  */
   1: ProgramList programs;
 
-  /** The instantiated types, accessible by `TypeId`. */
-  2: type.TypeList types;
-
   /** The values, accessible by `ValueId`. */
-  3: list<protocol.Value> values;
+  2: list<protocol.Value> values;
+
+  /** The values, accessible by `ValueKey`. */
+  3: map<ValueKey, protocol.Value> valuesMap;
 
   /** The definitions, accessible by `DefinitionId`. */
-  5: DefinitionList definitions;
-} (py3.hidden)
+  4: DefinitionList definitions;
+
+  /** The definitions, accessible by `DefinitionKey`. */
+  8: DefinitionMap definitionsMap;
+
+  /**
+   * DEPRECATED! Get the information from the Program struct.
+   * Information about the files holding the thrift definitions.
+   */
+  5: map<id.ProgramId, SourceInfo> sources;
+
+  /**
+    * The source ranges of all references to named entities in the main program.
+    * The `source_ranges` option must be passed to thrift2ast to populate this map.
+    */
+  6: list<IdentifierRef> identifierSourceRanges;
+
+  /**
+    * The source ranges of paths included in the main program.
+    * The `source_ranges` option must be passed to thrift2ast to populate this map.
+    */
+  7: list<IncludeRef> includeSourceRanges;
+}
+
+/**
+ * Information about a thrift source file.
+ */
+@python.Py3Hidden
+struct SourceInfo {
+  // A source file name. It can include directory components and/or be a
+  // virtual file name that doesn't have a correspondent entry in the system's
+  // directory structure.
+  // Preserves the legacy behavior of sometimes leaking resolved relative paths.
+  // The unmodified path is available inside schema.Program.
+  1: string fileName;
+
+  /**
+   * Per-language include statements.
+   */
+  2: map<string, list<id.ValueId>> languageIncludes;
+
+  /**
+   * Per-language namespace.
+   */
+  3: map<string, id.ValueId> namespaces;
+}
+
+// An instance of an identifier in a source file.
+@python.Py3Hidden
+struct IdentifierRef {
+  1: SourceRange range;
+  2: standard.TypeUri uri;
+  // Because enum values don't have URIs, references to them have to point to their owning enum.
+  // When that happens this field identifies the particular value being referenced.
+  3: string enumValue;
+}
+
+// An instance of an include in a source file.
+@python.Py3Hidden
+struct IncludeRef {
+  1: SourceRange range;
+  2: id.ProgramId target;
+}

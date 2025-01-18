@@ -13,23 +13,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
 import copy
 import unittest
-from typing import AbstractSet, Sequence, Tuple
+from typing import AbstractSet, Sequence, Tuple, Type, TypeVar
+
+import python_test.containers.thrift_mutable_types as mutable_containers_types
+import python_test.containers.thrift_types as immutable_containers_types
+
+import python_test.sets.thrift_mutable_types as mutable_sets_types
+import python_test.sets.thrift_types as immutable_sets_types
 
 from folly.iobuf import IOBuf
 
-from testing.thrift_types import easy, EasySet, SetI32, SetI32Lists, SetSetI32Lists
-from thrift.python.test.containers.thrift_types import Foo, Sets
+from parameterized import parameterized_class
+from python_test.containers.thrift_types import Color, Foo, Sets
+from python_test.sets.thrift_types import (
+    easy,
+    EasySet,
+    SetAtoIValue,
+    SetI32,
+    SetI32Lists,
+    SetSetI32Lists,
+)
+from thrift.lib.python.test.testing_utils import Untruthy
+from thrift.python.mutable_types import _ThriftSetWrapper, to_thrift_set
+
+SetT = TypeVar("SetT")
 
 
+@parameterized_class(
+    ("containers_types", "sets_types"),
+    [
+        (immutable_containers_types, immutable_sets_types),
+        (mutable_containers_types, mutable_sets_types),
+    ],
+)
 class SetTests(unittest.TestCase):
+    def setUp(self) -> None:
+        # pyre-ignore[16]: has no attribute `sets_types`
+        self.easy: Type[easy] = self.sets_types.easy
+        self.EasySet: Type[EasySet] = self.sets_types.EasySet
+        self.SetI32: Type[SetI32] = self.sets_types.SetI32
+        self.SetAtoIValue: Type[SetAtoIValue] = self.sets_types.SetAtoIValue
+        self.SetI32Lists: Type[SetI32Lists] = self.sets_types.SetI32Lists
+        self.SetSetI32Lists: Type[SetSetI32Lists] = self.sets_types.SetSetI32Lists
+        # pyre-ignore[16]: has no attribute `containers_types`
+        self.Foo: Type[Foo] = self.containers_types.Foo
+        self.Sets: Type[Sets] = self.containers_types.Sets
+        self.Color: Type[Color] = self.containers_types.Color
+        self.is_mutable_run: bool = self.containers_types.__name__.endswith(
+            "thrift_mutable_types"
+        )
+
+    def to_set(self, set_data: set[SetT]) -> set[SetT] | _ThriftSetWrapper:
+        return to_thrift_set(set_data) if self.is_mutable_run else set_data
+
     def test_and(self) -> None:
-        x = SetI32({1, 3, 4, 5})
-        y = SetI32({1, 2, 4, 6})
+        x = self.SetI32({1, 3, 4, 5})
+        y = self.SetI32({1, 2, 4, 6})
         z = {1, 2, 4, 6}
         self.assertEqual(x & y, set(x) & set(y))
         self.assertEqual(y & x, set(y) & set(x))
@@ -38,8 +84,8 @@ class SetTests(unittest.TestCase):
         self.assertEqual(x.intersection(y), set(x) & set(y))
 
     def test_or(self) -> None:
-        x = SetI32({1, 3, 4, 5})
-        y = SetI32({1, 2, 4, 6})
+        x = self.SetI32({1, 3, 4, 5})
+        y = self.SetI32({1, 2, 4, 6})
         z = {1, 3, 4, 5}
         self.assertEqual(x | y, set(x) | set(y))
         self.assertEqual(y | x, set(y) | set(x))
@@ -48,8 +94,8 @@ class SetTests(unittest.TestCase):
         self.assertEqual(x.union(y), set(x) | set(y))
 
     def test_xor(self) -> None:
-        x = SetI32({1, 3, 4, 5})
-        y = SetI32({1, 2, 4, 6})
+        x = self.SetI32({1, 3, 4, 5})
+        y = self.SetI32({1, 2, 4, 6})
         z = {1, 2, 4, 6}
         self.assertEqual(x ^ y, set(x) ^ set(y))
         self.assertEqual(y ^ x, set(y) ^ set(x))
@@ -58,8 +104,8 @@ class SetTests(unittest.TestCase):
         self.assertEqual(x.symmetric_difference(y), set(x) ^ set(y))
 
     def test_sub(self) -> None:
-        x = SetI32({1, 3, 4, 5})
-        y = SetI32({1, 2, 4, 6})
+        x = self.SetI32({1, 3, 4, 5})
+        y = self.SetI32({1, 2, 4, 6})
         z = {1, 2, 4, 6}
         self.assertEqual(x - y, set(x) - set(y))
         self.assertEqual(y - x, set(y) - set(x))
@@ -67,9 +113,16 @@ class SetTests(unittest.TestCase):
         self.assertEqual(x - z, set(x) - set(y))
         self.assertEqual(x.difference(y), set(x) - set(y))
 
+    def test_contains_enum(self) -> None:
+        # pyre-ignore[6]: TODO: Thrift-Container init
+        cset = self.Sets(colorSet=self.to_set({self.Color.red, self.Color.blue}))
+        self.assertIn(self.Color.red, cset.colorSet)
+        self.assertIn(self.Color.blue, cset.colorSet)
+        self.assertNotIn(self.Color.green, cset.colorSet)
+
     def test_comparisons(self) -> None:
-        x = SetI32({1, 2, 3, 4})
-        y = SetI32({1, 2, 3})
+        x = self.SetI32({1, 2, 3, 4})
+        y = self.SetI32({1, 2, 3})
         x2 = copy.copy(x)
         y2 = {1, 2, 3}
 
@@ -126,10 +179,77 @@ class SetTests(unittest.TestCase):
     def test_None(self) -> None:
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            SetI32Lists({None})
+            self.SetI32Lists({None})
         with self.assertRaises(TypeError):
             # pyre-ignore[6]: purposely use a wrong type to raise a TypeError
-            SetSetI32Lists({{None}})
+            self.SetSetI32Lists({{None}})
+
+    def test_no_dict(self) -> None:
+        with self.assertRaises(AttributeError):
+            SetI32().__dict__
+
+    def test_create_untruthy_set(self) -> None:
+        with self.assertRaises(ValueError):
+            bool(Untruthy(5))
+
+        self.assertEqual(SetI32(Untruthy(5)), set(range(5)))
+        self.assertEqual(Sets(i32Set=Untruthy(5)).i32Set, set(range(5)))
+
+    def test_struct_with_set_fields(self) -> None:
+        s = self.Sets(
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            boolSet=self.to_set({True, False}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            byteSet=self.to_set({1, 2, 3}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            i16Set=self.to_set({4, 5, 6}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            i64Set=self.to_set({7, 8, 9}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            doubleSet=self.to_set({1.23, 4.56}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            floatSet=self.to_set({7.89, 10.11}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            stringSet=self.to_set({"foo", "bar"}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            binarySet=self.to_set({b"foo", b"bar"}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            iobufSet=self.to_set({IOBuf(b"foo"), IOBuf(b"bar")}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            structSet=(
+                to_thrift_set(set())
+                if self.is_mutable_run
+                else {self.Foo(value=1), self.Foo(value=2)}
+            ),
+        )
+        self.assertEqual(s.boolSet, {True, False})
+        self.assertEqual(s.byteSet, {1, 2, 3})
+        self.assertEqual(s.i16Set, {4, 5, 6})
+        self.assertEqual(s.i64Set, {7, 8, 9})
+        self.assertEqual(s.doubleSet, {1.23, 4.56})
+        self.assertEqual(s.floatSet, {7.89, 10.11})
+        self.assertEqual(s.stringSet, {"foo", "bar"})
+        self.assertEqual(s.binarySet, {b"foo", b"bar"})
+        self.assertEqual(s.iobufSet, {IOBuf(b"foo"), IOBuf(b"bar")})
+        if not self.is_mutable_run:
+            self.assertEqual(s.structSet, {Foo(value=1), Foo(value=2)})
+            # test reaccess the set element won't have to recreating the struct
+            structs1 = list(s.structSet)
+            structs2 = list(s.structSet)
+            self.assertIs(structs1[0], structs2[0])
+            self.assertIs(structs1[1], structs2[1])
+
+    def test_adapted_sets(self) -> None:
+        int_set = {1, 2, 3}
+
+        self.assertEqual(int_set, self.SetAtoIValue(int_set))
+
+
+class ImmutableSetTests(unittest.TestCase):
+    """
+    These tests run only for immutable types because mutable types are not
+    hashable.
+    """
 
     def test_empty(self) -> None:
         SetI32Lists(set())
@@ -179,31 +299,38 @@ class SetTests(unittest.TestCase):
         self.assertGreaterEqual(a, d)
         self.assertGreaterEqual(f, a)
 
-    def test_struct_with_set_fields(self) -> None:
-        s = Sets(
-            boolSet={True, False},
-            byteSet={1, 2, 3},
-            i16Set={4, 5, 6},
-            i64Set={7, 8, 9},
-            doubleSet={1.23, 4.56},
-            floatSet={7.89, 10.11},
-            stringSet={"foo", "bar"},
-            binarySet={b"foo", b"bar"},
-            iobufSet={IOBuf(b"foo"), IOBuf(b"bar")},
-            structSet={Foo(value=1), Foo(value=2)},
-        )
-        self.assertEqual(s.boolSet, {True, False})
-        self.assertEqual(s.byteSet, {1, 2, 3})
-        self.assertEqual(s.i16Set, {4, 5, 6})
-        self.assertEqual(s.i64Set, {7, 8, 9})
-        self.assertEqual(s.doubleSet, {1.23, 4.56})
-        self.assertEqual(s.floatSet, {7.89, 10.11})
-        self.assertEqual(s.stringSet, {"foo", "bar"})
-        self.assertEqual(s.binarySet, {b"foo", b"bar"})
-        self.assertEqual(s.iobufSet, {IOBuf(b"foo"), IOBuf(b"bar")})
-        self.assertEqual(s.structSet, {Foo(value=1), Foo(value=2)})
-        # test reaccess the set element won't have to recreating the struct
-        structs1 = list(s.structSet)
-        structs2 = list(s.structSet)
-        self.assertIs(structs1[0], structs2[0])
-        self.assertIs(structs1[1], structs2[1])
+    def test_set_module_name(self) -> None:
+        easy_set = EasySet({easy()})
+        self.assertEqual(easy_set.__class__.__module__, "thrift.python.types")
+
+
+# TODO: Collapse these two test cases into parameterized test above
+class SetImmutablePythonTests(unittest.TestCase):
+    Color = immutable_containers_types.Color
+    Sets = immutable_containers_types.Sets
+
+    def test_contains_enum(self) -> None:
+        cset = self.Sets(colorSet={self.Color.red, self.Color.blue})
+        self.assertNotIn("str", cset.colorSet)
+
+        # This behavior is more permissive than thrift-py3
+        # which implicitly converts int to enum
+        self.assertIn(0, cset.colorSet)
+        self.assertIn(1, cset.colorSet)
+        self.assertNotIn(2, cset.colorSet)
+
+
+# TODO: Collapse these two test cases into parameterized test above
+class SetMutablePythonTests(unittest.TestCase):
+    Color = mutable_containers_types.Color
+    Sets = mutable_containers_types.Sets
+
+    # this test case documents behavior divergences from thrift-python
+    @unittest.expectedFailure
+    def test_contains_enum(self) -> None:
+        # pyre-ignore[6]: Fixme: type error to be addressed later
+        cset = self.Sets(colorSet={self.Color.red, self.Color.blue})
+        # TODO(T194526180): mutable thrift-python should not raise
+        self.assertNotIn("str", cset.colorSet)
+        # TODO(T194526180): mutable thrift-python should not raise
+        self.assertIn(0, cset.colorSet)

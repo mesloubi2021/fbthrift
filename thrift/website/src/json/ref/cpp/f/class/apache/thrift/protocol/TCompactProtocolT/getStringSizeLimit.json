@@ -15,10 +15,11 @@
       "definition_html": "int32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::getStringSizeLimit",
       "argsstring_html": "()",
       "name_html": "getStringSizeLimit",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::getStringSizeLimit",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "130",
-        "column": "1",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "130",
         "bodyend": "130"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getStringSizeLimit",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getStringSizeLimit"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getStringSizeLimit",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

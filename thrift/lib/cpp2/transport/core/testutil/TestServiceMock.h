@@ -24,8 +24,7 @@
 #include <thrift/lib/cpp2/transport/core/testutil/gen-cpp2/IntermHeaderService.tcc>
 #include <thrift/lib/cpp2/transport/core/testutil/gen-cpp2/TestService.tcc>
 
-namespace testutil {
-namespace testservice {
+namespace testutil::testservice {
 
 class TestServiceMock : public apache::thrift::ServiceHandler<TestService> {
  public:
@@ -73,7 +72,7 @@ class IntermHeaderService
     : public apache::thrift::ServiceHandler<IntermHeaderService> {
  public:
   IntermHeaderService(const std::string& host, int16_t port);
-  virtual ~IntermHeaderService();
+  ~IntermHeaderService() override;
 
   int32_t callAdd(int32_t) override;
 
@@ -82,5 +81,4 @@ class IntermHeaderService
   folly::ScopedEventBaseThread evbThread_;
 };
 
-} // namespace testservice
-} // namespace testutil
+} // namespace testutil::testservice

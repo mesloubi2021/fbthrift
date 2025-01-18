@@ -15,8 +15,10 @@
  */
 
 #include <folly/portability/GTest.h>
+#include <thrift/lib/cpp2/protocol/DebugProtocol.h>
 #include <thrift/lib/cpp2/protocol/FieldMask.h>
 #include <thrift/lib/cpp2/protocol/Object.h>
+#include <thrift/lib/cpp2/type/UniversalName.h>
 #include <thrift/test/gen-cpp2/FieldMask_types.h>
 
 using apache::thrift::protocol::allMask;
@@ -32,6 +34,61 @@ namespace apache::thrift::test {
 bool literallyEqual(MaskRef actual, MaskRef expected) {
   return actual.mask == expected.mask &&
       actual.is_exclusion == expected.is_exclusion;
+}
+
+void assertSmartPointerStructIsEmpty(SmartPointerStruct& obj) {
+  EXPECT_FALSE(bool(obj.unique_ref()));
+  EXPECT_FALSE(bool(obj.shared_ref()));
+  EXPECT_FALSE(bool(obj.boxed_ref()));
+}
+
+void assertPointerHasAllValues(auto&& ptr) {
+  ASSERT_TRUE(bool(ptr));
+  EXPECT_EQ(ptr->field_1(), 0);
+  EXPECT_EQ(ptr->field_2(), 0);
+}
+
+void assertSmartPointerStructHasAllValues(SmartPointerStruct& obj) {
+  assertPointerHasAllValues(obj.unique_ref());
+  assertPointerHasAllValues(obj.shared_ref());
+  assertPointerHasAllValues(obj.boxed_ref());
+}
+
+static Mask noTypeMask = []() {
+  Mask m;
+  m.includes_type_ref().ensure();
+  return m;
+}();
+
+static Mask allTypeMask = []() {
+  Mask m;
+  m.excludes_type_ref().ensure();
+  return m;
+}();
+
+// We don't want to provide an official API for this
+template <typename T>
+T getViaIdenticalType(const type::AnyStruct& any, const type::Type& type) {
+  CHECK(type::identicalType(*any.type(), type));
+
+  T ret;
+  CompactProtocolReader reader;
+  reader.setInput(&any.data().value());
+  op::decode<type::struct_t<Foo>>(reader, ret);
+  return ret;
+}
+
+// Works only for struct types
+void convertToHashedURI(type::Type& type) {
+  auto& typeUriUnion = *type.toThrift().name()->structType_ref();
+
+  auto hashed =
+      type::getUniversalHashPrefix(
+          type::getUniversalHash(
+              type::UniversalHashAlgorithm::Sha2_256, typeUriUnion.get_uri()),
+          type::kDefaultTypeHashBytes)
+          .toString();
+  typeUriUnion.typeHashPrefixSha2_256_ref().ensure() = hashed;
 }
 
 TEST(FieldMaskTest, ExampleFieldMask) {
@@ -65,6 +122,14 @@ TEST(FieldMaskTest, ExampleStringMapMask) {
   includes_string_map["3"] = allMask();
 }
 
+TEST(FieldMaskTest, ExampleTypeMask) {
+  // includes_type{foo: allMask(), bar: noneMask()}
+  Mask m;
+  auto& includes_type = m.includes_type_ref().emplace();
+  includes_type[type::infer_tag<Foo>{}] = allMask();
+  includes_type[type::infer_tag<Bar>{}] = noneMask();
+}
+
 TEST(FieldMaskTest, Constant) {
   EXPECT_EQ(allMask().excludes_ref()->size(), 0);
   EXPECT_EQ(noneMask().includes_ref()->size(), 0);
@@ -96,6 +161,12 @@ TEST(FieldMaskTest, IsAllMask) {
     EXPECT_FALSE((MaskRef{m, false}).isAllMask());
     EXPECT_FALSE((MaskRef{m, true}).isAllMask());
   }
+  {
+    Mask m;
+    m.includes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_FALSE((MaskRef{m, true}).isAllMask());
+    EXPECT_FALSE((MaskRef{m, false}).isAllMask());
+  }
 }
 
 TEST(FieldMaskTest, IsNoneMask) {
@@ -108,6 +179,12 @@ TEST(FieldMaskTest, IsNoneMask) {
     m.excludes_ref().emplace()[5] = noneMask();
     EXPECT_FALSE((MaskRef{m, false}).isNoneMask());
     EXPECT_FALSE((MaskRef{m, true}).isNoneMask());
+  }
+  {
+    Mask m;
+    m.includes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_FALSE((MaskRef{m, true}).isNoneMask());
+    EXPECT_FALSE((MaskRef{m, false}).isNoneMask());
   }
 }
 
@@ -232,6 +309,18 @@ TEST(FieldMaskTest, IsExclusive) {
     EXPECT_TRUE((MaskRef{m, false}).isExclusive());
     EXPECT_FALSE((MaskRef{m, true}).isExclusive());
   }
+  {
+    Mask m;
+    m.includes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_FALSE((MaskRef{m, false}).isExclusive());
+    EXPECT_TRUE((MaskRef{m, true}).isExclusive());
+  }
+  {
+    Mask m;
+    m.excludes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_TRUE((MaskRef{m, false}).isExclusive());
+    EXPECT_FALSE((MaskRef{m, true}).isExclusive());
+  }
 }
 
 TEST(FieldMaskTest, MaskRefIsMask) {
@@ -239,10 +328,12 @@ TEST(FieldMaskTest, MaskRefIsMask) {
   EXPECT_FALSE((MaskRef{allMask(), false}).isMapMask());
   EXPECT_FALSE((MaskRef{allMask(), false}).isIntegerMapMask());
   EXPECT_FALSE((MaskRef{allMask(), false}).isStringMapMask());
+  EXPECT_FALSE((MaskRef{allMask(), false}).isTypeMask());
   EXPECT_TRUE((MaskRef{noneMask(), true}).isFieldMask());
   EXPECT_FALSE((MaskRef{noneMask(), true}).isMapMask());
   EXPECT_FALSE((MaskRef{noneMask(), true}).isIntegerMapMask());
   EXPECT_FALSE((MaskRef{noneMask(), true}).isStringMapMask());
+  EXPECT_FALSE((MaskRef{noneMask(), false}).isTypeMask());
   {
     Mask m;
     m.includes_ref().emplace()[5] = allMask();
@@ -250,6 +341,7 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_FALSE((MaskRef{m, true}).isMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
   }
   {
     Mask m;
@@ -258,6 +350,7 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_FALSE((MaskRef{m, true}).isMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
   }
   {
     Mask m;
@@ -266,6 +359,7 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_TRUE((MaskRef{m, true}).isMapMask());
     EXPECT_TRUE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
   }
   {
     Mask m;
@@ -274,6 +368,7 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_TRUE((MaskRef{m, true}).isMapMask());
     EXPECT_TRUE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
   }
   {
     Mask m;
@@ -282,6 +377,7 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_TRUE((MaskRef{m, true}).isMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_TRUE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
   }
   {
     Mask m;
@@ -290,6 +386,25 @@ TEST(FieldMaskTest, MaskRefIsMask) {
     EXPECT_TRUE((MaskRef{m, true}).isMapMask());
     EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
     EXPECT_TRUE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isTypeMask());
+  }
+  {
+    Mask m;
+    m.includes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_FALSE((MaskRef{m, false}).isFieldMask());
+    EXPECT_FALSE((MaskRef{m, true}).isMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_TRUE((MaskRef{m, true}).isTypeMask());
+  }
+  {
+    Mask m;
+    m.excludes_type_ref().emplace()[type::infer_tag<Foo>{}] = allMask();
+    EXPECT_FALSE((MaskRef{m, false}).isFieldMask());
+    EXPECT_FALSE((MaskRef{m, true}).isMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isIntegerMapMask());
+    EXPECT_FALSE((MaskRef{m, true}).isStringMapMask());
+    EXPECT_TRUE((MaskRef{m, true}).isTypeMask());
   }
 }
 
@@ -336,6 +451,22 @@ TEST(FieldMaskTest, MaskRefGetMask) {
     EXPECT_EQ(getFieldMask(m), nullptr);
     EXPECT_EQ(getIntegerMapMask(m), nullptr);
     EXPECT_EQ(getStringMapMask(m), &*m.excludes_string_map_ref());
+  }
+  {
+    Mask m;
+    m.includes_type_ref().ensure();
+    EXPECT_EQ(getFieldMask(m), nullptr);
+    EXPECT_EQ(getIntegerMapMask(m), nullptr);
+    EXPECT_EQ(getStringMapMask(m), nullptr);
+    EXPECT_EQ(getTypeMask(m), &*m.includes_type_ref());
+  }
+  {
+    Mask m;
+    m.excludes_type_ref().ensure();
+    EXPECT_EQ(getFieldMask(m), nullptr);
+    EXPECT_EQ(getIntegerMapMask(m), nullptr);
+    EXPECT_EQ(getStringMapMask(m), nullptr);
+    EXPECT_EQ(getTypeMask(m), &*m.excludes_type_ref());
   }
 }
 
@@ -840,251 +971,138 @@ TEST(FieldMaskTest, SchemalessClearExceptionMap) {
   }
 }
 
-// Calls copy on the mask, src, and dst.
-// Then checks the read-write consistency of the copy.
-void testCopy(
-    const Mask& mask, const protocol::Object& src, protocol::Object& dst) {
-  protocol::copy(mask, src, dst);
-  // copy(dst, src) should be no-op.
-  protocol::Object result;
-  result = src;
-  protocol::copy(mask, dst, result);
-  EXPECT_EQ(result, src);
+// Test that:
+// 1. filter(mask, filter(mask, src)) == filter(mask, src)
+// 2. filter(mask, asObject(src)) == asObject(filter(mask, src))
+// returns filter(mask, src)
+template <typename T>
+T testFilter(const Mask& mask, const T& src) {
+  auto filtered = protocol::filter(mask, src);
+  auto filteredObj = protocol::filter(mask, protocol::asObject(src));
+
+  EXPECT_EQ(
+      filtered, protocol::fromObjectStruct<type::infer_tag<T>>(filteredObj));
+  return filtered;
 }
 
-TEST(FieldMaskTest, SchemalessCopySimpleIncludes) {
-  protocol::Object fooObject, barObject, bazObject;
-  // foo{1: 10}
-  // bar{1: "30", 2: 20}
-  // baz = bar
-  fooObject[FieldId{1}].ensure_i32() = 10;
-  barObject[FieldId{2}].ensure_string() = "30";
-  barObject[FieldId{2}].ensure_i32() = 20;
-  bazObject = barObject;
+TEST(FieldMaskTest, FilterSimple) {
+  {
+    Foo src;
+    MaskBuilder<Foo> m(noneMask());
+    auto filtered = testFilter(m.toThrift(), src);
+    EXPECT_EQ(src, filtered);
+  }
+  {
+    Foo src;
+    src.field1() = 1;
+    src.field2() = 2;
 
-  Mask m;
-  // includes{1: exludes{}}
-  auto& includes = m.includes_ref().emplace();
-  includes[1] = allMask();
-  testCopy(m, fooObject, barObject);
-  // bar becomes bar{1: 10, 2: 20}
-  ASSERT_TRUE(barObject.contains(FieldId{1}));
-  EXPECT_EQ(barObject.at(FieldId{1}).as_i32(), 10);
-  ASSERT_TRUE(barObject.contains(FieldId{2}));
-  EXPECT_EQ(barObject.at(FieldId{2}).as_i32(), 20);
+    MaskBuilder<Foo> m(allMask());
+    auto filtered = testFilter(m.toThrift(), src);
+    EXPECT_EQ(src, filtered);
+  }
+  {
+    Foo src;
+    src.field1() = 1;
+    src.field2() = 2;
+    protocol::Object fooObj(protocol::asObject(folly::copy(src)));
 
-  testCopy(allMask(), fooObject, bazObject);
-  // baz becomes baz{1: 10}
-  ASSERT_TRUE(bazObject.contains(FieldId{1}));
-  EXPECT_EQ(bazObject.at(FieldId{1}).as_i32(), 10);
-  ASSERT_FALSE(bazObject.contains(FieldId{2}));
+    MaskBuilder<Foo> m(noneMask());
+    m.includes<ident::field1>();
 
-  // includes{1: exludes{}, 2: excludes{}, 3: excludes{}}
-  includes[2] = allMask();
-  includes[3] = allMask(); // no-op
-  testCopy(m, barObject, bazObject);
-  // baz becomes baz{1: 10, 2: 20}
-  ASSERT_TRUE(bazObject.contains(FieldId{1}));
-  EXPECT_EQ(bazObject.at(FieldId{1}).as_i32(), 10);
-  ASSERT_TRUE(bazObject.contains(FieldId{2}));
-  EXPECT_EQ(bazObject.at(FieldId{2}).as_i32(), 20);
-  ASSERT_FALSE(bazObject.contains(FieldId{3}));
+    auto filtered = testFilter(m.toThrift(), src);
+    EXPECT_EQ(filtered.field1(), 1);
+    EXPECT_EQ(filtered.field2(), 0);
+  }
+  {
+    // nested struct
+    Bar src;
+    auto& foo = src.foo_ref().ensure();
+    foo.field1_ref() = 1;
+    foo.field2_ref() = 2;
+
+    MaskBuilder<Bar> m(noneMask());
+    m.includes<ident::foo, ident::field1>();
+
+    auto filtered = testFilter(m.toThrift(), src);
+    EXPECT_EQ(filtered.foo_ref()->field1_ref(), 1);
+    EXPECT_EQ(filtered.foo_ref()->field2_ref(), 0);
+  }
+  {
+    // nested struct + optional field
+    Bar2 src, filtered;
+    src.field_3_ref().emplace().field_1_ref() = 1;
+
+    MaskBuilder<Bar2> m(noneMask());
+    m.includes<ident::field_3, ident::field_1>();
+    filtered = testFilter(m.toThrift(), src);
+    EXPECT_EQ(filtered.field_3_ref().value().field_1_ref().value(), 1);
+
+    m.reset_and_includes<ident::field_3, ident::field_2>();
+    filtered = testFilter(m.toThrift(), src);
+    // No sub field filtered, so field_3 should be null
+    EXPECT_FALSE(filtered.field_3_ref().has_value());
+  }
 }
 
-TEST(FieldMaskTest, SchemalessCopySimpleExcludes) {
-  protocol::Object fooObject, barObject;
-  // foo{1: 10, 3: 40}
-  // bar{1: "30", 2: 20}
-  fooObject[FieldId{1}].ensure_i32() = 10;
-  fooObject[FieldId{3}].ensure_i32() = 40;
-  barObject[FieldId{1}].ensure_string() = "30";
-  barObject[FieldId{2}].ensure_i32() = 20;
+TEST(FieldMaskTest, FilterException) {
+  {
+    protocol::Object fooObject, barObject, bazObject;
+    // bar{1: foo{2: 20}, 2: "40"}
+    fooObject[FieldId{2}].ensure_i32() = 20;
+    barObject[FieldId{1}].ensure_object() = fooObject;
+    barObject[FieldId{2}].ensure_string() = "40";
+    // baz{2: {3: 40}}
+    bazObject[FieldId{2}].ensure_object()[FieldId{3}].ensure_i32() = 40;
 
-  Mask m;
-  // excludes{1: exludes{}}
-  m.excludes_ref().emplace()[1] = allMask();
-  testCopy(m, fooObject, barObject);
-  // bar becomes bar{1: "30", 3: 40}
-  ASSERT_TRUE(barObject.contains(FieldId{1}));
-  EXPECT_EQ(barObject.at(FieldId{1}).as_string(), "30");
-  ASSERT_TRUE(barObject.contains(FieldId{3}));
-  EXPECT_EQ(barObject.at(FieldId{3}).as_i32(), 40);
-  ASSERT_FALSE(barObject.contains(FieldId{2}));
+    Mask m1; // bar[2] is not an object but has an object mask.
+    m1.includes_ref().emplace()[2].includes_ref().emplace()[3] = allMask();
+    EXPECT_THROW(protocol::filter(m1, barObject), std::runtime_error);
+    // baz[2] is an object, but since bar[2] is not, it still throws an error.
+    EXPECT_THROW(protocol::filter(m1, barObject), std::runtime_error);
+  }
+  {
+    Bar2 src;
+    Mask m1; // m1 = includes{2: includes{4: includes{}}}
+    auto& includes = m1.includes_ref().emplace();
+    includes[2].includes_ref().emplace()[4] = noneMask();
+    EXPECT_THROW(protocol::filter(m1, src), std::runtime_error);
+
+    Mask m2; // m2 = includes{1: includes{2: includes{5: excludes{}}}}
+    auto& includes2 = m2.includes_ref().emplace();
+    includes2[1].includes_ref().emplace()[2].excludes_ref().emplace()[5] =
+        allMask();
+    includes2[2] = allMask();
+    EXPECT_THROW(protocol::filter(m2, src), std::runtime_error);
+  }
 }
 
-TEST(FieldMaskTest, SchemalessCopyNestedRecursive) {
-  protocol::Object fooObject, barObject;
-  // bar{1: foo{1: 10,
-  //            2: 20},
-  //     2: "40"}
-  fooObject[FieldId{1}].ensure_i32() = 10;
-  fooObject[FieldId{2}].ensure_i32() = 20;
-  barObject[FieldId{1}].ensure_object() = fooObject;
-  barObject[FieldId{2}].ensure_string() = "40";
-
-  protocol::Object dst = barObject;
-  protocol::Object& nestedObject = dst[FieldId{1}].objectValue_ref().value();
-  nestedObject[FieldId{1}].ensure_object() = fooObject;
-  nestedObject[FieldId{2}].ensure_i32() = 30;
-  // dst{1: {1: {1: 10,
-  //             2: 20},
-  //         2: 30},
-  //     2: "40"}
-
-  Mask m;
-  // excludes{1: exludes{1: excludes{}}}
-  m.excludes_ref().emplace()[1].excludes_ref().emplace()[1] = allMask();
-  testCopy(m, barObject, dst);
-  // dst becomes
-  // dst{1: {1: 10
-  //         2: 30},
-  //     2: "40"}
-  ASSERT_TRUE(dst.contains(FieldId{1}));
-  protocol::Object& nested = dst.at(FieldId{1}).as_object();
-  ASSERT_TRUE(nested.contains(FieldId{1}));
-  EXPECT_EQ(nested.at(FieldId{1}).as_i32(), 10);
-  ASSERT_TRUE(nested.contains(FieldId{2}));
-  EXPECT_EQ(nested.at(FieldId{2}).as_i32(), 30);
-  ASSERT_TRUE(dst.contains(FieldId{2}));
-  EXPECT_EQ(dst.at(FieldId{2}).as_string(), "40");
-}
-
-TEST(FieldMaskTest, SchemalessCopyNestedAddField) {
-  protocol::Object fooObject, barObject;
-  // bar{1: foo{1: 10,
-  //            2: 20},
-  //     2: "40"}
-  fooObject[FieldId{1}].ensure_i32() = 10;
-  fooObject[FieldId{2}].ensure_i32() = 20;
-  barObject[FieldId{1}].ensure_object() = fooObject;
-  barObject[FieldId{2}].ensure_string() = "40";
-
-  Mask m1;
-  // includes{1: includes{2: excludes{}},
-  //          2: excludes{}}
-  auto& includes = m1.includes_ref().emplace();
-  includes[1].includes_ref().emplace()[2] = allMask();
-  includes[2] = allMask();
-
-  protocol::Object dst1;
-  testCopy(m1, barObject, dst1);
-  // dst1 becomes dst1{1: {2: 20}, 2: "40"}
-  ASSERT_TRUE(dst1.contains(FieldId{1}));
-  protocol::Object& nested = dst1.at(FieldId{1}).as_object();
-  ASSERT_TRUE(nested.contains(FieldId{2}));
-  EXPECT_EQ(nested.at(FieldId{2}).as_i32(), 20);
-  ASSERT_FALSE(nested.contains(FieldId{1}));
-  ASSERT_TRUE(dst1.contains(FieldId{2}));
-  EXPECT_EQ(dst1.at(FieldId{2}).as_string(), "40");
-
-  Mask m2;
-  // excludes{1: includes{1: excludes{}, 2: excludes{}, 3: includes{}},
-  //          2: includes{}}
-  auto& excludes = m2.excludes_ref().emplace();
-  auto& nestedIncludes = excludes[1].includes_ref().emplace();
-  nestedIncludes[1] = allMask();
-  nestedIncludes[2] = allMask();
-  nestedIncludes[3] = allMask();
-  excludes[2] = noneMask();
-
-  protocol::Object dst2;
-  testCopy(m2, barObject, dst2);
-  // dst2 becomes dst2{2: "40"} (doesn't create nested object).
-  ASSERT_FALSE(dst2.contains(FieldId{1}));
-  ASSERT_TRUE(dst2.contains(FieldId{2}));
-  EXPECT_EQ(dst2.at(FieldId{2}).as_string(), "40");
-}
-
-TEST(FieldMaskTest, SchemalessCopyNestedRemoveField) {
-  protocol::Object fooObject, barObject;
-  // bar{1: foo{1: 10,
-  //            2: 20},
-  //     2: "40"}
-  fooObject[FieldId{1}].ensure_i32() = 10;
-  fooObject[FieldId{2}].ensure_i32() = 20;
-  barObject[FieldId{1}].ensure_object() = fooObject;
-  barObject[FieldId{2}].ensure_string() = "40";
-
-  Mask m;
-  // includes{1: includes{2: excludes{}},
-  //          2: excludes{}}
-  auto& includes = m.includes_ref().emplace();
-  includes[1].includes_ref().emplace()[2] = allMask();
-  includes[2] = allMask();
-
-  protocol::Object src;
-  testCopy(m, src, barObject);
-  // bar becomes bar{1: foo{1: 10}} (doesn't delete foo object).
-  ASSERT_TRUE(barObject.contains(FieldId{1}));
-  protocol::Object& nested = barObject.at(FieldId{1}).as_object();
-  ASSERT_TRUE(nested.contains(FieldId{1}));
-  EXPECT_EQ(nested.at(FieldId{1}).as_i32(), 10);
-  ASSERT_FALSE(nested.contains(FieldId{2}));
-  ASSERT_FALSE(barObject.contains(FieldId{2}));
-}
-
-TEST(FieldMaskTest, SchemalessCopyException) {
-  protocol::Object fooObject, barObject, bazObject;
-  // bar{1: foo{2: 20}, 2: "40"}
-  fooObject[FieldId{2}].ensure_i32() = 20;
-  barObject[FieldId{1}].ensure_object() = fooObject;
-  barObject[FieldId{2}].ensure_string() = "40";
-  // baz{2: {3: 40}}
-  bazObject[FieldId{2}].ensure_object()[FieldId{3}].ensure_i32() = 40;
-
-  Mask m1; // bar[2] is not an object but has an object mask.
-  m1.includes_ref().emplace()[2].includes_ref().emplace()[3] = allMask();
-  protocol::Object copy = barObject;
-  EXPECT_THROW(protocol::copy(m1, copy, barObject), std::runtime_error);
-  protocol::Object empty;
-  EXPECT_THROW(protocol::copy(m1, barObject, empty), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, empty, barObject), std::runtime_error);
-  // baz[2] is an object, but since bar[2] is not, it still throws an error.
-  EXPECT_THROW(protocol::copy(m1, barObject, bazObject), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, bazObject, barObject), std::runtime_error);
-}
-
-TEST(FieldMaskTest, SchemalessCopySimpleMap) {
-  protocol::Object src, dst, expected;
+TEST(FieldMaskTest, SchemalessFilterSimpleMap) {
+  protocol::Object src, expected;
   // src{1: map{1: "1",
   //            2: "2"}}
   src[FieldId{1}] = asValueStruct<type::map<type::i64_t, type::string_t>>(
       {{1, "1"}, {2, "2"}});
-  // dst{1: map{1: "3",
-  //            2: "4"}}
-  dst[FieldId{1}] = asValueStruct<type::map<type::i64_t, type::string_t>>(
-      {{1, "3"}, {2, "4"}});
-  // expected{1: map{1: "1",
-  //                 2: "4"}}
-  expected[FieldId{1}] = asValueStruct<type::map<type::i64_t, type::string_t>>(
-      {{1, "1"}, {2, "4"}});
+  // expected{1: map{1: "1"}
+  expected[FieldId{1}] =
+      asValueStruct<type::map<type::i64_t, type::string_t>>({{1, "1"}});
 
   Mask mask;
   mask.includes_ref().emplace()[1].includes_map_ref().emplace()[1] = allMask();
-  testCopy(mask, src, dst);
-  EXPECT_EQ(dst, expected);
+  EXPECT_EQ(protocol::filter(mask, src), expected);
 }
 
-TEST(FieldMaskTest, SchemalessCopySimpleStringMap) {
+TEST(FieldMaskTest, SchemalessFilterSimpleStringMap) {
   protocol::Object src, dst, expected;
-  // src{1: map{"1": "1",
-  //            "2": "2"}}
+  // src{1: map{"1": "1", "2": "2"}}
   {
     std::map<std::string, std::string> map = {{"1", "1"}, {"2", "2"}};
     src[FieldId{1}] =
         asValueStruct<type::map<type::string_t, type::string_t>>(map);
   }
-  // dst{1: map{"1": "3",
-  //            "2": "4"}}
+  // expected{1: map{"1": "1"}}
   {
-    std::map<std::string, std::string> map = {{"1", "3"}, {"2", "4"}};
-    dst[FieldId{1}] =
-        asValueStruct<type::map<type::string_t, type::string_t>>(map);
-  }
-  // expected{1: map{"1": "1",
-  //                 "2": "4"}}
-  {
-    std::map<std::string, std::string> map = {{"1", "1"}, {"2", "4"}};
+    std::map<std::string, std::string> map = {{"1", "1"}};
     expected[FieldId{1}] =
         asValueStruct<type::map<type::string_t, type::string_t>>(map);
   }
@@ -1092,48 +1110,34 @@ TEST(FieldMaskTest, SchemalessCopySimpleStringMap) {
   Mask mask;
   mask.includes_ref().emplace()[1].includes_string_map_ref().emplace()["1"] =
       allMask();
-  testCopy(mask, src, dst);
-  EXPECT_EQ(dst, expected);
+  EXPECT_EQ(protocol::filter(mask, src), expected);
 }
 
-TEST(FieldMaskTest, SchemalessCopyNestedMap) {
-  protocol::Object src, dst, expected;
+TEST(FieldMaskTest, SchemalessFilterNestedMap) {
+  protocol::Object src, expected;
   // src{1: map{1: map{1: "1",
   //                   2: "2"},
   //            2: map{3: "3"}}}
   src[FieldId{1}] = asValueStruct<
       type::map<type::i64_t, type::map<type::i16_t, type::string_t>>>(
       {{1, {{1, "1"}, {2, "2"}}}, {2, {{3, "3"}}}});
-  // dst{1: map{1: map{1: "5",
-  //                   2: "6",
-  //                   3: "7"}}}
-  dst[FieldId{1}] = asValueStruct<
-      type::map<type::i64_t, type::map<type::i16_t, type::string_t>>>(
-      {{1, {{1, "5"}, {2, "6"}, {3, "7"}}}});
-  // expected{1: map{1: map{1: "1",
-  //                        2: "6"}},
-  //                 2: map{3: "3"}}}
   expected[FieldId{1}] = asValueStruct<
       type::map<type::i64_t, type::map<type::i16_t, type::string_t>>>(
-      {{1, {{1, "5"}, {2, "2"}}}, {2, {{3, "3"}}}});
+      {{1, {{2, "2"}}}, {2, {{3, "3"}}}});
 
   Mask mask;
   // includes{1: includes_map{1: excludes_map{1: allMask()},
-  //                          2: allMask(),
-  //                          5: excludes_map{5: allMask()}}}
+  //                          2: allMask()}}
   auto& nestedIncludes =
       mask.includes_ref().emplace()[1].includes_map_ref().emplace();
   nestedIncludes[1].excludes_map_ref().emplace()[1] = allMask();
   nestedIncludes[2] = allMask();
-  nestedIncludes[5].excludes_map_ref().emplace()[5] =
-      allMask(); // The object doesn't have this field.
-  // this copies src[1][1][2], src[1][1][3], and src[1][2]
-  testCopy(mask, src, dst);
-  EXPECT_EQ(dst, expected);
+  // this copies src[1][1][2] and src[1][2]
+  EXPECT_EQ(protocol::filter(mask, src), expected);
 }
 
-TEST(FieldMaskTest, SchemalessCopyNestedStringMap) {
-  protocol::Object src, dst, expected;
+TEST(FieldMaskTest, SchemalessFilterNestedStringMap) {
+  protocol::Object src, expected;
   // src{1: map{"1": map{"1": "1",
   //                     "2": "2"},
   //            "2": map{"3": "3"}}}
@@ -1141,16 +1145,6 @@ TEST(FieldMaskTest, SchemalessCopyNestedStringMap) {
     std::map<std::string, std::map<std::string, std::string>> map = {
         {"1", {{"1", "1"}, {"2", "2"}}}, {"2", {{"3", "3"}}}};
     src[FieldId{1}] = asValueStruct<
-        type::map<type::string_t, type::map<type::string_t, type::string_t>>>(
-        map);
-  }
-  // dst{1: map{"1": map{"1": "5",
-  //                     "2": "6",
-  //                     "3": "7"}}}
-  {
-    std::map<std::string, std::map<std::string, std::string>> map = {
-        {"1", {{"1", "5"}, {"2", "6"}, {"3", "7"}}}};
-    dst[FieldId{1}] = asValueStruct<
         type::map<type::string_t, type::map<type::string_t, type::string_t>>>(
         map);
   }
@@ -1159,7 +1153,7 @@ TEST(FieldMaskTest, SchemalessCopyNestedStringMap) {
   //                 "2": map{"3": "3"}}}
   {
     std::map<std::string, std::map<std::string, std::string>> map = {
-        {"1", {{"1", "5"}, {"2", "2"}}}, {"2", {{"3", "3"}}}};
+        {"1", {{"2", "2"}}}, {"2", {{"3", "3"}}}};
     expected[FieldId{1}] = asValueStruct<
         type::map<type::string_t, type::map<type::string_t, type::string_t>>>(
         map);
@@ -1167,154 +1161,244 @@ TEST(FieldMaskTest, SchemalessCopyNestedStringMap) {
 
   Mask mask;
   // includes{1: includes_string_map{"1": excludes_string_map{"1": allMask()},
-  //                                 "2": allMask(),
-  //                                 "5": excludes_string_map{"5": allMask()}}}
+  //                                 "2": allMask()}}
   auto& nestedIncludes =
       mask.includes_ref().emplace()[1].includes_string_map_ref().emplace();
   nestedIncludes["1"].excludes_string_map_ref().emplace()["1"] = allMask();
   nestedIncludes["2"] = allMask();
-  nestedIncludes["5"].excludes_string_map_ref().emplace()["5"] =
-      allMask(); // The object doesn't have this field.
-  // this copies src[1][1][2], src[1][1][3], and src[1][2]
-  testCopy(mask, src, dst);
-  EXPECT_EQ(dst, expected);
+  EXPECT_EQ(protocol::filter(mask, src), expected);
 }
 
-TEST(FieldMaskTest, SchemalessCopyMapAddRemoveKey) {
-  protocol::Object src;
-  // src{1: map{1: map{1: "1",
-  //                   2: "2"},
-  //            2: map{3: "3"}}}
-  src[FieldId{1}] = asValueStruct<
-      type::map<type::i64_t, type::map<type::i16_t, type::string_t>>>(
-      {{1, {{1, "1"}, {2, "2"}}}, {2, {{3, "3"}}}});
-  {
-    Mask mask;
-    mask.includes_ref()
-        .emplace()[1]
-        .includes_map_ref()
-        .emplace()[1]
-        .includes_map_ref()
-        .emplace()[1] = allMask();
-
-    protocol::Object dst, expected;
-    expected[FieldId{1}] = asValueStruct<
-        type::map<type::i64_t, type::map<type::i16_t, type::string_t>>>(
-        {{1, {{1, "1"}}}});
-
-    // This creates a new map at dst[1]
-    testCopy(mask, src, dst);
-    EXPECT_EQ(dst, expected);
-  }
-  {
-    Mask mask;
-    mask.includes_ref()
-        .emplace()[1]
-        .includes_map_ref()
-        .emplace()[1]
-        .includes_map_ref()
-        .emplace()[3] = allMask();
-
-    protocol::Object dst, expected;
-
-    // This doesn't create a new map at dst[1]
-    testCopy(mask, src, dst);
-    EXPECT_EQ(dst, expected);
-  }
-}
-
-TEST(FieldMaskTest, SchemalessCopyStringMapAddRemoveKey) {
-  protocol::Object src;
-  // src{1: map{"1": map{"1": "1",
-  //                     "2": "2"},
-  //            "2": map{"3": "3"}}}
-  {
-    std::map<std::string, std::map<std::string, std::string>> map = {
-        {"1", {{"1", "1"}, {"2", "2"}}}, {"2", {{"3", "3"}}}};
-    src[FieldId{1}] = asValueStruct<
-        type::map<type::string_t, type::map<type::string_t, type::string_t>>>(
-        map);
-  }
-  {
-    Mask mask;
-    mask.includes_ref()
-        .emplace()[1]
-        .includes_string_map_ref()
-        .emplace()["1"]
-        .includes_string_map_ref()
-        .emplace()["1"] = allMask();
-
-    protocol::Object dst, expected;
-    std::map<std::string, std::map<std::string, std::string>> map = {
-        {"1", {{"1", "1"}}}};
-    expected[FieldId{1}] = asValueStruct<
-        type::map<type::string_t, type::map<type::string_t, type::string_t>>>(
-        map);
-
-    // This creates a new map at dst[1]
-    testCopy(mask, src, dst);
-    EXPECT_EQ(dst, expected);
-  }
-  {
-    Mask mask;
-    mask.includes_ref()
-        .emplace()[1]
-        .includes_string_map_ref()
-        .emplace()["1"]
-        .includes_string_map_ref()
-        .emplace()["3"] = allMask();
-
-    protocol::Object dst, expected;
-
-    // This doesn't create a new map at dst[1]
-    testCopy(mask, src, dst);
-    EXPECT_EQ(dst, expected);
-  }
-}
-
-TEST(FieldMaskTest, SchemalessCopyExceptionMap) {
+TEST(FieldMaskTest, SchemalessFilterExceptionMap) {
   protocol::Object barObject, bazObject;
   // bar{1: map{2: 20}, 2: "40"}
   barObject[FieldId{1}] =
       asValueStruct<type::map<type::byte_t, type::i32_t>>({{2, 20}});
   barObject[FieldId{2}].ensure_string() = "40";
-  // baz{2: map{3: 40}}
-  bazObject[FieldId{2}] =
-      asValueStruct<type::map<type::byte_t, type::i32_t>>({{3, 40}});
 
   Mask m1; // bar[2] is not a map but has an integer map mask.
   m1.includes_ref().emplace()[2].includes_map_ref().emplace()[3] = allMask();
-  protocol::Object copy = barObject;
-  EXPECT_THROW(protocol::copy(m1, copy, barObject), std::runtime_error);
-  protocol::Object empty;
-  EXPECT_THROW(protocol::copy(m1, barObject, empty), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, empty, barObject), std::runtime_error);
-  // baz[2] is a map, but since bar[2] is not, it still throws an error.
-  EXPECT_THROW(protocol::copy(m1, barObject, bazObject), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, bazObject, barObject), std::runtime_error);
+  EXPECT_THROW(protocol::filter(m1, barObject), std::runtime_error);
 }
 
-TEST(FieldMaskTest, SchemalessCopyExceptionStringMap) {
-  protocol::Object barObject, bazObject;
+TEST(FieldMaskTest, SchemalessFilterExceptionStringMap) {
+  protocol::Object barObject;
   // bar{1: map{"2": 20}, 2: "40"}
   barObject[FieldId{1}] =
       asValueStruct<type::map<type::string_t, type::i32_t>>({{"2", 20}});
   barObject[FieldId{2}].ensure_string() = "40";
-  // baz{2: map{"3": 40}}
-  bazObject[FieldId{2}] =
-      asValueStruct<type::map<type::string_t, type::i32_t>>({{"3", 40}});
 
   Mask m1; // bar[2] is not a map but has a string map mask.
   m1.includes_ref().emplace()[2].includes_string_map_ref().emplace()["3"] =
       allMask();
-  protocol::Object copy = barObject;
-  EXPECT_THROW(protocol::copy(m1, copy, barObject), std::runtime_error);
-  protocol::Object empty;
-  EXPECT_THROW(protocol::copy(m1, barObject, empty), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, empty, barObject), std::runtime_error);
-  // baz[2] is a map, but since bar[2] is not, it still throws an error.
-  EXPECT_THROW(protocol::copy(m1, barObject, bazObject), std::runtime_error);
-  EXPECT_THROW(protocol::copy(m1, bazObject, barObject), std::runtime_error);
+  EXPECT_THROW(protocol::filter(m1, barObject), std::runtime_error);
+}
+
+TEST(FieldMaskTest, FilterTerseWrite) {
+  // Makes sure filter doesn't use has_value() for all fields.
+  TerseWrite src;
+  src.field() = 4;
+  src.foo()->field1() = 5;
+  auto dst = protocol::filter(allMask(), src);
+  EXPECT_EQ(dst, src);
+}
+
+TEST(FieldMaskTest, FilterSmartPointer) {
+  // test with allMask and noneMask
+  SmartPointerStruct full, dst, empty;
+  protocol::ensure(allMask(), full);
+
+  dst = protocol::filter(allMask(), empty);
+  assertSmartPointerStructIsEmpty(dst);
+
+  dst = protocol::filter(noneMask(), full);
+  assertSmartPointerStructIsEmpty(dst);
+
+  dst = protocol::filter(allMask(), full);
+  assertSmartPointerStructHasAllValues(dst);
+
+  dst = protocol::filter(allMask(), empty);
+  assertSmartPointerStructIsEmpty(dst);
+}
+
+TEST(FieldMaskTest, FilterUnion) {
+  MaskBuilder<RecursiveUnion> m(noneMask());
+  RecursiveUnion leaf, parent, dst;
+
+  leaf.foo_ref().emplace().field1() = 1;
+  leaf.foo_ref()->field2() = 2;
+
+  dst = protocol::filter(allMask(), leaf);
+  EXPECT_EQ(leaf, dst);
+
+  dst = protocol::filter(noneMask(), leaf);
+  EXPECT_EQ(dst.getType(), RecursiveUnion::Type::__EMPTY__);
+
+  parent.recurse_ref().emplace(leaf);
+  dst = protocol::filter(allMask(), parent);
+  EXPECT_EQ(parent, dst);
+
+  m.includes<ident::recurse, ident::bar>();
+  dst = m.filter(parent);
+  // Filter failed, union-ref should remain empty
+  EXPECT_EQ(dst.getType(), RecursiveUnion::Type::__EMPTY__);
+
+  m.reset_and_includes<ident::recurse, ident::foo, ident::field1>();
+  dst = m.filter(parent);
+  EXPECT_EQ(*dst.recurse_ref().value().foo_ref().value().field1(), 1);
+  EXPECT_EQ(
+      *dst.recurse_ref().value().foo_ref().value().field2(), 0); // not filtered
+}
+
+bool compareAny(const type::AnyStruct& lhs, const type::AnyStruct& rhs) {
+  if (lhs.type() != rhs.type()) {
+    return false;
+  }
+
+  if (lhs.type() == type::Type{}) {
+    return true;
+  }
+
+  return protocol::detail::parseValueFromAny(lhs) ==
+      protocol::detail::parseValueFromAny(rhs);
+}
+
+// Tests that schemaful + schemless clear do the same thing
+template <typename T, typename Eq>
+T applyFilter(const Mask& m, const T& val, Eq eq) {
+  auto filtered = protocol::filter(m, val);
+  auto filteredObject = protocol::filter(m, protocol::asObject(val));
+
+  // Make sure filtered and filteredObject are the same
+  EXPECT_TRUE(
+      eq(filtered,
+         protocol::fromObjectStruct<type::infer_tag<T>>(filteredObject)));
+
+  return filtered;
+}
+
+type::AnyStruct applyFilterOnAny(const Mask& m, const type::AnyStruct& val) {
+  return applyFilter(m, val, compareAny);
+}
+
+StructWithAny applyFilterOnStructWithAny(
+    const Mask& m, const StructWithAny& val) {
+  return applyFilter(
+      m, val, [](const StructWithAny& lhs, const StructWithAny& rhs) {
+        if (!compareAny(*lhs.rawAny(), *rhs.rawAny())) {
+          return false;
+        }
+        if (!compareAny(
+                lhs.adaptedAny()->toThrift(), rhs.adaptedAny()->toThrift())) {
+          return false;
+        }
+        if (lhs.optAny().has_value() != rhs.optAny().has_value()) {
+          return false;
+        }
+        if (lhs.optAny().has_value()) {
+          return compareAny(*lhs.optAny(), *rhs.optAny());
+        }
+        return true;
+      });
+}
+
+template <typename Tag, typename T = type::native_type<Tag>>
+void testFilterAnyStruct(T data) {
+  // Baz is used for type mismatch test
+  static_assert(!std::is_same_v<T, Baz>);
+  auto wrappedData = type::AnyData::toAny<Tag>(folly::copy(data)).toThrift();
+
+  MaskBuilder<type::AnyStruct> m;
+
+  // noneMask
+  m.reset_to_none();
+  EXPECT_EQ(applyFilterOnAny(m.toThrift(), wrappedData), type::AnyStruct{});
+
+  // type mismatch
+  m.reset_to_none().includes_type<>(type::infer_tag<Baz>{});
+  EXPECT_EQ(applyFilterOnAny(m.toThrift(), wrappedData), type::AnyStruct{});
+
+  // type match
+  m.reset_to_none().includes_type<>(Tag{});
+  EXPECT_EQ(
+      type::AnyData(applyFilterOnAny(m.toThrift(), wrappedData)).get<Tag>(),
+      data);
+}
+
+TEST(FieldMaskTest, FilterAny) {
+  Foo foo;
+  foo.field1_ref() = 123;
+  MaskBuilder<Foo> fooMask;
+  fooMask.reset_to_none().includes<ident::field1>();
+
+  testFilterAnyStruct<type::bool_t>(true);
+  testFilterAnyStruct<type::i32_t>(123);
+  testFilterAnyStruct<type::binary_t>("foobar");
+  testFilterAnyStruct<type::list<type::float_t>>(std::vector<float>{1.0, 3.0});
+  testFilterAnyStruct<type::set<type::i64_t>>(std::set<int64_t>{1, 2, 3});
+  testFilterAnyStruct<type::map<type::binary_t, type::i64_t>>(
+      std::map<std::string, int64_t>{{"1", 1}, {"3", 3}});
+  testFilterAnyStruct<type::infer_tag<Foo>>(foo);
+
+  // nested field filter
+  StructWithAny s;
+  s.rawAny() = type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift();
+  MaskBuilder<StructWithAny> m;
+  m.reset_to_none().includes_type<ident::rawAny>(
+      type::infer_tag<Foo>{}, fooMask.toThrift());
+  EXPECT_EQ(
+      foo.field1(),
+      type::AnyData(*applyFilterOnStructWithAny(m.toThrift(), s).rawAny())
+          .get<type::infer_tag<Foo>>()
+          .field1());
+
+  // nested field filter that fails
+  s.optAny() = type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift();
+  m.reset_to_none().includes_type<ident::optAny>(
+      type::struct_t<Bar>{}, MaskBuilder<Bar>().reset_to_all().toThrift());
+  EXPECT_FALSE(
+      applyFilterOnStructWithAny(m.toThrift(), s).optAny().has_value());
+
+  // Nested any
+  // StructWithAny -> Any -> Any -> Foo
+  s.rawAny_ref() =
+      type::AnyData::toAny<type::infer_tag<type::AnyStruct>>(
+          type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift())
+          .toThrift();
+  m.reset_to_none().includes_type<ident::rawAny>(
+      type::infer_tag<type::AnyStruct>{},
+      MaskBuilder<type::AnyStruct>()
+          .reset_to_none()
+          .includes_type<>(type::infer_tag<Foo>{}, fooMask.toThrift())
+          .toThrift());
+  EXPECT_EQ(
+      foo.field1(),
+      type::AnyData(*applyFilterOnStructWithAny(m.toThrift(), s).rawAny())
+          .get<type::infer_tag<type::AnyData>>()
+          .get<type::infer_tag<Foo>>()
+          .field1());
+}
+
+TEST(FieldMaskTest, FilterAnyWithHashedURI) {
+  auto fooType = type::Type::get<type::infer_tag<Foo>>();
+  convertToHashedURI(fooType);
+
+  Foo foo;
+  foo.field1() = 1;
+  auto fooAny = type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift();
+  fooAny.type() = fooType;
+
+  MaskBuilder<type::AnyStruct> m;
+
+  // type mismatch
+  m.reset_to_none().includes_type<>(type::struct_t<Bar>{}, allMask());
+  type::AnyStruct filtered = applyFilterOnAny(m.toThrift(), fooAny);
+  EXPECT_EQ(filtered, type::AnyStruct{});
+
+  // type match
+  m.reset_to_none().includes_type<>(type::struct_t<Foo>{}, allMask());
+  filtered = applyFilterOnAny(m.toThrift(), fooAny);
+  EXPECT_EQ(getViaIdenticalType<Foo>(filtered, fooType), foo);
 }
 
 TEST(FieldMaskTest, IsCompatibleWithSimple) {
@@ -1507,6 +1591,41 @@ TEST(FieldMaskTest, IsCompatibleWithOtherTypes) {
   EXPECT_FALSE(protocol::is_compatible_with<type::list<type::string_t>>(mask));
 }
 
+TEST(FieldMaskTest, IsCompatibleWithUnion) {
+  using UnionTag = type::union_t<RecursiveUnion>;
+  EXPECT_TRUE(protocol::is_compatible_with<RecursiveUnion>(allMask()));
+  EXPECT_TRUE(protocol::is_compatible_with<RecursiveUnion>(noneMask()));
+
+  Mask m;
+  auto& includes = m.includes_ref().emplace();
+  includes[1] = allMask();
+  EXPECT_TRUE(protocol::is_compatible_with<UnionTag>(m));
+  includes[2] = noneMask();
+  EXPECT_TRUE(protocol::is_compatible_with<UnionTag>(m));
+
+  Mask invalid(m);
+  (*invalid.includes_ref())[100] = allMask(); // doesn't exist
+  EXPECT_FALSE(protocol::is_compatible_with<UnionTag>(invalid));
+
+  Mask nested(m);
+  (*nested.includes_ref())[4] = m;
+  EXPECT_TRUE(protocol::is_compatible_with<UnionTag>(m));
+
+  {
+    Mask invalidNested(nested);
+    (*(*invalidNested.includes_ref())[4].includes_ref())[4] = invalid;
+    EXPECT_FALSE(protocol::is_compatible_with<UnionTag>(invalidNested));
+  }
+
+  Mask mapMask;
+  auto& mapIncludes = mapMask.includes_string_map_ref().emplace();
+  mapIncludes["1"] = Mask(m);
+  mapIncludes["2"] = Mask(m);
+
+  (*nested.includes_ref())[5] = mapMask;
+  EXPECT_TRUE(protocol::is_compatible_with<UnionTag>(m));
+}
+
 TEST(FieldMaskTest, Ensure) {
   Mask mask;
   // mask = includes{1: includes{2: excludes{}},
@@ -1557,24 +1676,6 @@ TEST(FieldMaskTest, Ensure) {
     ASSERT_TRUE(bar.field_4().has_value());
     EXPECT_EQ(bar.field_4(), "");
   }
-}
-
-void assertSmartPointerStructIsEmpty(SmartPointerStruct& obj) {
-  EXPECT_FALSE(bool(obj.unique_ref()));
-  EXPECT_FALSE(bool(obj.shared_ref()));
-  EXPECT_FALSE(bool(obj.boxed_ref()));
-}
-
-void assertPointerHasAllValues(auto&& ptr) {
-  ASSERT_TRUE(bool(ptr));
-  EXPECT_EQ(ptr->field_1(), 0);
-  EXPECT_EQ(ptr->field_2(), 0);
-}
-
-void assertSmartPointerStructHasAllValues(SmartPointerStruct& obj) {
-  assertPointerHasAllValues(obj.unique_ref());
-  assertPointerHasAllValues(obj.shared_ref());
-  assertPointerHasAllValues(obj.boxed_ref());
 }
 
 TEST(FieldMaskTest, EnsureSmartPointer) {
@@ -1654,6 +1755,46 @@ TEST(FieldMaskTest, EnsureException) {
   // includes{3: excludes{}}
   mask.includes_ref().emplace()[3] = allMask();
   EXPECT_THROW(ensure(mask, bar), std::runtime_error); // incompatible
+}
+
+TEST(FieldMaskTest, EnsureUnion) {
+  {
+    RecursiveUnion u;
+
+    ensure(noneMask(), u);
+    EXPECT_EQ(u.getType(), RecursiveUnion::Type::__EMPTY__);
+
+    // test validation for multiple fields
+    EXPECT_THROW(ensure(allMask(), u), std::runtime_error);
+  }
+  {
+    // Simple ensure
+    RecursiveUnion u;
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::foo>();
+    ensure(m.toThrift(), u);
+    EXPECT_TRUE(u.foo_ref().has_value());
+
+    m.includes<ident::bar>();
+    // multiple fields by inclusion
+    EXPECT_THROW(ensure(m.toThrift(), u), std::runtime_error);
+  }
+  {
+    // Nested ensure
+    RecursiveUnion u;
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::recurse, ident::foo>();
+    ensure(m.toThrift(), u);
+    EXPECT_TRUE(u.recurse_ref().has_value());
+    EXPECT_TRUE(u.recurse_ref()->foo_ref().has_value());
+  }
+}
+
+TEST(FieldMaskTest, EnsureAny) {
+  MaskBuilder<StructWithAny> m(noneMask());
+  m.includes_type<ident::rawAny>(type::infer_tag<Foo>{});
+  StructWithAny s;
+  EXPECT_THROW(m.ensure(s), std::runtime_error);
 }
 
 TEST(FieldMaskTest, SchemafulClear) {
@@ -1804,7 +1945,7 @@ TEST(FieldMaskTest, SchemafulClearSmartPointer) {
     builder.includes<ident::unique>();
     builder.ensure(obj);
     builder.clear(obj);
-    EXPECT_FALSE(obj.unique_ref());
+    EXPECT_EQ(*obj.unique_ref(), Foo2{});
     EXPECT_FALSE(obj.shared_const_ref());
 
     // Cannot clear a field inside the shared const field.
@@ -1829,204 +1970,140 @@ TEST(FieldMaskTest, SchemafulClearException) {
   EXPECT_THROW(protocol::clear(m2, bar), std::runtime_error);
 }
 
-TEST(FieldMaskTest, SchemafulCopy) {
-  Bar2 src, empty;
-  // src = {1: {1: 10, 2: 20}, 2: "40"}
-  src.field_3().ensure().field_1() = 10;
-  src.field_3()->field_2() = 20;
-  src.field_4() = "40";
-
-  Mask mask;
-  // includes{1: includes{2: excludes{}},
-  //          2: excludes{}}
-  auto& includes = mask.includes_ref().emplace();
-  includes[1].includes_ref().emplace()[2] = allMask();
-  includes[2] = allMask();
-
-  // copy empty
+TEST(FieldMaskTest, ClearUnion) {
   {
-    Bar2 dst;
-    copy(mask, empty, dst);
-    EXPECT_EQ(dst, empty);
+    RecursiveUnion u;
+    protocol::clear(noneMask(), u);
+    EXPECT_EQ(u.getType(), RecursiveUnion::Type::__EMPTY__);
+    protocol::clear(allMask(), u);
+    EXPECT_EQ(u.getType(), RecursiveUnion::Type::__EMPTY__);
   }
-
-  // test copy field to dst
   {
-    Bar2 dst;
-    dst.field_3().ensure().field_1() = 30;
-    dst.field_3()->field_2() = 40;
-    copy(mask, src, dst);
-    ASSERT_TRUE(dst.field_3().has_value());
-    ASSERT_TRUE(dst.field_3()->field_1().has_value());
-    EXPECT_EQ(dst.field_3()->field_1().value(), 30);
-    ASSERT_TRUE(dst.field_3()->field_2().has_value());
-    EXPECT_EQ(dst.field_3()->field_2().value(), 20);
-    ASSERT_TRUE(dst.field_4().has_value());
-    EXPECT_EQ(dst.field_4(), "40");
+    // Clear union arm
+    RecursiveUnion u;
+    u.foo_ref().emplace();
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::bar>();
+    protocol::clear(m.toThrift(), u);
+    EXPECT_TRUE(u.foo_ref().has_value());
+    m.includes<ident::foo>();
+    protocol::clear(m.toThrift(), u);
+    EXPECT_EQ(u.getType(), RecursiveUnion::Type::__EMPTY__);
   }
-
-  // test add field to dst
   {
-    Bar2 dst;
-    copy(mask, src, dst);
-    ASSERT_TRUE(dst.field_3().has_value());
-    ASSERT_FALSE(dst.field_3()->field_1().has_value());
-    ASSERT_TRUE(dst.field_3()->field_2().has_value());
-    EXPECT_EQ(dst.field_3()->field_2().value(), 20);
-    EXPECT_EQ(dst.field_4(), "40");
-  }
-
-  // test remove field from src
-  {
-    Bar2 dst;
-    copy(mask, empty, src);
-    // src = {1: {1: 10}, 2: "40"}
-    ASSERT_TRUE(src.field_3().has_value());
-    ASSERT_TRUE(src.field_3()->field_1().has_value());
-    EXPECT_EQ(src.field_3()->field_1().value(), 10);
-    ASSERT_FALSE(src.field_3()->field_2().has_value());
-    EXPECT_EQ(src.field_4(), "");
-
-    src.field_4() = "40";
-    copy(mask, src, dst); // this does not create a new object.
-    ASSERT_FALSE(dst.field_3().has_value());
-    ASSERT_TRUE(dst.field_4().has_value());
-    EXPECT_EQ(dst.field_4().value(), "40");
-
-    copy(allMask(), empty, src);
-    ASSERT_FALSE(src.field_3().has_value());
-    EXPECT_EQ(src.field_4(), "");
-  }
-}
-TEST(FieldMaskTest, SchemafulCopyExcludes) {
-  // test excludes mask
-  // mask2 = excludes{1: includes{1: excludes{}}}
-  Mask mask;
-  auto& excludes = mask.excludes_ref().emplace();
-  excludes[1].includes_ref().emplace()[1] = allMask();
-  Bar src, dst;
-  src.foo().emplace().field1() = 1;
-  src.foo()->field2() = 2;
-  protocol::copy(mask, src, dst);
-  ASSERT_FALSE(dst.foo()->field1().has_value());
-  ASSERT_TRUE(dst.foo()->field2().has_value());
-  EXPECT_EQ(dst.foo()->field2(), 2);
-  ASSERT_FALSE(dst.foos().has_value());
-}
-
-TEST(FieldMaskTest, SchemafulCopyTerseWrite) {
-  // Makes sure copy doesn't use has_value() for all fields.
-  TerseWrite src, dst;
-  src.field() = 4;
-  src.foo()->field1() = 5;
-  protocol::copy(allMask(), src, dst);
-  EXPECT_EQ(dst, src);
-
-  Mask m;
-  m.includes_ref().emplace()[2].includes_ref().emplace()[1] = allMask();
-  protocol::copy(m, src, dst);
-  EXPECT_EQ(dst, src);
-}
-
-TEST(FieldMaskTest, SchemafulCopySmartPointer) {
-  // test with allMask and noneMask
-  {
-    SmartPointerStruct full, dst, empty;
-    protocol::ensure(allMask(), full);
-
-    protocol::copy(allMask(), empty, dst);
-    assertSmartPointerStructIsEmpty(dst);
-
-    protocol::copy(noneMask(), full, dst);
-    assertSmartPointerStructIsEmpty(dst);
-
-    protocol::copy(allMask(), full, dst);
-    assertSmartPointerStructHasAllValues(dst);
-    protocol::copy(allMask(), full, dst);
-    assertSmartPointerStructHasAllValues(dst);
-
-    protocol::copy(noneMask(), empty, dst);
-    assertSmartPointerStructHasAllValues(dst);
-    protocol::copy(allMask(), empty, dst);
-    assertSmartPointerStructIsEmpty(dst);
-  }
-
-  // Test copy works with struct that has a shared const pointer field.
-  {
-    SharedConstPointerStruct src, dst;
-    MaskBuilder<SharedConstPointerStruct> builder(noneMask());
-    builder.includes<ident::unique>();
-    builder.ensure(src);
-    builder.copy(src, dst);
-    assertPointerHasAllValues(dst.unique_ref());
-
-    // Cannot copy to a field inside the shared const field.
-    builder.includes<ident::shared_const, ident::field_1>();
-    src.shared_const_ref() = std::make_shared<Foo2>(Foo2{});
-    dst.shared_const_ref() = std::make_shared<Foo2>(Foo2{});
-    EXPECT_THROW(builder.copy(src, dst), std::runtime_error);
+    // Clear nested field in arm
+    RecursiveUnion u;
+    u.foo_ref().emplace().field1() = 1;
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    // {includes: {1: includes: {1: allMask()}}}
+    m.includes<ident::foo, ident::field1>();
+    protocol::clear(m.toThrift(), u);
+    // Make sure union is still set but nested field is cleared
+    EXPECT_TRUE(u.foo_ref().has_value());
+    EXPECT_EQ(u.foo_ref()->field1(), 0);
   }
 }
 
-TEST(FieldMaskTest, SchemafulCopySmartPointerAddField) {
-  SmartPointerStruct src, dst;
-  // src contains unique field except for unique.field_1 and box field.
-  MaskBuilder<SmartPointerStruct> setup(allMask());
-  setup.excludes<ident::unique, ident::field_1>();
-  setup.excludes<ident::shared>();
-  protocol::ensure(setup.toThrift(), src);
-  {
-    MaskBuilder<SmartPointerStruct> builder(noneMask());
-    builder.includes<ident::unique, ident::field_1>();
-    protocol::copy(builder.toThrift(), src, dst); // doesn't create object
-    assertSmartPointerStructIsEmpty(dst);
-  }
-  {
-    MaskBuilder<SmartPointerStruct> builder2(noneMask());
-    builder2.includes<ident::boxed, ident::field_1>();
-    protocol::copy(builder2.toThrift(), src, dst); // creates object
-    EXPECT_FALSE(bool(dst.unique_ref()));
-    EXPECT_FALSE(bool(dst.shared_ref()));
-    ASSERT_TRUE(bool(dst.boxed_ref()));
-    EXPECT_EQ(dst.boxed_ref()->field_1(), 0);
-    EXPECT_FALSE(dst.boxed_ref()->field_2().has_value());
-  }
+// Tests that schemaful + schemless clear do the same thing
+template <typename T>
+void applyClear(const Mask& m, T& val) {
+  auto obj = protocol::asObject(val);
+  protocol::clear(m, val);
+  protocol::clear(m, obj);
+  EXPECT_EQ(val, protocol::fromObjectStruct<type::infer_tag<T>>(obj));
 }
 
-TEST(FieldMaskTest, SchemafulCopySmartPointerRemoveField) {
-  SmartPointerStruct src, dst;
-  // dst contains unique field except for unique.field_1 and box field.
-  MaskBuilder<SmartPointerStruct> setup(allMask());
-  setup.excludes<ident::unique, ident::field_1>();
-  setup.excludes<ident::shared>();
-  protocol::ensure(setup.toThrift(), dst);
+template <typename Tag, typename T = type::native_type<Tag>>
+void testClearAnyStruct(T data) {
+  // Baz is used for type mismatch test
+  static_assert(!std::is_same_v<T, Baz>);
+  auto wrappedData = type::AnyData::toAny<Tag>(folly::copy(data)).toThrift();
 
-  MaskBuilder<SmartPointerStruct> builder(noneMask());
-  builder.includes<ident::unique, ident::field_2>();
-  builder.includes<ident::boxed, ident::field_1>();
-  protocol::copy(builder.toThrift(), src, dst);
-  ASSERT_TRUE(bool(dst.unique_ref()));
-  EXPECT_FALSE(dst.unique_ref()->field_1().has_value());
-  EXPECT_FALSE(dst.unique_ref()->field_2().has_value());
-  EXPECT_FALSE(bool(dst.shared_ref()));
-  ASSERT_TRUE(bool(dst.boxed_ref()));
-  EXPECT_FALSE(dst.boxed_ref()->field_1().has_value());
-  EXPECT_EQ(dst.boxed_ref()->field_2(), 0);
+  MaskBuilder<type::AnyStruct> m;
+
+  // noneMask
+  m.reset_to_none();
+  applyClear(m.toThrift(), wrappedData);
+  EXPECT_EQ(data, type::AnyData(wrappedData).get<Tag>());
+
+  // type mismatch
+  m.reset_to_none().includes_type<>(type::infer_tag<Baz>{});
+  applyClear(m.toThrift(), wrappedData);
+  EXPECT_EQ(data, type::AnyData(wrappedData).get<Tag>());
+
+  // type match
+  m.reset_to_none().includes_type<>(Tag{});
+  applyClear(m.toThrift(), wrappedData);
+  EXPECT_EQ(op::getDefault<Tag>(), type::AnyData(wrappedData).get<Tag>());
 }
 
-TEST(FieldMaskTest, SchemafulCopyException) {
-  Bar2 src, dst;
-  Mask m1; // m1 = includes{2: includes{4: includes{}}}
-  auto& includes = m1.includes_ref().emplace();
-  includes[2].includes_ref().emplace()[4] = noneMask();
-  EXPECT_THROW(protocol::copy(m1, src, dst), std::runtime_error);
+TEST(FieldMaskTest, ClearAnyStruct) {
+  Foo foo;
+  foo.field1_ref() = 123;
+  MaskBuilder<Foo> fooMask;
+  fooMask.reset_to_none().includes<ident::field1>();
 
-  Mask m2; // m2 = includes{1: includes{2: includes{5: excludes{}}}}
-  auto& includes2 = m2.includes_ref().emplace();
-  includes2[1].includes_ref().emplace()[2].excludes_ref().emplace()[5] =
-      allMask();
-  includes2[2] = allMask();
-  EXPECT_THROW(protocol::copy(m2, src, dst), std::runtime_error);
+  testClearAnyStruct<type::bool_t>(true);
+  testClearAnyStruct<type::i32_t>(123);
+  testClearAnyStruct<type::binary_t>("foobar");
+  testClearAnyStruct<type::list<type::float_t>>(std::vector<float>{1.0, 3.0});
+  testClearAnyStruct<type::set<type::i64_t>>(std::set<int64_t>{1, 2, 3});
+  testClearAnyStruct<type::map<type::binary_t, type::i64_t>>(
+      std::map<std::string, int64_t>{{"1", 1}, {"3", 3}});
+  testClearAnyStruct<type::infer_tag<Foo>>(foo);
+
+  // nested field clear
+  StructWithAny s;
+  s.rawAny_ref() = type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift();
+  MaskBuilder<StructWithAny> m;
+  m.reset_to_none().includes_type<ident::rawAny>(
+      type::infer_tag<Foo>{}, fooMask.toThrift());
+  m.clear(s);
+  EXPECT_EQ(
+      0,
+      *type::AnyData(*s.rawAny_ref()).get<type::infer_tag<Foo>>().field1_ref());
+
+  // Nested any
+  // StructWithAny -> Any -> Any -> Foo
+  s.rawAny_ref() =
+      type::AnyData::toAny<type::infer_tag<type::AnyStruct>>(
+          type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift())
+          .toThrift();
+  m.reset_to_none().includes_type<ident::rawAny>(
+      type::infer_tag<type::AnyStruct>{}, [&]() {
+        MaskBuilder<type::AnyStruct> m1;
+        m1.reset_to_none().includes_type<>(
+            type::infer_tag<Foo>{}, fooMask.toThrift());
+        return m1.toThrift();
+      }());
+  m.clear(s);
+  EXPECT_EQ(
+      0,
+      *type::AnyData(type::AnyData(*s.rawAny_ref())
+                         .get<type::infer_tag<type::AnyStruct>>())
+           .get<type::infer_tag<Foo>>()
+           .field1_ref());
+}
+TEST(FieldMaskTest, ClearAnyStructWithHashedUri) {
+  auto fooType = type::Type::get<type::infer_tag<Foo>>();
+  convertToHashedURI(fooType);
+
+  Foo foo;
+  foo.field1() = 1;
+  auto fooAny = type::AnyData::toAny<type::infer_tag<Foo>>(foo).toThrift();
+  fooAny.type() = fooType;
+
+  MaskBuilder<type::AnyStruct> m;
+
+  // type mismatch
+  m.reset_to_none().includes_type<>(type::struct_t<Bar>{}, allMask());
+  applyClear(m.toThrift(), fooAny);
+  EXPECT_EQ(getViaIdenticalType<Foo>(fooAny, fooType), foo);
+
+  // type match
+  m.reset_to_none().includes_type<>(type::struct_t<Foo>{}, allMask());
+  applyClear(m.toThrift(), fooAny);
+  EXPECT_EQ(getViaIdenticalType<Foo>(fooAny, fooType), Foo{});
 }
 
 void testLogicalOperations(Mask A, Mask B) {
@@ -2058,8 +2135,14 @@ void testLogicalOperations(Mask A, Mask B) {
   EXPECT_EQ(maskSubtractBA, B & maskSubtractBA);
   EXPECT_EQ(maskSubtractBA, maskUnion - A);
 }
+TEST(FieldMaskTest, LogicalOpEmpty) {
+  Mask a, b;
+  EXPECT_THROW(a | b, std::runtime_error);
+  EXPECT_THROW(a & b, std::runtime_error);
+  EXPECT_THROW(a - b, std::runtime_error);
+}
 
-TEST(FIeldMaskTest, LogicalOpSimple) {
+TEST(FieldMaskTest, LogicalOpSimple) {
   // maskA = includes{1: excludes{},
   //                  2: excludes{},
   //                  3: includes{}}
@@ -2213,6 +2296,73 @@ TEST(FieldMaskTest, LogicalOpSimpleStringMap) {
   Mask maskSubtractBA;
   { maskSubtractBA.includes_string_map_ref().emplace()["3"] = allMask(); }
   EXPECT_EQ(maskB - maskA, maskSubtractBA);
+
+  testLogicalOperations(maskA, maskB);
+}
+
+TEST(FieldMaskTest, LogicalOpAny) {
+  Mask includesFoo;
+  includesFoo.includes_type_ref().ensure()[type::infer_tag<Foo>{}] = allMask();
+
+  // maskA = includes_type{Foo: allMask(), Any: includes_type{Foo: allMask()}}
+  Mask maskA;
+  {
+    auto& includes_type = maskA.includes_type_ref().ensure();
+    includes_type[type::infer_tag<Foo>{}] = allMask();
+    includes_type[type::infer_tag<type::AnyStruct>{}] = includesFoo;
+  }
+
+  // maskB = includes_type{Any: excludes_type{}, Baz: allMask()}
+  Mask maskB;
+  {
+    auto& includes_type = maskB.includes_type_ref().ensure();
+    includes_type[type::infer_tag<type::AnyStruct>{}] = allTypeMask;
+    includes_type[type::infer_tag<Baz>{}] = allMask();
+  }
+
+  // includes_type{Foo: allMask(), Any: excludes_type{}, Baz: allMask()}
+  Mask maskUnion;
+  {
+    auto& includes_type = maskUnion.includes_type_ref().ensure();
+    includes_type[type::infer_tag<Foo>{}] = allMask();
+    includes_type[type::infer_tag<type::AnyStruct>{}] = allTypeMask;
+    includes_type[type::infer_tag<Baz>{}] = allMask();
+  }
+  EXPECT_EQ(maskUnion, maskA | maskB);
+
+  // maskIntersect = includes_type{Any: includes_type{Foo: allMask()}}
+  Mask maskIntersect;
+  maskIntersect.includes_type_ref()
+      .ensure()[type::infer_tag<type::AnyStruct>{}] = includesFoo;
+  EXPECT_EQ(maskIntersect, maskA & maskB);
+
+  // subtractAB = includes_type{Foo: allMask(), Any: includes_type{}}
+  Mask subtractAB;
+  {
+    auto& includes_type = subtractAB.includes_type_ref().ensure();
+    includes_type[type::infer_tag<Foo>{}] = allMask();
+    includes_type[type::infer_tag<type::AnyStruct>{}] = []() {
+      Mask m;
+      m.includes_type_ref().emplace();
+      return m;
+    }();
+  }
+  EXPECT_EQ(subtractAB, maskA - maskB);
+
+  // subtractBA = includes_type{Any: excludes_type{Foo: allMask()}, Baz:
+  //                            allMask()}
+  Mask subtractBA;
+  {
+    auto& includes_type = subtractBA.includes_type_ref().ensure();
+    includes_type[type::infer_tag<type::AnyStruct>{}] = []() {
+      Mask excludesFoo;
+      excludesFoo.excludes_type_ref().ensure()[type::infer_tag<Foo>{}] =
+          allMask();
+      return excludesFoo;
+    }();
+    includes_type[type::infer_tag<Baz>{}] = allMask();
+  }
+  EXPECT_EQ(subtractBA, maskB - maskA);
 
   testLogicalOperations(maskA, maskB);
 }
@@ -2914,6 +3064,99 @@ TEST(FieldMaskTest, MaskBuilderNestedWithFieldName) {
   testMaskBuilderNested(true);
 }
 
+TEST(FieldMaskTest, MaskBuilderUnion) {
+  {
+    // simple
+    Mask expected;
+    expected.includes_ref().emplace()[1] = allMask();
+
+    MaskBuilder<RecursiveUnion> builder(noneMask());
+    builder.includes<ident::foo>();
+    EXPECT_EQ(builder.toThrift(), expected);
+
+    builder.reset_and_includes({"foo"});
+    EXPECT_EQ(builder.toThrift(), expected);
+  }
+  {
+    // nested
+    Mask nested;
+    nested.excludes_ref().emplace()[11] = allMask();
+
+    Mask expected;
+    expected.includes_ref().emplace()[1] = nested;
+
+    MaskBuilder<RecursiveUnion> builder(noneMask());
+    builder.includes<ident::foo>(nested);
+    EXPECT_EQ(builder.toThrift(), expected);
+
+    builder.reset_and_includes({"foo"}, nested);
+    EXPECT_EQ(builder.toThrift(), expected);
+  }
+  {
+    // recurse
+    Mask expected;
+    expected.includes_ref().emplace()[4].includes_ref().emplace()[1] =
+        allMask();
+
+    MaskBuilder<RecursiveUnion> builder(noneMask());
+    builder.includes<ident::recurse, ident::foo>();
+    EXPECT_EQ(builder.toThrift(), expected);
+
+    builder.reset_and_includes({"recurse", "foo"});
+    EXPECT_EQ(builder.toThrift(), expected);
+  }
+}
+TEST(FieldMaskTest, MaskBuilderAny) {
+  MaskBuilder<Foo> fooMask(noneMask());
+  fooMask.includes<ident::field1>();
+
+  Mask simpleExpected;
+  simpleExpected.includes_ref()
+      .emplace()[1]
+      .includes_type_ref()
+      .emplace()[type::infer_tag<Foo>{}] = fooMask.toThrift();
+
+  Mask nestedExpected;
+  nestedExpected.includes_ref()
+      .emplace()[1]
+      .includes_type_ref()
+      .emplace()[type::infer_tag<StructWithAny>{}] = simpleExpected;
+
+  MaskBuilder<StructWithAny> b(noneMask());
+  b.includes_type<ident::rawAny>(type::infer_tag<Foo>{}, fooMask.toThrift());
+  EXPECT_EQ(b.toThrift(), simpleExpected);
+
+  b.reset_to_none().includes_type<ident::rawAny>(
+      type::infer_tag<StructWithAny>{}, simpleExpected);
+  EXPECT_EQ(b.toThrift(), nestedExpected);
+}
+
+TEST(FieldMaskTest, MaskBuilderAdaptedAny) {
+  MaskBuilder<Foo> fooMask(noneMask());
+  fooMask.includes<ident::field1>();
+
+  Mask simpleExpected;
+  simpleExpected.includes_ref()
+      .emplace()[2]
+      .includes_type_ref()
+      .emplace()[type::infer_tag<Foo>{}] = fooMask.toThrift();
+
+  Mask nestedExpected;
+  nestedExpected.includes_ref()
+      .emplace()[2]
+      .includes_type_ref()
+      .emplace()[type::infer_tag<StructWithAny>{}] = simpleExpected;
+
+  MaskBuilder<StructWithAny> b(noneMask());
+  b.includes_type<ident::adaptedAny>(
+      type::infer_tag<Foo>{}, fooMask.toThrift());
+  EXPECT_EQ(b.toThrift(), simpleExpected);
+
+  b.reset_to_none().includes_type<ident::adaptedAny>(
+      type::infer_tag<StructWithAny>{}, simpleExpected);
+  EXPECT_EQ(b.toThrift(), nestedExpected);
+}
+
 TEST(FieldMaskTest, MaskBuilderWithFieldNameError) {
   MaskBuilder<Bar2> builder(noneMask());
   // field not found
@@ -3072,6 +3315,30 @@ TEST(FieldMaskTest, ReverseStringMapMask) {
   EXPECT_EQ(reverseMask(exclusiveMask), inclusiveMask);
 }
 
+TEST(FieldMaskTest, ReverseTypeMask) {
+  EXPECT_EQ(reverseMask(noTypeMask), allTypeMask);
+  EXPECT_EQ(noTypeMask, reverseMask(allTypeMask));
+
+  // m = includes_type{Foo: allMap(), Any: includes_type{Foo: allMap()}}
+  Mask inclusiveMask;
+  {
+    auto& includes_type = inclusiveMask.includes_type_ref().ensure();
+    includes_type[type::infer_tag<Foo>{}] = allMask();
+    includes_type[type::infer_tag<type::Any>{}] = allMask();
+  }
+
+  // m = excludes_type{Foo: allMap(), Any: includes_type{Foo: allMap()},
+  Mask exclusiveMask;
+  {
+    auto& excludes_type = exclusiveMask.excludes_type_ref().ensure();
+    excludes_type[type::infer_tag<Foo>{}] = allMask();
+    excludes_type[type::infer_tag<type::Any>{}] = allMask();
+  }
+
+  EXPECT_EQ(reverseMask(inclusiveMask), exclusiveMask);
+  EXPECT_EQ(reverseMask(exclusiveMask), inclusiveMask);
+}
+
 TEST(FieldMaskTest, Compare) {
   Bar2 original;
   Foo2 foo;
@@ -3152,6 +3419,63 @@ TEST(FieldMaskTest, Compare) {
   }
 }
 
+TEST(FieldMaskTest, UnionCompare) {
+  {
+    // compare with self
+    RecursiveUnion src;
+    EXPECT_EQ(noneMask(), protocol::compare(src, src));
+
+    src.foo_ref().emplace();
+    src.foo_ref()->field1() = 1;
+    EXPECT_EQ(noneMask(), protocol::compare(src, src));
+  }
+  {
+    // single field mismatch
+    RecursiveUnion src;
+    src.foo_ref().emplace();
+    src.foo_ref()->field1() = 1;
+
+    RecursiveUnion dst(src);
+    dst.foo_ref()->field1() = 2;
+
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::foo, ident::field1>();
+    EXPECT_EQ(m.toThrift(), protocol::compare(src, dst));
+  }
+  {
+    // different fields set
+    RecursiveUnion src;
+    src.foo_ref().emplace();
+
+    RecursiveUnion dst;
+    dst.bar_ref().emplace();
+
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::foo>();
+    m.includes<ident::bar>();
+    EXPECT_EQ(m.toThrift(), protocol::compare(src, dst));
+  }
+  {
+    // nested field mismatch
+    RecursiveUnion src;
+    auto& nestedSrc = src.recurse_ref().emplace();
+    RecursiveUnion dst;
+    auto& nestedDst = dst.recurse_ref().emplace();
+
+    nestedSrc.foo_ref().emplace();
+    nestedSrc.foo_ref()->field1() = 1;
+    EXPECT_EQ(noneMask(), protocol::compare(src, src));
+
+    nestedDst.foo_ref().emplace();
+    nestedDst.foo_ref()->field2() = 2;
+
+    MaskBuilder<RecursiveUnion> m(noneMask());
+    m.includes<ident::recurse, ident::foo, ident::field1>();
+    m.includes<ident::recurse, ident::foo, ident::field2>();
+    EXPECT_EQ(m.toThrift(), protocol::compare(src, dst));
+  }
+}
+
 TEST(FieldMaskTest, MaskAdapter) {
   MaskStruct foo;
   static_assert(std::is_same_v<
@@ -3229,18 +3553,16 @@ TEST(FieldMaskTest, MaskBuilderMaskAPIs) {
   Mask expectedMask = reverseMask(builder.toThrift());
   EXPECT_EQ(builder.invert().toThrift(), expectedMask);
   // Mask includes bar.field_3().field_2().
-  // test ensure, clear, and copy
+  // test ensure, clear, and filter
   Bar2 expected, cleared;
   expected.field_3().emplace().field_2() = 0;
   cleared.field_3().emplace();
   builder.ensure(src);
   EXPECT_EQ(src, expected);
-  builder.copy(src, dst);
+  dst = builder.filter(src);
   EXPECT_EQ(dst, expected);
   builder.clear(src);
   EXPECT_EQ(src, cleared);
-  builder.copy(src, dst);
-  EXPECT_EQ(dst, cleared);
 }
 
 TEST(FieldMaskTest, MaskBuilderMaskNotCompatible) {
@@ -3257,6 +3579,334 @@ TEST(FieldMaskTest, MaskBuilderMaskNotCompatible) {
       builder.includes_map_element<ident::foo>(1, mask), std::runtime_error);
   EXPECT_THROW(
       builder.includes_map_element<ident::foo>("1", mask), std::runtime_error);
+}
+
+TEST(FieldMaskTest, NestedMap) {
+  MaskBuilder<Foo> fooMaskBuilder(noneMask());
+  fooMaskBuilder.includes_map_element<ident::field3>("1");
+
+  MaskBuilder<HasMap> hasMapMaskBuilder(noneMask());
+  hasMapMaskBuilder.includes_map_element<ident::foos>(
+      1, fooMaskBuilder.toThrift());
+  Mask mask = hasMapMaskBuilder.toThrift();
+  EXPECT_EQ(
+      mask.includes_ref()
+          .value()[1]
+          .includes_map_ref()
+          .value()[1]
+          .includes_ref()
+          .value()[11]
+          .includes_string_map_ref()
+          .value()["1"],
+      allMask());
+}
+
+TEST(FieldMaskTest, testDuplicateEntryInTypeMaskList) {
+  std::vector<protocol::TypeAndMaskEntry> entries;
+  entries.emplace_back().type() = type::infer_tag<Foo>{};
+  entries.emplace_back().type() = type::infer_tag<Foo>{};
+
+  EXPECT_THROW(
+      (protocol::detail::TypeToMaskAdapter<protocol::TypeAndMaskEntry, Mask>::
+           fromThrift(std::move(entries))),
+      std::runtime_error);
+}
+TEST(FieldMaskTest, testIncompleteType) {
+  Mask m;
+
+  type::Type type;
+
+  // Scoped name
+  type.toThrift().name()->structType_ref().ensure().scopedName_ref() =
+      "foo.Bar";
+  EXPECT_THROW(m.includes_type_ref().ensure()[type], std::runtime_error);
+
+  // typeHash
+  type.toThrift()
+      .name()
+      ->structType_ref()
+      .ensure()
+      .typeHashPrefixSha2_256_ref() = "abcde123";
+  EXPECT_THROW(
+      m.excludes_type_ref().ensure().emplace(type, Mask{}), std::runtime_error);
+
+  type.toThrift().name()->unionType_ref().ensure().definitionKey_ref() =
+      "abcde123";
+  EXPECT_THROW(
+      m.excludes_type_ref().ensure().emplace(type, Mask{}), std::runtime_error);
+}
+
+TEST(FieldMaskTest, FieldMaskLogicalOperatorAllMask) {
+  auto checkMask = [](const Mask& mask) {
+    EXPECT_EQ(mask | allMask(), allMask());
+    EXPECT_EQ(allMask() | mask, allMask());
+    EXPECT_EQ(mask & allMask(), mask);
+    EXPECT_EQ(allMask() & mask, mask);
+    EXPECT_EQ(mask - allMask(), noneMask());
+    EXPECT_EQ(allMask() - mask, reverseMask(mask));
+  };
+  {
+    // Field Mask
+    Mask mask;
+    mask.includes_ref().ensure()[1] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+  {
+    // Map Mask
+    Mask mask;
+    mask.includes_map_ref().ensure()[1] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+  {
+    // Type Mask
+    Mask mask;
+    mask.includes_type_ref().ensure()[type::infer_tag<Foo>{}] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+}
+
+TEST(FieldMaskTest, FieldMaskLogicalOperatorNoneMask) {
+  auto checkMask = [](const Mask& mask) {
+    EXPECT_EQ(mask | noneMask(), mask);
+    EXPECT_EQ(noneMask() | mask, mask);
+    EXPECT_EQ(mask & noneMask(), noneMask());
+    EXPECT_EQ(noneMask() & mask, noneMask());
+    EXPECT_EQ(noneMask() - mask, noneMask());
+    EXPECT_EQ(mask - noneMask(), mask);
+  };
+  {
+    // Field Mask
+    Mask mask;
+    mask.includes_ref().ensure()[1] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+  {
+    // Map Mask
+    Mask mask;
+    mask.includes_map_ref().ensure()[1] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+  {
+    // Type Mask
+    Mask mask;
+    mask.includes_type_ref().ensure()[type::infer_tag<Foo>{}] = allMask();
+    checkMask(mask);
+    checkMask(reverseMask(mask));
+  }
+}
+
+TEST(FieldMaskTest, ValidateSinglePathInvalid) {
+  {
+    // empty
+    Mask mask;
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // noneMask
+    Mask mask = noneMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive map mask
+    Mask mask;
+    mask.includes_map_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive map mask
+    Mask mask;
+    mask.excludes_map_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive string map mask
+    Mask mask;
+    mask.includes_string_map_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive string map mask
+    Mask mask;
+    mask.excludes_string_map_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive type mask
+    Mask mask;
+    mask.includes_type_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive type mask
+    Mask mask;
+    mask.excludes_type_ref().ensure();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+}
+
+TEST(FieldMaskTest, ValidateSinglePathInvalidNested) {
+  auto type = type::Type::get<type::infer_tag<Foo>>();
+  {
+    // exclusive field mask
+    Mask mask;
+    mask.excludes_ref().ensure()[1] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive map mask
+    Mask mask;
+    mask.excludes_map_ref().ensure()[1] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive string map mask
+    Mask mask;
+    mask.excludes_string_map_ref().ensure()["1"] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // exclusive type mask
+    Mask mask;
+    mask.excludes_type_ref().ensure()[type] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive field mask
+    Mask mask;
+    mask.includes_ref().ensure()[1].excludes_ref().ensure()[1] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive map mask
+    Mask mask;
+    mask.includes_map_ref().ensure()[1].excludes_ref().ensure()[1] = allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive string map mask
+    Mask mask;
+    mask.includes_string_map_ref().ensure()["1"].excludes_ref().ensure()[1] =
+        allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+  {
+    // inclusive type mask
+    Mask mask;
+    mask.includes_type_ref().ensure()[type].excludes_ref().ensure()[1] =
+        allMask();
+    EXPECT_THROW(validateSinglePath(mask), std::runtime_error);
+  }
+}
+
+TEST(FieldMaskTest, ValidateSinglePathValid) {
+  auto type = type::Type::get<type::infer_tag<Foo>>();
+  {
+    // allMask
+    Mask mask = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive field mask
+    Mask mask;
+    mask.includes_ref().ensure()[1] = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive map mask
+    Mask mask;
+    mask.includes_map_ref().ensure()[1] = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive string map mask
+    Mask mask;
+    mask.includes_string_map_ref().ensure()["1"] = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive type mask
+    Mask mask;
+    mask.includes_type_ref().ensure()[type] = allMask();
+    validateSinglePath(mask);
+  }
+}
+
+TEST(FieldMaskTest, ValidateSinglePathValidNested) {
+  auto type = type::Type::get<type::infer_tag<Foo>>();
+  {
+    // inclusive field mask
+    Mask mask;
+    mask.includes_ref().ensure()[1].includes_ref().ensure()[2] = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive map mask
+    Mask mask;
+    mask.includes_map_ref().ensure()[1].includes_ref().ensure()[2] = allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive string map mask
+    Mask mask;
+    mask.includes_string_map_ref().ensure()["1"].includes_ref().ensure()[2] =
+        allMask();
+    validateSinglePath(mask);
+  }
+  {
+    // inclusive type mask
+    Mask mask;
+    mask.includes_type_ref().ensure()[type].includes_ref().ensure()[2] =
+        allMask();
+    validateSinglePath(mask);
+  }
+}
+
+TEST(FieldMaskTest, getValueAsMapId) {
+  auto byteVal = protocol::asValueStruct<type::byte_t>(1);
+  auto i16Val = protocol::asValueStruct<type::i16_t>(1);
+  auto i32Val = protocol::asValueStruct<type::i32_t>(1);
+  auto i64Val = protocol::asValueStruct<type::i64_t>(1);
+  auto stringVal = protocol::asValueStruct<type::string_t>("1");
+
+  // Valid
+  for (const auto& as : {byteVal, i16Val, i32Val, i64Val}) {
+    auto v = getValueAs(MapId{1}, as);
+    EXPECT_EQ(v, as);
+  }
+
+  // Invalid `as`
+  EXPECT_THROW(getValueAs(MapId{1}, stringVal), std::runtime_error);
+
+  // Overflow
+  for (const auto& as : {byteVal, i16Val, i32Val}) {
+    EXPECT_THROW(
+        getValueAs(
+            MapId{
+                static_cast<int64_t>(std::numeric_limits<std::int32_t>::max()) +
+                1},
+            as),
+        std::runtime_error);
+  }
+}
+
+TEST(FieldMaskTest, getValueAsString) {
+  auto byteVal = protocol::asValueStruct<type::byte_t>(1);
+  auto stringVal = protocol::asValueStruct<type::string_t>("1");
+  auto binaryVal = protocol::asValueStruct<type::binary_t>("1");
+
+  // Valid
+  for (const auto& as : {stringVal, binaryVal}) {
+    auto v = getValueAs("1", as);
+    EXPECT_EQ(v, as);
+  }
+
+  // Invalid `as`
+  EXPECT_THROW(getValueAs("1", byteVal), std::runtime_error);
 }
 
 } // namespace apache::thrift::test

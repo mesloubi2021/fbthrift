@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
@@ -60,7 +62,7 @@ class TestJSONGenerate(unittest.TestCase):
             path = "thrift/test/" + thriftFile + ".thrift"
             self.assertTrue(os.path.exists(path))
             proc = subprocess.Popen(
-                [thrift_compiler, "-gen", "json", "-o", self.temp_dir, path],
+                [thrift_compiler, "-I", ".", "-gen", "json", "-o", self.temp_dir, path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )

@@ -15,7 +15,7 @@
  */
 
 #include <algorithm>
-#include <iterator>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -26,31 +26,20 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem.hpp>
 
 #include <thrift/compiler/ast/t_field.h>
 #include <thrift/compiler/ast/t_service.h>
-#include <thrift/compiler/detail/mustache/mstch.h>
+#include <thrift/compiler/ast/uri.h>
 #include <thrift/compiler/generate/common.h>
 #include <thrift/compiler/generate/mstch_objects.h>
+#include <thrift/compiler/generate/python/util.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/cpp2/util.h>
-#include <thrift/compiler/lib/py3/util.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/sema/ast_validator.h>
+#include <thrift/compiler/whisker/mstch_compat.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
-
-bool is_type_iobuf(std::string_view name) {
-  return name == "folly::IOBuf" || name == "std::unique_ptr<folly::IOBuf>";
-}
-
-bool is_type_iobuf(const t_type* type) {
-  return is_type_iobuf(cpp2::get_type(type));
-}
 
 const t_const* find_structured_adapter_annotation(
     const t_named& node, const char* uri = kPythonAdapterUri) {
@@ -89,12 +78,12 @@ const t_const* get_transitive_annotation_of_adapter_or_null(
   return nullptr;
 }
 
-std::string_view extract_module_path(std::string_view fully_qualified_name) {
-  size_t last_dot = fully_qualified_name.rfind(".");
-  if (last_dot == std::string_view::npos) {
-    return "";
-  }
-  return fully_qualified_name.substr(0, last_dot);
+std::string mangle_program_path(
+    const t_program* program, const std::string& root_module_prefix) {
+  std::string prefix = root_module_prefix.empty() ? std::string("_fbthrift")
+                                                  : root_module_prefix;
+  boost::algorithm::replace_all(prefix, ".", "__");
+  return get_py3_namespace_with_name_and_prefix(program, prefix, "__");
 }
 
 class python_mstch_const_value;
@@ -121,7 +110,7 @@ mstch::node adapter_node(
   };
   if (is_transitive) {
     node["adapter:transitive_annotation"] =
-        std::make_shared<python_mstch_const_value>(
+        mstch::make_shared_node<python_mstch_const_value>(
             transitive_adapter_annotation->value(),
             context,
             pos,
@@ -129,6 +118,58 @@ mstch::node adapter_node(
             &*transitive_adapter_annotation->type());
   }
   return node;
+}
+
+bool is_invariant_container_type(const t_type* type) {
+  // Mapping is invariant in its key type
+  // For example, if `Derived` extends `Base`,
+  // then Mapping[Derived, Any] is not compatible with Mapping[Base, Any].
+  // We first check if the map has an `Base` key type (for abstract types).
+  // Then, we recursively verify whether the map's value type, or the element
+  // type of a list or set, contains any such mapping incompatibility.
+  const t_type* true_type = type->get_true_type();
+  if (true_type->is_map()) {
+    const t_map* map_type = dynamic_cast<const t_map*>(true_type);
+    const t_type* key_type = map_type->get_key_type()->get_true_type();
+    return key_type->is_struct() || key_type->is_union() ||
+        key_type->is_exception() || key_type->is_container() ||
+        is_invariant_container_type(map_type->get_val_type());
+  } else if (true_type->is_list()) {
+    return is_invariant_container_type(
+        dynamic_cast<const t_list*>(true_type)->get_elem_type());
+  } else if (true_type->is_set()) {
+    return is_invariant_container_type(
+        dynamic_cast<const t_set*>(true_type)->get_elem_type());
+  }
+
+  return false;
+}
+
+bool is_invariant_adapter(
+    const t_const* adapter_annotation, const t_type* true_type) {
+  if (true_type->is_primitive_type() || !adapter_annotation) {
+    return false;
+  }
+
+  auto type_hint = get_annotation_property(adapter_annotation, "typeHint");
+  return boost::algorithm::ends_with(type_hint, "[]");
+}
+
+bool field_has_invariant_type(const t_field* field) {
+  if (is_invariant_adapter(
+          find_structured_adapter_annotation(*field),
+          field->get_type()->get_true_type())) {
+    return true;
+  }
+
+  if (is_invariant_adapter(
+          find_structured_adapter_annotation(*field->type()->get_true_type()),
+          field->get_type()->get_true_type())) {
+    return true;
+  }
+
+  return ::apache::thrift::compiler::is_invariant_container_type(
+      field->get_type());
 }
 
 class python_mstch_program : public mstch_program {
@@ -140,9 +181,14 @@ class python_mstch_program : public mstch_program {
         this,
         {
             {"program:module_path", &python_mstch_program::module_path},
+            {"program:safe_patch?", &python_mstch_program::safe_patch},
+            {"program:safe_patch_module_path",
+             &python_mstch_program::safe_patch_module_path},
+            {"program:module_mangle", &python_mstch_program::module_mangle},
             {"program:py_deprecated_module_path",
              &python_mstch_program::py_deprecated_module_path},
-            {"program:is_types_file?", &python_mstch_program::is_types_file},
+            {"program:py_asyncio_module_path",
+             &python_mstch_program::py_asyncio_module_path},
             {"program:include_namespaces",
              &python_mstch_program::include_namespaces},
             {"program:base_library_package",
@@ -152,6 +198,24 @@ class python_mstch_program : public mstch_program {
             {"program:adapter_modules", &python_mstch_program::adapter_modules},
             {"program:adapter_type_hint_modules",
              &python_mstch_program::adapter_type_hint_modules},
+            {"program:py3_auto_migrate?",
+             &python_mstch_program::py3_auto_migrate},
+
+            {"program:is_types_file?",
+             {with_no_caching, &python_mstch_program::is_types_file}},
+            {"program:is_source_file?",
+             {with_no_caching, &python_mstch_program::is_source_file}},
+            {"program:is_type_stub?",
+             {with_no_caching, &python_mstch_program::is_type_stub}},
+            {"program:generate_abstract_types",
+             {with_no_caching, &python_mstch_program::generate_abstract_types}},
+            {"program:generate_mutable_types",
+             {with_no_caching, &python_mstch_program::generate_mutable_types}},
+            {"program:generate_immutable_types",
+             {with_no_caching,
+              &python_mstch_program::generate_immutable_types}},
+            {"program:enable_abstract_types?",
+             {with_no_caching, &python_mstch_program::enable_abstract_types}},
         });
     register_has_option("program:import_static?", "import_static");
     gather_included_program_namespaces();
@@ -162,7 +226,11 @@ class python_mstch_program : public mstch_program {
     visit_types_for_adapters();
   }
 
+  mstch::node py3_auto_migrate() { return has_option("auto_migrate"); }
+
   mstch::node is_types_file() { return has_option("is_types_file"); }
+  mstch::node is_source_file() { return has_option("is_source_file"); }
+  mstch::node is_type_stub() { return has_option("is_type_stub"); }
 
   mstch::node include_namespaces() {
     std::vector<const Namespace*> namespaces;
@@ -177,8 +245,10 @@ class python_mstch_program : public mstch_program {
     for (const auto& it : namespaces) {
       a.push_back(mstch::map{
           {"included_module_path", it->ns},
+          {"included_module_mangle", it->ns_mangle},
           {"has_services?", it->has_services},
-          {"has_types?", it->has_types}});
+          {"has_types?", it->has_types},
+          {"is_unsafe_patch?", it->is_unsafe_patch}});
     }
     return a;
   }
@@ -186,6 +256,23 @@ class python_mstch_program : public mstch_program {
   mstch::node module_path() {
     return get_py3_namespace_with_name_and_prefix(
         program_, get_option("root_module_prefix"));
+  }
+
+  mstch::node safe_patch() {
+    constexpr std::string_view prefix = "gen_safe_patch_";
+    return program_->name().substr(0, prefix.size()) == prefix;
+  }
+
+  mstch::node safe_patch_module_path() {
+    auto ns = std::get<std::string>(module_path());
+
+    // Change the namespace from "path.to.file" to "path.to.gen_safe_patch_file"
+    auto pos = ns.rfind('.');
+    return ns.substr(0, pos + 1) + "gen_safe_patch_" + ns.substr(pos + 1);
+  }
+
+  mstch::node module_mangle() {
+    return mangle_program_path(program_, get_option("root_module_prefix"));
   }
 
   mstch::node py_deprecated_module_path() {
@@ -196,13 +283,21 @@ class python_mstch_program : public mstch_program {
     return module_path;
   }
 
+  mstch::node py_asyncio_module_path() {
+    std::string module_path = program_->get_namespace("py.asyncio");
+    if (module_path.empty()) {
+      return program_->name();
+    }
+    return module_path;
+  }
+
   mstch::node base_library_package() {
-    auto option = get_option("base_library_package");
+    std::string option = get_option("base_library_package");
     return option.empty() ? "thrift.python" : option;
   }
 
   mstch::node root_module_prefix() {
-    auto prefix = get_option("root_module_prefix");
+    std::string prefix = get_option("root_module_prefix");
     return prefix.empty() ? "" : prefix + ".";
   }
 
@@ -212,11 +307,29 @@ class python_mstch_program : public mstch_program {
     return module_path_array(adapter_type_hint_modules_);
   }
 
+  mstch::node generate_abstract_types() {
+    return !get_option("generate_abstract_types").empty();
+  }
+
+  mstch::node generate_mutable_types() {
+    return !get_option("generate_mutable_types").empty();
+  }
+
+  mstch::node generate_immutable_types() {
+    return !get_option("generate_immutable_types").empty();
+  }
+
+  mstch::node enable_abstract_types() {
+    return !get_option("enable_abstract_types").empty();
+  }
+
  protected:
   struct Namespace {
     std::string ns;
+    std::string ns_mangle;
     bool has_services;
     bool has_types;
+    bool is_unsafe_patch;
   };
 
   void gather_included_program_namespaces() {
@@ -230,9 +343,11 @@ class python_mstch_program : public mstch_program {
       include_namespaces_[included_program->path()] = Namespace{
           get_py3_namespace_with_name_and_prefix(
               included_program, get_option("root_module_prefix")),
+          mangle_program_path(
+              included_program, get_option("root_module_prefix")),
           !included_program->services().empty(),
           has_types,
-      };
+          is_unsafe_patch_program(included_program)};
     }
   }
 
@@ -246,6 +361,8 @@ class python_mstch_program : public mstch_program {
       auto ns = Namespace();
       ns.ns = get_py3_namespace_with_name_and_prefix(
           prog, get_option("root_module_prefix"));
+      ns.ns_mangle =
+          mangle_program_path(prog, get_option("root_module_prefix"));
       ns.has_services = false;
       ns.has_types = true;
       include_namespaces_[path] = std::move(ns);
@@ -269,7 +386,7 @@ class python_mstch_program : public mstch_program {
         if (function.has_return_type()) {
           visit_type(function.return_type().get_type());
         }
-        visit_type(stream->get_elem_type());
+        visit_type(stream->elem_type().get_type());
       } else {
         visit_type(function.return_type().get_type());
       }
@@ -308,19 +425,19 @@ class python_mstch_program : public mstch_program {
   void visit_types_for_adapters() {
     for (const t_structured* strct : program_->structs_and_unions()) {
       if (auto annotation = find_structured_adapter_annotation(*strct)) {
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "name"), adapter_modules_);
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "typeHint"), adapter_modules_);
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "typeHint"),
             adapter_type_hint_modules_);
       }
       for (const auto& field : strct->fields()) {
         if (auto annotation = find_structured_adapter_annotation(field)) {
-          extract_module_and_insert_to(
+          python::extract_modules_and_insert_into(
               get_annotation_property(annotation, "name"), adapter_modules_);
-          extract_module_and_insert_to(
+          python::extract_modules_and_insert_into(
               get_annotation_property(annotation, "typeHint"),
               adapter_type_hint_modules_);
         }
@@ -328,22 +445,14 @@ class python_mstch_program : public mstch_program {
     }
     for (const auto typedef_def : program_->typedefs()) {
       if (auto annotation = find_structured_adapter_annotation(*typedef_def)) {
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "name"), adapter_modules_);
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "typeHint"), adapter_modules_);
-        extract_module_and_insert_to(
+        python::extract_modules_and_insert_into(
             get_annotation_property(annotation, "typeHint"),
             adapter_type_hint_modules_);
       }
-    }
-  }
-
-  void extract_module_and_insert_to(
-      std::string_view name, std::unordered_set<std::string_view>& modules) {
-    std::string_view module_path = extract_module_path(name);
-    if (module_path != "") {
-      modules.insert(module_path);
     }
   }
 
@@ -358,9 +467,9 @@ class python_mstch_program : public mstch_program {
       return;
     }
     if (auto annotation = find_structured_adapter_annotation(*orig_type)) {
-      extract_module_and_insert_to(
+      python::extract_modules_and_insert_into(
           get_annotation_property(annotation, "name"), adapter_modules_);
-      extract_module_and_insert_to(
+      python::extract_modules_and_insert_into(
           get_annotation_property(annotation, "typeHint"),
           adapter_type_hint_modules_);
     }
@@ -406,15 +515,14 @@ class python_mstch_service : public mstch_service {
       const t_service* s,
       mstch_context& ctx,
       mstch_element_position pos,
-      const t_program* prog)
-      : mstch_service(s, ctx, pos), prog_(prog) {
+      const t_program* prog,
+      const t_service* containing_service = nullptr)
+      : mstch_service(s, ctx, pos, containing_service), prog_(prog) {
     register_methods(
         this,
         {
             {"service:module_path", &python_mstch_service::module_path},
             {"service:program_name", &python_mstch_service::program_name},
-            {"service:parent_service_name",
-             &python_mstch_service::parent_service_name},
             {"service:supported_functions",
              &python_mstch_service::supported_functions},
             {"service:supported_service_functions",
@@ -430,10 +538,6 @@ class python_mstch_service : public mstch_service {
   }
 
   mstch::node program_name() { return service_->program()->name(); }
-
-  mstch::node parent_service_name() {
-    return context_.options.at("parent_service_name");
-  }
 
   std::vector<t_function*> get_supported_functions(
       std::function<bool(const t_function*)> func_filter) {
@@ -468,46 +572,54 @@ class python_mstch_service : public mstch_service {
   const t_program* prog_;
 };
 
+class python_mstch_interaction : public python_mstch_service {
+ public:
+  using ast_type = t_interaction;
+
+  python_mstch_interaction(
+      const t_interaction* interaction,
+      mstch_context& ctx,
+      mstch_element_position pos,
+      const t_service* containing_service,
+      const t_program* prog)
+      : python_mstch_service(interaction, ctx, pos, prog, containing_service) {}
+};
+
 // Generator-specific validator that enforces that a reserved key is not used
 // as a namespace component.
-class no_reserved_key_in_namespace_validator : virtual public validator {
- public:
-  using validator::visit;
-
-  bool visit(t_program* prog) override {
-    validate(prog);
-    return true;
+void validate_no_reserved_key_in_namespace(
+    sema_context& ctx, const t_program& prog) {
+  auto namespace_tokens = get_py3_namespace(&prog);
+  if (namespace_tokens.empty()) {
+    return;
+  }
+  for (const auto& component : namespace_tokens) {
+    if (get_python_reserved_names().find(component) !=
+        get_python_reserved_names().end()) {
+      ctx.report(
+          prog,
+          "reserved-keyword-in-namespace-rule",
+          diagnostic_level::error,
+          "Namespace '{}' contains reserved keyword '{}'",
+          fmt::join(namespace_tokens, "."),
+          component);
+    }
   }
 
- private:
-  void validate(t_program* prog) {
-    auto namespace_tokens = get_py3_namespace(prog);
-    if (namespace_tokens.empty()) {
-      return;
-    }
-    for (const auto& field_name : namespace_tokens) {
-      if (get_python_reserved_names().find(field_name) !=
-          get_python_reserved_names().end()) {
-        report_error(
-            *prog,
-            "Namespace '{}' contains reserved keyword '{}'",
-            fmt::join(namespace_tokens, "."),
-            field_name);
-      }
-    }
-
-    std::vector<std::string> fields;
-    boost::split(fields, prog->path(), boost::is_any_of("\\/."));
-    for (const auto& field : fields) {
-      if (field == "include") {
-        report_error(
-            *prog,
-            "Path '{}' contains reserved keyword 'include'",
-            prog->path());
-      }
+  std::vector<std::string> components;
+  boost::split(components, prog.path(), boost::is_any_of("\\/."));
+  for (const auto& component : components) {
+    if (component == "include") {
+      ctx.report(
+          prog,
+          "no-reserved-keyword-in-namespace",
+          diagnostic_level::error,
+          "Path '{}' contains reserved keyword 'include'",
+          prog.path());
     }
   }
-};
+}
+
 class python_mstch_function : public mstch_function {
  public:
   python_mstch_function(
@@ -562,8 +674,8 @@ class python_mstch_function : public mstch_function {
 
   mstch::node async_only() {
     return function_->sink_or_stream() ||
-        function_->is_interaction_constructor() ||
-        function_->is_interaction_member() || function_->interaction();
+        function_->is_interaction_constructor() || is_interaction_member() ||
+        function_->interaction();
   }
 };
 
@@ -582,27 +694,83 @@ class python_mstch_type : public mstch_type {
     register_methods(
         this,
         {
-            {"type:module_path", &python_mstch_type::module_path},
             {"type:program_name", &python_mstch_type::program_name},
             {"type:metadata_path", &python_mstch_type::metadata_path},
             {"type:py3_namespace", &python_mstch_type::py3_namespace},
-            {"type:need_module_path?", &python_mstch_type::need_module_path},
             {"type:external_program?", &python_mstch_type::is_external_program},
             {"type:integer?", &python_mstch_type::is_integer},
             {"type:iobuf?", &python_mstch_type::is_iobuf},
+            {"type:contains_unsafe_patch?",
+             &python_mstch_type::contains_unsafe_patch},
             {"type:has_adapter?", &python_mstch_type::adapter},
+
+            {"type:module_name",
+             {with_no_caching, &python_mstch_type::module_name}},
+            {"type:module_mangle",
+             {with_no_caching, &python_mstch_type::module_mangle}},
+            {"type:patch_module_path",
+             {with_no_caching, &python_mstch_type::patch_module_path}},
+            {"type:need_module_path?",
+             {with_no_caching, &python_mstch_type::need_module_path}},
+            {"type:need_patch_module_path?",
+             {with_no_caching, &python_mstch_type::need_patch_module_path}},
         });
   }
 
-  mstch::node module_path() {
+  mstch::node module_name() {
+    std::string_view types_import_path = [this]() {
+      if (!get_option("generate_abstract_types").empty()) {
+        return ".thrift_abstract_types";
+      }
+      if (!get_option("generate_mutable_types").empty()) {
+        return ".thrift_mutable_types";
+      }
+      if (!get_option("generate_immutable_types").empty()) {
+        return ".thrift_types";
+      }
+      throw std::runtime_error(
+          "Expected one option out of generate_abstract_types, generate_immutable_types, or generate_mutable_types to be set, and none are set.");
+    }();
+
     return get_py3_namespace_with_name_and_prefix(
-               get_type_program(), get_option("root_module_prefix")) +
-        ".thrift_types";
+               get_type_program(), get_option("root_module_prefix"))
+        .append(types_import_path);
+  }
+
+  mstch::node module_mangle() {
+    std::string_view types_import_path = [this]() {
+      if (!get_option("generate_abstract_types").empty()) {
+        return "__thrift_abstract_types";
+      }
+      if (!get_option("generate_mutable_types").empty()) {
+        return "__thrift_mutable_types";
+      }
+      if (!get_option("generate_immutable_types").empty()) {
+        return "__thrift_types";
+      }
+      throw std::runtime_error(
+          "Expected one option out of generate_abstract_types, generate_immutable_types, or generate_mutable_types to be set, and none are set.");
+    }();
+
+    return mangle_program_path(
+               get_type_program(), get_option("root_module_prefix"))
+        .append(types_import_path);
+  }
+
+  mstch::node patch_module_path() {
+    return get_py3_namespace_with_name_and_prefix(
+               get_type_program(), get_option("root_module_prefix"))
+        .append(".thrift_patch");
   }
 
   mstch::node program_name() { return get_type_program()->name(); }
 
   mstch::node metadata_path() {
+    if (type_->is_enum()) {
+      return get_py3_namespace_with_name_and_prefix(
+                 get_type_program(), get_option("root_module_prefix")) +
+          ".thrift_enums";
+    }
     return get_py3_namespace_with_name_and_prefix(
                get_type_program(), get_option("root_module_prefix")) +
         ".thrift_metadata";
@@ -620,12 +788,14 @@ class python_mstch_type : public mstch_type {
     if (!has_option("is_types_file")) {
       return true;
     }
-    if (const t_program* prog = type_->program()) {
-      if (prog != prog_) {
-        return true;
-      }
+    return is_type_defined_in_the_current_program();
+  }
+
+  mstch::node need_patch_module_path() {
+    if (!has_option("is_patch_file")) {
+      return true;
     }
-    return false;
+    return is_type_defined_in_the_current_program();
   }
 
   mstch::node is_external_program() {
@@ -636,6 +806,10 @@ class python_mstch_type : public mstch_type {
   mstch::node is_integer() { return type_->is_any_int() || type_->is_byte(); }
 
   mstch::node is_iobuf() { return is_type_iobuf(type_); }
+
+  mstch::node contains_unsafe_patch() {
+    return type_contains_unsafe_patch(type_);
+  }
 
   mstch::node adapter() {
     return adapter_node(
@@ -648,6 +822,15 @@ class python_mstch_type : public mstch_type {
       return p;
     }
     return prog_;
+  }
+
+  bool is_type_defined_in_the_current_program() {
+    if (const t_program* prog = type_->program()) {
+      if (prog != prog_) {
+        return true;
+      }
+    }
+    return false;
   }
 
   const t_program* prog_;
@@ -685,6 +868,7 @@ class python_mstch_struct : public mstch_struct {
     register_methods(
         this,
         {
+            {"struct:py_name", &python_mstch_struct::py_name},
             {"struct:fields_ordered_by_id",
              &python_mstch_struct::fields_ordered_by_id},
             {"struct:exception_message?",
@@ -692,10 +876,14 @@ class python_mstch_struct : public mstch_struct {
             {"struct:exception_message",
              &python_mstch_struct::exception_message},
             {"struct:has_adapter?", &python_mstch_struct::adapter},
+            {"struct:has_invariant_field?",
+             &python_mstch_struct::has_invariant_field},
             {"struct:legacy_api?", &python_mstch_struct::legacy_api},
             {"struct:fields_size", &python_mstch_struct::fields_size},
         });
   }
+
+  mstch::node py_name() { return python::get_py3_name(*struct_); }
 
   mstch::node fields_ordered_by_id() {
     std::vector<const t_field*> fields = struct_->fields().copy();
@@ -705,10 +893,22 @@ class python_mstch_struct : public mstch_struct {
     return make_mstch_fields(fields);
   }
 
-  mstch::node has_exception_message() {
-    return struct_->has_annotation("message");
+  mstch::node has_invariant_field() {
+    return std::any_of(
+        struct_->fields().begin(),
+        struct_->fields().end(),
+        [](const auto& field) { return field_has_invariant_type(&field); });
   }
-  mstch::node exception_message() { return struct_->get_annotation("message"); }
+
+  mstch::node has_exception_message() {
+    return !!dynamic_cast<const t_exception&>(*struct_).get_message_field();
+  }
+
+  mstch::node exception_message() {
+    const auto* message_field =
+        dynamic_cast<const t_exception&>(*struct_).get_message_field();
+    return message_field ? python::get_py3_name(*message_field) : "";
+  }
 
   mstch::node adapter() {
     return adapter_node(adapter_annotation_, nullptr, context_, pos_);
@@ -718,7 +918,7 @@ class python_mstch_struct : public mstch_struct {
     return ::apache::thrift::compiler::generate_legacy_api(*struct_);
   }
 
-  mstch::node fields_size() { return std::to_string(struct_->fields().size()); }
+  mstch::node fields_size() { return struct_->fields().size(); }
 
  private:
   const t_const* adapter_annotation_;
@@ -732,7 +932,7 @@ class python_mstch_field : public mstch_field {
       mstch_element_position pos,
       const field_generator_context* field_context)
       : mstch_field(field, ctx, pos, field_context),
-        py_name_(py3::get_py3_name(*field)),
+        py_name_(python::get_py3_name(*field)),
         adapter_annotation_(find_structured_adapter_annotation(*field)),
         transitive_adapter_annotation_(
             get_transitive_annotation_of_adapter_or_null(*field)) {
@@ -745,6 +945,9 @@ class python_mstch_field : public mstch_field {
             {"field:user_default_value",
              &python_mstch_field::user_default_value},
             {"field:has_adapter?", &python_mstch_field::adapter},
+            {"field:is_container_type", &python_mstch_field::is_container_type},
+            {"field:is_invariant_type?",
+             &python_mstch_field::is_invariant_type},
         });
   }
 
@@ -782,11 +985,11 @@ class python_mstch_field : public mstch_field {
     if (value->is_empty()) {
       auto true_type = field_->get_type()->get_true_type();
       if ((true_type->is_list() || true_type->is_set()) &&
-          value->get_type() != t_const_value::CV_LIST) {
-        const_cast<t_const_value*>(value)->set_list();
+          value->kind() != t_const_value::CV_LIST) {
+        const_cast<t_const_value*>(value)->convert_empty_map_to_list();
       }
-      if (true_type->is_map() && value->get_type() != t_const_value::CV_MAP) {
-        const_cast<t_const_value*>(value)->set_map();
+      if (true_type->is_map() && value->kind() != t_const_value::CV_MAP) {
+        const_cast<t_const_value*>(value)->convert_empty_list_to_map();
       }
     }
     return context_.const_value_factory->make_mstch_object(
@@ -796,6 +999,14 @@ class python_mstch_field : public mstch_field {
     return adapter_node(
         adapter_annotation_, transitive_adapter_annotation_, context_, pos_);
   }
+
+  mstch::node is_container_type() {
+    const auto* type = field_->get_type();
+    return type->get_true_type()->is_list() ||
+        type->get_true_type()->is_map() || type->get_true_type()->is_set();
+  }
+
+  mstch::node is_invariant_type() { return field_has_invariant_type(field_); }
 
  private:
   const std::string py_name_;
@@ -838,61 +1049,119 @@ class python_mstch_enum_value : public mstch_enum_value {
         });
   }
 
-  mstch::node py_name() { return py3::get_py3_name(*enum_value_); }
+  mstch::node py_name() { return python::get_py3_name(*enum_value_); }
 };
 
 // Generator-specific validator that enforces "name" and "value" are not used
 // as enum member or union field names (thrift-py3).
-class enum_member_union_field_names_validator : virtual public validator {
- public:
-  using validator::visit;
-
-  bool visit(t_enum* enm) override {
-    for (const t_enum_value* ev : enm->get_enum_values()) {
-      validate(ev, ev->get_name());
-    }
-    return true;
-  }
-
-  bool visit(t_structured* s) override {
-    if (!s->is_union()) {
-      return false;
-    }
-    for (const t_field& f : s->fields()) {
-      validate(&f, f.name());
-    }
-    return true;
-  }
-
- private:
-  void validate(const t_named* node, const std::string& name) {
-    auto pyname = node->get_annotation("py3.name", &name);
-    if (const t_const* annot =
-            node->find_structured_annotation_or_null(kPythonNameUri)) {
-      if (auto annotation_name =
-              annot->get_value_from_structured_annotation_or_null("name")) {
-        pyname = annotation_name->get_string();
-      }
-    }
-    if (pyname == "name" || pyname == "value") {
-      report_error(
-          *node,
-          "'{}' should not be used as an enum/union field name in thrift-py3. "
-          "Use a different name or annotate the field with "
-          "`(py3.name=\"<new_py_name>\")`",
-          pyname);
+namespace enum_member_union_field_names_validator {
+template <typename Pred>
+void validate(
+    const t_named* node,
+    const std::string& name,
+    sema_context& ctx,
+    Pred&& field_name_predicate) {
+  auto pyname = node->get_annotation("py3.name", &name);
+  if (const t_const* annot =
+          node->find_structured_annotation_or_null(kPythonNameUri)) {
+    if (auto annotation_name =
+            annot->get_value_from_structured_annotation_or_null("name")) {
+      pyname = annotation_name->get_string();
     }
   }
-};
+  if (field_name_predicate(pyname)) {
+    ctx.report(
+        *node,
+        "enum-member-union-field-names-rule",
+        diagnostic_level::error,
+        "'{}' should not be used as an enum/union field name in thrift-py3. "
+        "Use a different name or annotate the field with "
+        "`@python.Name{{name=\"<new_py_name>\"}}`",
+        pyname);
+  }
+}
+bool validate_enum(sema_context& ctx, const t_enum& enm) {
+  auto predicate = [](const auto& pyname) {
+    return pyname == "name" || pyname == "value";
+  };
+  for (const t_enum_value* ev : enm.get_enum_values()) {
+    validate(ev, ev->get_name(), ctx, predicate);
+  }
+  return true;
+}
+
+bool validate_union(sema_context& ctx, const t_struct& s) {
+  auto predicate = [](const auto& pyname) {
+    return pyname == "type" || pyname == "value" || pyname == "Type";
+  };
+  for (const t_field& f : s.fields()) {
+    validate(&f, f.name(), ctx, predicate);
+  }
+  return true;
+}
+
+} // namespace enum_member_union_field_names_validator
+
+namespace module_name_collision_validator {
+
+void validate_module_name_collision(
+    const t_named& node,
+    const std::string& name,
+    sema_context& ctx,
+    diagnostic_level level) {
+  // the structured annotation @python.Name overrides unstructured py3.name
+  std::reference_wrapper<const std::string> pyname =
+      node.get_annotation("py3.name", &name);
+  if (const t_const* annot =
+          node.find_structured_annotation_or_null(kPythonNameUri)) {
+    if (auto annotation_name =
+            annot->get_value_from_structured_annotation_or_null("name")) {
+      pyname = annotation_name->get_string();
+    }
+  }
+  if (pyname.get() == node.program()->name()) {
+    ctx.report(
+        node,
+        "python-empty-namespace-symbol-collides-with-module",
+        level,
+        "'{}' is declared in module of the same name. "
+        "To fix, add a non-empty py3 namespace or change the name to "
+        " no longer collide with the module name. ",
+        pyname.get());
+  }
+}
+
+void validate_named(sema_context& ctx, const t_named& d) {
+  validate_module_name_collision(d, d.name(), ctx, diagnostic_level::error);
+}
+void warn_named(sema_context& ctx, const t_named& d) {
+  validate_module_name_collision(d, d.name(), ctx, diagnostic_level::warning);
+}
+
+} // namespace module_name_collision_validator
+
+std::filesystem::path program_to_path(const t_program& prog) {
+  auto package = get_py3_namespace(&prog);
+  return fmt::format("{}", fmt::join(package, "/"));
+}
 
 class t_mstch_python_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
 
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "field:has_adapter?",
+        "field:type",
+    };
+    return opts;
+  }
+
   std::string template_prefix() const override { return "python"; }
 
   void generate_program() override {
-    generate_root_path_ = package_to_path();
+    generate_root_path_ = program_to_path(*get_program());
     out_dir_base_ = "gen-python";
     auto include_prefix = get_option("include_prefix").value_or("");
     if (!include_prefix.empty()) {
@@ -905,28 +1174,44 @@ class t_mstch_python_generator : public t_mstch_generator {
     generate_services();
   }
 
-  void fill_validator_list(validator_list& vl) const override {
-    vl.add<no_reserved_key_in_namespace_validator>();
-    vl.add<enum_member_union_field_names_validator>();
+  void fill_validator_visitors(ast_validator& validator) const override {
+    validator.add_program_visitor(validate_no_reserved_key_in_namespace);
+    validator.add_enum_visitor(
+        enum_member_union_field_names_validator::validate_enum);
+    validator.add_union_visitor(
+        enum_member_union_field_names_validator::validate_union);
+    if (get_py3_namespace(program_).empty()) {
+      validator.add_structured_definition_visitor(
+          module_name_collision_validator::validate_named);
+      validator.add_enum_visitor(
+          module_name_collision_validator::validate_named);
+      validator.add_const_visitor(
+          module_name_collision_validator::validate_named);
+      validator.add_typedef_visitor(
+          module_name_collision_validator::validate_named);
+      validator.add_interface_visitor(
+          module_name_collision_validator::warn_named);
+    }
   }
 
-  enum TypesFile { IsTypesFile, NotTypesFile };
+  enum class TypesFileKind { NotATypesFile, SourceFile, TypeStub };
+  enum class TypeKind { Abstract, Immutable, Mutable };
 
  protected:
   bool should_resolve_typedefs() const override { return true; }
   void set_mstch_factories();
   void generate_file(
-      const std::string& file,
-      TypesFile is_types_file,
-      const boost::filesystem::path& base);
+      const std::string& template_name,
+      TypesFileKind types_file_kind,
+      TypeKind type_kind,
+      const std::filesystem::path& base);
   void set_types_file(bool val);
   void generate_types();
   void generate_metadata();
   void generate_clients();
   void generate_services();
-  boost::filesystem::path package_to_path();
 
-  boost::filesystem::path generate_root_path_;
+  std::filesystem::path generate_root_path_;
 };
 
 class python_mstch_const : public mstch_const {
@@ -972,7 +1257,7 @@ class python_mstch_const : public mstch_const {
   }
 
   mstch::node transitive_adapter_annotation() {
-    return std::make_shared<python_mstch_const_value>(
+    return mstch::make_shared_node<python_mstch_const_value>(
         transitive_adapter_annotation_->value(),
         context_,
         pos_,
@@ -1048,10 +1333,12 @@ class python_mstch_const_value : public mstch_const_value {
   }
 
   mstch::node py3_enum_value_name() {
-    if (const_value_->is_enum() && const_value_->get_enum_value() != nullptr) {
-      return py3::get_py3_name(*const_value_->get_enum_value());
+    if (!const_value_->is_enum() || const_value_->get_enum_value() == nullptr) {
+      return mstch::node();
     }
-    return mstch::node();
+    const auto& enum_name = const_value_->get_enum()->get_name();
+    return python::get_py3_name_class_scope(
+        *const_value_->get_enum_value(), enum_name);
   }
 
   mstch::node list_elem_type() {
@@ -1124,7 +1411,7 @@ class python_mstch_deprecated_annotation : public mstch_deprecated_annotation {
 
  protected:
   std::string to_python_string_literal(std::string val) const {
-    std::string quotes = "\"\"\"";
+    std::string quotes = R"(""")";
     boost::algorithm::replace_all(val, "\\", "\\\\");
     boost::algorithm::replace_all(val, "\"", "\\\"");
     return quotes + val + quotes;
@@ -1134,6 +1421,7 @@ class python_mstch_deprecated_annotation : public mstch_deprecated_annotation {
 void t_mstch_python_generator::set_mstch_factories() {
   mstch_context_.add<python_mstch_program>();
   mstch_context_.add<python_mstch_service>(program_);
+  mstch_context_.add<python_mstch_interaction>(program_);
   mstch_context_.add<python_mstch_function>();
   mstch_context_.add<python_mstch_type>(program_);
   mstch_context_.add<python_mstch_typedef>();
@@ -1146,33 +1434,86 @@ void t_mstch_python_generator::set_mstch_factories() {
   mstch_context_.add<python_mstch_deprecated_annotation>();
 }
 
-boost::filesystem::path t_mstch_python_generator::package_to_path() {
-  auto package = get_py3_namespace(get_program());
-  return boost::algorithm::join(package, "/");
-}
-
 void t_mstch_python_generator::generate_file(
-    const std::string& file,
-    TypesFile is_types_file,
-    const boost::filesystem::path& base = {}) {
-  auto program = get_program();
-  const auto& name = program->name();
-  if (is_types_file == IsTypesFile) {
-    mstch_context_.options["is_types_file"] = "";
-  } else {
-    mstch_context_.options.erase("is_types_file");
-  }
-  auto mstch_program = make_mstch_program_cached(program, mstch_context_);
-  render_to_file(mstch_program, file, base / name / file);
+    const std::string& template_name,
+    TypesFileKind types_file_kind,
+    TypeKind type_kind,
+    const std::filesystem::path& base = {}) {
+  t_program* program = get_program();
+  const std::string& program_name = program->name();
+  mstch_context_
+      .set_or_erase_option(
+          types_file_kind != TypesFileKind::NotATypesFile, "is_types_file", "")
+      .set_or_erase_option(
+          types_file_kind == TypesFileKind::SourceFile, "is_source_file", "")
+      .set_or_erase_option(
+          types_file_kind == TypesFileKind::TypeStub, "is_type_stub", "")
+      .set_or_erase_option(
+          type_kind == TypeKind::Abstract, "generate_abstract_types", "yes")
+      .set_or_erase_option(
+          type_kind == TypeKind::Immutable, "generate_immutable_types", "yes")
+      .set_or_erase_option(
+          type_kind == TypeKind::Mutable, "generate_mutable_types", "yes");
+
+  std::shared_ptr<mstch_base> mstch_program =
+      make_mstch_program_cached(program, mstch_context_);
+  render_to_file(
+      mstch_program,
+      template_name,
+      base / program_name / template_name // (output) path
+  );
 }
 
 void t_mstch_python_generator::generate_types() {
-  generate_file("thrift_types.py", IsTypesFile, generate_root_path_);
-  generate_file("thrift_types.pyi", IsTypesFile, generate_root_path_);
+  // DO_BEFORE(satishvk, 20250130): Remove flags related to abstract types after
+  // launch.
+  const bool enable_abstract_types = !has_option("disable_abstract_types");
+
+  mstch_context_.set_or_erase_option(
+      enable_abstract_types, "enable_abstract_types", "true");
+  generate_file(
+      "thrift_types.py",
+      TypesFileKind::SourceFile,
+      TypeKind::Immutable,
+      generate_root_path_);
+  generate_file(
+      "thrift_types.pyi",
+      TypesFileKind::TypeStub,
+      TypeKind::Immutable,
+      generate_root_path_);
+  generate_file(
+      "thrift_enums.py",
+      TypesFileKind::SourceFile,
+      TypeKind::Immutable,
+      generate_root_path_);
+
+  generate_file(
+      "thrift_abstract_types.py",
+      TypesFileKind::SourceFile,
+      TypeKind::Abstract,
+      generate_root_path_);
+
+  generate_file(
+      "thrift_mutable_types.py",
+      TypesFileKind::SourceFile,
+      TypeKind::Mutable,
+      generate_root_path_);
+
+  generate_file(
+      "thrift_mutable_types.pyi",
+      TypesFileKind::TypeStub,
+      TypeKind::Mutable,
+      generate_root_path_);
+
+  mstch_context_.options["enable_abstract_types"] = "true";
 }
 
 void t_mstch_python_generator::generate_metadata() {
-  generate_file("thrift_metadata.py", IsTypesFile, generate_root_path_);
+  generate_file(
+      "thrift_metadata.py",
+      TypesFileKind::SourceFile,
+      TypeKind::Immutable,
+      generate_root_path_);
 }
 
 void t_mstch_python_generator::generate_clients() {
@@ -1182,7 +1523,17 @@ void t_mstch_python_generator::generate_clients() {
     return;
   }
 
-  generate_file("thrift_clients.py", NotTypesFile, generate_root_path_);
+  generate_file(
+      "thrift_clients.py",
+      TypesFileKind::NotATypesFile,
+      TypeKind::Immutable,
+      generate_root_path_);
+
+  generate_file(
+      "thrift_mutable_clients.py",
+      TypesFileKind::NotATypesFile,
+      TypeKind::Mutable,
+      generate_root_path_);
 }
 
 void t_mstch_python_generator::generate_services() {
@@ -1191,16 +1542,72 @@ void t_mstch_python_generator::generate_services() {
     // services.
     return;
   }
-  generate_file("thrift_services.py", NotTypesFile, generate_root_path_);
+  generate_file(
+      "thrift_services.py",
+      TypesFileKind::NotATypesFile,
+      TypeKind::Immutable,
+      generate_root_path_);
+
+  generate_file(
+      "thrift_mutable_services.py",
+      TypesFileKind::NotATypesFile,
+      TypeKind::Mutable,
+      generate_root_path_);
 }
+
+class t_python_patch_generator : public t_mstch_generator {
+ public:
+  using t_mstch_generator::t_mstch_generator;
+
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "field:has_adapter?",
+        "field:type",
+    };
+    return opts;
+  }
+
+  std::string template_prefix() const override { return "patch"; }
+
+  void generate_program() override {
+    out_dir_base_ = "gen-python-patch";
+
+    set_mstch_factories();
+    mstch_context_.set_or_erase_option(true, "generate_immutable_types", "yes");
+    mstch_context_.set_or_erase_option(true, "is_patch_file", "");
+    const auto* program = get_program();
+    auto mstch_program = mstch_context_.program_factory->make_mstch_object(
+        program, mstch_context_);
+
+    render_to_file(
+        std::move(mstch_program),
+        "thrift_patch.py",
+        program_to_path(*get_program()) / program->name() / "thrift_patch.py");
+  }
+
+ private:
+  void set_mstch_factories() {
+    mstch_context_.add<python_mstch_program>();
+    mstch_context_.add<python_mstch_struct>();
+    mstch_context_.add<python_mstch_field>();
+    mstch_context_.add<python_mstch_type>(program_);
+  }
+};
 
 } // namespace
 
 THRIFT_REGISTER_GENERATOR(
     mstch_python,
     "Python",
-    "    include_prefix:  Use full include paths in generated files.\n");
+    "    include_prefix:  Use full include paths in generated files.\n"
+    "    disable_abstract_types:\n"
+    "      Disable the use of abstract types with thrift-python"
+    "      immutable and mutable types.\n");
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+namespace patch {
+THRIFT_REGISTER_GENERATOR(
+    python_patch, "Python patch", "Python patch generator\n");
+}
+
+} // namespace apache::thrift::compiler

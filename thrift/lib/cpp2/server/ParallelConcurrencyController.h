@@ -31,36 +31,53 @@ namespace apache::thrift {
 
 class ParallelConcurrencyControllerBase : public ConcurrencyControllerBase {
  public:
-  explicit ParallelConcurrencyControllerBase(RequestPileInterface& pile)
-      : pile_(pile) {}
+  enum class RequestExecutionMode : uint8_t {
+    // Requests are executed in the order they are enqueued, but coroutines are
+    // reenqueued to the CPU Executor directly allowing any thread to execute
+    // them. This is the default mode.
+    Parallel,
 
-  void setExecutionLimitRequests(uint64_t limit) override final;
+    // Requests are executed in the order they are enqueued, but coroutines are
+    // reenqueued to the CPU Executor through a SerialExecutor bound to the
+    // request. This lows contention on the Executor when using coroutines.
+    Serial,
+  };
+
+  explicit ParallelConcurrencyControllerBase(
+      RequestPileInterface& pile,
+      RequestExecutionMode requestExecutionMode =
+          RequestExecutionMode::Parallel)
+      : requestExecutionMode_(requestExecutionMode), pile_(pile) {}
+
+  void setExecutionLimitRequests(uint64_t limit) final;
 
   using ConcurrencyControllerBase::setObserver;
 
-  uint64_t getExecutionLimitRequests() const override final {
+  uint64_t getExecutionLimitRequests() const final {
     return executionLimit_.load();
   }
 
-  void setQpsLimit(uint64_t) override final {}
+  void setQpsLimit(uint64_t) final {}
 
-  uint64_t getQpsLimit() const override final { return 0; }
+  uint64_t getQpsLimit() const final { return 0; }
 
-  uint64_t requestCount() const override final {
+  uint64_t requestCount() const final {
     return counters_.load().requestInExecution;
   }
 
-  void onEnqueued() override final;
+  void onEnqueued() final;
 
   void onRequestFinished(ServerRequestData&) override;
 
-  void stop() override final;
+  void stop() final;
 
-  uint64_t numPendingDequeRequest() const override final {
+  uint64_t numPendingDequeRequest() const final {
     return counters_.load().pendingDequeCalls;
   }
 
  protected:
+  const RequestExecutionMode requestExecutionMode_;
+
   struct Counters {
     constexpr Counters() noexcept = default;
     // Number of requests that are being executed
@@ -91,13 +108,31 @@ class ParallelConcurrencyControllerBase : public ConcurrencyControllerBase {
 
 class ParallelConcurrencyController : public ParallelConcurrencyControllerBase {
  public:
-  ParallelConcurrencyController(RequestPileInterface& pile, folly::Executor& ex)
-      : ParallelConcurrencyControllerBase(pile), executor_(ex) {}
+  using RequestExecutionMode =
+      ParallelConcurrencyControllerBase::RequestExecutionMode;
+
+  /**
+   *
+   * @param requestExecutor: If set to RequestExecutor::Serial, the requests
+   * will be executed using a a folly::SerialExecutor. Consider using this if
+   * your code uses coroutines.
+   */
+  ParallelConcurrencyController(
+      RequestPileInterface& pile,
+      folly::Executor& ex,
+      RequestExecutionMode requestExecutionMode =
+          RequestExecutionMode::Parallel)
+      : ParallelConcurrencyControllerBase(pile, requestExecutionMode),
+        executor_(ex) {}
   std::string describe() const override;
+
+  serverdbginfo::ConcurrencyControllerDbgInfo getDbgInfo() const override;
 
  private:
   folly::Executor& executor_;
 
+  void scheduleWithSerialExecutor();
+  void scheduleWithoutSerialExecutor();
   void scheduleOnExecutor() override;
 };
 

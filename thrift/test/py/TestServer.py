@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import glob
@@ -43,6 +45,7 @@ class SecondHandler(SecondService.Iface):
         print("blahBlah()")
 
 
+# pyre-fixme[11]: Annotation `ContextIface` is not defined as a type.
 class SecondContextHandler(SecondService.ContextIface):
     def __init__(self):
         self.th = SecondHandler()
@@ -124,6 +127,7 @@ class TestHandler(ThriftTest.Iface):
         return thing
 
 
+# pyre-fixme[11]: Annotation `ContextIface` is not defined as a type.
 class TestContextHandler(ThriftTest.ContextIface):
     def __init__(self, server_port):
         self.th = TestHandler()
@@ -226,7 +230,7 @@ class TestServerEventHandler(TServer.TServerEventHandler):
         self.num_conns_destroyed += 1
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = OptionParser()
     parser.add_option(
         "--ssl",
@@ -278,6 +282,7 @@ if __name__ == "__main__":
         pfactory = TBinaryProtocol.TBinaryProtocolFactory()
 
     if options.context:
+        # pyre-fixme[16]: Module `ThriftTest` has no attribute `ContextProcessor`.
         processor = ThriftTest.ContextProcessor(TestContextHandler(options.port))
     else:
         processor = ThriftTest.Processor(TestHandler())
@@ -287,10 +292,15 @@ if __name__ == "__main__":
         if options.context:
             processor.registerProcessor(
                 "ThriftTest",
+                # pyre-fixme[16]: Module `ThriftTest` has no attribute
+                #  `ContextProcessor`.
                 ThriftTest.ContextProcessor(TestContextHandler(options.port)),
             )
             processor.registerProcessor(
-                "SecondService", SecondService.ContextProcessor(SecondContextHandler())
+                "SecondService",
+                # pyre-fixme[16]: Module `SecondService` has no attribute
+                #  `ContextProcessor`.
+                SecondService.ContextProcessor(SecondContextHandler()),
             )
         else:
             processor.registerProcessor(
@@ -310,3 +320,7 @@ if __name__ == "__main__":
     server.setServerEventHandler(event_handler)
 
     server.serve()
+
+
+if __name__ == "__main__":
+    main()  # pragma: no cover

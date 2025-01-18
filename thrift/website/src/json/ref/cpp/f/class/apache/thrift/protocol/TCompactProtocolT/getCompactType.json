@@ -15,6 +15,7 @@
       "definition_html": "int8_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::getCompactType",
       "argsstring_html": "(int8_t ttype)",
       "name_html": "getCompactType",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::getCompactType",
       "param": [
         {
           "type_html": "int8_t",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "203",
-        "column": "1",
+        "column": "17",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "401",
         "bodyend": "403"
@@ -52,5 +53,11 @@
   "brief_html": "<p>Given a TType value, find the appropriate <code>detail::compact::Types</code> value </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getCompactType",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getCompactType"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/getCompactType",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

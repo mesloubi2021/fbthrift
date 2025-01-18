@@ -10,11 +10,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::intern_boxed_field_ref&lt; T &gt;::intern_boxed_field_ref",
       "argsstring_html": "(T value, get_default_t get_default, typename BitRef::Isset &amp;is_set, const uint8_t bit_index=0) noexcept",
       "name_html": "intern_boxed_field_ref",
+      "qualifiedname_html": "apache::thrift::intern_boxed_field_ref::intern_boxed_field_ref",
       "param": [
         {
           "type_html": "T",
@@ -25,7 +27,7 @@
           "declname_html": "get_default"
         },
         {
-          "type_html": "typename <code>BitRef::Isset</code> &amp;",
+          "type_html": "typename BitRef::Isset &amp;",
           "declname_html": "is_set"
         },
         {
@@ -36,11 +38,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1183",
-        "column": "1",
+        "line": "1186",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1183",
-        "bodyend": "1188"
+        "bodystart": "1186",
+        "bodyend": "1191"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE intern_boxed_field_ref(\n    T value,\n    get_default_t get_default,\n    typename BitRef::Isset&amp; is_set,\n    const uint8_t bit_index = 0)",
@@ -63,11 +65,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::intern_boxed_field_ref&lt; T &gt;::intern_boxed_field_ref",
       "argsstring_html": "(T value, get_default_t get_default, typename BitRef::AtomicIsset &amp;is_set, const uint8_t bit_index=0) noexcept",
       "name_html": "intern_boxed_field_ref",
+      "qualifiedname_html": "apache::thrift::intern_boxed_field_ref::intern_boxed_field_ref",
       "param": [
         {
           "type_html": "T",
@@ -78,7 +82,7 @@
           "declname_html": "get_default"
         },
         {
-          "type_html": "typename <code>BitRef::AtomicIsset</code> &amp;",
+          "type_html": "typename BitRef::AtomicIsset &amp;",
           "declname_html": "is_set"
         },
         {
@@ -89,11 +93,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1190",
-        "column": "1",
+        "line": "1193",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1190",
-        "bodyend": "1195"
+        "bodystart": "1193",
+        "bodyend": "1198"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE intern_boxed_field_ref(\n    T value,\n    get_default_t get_default,\n    typename BitRef::AtomicIsset&amp; is_set,\n    const uint8_t bit_index = 0)",
@@ -116,6 +120,7 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -123,13 +128,14 @@
         },
         {
           "type_html": "typename",
-          "defval_html": "<code>detail::EnableIfImplicit</code>&lt;T, U&gt;"
+          "defval_html": "<code>apache::thrift::detail::EnableIfImplicit</code>&lt;T, U&gt;"
         }
       ],
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::intern_boxed_field_ref&lt; T &gt;::intern_boxed_field_ref",
       "argsstring_html": "(const intern_boxed_field_ref&lt; U &gt; &amp;other) noexcept",
       "name_html": "intern_boxed_field_ref",
+      "qualifiedname_html": "apache::thrift::intern_boxed_field_ref::intern_boxed_field_ref",
       "param": [
         {
           "type_html": "const <code>intern_boxed_field_ref</code>&lt; U &gt; &amp;",
@@ -138,17 +144,17 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1198",
-        "column": "1",
+        "line": "1203",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1198",
-        "bodyend": "1200"
+        "bodystart": "1203",
+        "bodyend": "1205"
       },
       "definition": {
-        "simple_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE intern_boxed_field_ref(const intern_boxed_field_ref&lt;U&gt;&amp; other)",
-        "simple_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE intern_boxed_field_ref(const intern_boxed_field_ref<U>& other)",
-        "detailed_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE intern_boxed_field_ref(\n    const intern_boxed_field_ref&lt;U&gt;&amp; other) noexcept",
-        "detailed_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE intern_boxed_field_ref(\n    const intern_boxed_field_ref<U>& other) noexcept",
+        "simple_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE intern_boxed_field_ref(const intern_boxed_field_ref&lt;U&gt;&amp; other)",
+        "simple_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE intern_boxed_field_ref(const intern_boxed_field_ref<U>& other)",
+        "detailed_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE intern_boxed_field_ref(\n    const intern_boxed_field_ref&lt;U&gt;&amp; other) noexcept",
+        "detailed_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE intern_boxed_field_ref(\n    const intern_boxed_field_ref<U>& other) noexcept",
         "original_definition_html": "FOLLY_ERASE apache::thrift::intern_boxed_field_ref&lt; T &gt;::intern_boxed_field_ref",
         "original_argsstring_html": "(const intern_boxed_field_ref&lt; U &gt; &amp;other) noexcept"
       },
@@ -165,5 +171,11 @@
   "brief_html": "Constructs the intern_boxed_field_ref.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/intern_boxed_field_ref",
-  "refid": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/intern_boxed_field_ref"
+  "refid": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/intern_boxed_field_ref",
+  "parent_links": [
+    {
+      "text_html": "intern_boxed_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/intern_boxed_field_ref"
+    }
+  ]
 }

@@ -15,6 +15,7 @@
       "definition_html": "apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::BaseEnsurePatch",
       "argsstring_html": "(const BaseEnsurePatch &amp;)=default",
       "name_html": "BaseEnsurePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::BaseEnsurePatch",
       "param": [
         {
           "type_html": "const <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/op/detail/BaseEnsurePatch\">BaseEnsurePatch</a> &amp;"
@@ -22,8 +23,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "130",
-        "column": "1"
+        "line": "173",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BaseEnsurePatch(const BaseEnsurePatch&amp;)",
@@ -46,11 +47,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "no",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::BaseEnsurePatch",
       "argsstring_html": "(BaseEnsurePatch &amp;&amp;) noexcept=default",
       "name_html": "BaseEnsurePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::BaseEnsurePatch",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/op/detail/BaseEnsurePatch\">BaseEnsurePatch</a> &amp;&amp;"
@@ -58,8 +61,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "131",
-        "column": "1"
+        "line": "174",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BaseEnsurePatch(BaseEnsurePatch&amp;&amp;)",
@@ -82,5 +85,11 @@
   "brief_html": "Constructs the BaseEnsurePatch.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/BaseEnsurePatch",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/BaseEnsurePatch"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/BaseEnsurePatch",
+  "parent_links": [
+    {
+      "text_html": "StructPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/StructPatch"
+    }
+  ]
 }

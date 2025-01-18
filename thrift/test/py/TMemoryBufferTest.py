@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -25,15 +27,15 @@ class TestTMemoryBuffer(unittest.TestCase):
         buf = TMemoryBuffer(b"hello")
         data = buf.read(5)
         buf.write(b"world")
-        self.assertEquals(data, b"hello")
-        self.assertEquals(buf.getvalue(), b"world")
+        self.assertEqual(data, b"hello")
+        self.assertEqual(buf.getvalue(), b"world")
 
     def testNoInitialValue(self):
         buf = TMemoryBuffer()
         data = buf.read(5)
         buf.write(b"world")
-        self.assertEquals(data, b"")
-        self.assertEquals(buf.getvalue(), b"world")
+        self.assertEqual(data, b"")
+        self.assertEqual(buf.getvalue(), b"world")
 
     def testClose(self):
         buf = TMemoryBuffer(b"hello")

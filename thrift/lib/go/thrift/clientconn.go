@@ -17,125 +17,90 @@
 package thrift
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
 )
 
 // ClientConn holds all the connection information for a thrift client
 type ClientConn struct {
-	transport       Transport
-	protocolFactory ProtocolFactory
-	iproto          Protocol
-	oproto          Protocol
-	seqID           int32
+	proto types.Protocol
+	seqID int32
 }
 
-// Transport returns the underlying Transport object inside the ClientConn
-// object
-func (cc *ClientConn) Transport() Transport {
-	return cc.transport
-}
-
-// NewClientConn creates a new ClientConn object using the provided ProtocolFactory
-func NewClientConn(t Transport, pf ProtocolFactory) ClientConn {
+// NewClientConn creates a new ClientConn object using a protocol
+func NewClientConn(proto types.Protocol) ClientConn {
 	return ClientConn{
-		transport:       t,
-		protocolFactory: pf,
-		iproto:          pf.GetProtocol(t),
-		oproto:          pf.GetProtocol(t),
+		proto: proto,
 	}
-}
-
-// NewClientConnWithProtocols creates a new ClientConn object using the input and output protocols provided
-func NewClientConnWithProtocols(t Transport, iproto, oproto Protocol) ClientConn {
-	return ClientConn{
-		transport:       t,
-		protocolFactory: nil,
-		iproto:          iproto,
-		oproto:          oproto,
-	}
-}
-
-// IRequest represents a request to be sent to a thrift endpoint
-type IRequest interface {
-	Write(p Protocol) error
-}
-
-// IResponse represents a response received from a thrift call
-type IResponse interface {
-	Read(p Protocol) error
-}
-
-// Open opens the client connection
-func (cc *ClientConn) Open() error {
-	return cc.transport.Open()
 }
 
 // Close closes the client connection
 func (cc *ClientConn) Close() error {
-	return cc.transport.Close()
-}
-
-// IsOpen return true if the client connection is open; otherwise, it returns false.
-func (cc *ClientConn) IsOpen() bool {
-	return cc.transport.IsOpen()
+	return cc.proto.Close()
 }
 
 // SendMsg sends a request to a given thrift endpoint
-func (cc *ClientConn) SendMsg(method string, req IRequest, msgType MessageType) error {
+func (cc *ClientConn) SendMsg(ctx context.Context, method string, req types.IRequest, msgType types.MessageType) error {
 	cc.seqID++
 
-	if err := cc.oproto.WriteMessageBegin(method, msgType, cc.seqID); err != nil {
-		return err
+	if err := setRequestHeaders(ctx, cc.proto); err != nil {
+		return fmt.Errorf("Failed to set request headers: %w", err)
 	}
 
-	if err := req.Write(cc.oproto); err != nil {
-		return err
+	if err := cc.proto.WriteMessageBegin(method, msgType, cc.seqID); err != nil {
+		return fmt.Errorf("Failed to write message preamble: %w", err)
 	}
 
-	if err := cc.oproto.WriteMessageEnd(); err != nil {
-		return err
+	if err := req.Write(cc.proto); err != nil {
+		return fmt.Errorf("Failed to write request body: %w", err)
 	}
 
-	return cc.oproto.Flush()
+	if err := cc.proto.WriteMessageEnd(); err != nil {
+		return fmt.Errorf("Failed to write message epilogue: %w", err)
+	}
+
+	return cc.proto.Flush()
 }
 
 // RecvMsg receives the response from a call to a thrift endpoint
-func (cc *ClientConn) RecvMsg(method string, res IResponse) error {
-	recvMethod, mTypeID, seqID, err := cc.iproto.ReadMessageBegin()
+func (cc *ClientConn) RecvMsg(ctx context.Context, method string, res types.IResponse) error {
+	recvMethod, mTypeID, seqID, err := cc.proto.ReadMessageBegin()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to read message preamble: %w", err)
 	}
 
 	if method != recvMethod {
-		return NewApplicationException(WRONG_METHOD_NAME, fmt.Sprintf("%s failed: wrong method name", method))
+		return types.NewApplicationException(types.WRONG_METHOD_NAME, fmt.Sprintf("%s failed: wrong method name", method))
 	}
 
 	if cc.seqID != seqID {
-		return NewApplicationException(BAD_SEQUENCE_ID, fmt.Sprintf("%s failed: out of sequence response", method))
+		return types.NewApplicationException(types.BAD_SEQUENCE_ID, fmt.Sprintf("%s failed: out of sequence response", method))
 	}
 
 	switch mTypeID {
-	case REPLY:
-		if err := res.Read(cc.iproto); err != nil {
-			return err
+	case types.REPLY:
+		if err := res.Read(cc.proto); err != nil {
+			return fmt.Errorf("Failed to read message body: %w", err)
 		}
 
-		return cc.iproto.ReadMessageEnd()
-	case EXCEPTION:
-		err := NewApplicationException(UNKNOWN_APPLICATION_EXCEPTION, "Unknown exception")
+		return cc.proto.ReadMessageEnd()
+	case types.EXCEPTION:
+		err := types.NewApplicationException(types.UNKNOWN_APPLICATION_EXCEPTION, "Unknown exception")
 
-		recvdErr, readErr := err.Read(cc.iproto)
+		recvdErr, readErr := err.Read(cc.proto)
 
 		if readErr != nil {
 			return readErr
 		}
 
-		if msgEndErr := cc.iproto.ReadMessageEnd(); msgEndErr != nil {
+		if msgEndErr := cc.proto.ReadMessageEnd(); msgEndErr != nil {
 			return msgEndErr
 		}
 		return recvdErr
 	default:
-		return NewApplicationException(INVALID_MESSAGE_TYPE_EXCEPTION, fmt.Sprintf("%s failed: invalid message type", method))
+		return types.NewApplicationException(types.INVALID_MESSAGE_TYPE_EXCEPTION, fmt.Sprintf("%s failed: invalid message type", method))
 	}
 }

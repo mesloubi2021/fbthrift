@@ -31,43 +31,34 @@
 #include <thrift/lib/cpp2/transport/rocket/framing/parser/FrameLengthParserStrategy.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/parser/ParserStrategy.h>
 
-THRIFT_FLAG_DECLARE_bool(rocket_strategy_parser);
-THRIFT_FLAG_DECLARE_bool(rocket_allocating_strategy_parser);
+THRIFT_FLAG_DECLARE_string(rocket_frame_parser);
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
+
+namespace detail {
+enum class ParserMode { STRATEGY, ALLOCATING };
+ParserMode stringToMode(const std::string& modeStr) noexcept;
+ParserAllocatorType& getDefaultAllocator();
+} // namespace detail
 
 // TODO (T160861572): deprecate most of logic in this class and replace with
 // either AllocatingParserStrategy or FrameLengthParserStrategy
 template <class T>
-class Parser final : public folly::AsyncTransport::ReadCallback,
-                     public folly::HHWheelTimer::Callback {
-  template <class Owner>
-  using StandardAllocatingParserStrategy = AllocatingParserStrategy<Owner>;
-
+class Parser final : public folly::AsyncTransport::ReadCallback {
  public:
-  explicit Parser(T& owner)
+  explicit Parser(
+      T& owner, std::shared_ptr<ParserAllocatorType> alloc = nullptr)
       : owner_(owner),
-        readBuffer_(folly::IOBuf::CreateOp(), bufferSize_),
-        useStrategyParser_(THRIFT_FLAG(rocket_strategy_parser)),
-        useAllocatingStrategyParser_(
-            THRIFT_FLAG(rocket_allocating_strategy_parser)) {
-    if (useStrategyParser_) {
+        mode_(detail::stringToMode(THRIFT_FLAG(rocket_frame_parser))) {
+    if (mode_ == detail::ParserMode::STRATEGY) {
       frameLengthParser_ =
           std::make_unique<ParserStrategy<T, FrameLengthParserStrategy>>(
               owner_);
     }
-    if (useAllocatingStrategyParser_) {
-      allocatingParser_ =
-          std::make_unique<ParserStrategy<T, StandardAllocatingParserStrategy>>(
-              owner_);
-    }
-  }
-
-  ~Parser() override {
-    if (currentFrameLength_) {
-      owner_.decMemoryUsage(currentFrameLength_);
+    if (mode_ == detail::ParserMode::ALLOCATING) {
+      allocatingParser_ = std::make_unique<
+          ParserStrategy<T, AllocatingParserStrategy, ParserAllocatorType>>(
+          owner_, alloc ? *alloc : detail::getDefaultAllocator());
     }
   }
 
@@ -81,60 +72,22 @@ class Parser final : public folly::AsyncTransport::ReadCallback,
       std::unique_ptr<folly::IOBuf> /*readBuf*/) noexcept override;
 
   bool isBufferMovable() noexcept override {
-    if (useAllocatingStrategyParser_) {
-      return false;
-    }
-    return true;
+    return mode_ != detail::ParserMode::ALLOCATING;
   }
 
-  void timeoutExpired() noexcept override;
-
-  const folly::IOBuf& getReadBuffer() const { return readBuffer_; }
-
-  void setReadBuffer(folly::IOBuf&& buffer) { readBuffer_ = std::move(buffer); }
-
-  size_t getReadBufferSize() const { return bufferSize_; }
-
-  void setReadBufferSize(size_t size) { bufferSize_ = size; }
-
-  void resizeBuffer();
-
-  size_t getReadBufLength() const {
-    return readBuffer_.computeChainDataLength();
-  }
-
-  bool isReadCallbackBased() const {
-    return !(useStrategyParser_ || useAllocatingStrategyParser_);
-  }
-
-  static constexpr size_t kMinBufferSize{256};
-  static constexpr size_t kMaxBufferSize{4096};
+  const folly::IOBuf& getReadBuffer() const;
 
  private:
-  void getReadBufferOld(void** bufout, size_t* lenout);
-  void readDataAvailableOld(size_t nbytes);
-  static constexpr std::chrono::milliseconds kDefaultBufferResizeInterval{
-      std::chrono::seconds(3)};
-
   T& owner_;
-  size_t bufferSize_{kMinBufferSize};
-  size_t currentFrameLength_{0};
-  uint8_t currentFrameType_{0};
-  folly::IOBufQueue readBufQueue_{folly::IOBufQueue::cacheChainLength()};
-  folly::IOBuf readBuffer_;
-  bool blockResize_{false};
 
-  bool useStrategyParser_{false};
+  detail::ParserMode mode_;
   std::unique_ptr<ParserStrategy<T, FrameLengthParserStrategy>>
       frameLengthParser_;
-
-  bool useAllocatingStrategyParser_{false};
-  std::unique_ptr<ParserStrategy<T, StandardAllocatingParserStrategy>>
+  std::unique_ptr<
+      ParserStrategy<T, AllocatingParserStrategy, ParserAllocatorType>>
       allocatingParser_;
 };
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket
 
 #include <thrift/lib/cpp2/transport/rocket/framing/Parser-inl.h>

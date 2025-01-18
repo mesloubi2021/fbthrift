@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -30,4 +30,3 @@ mod tests {
 // This is here to ensure you enable unittests on your Thrift library.
 #[cfg(feature = "thrift_library_unittests_disabled")]
 compile_error!("You are using Rust adapters in a Thrift library that does not have unittests enabled. For safety reasons, this is forbidden. Please enable Rust unittests for this Thrift library.");
-{{!newline}}

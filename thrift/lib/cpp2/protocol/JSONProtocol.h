@@ -22,8 +22,7 @@
 #include <thrift/lib/cpp2/protocol/JSONProtocolCommon.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class JSONProtocolReader;
 
@@ -114,13 +113,12 @@ class JSONProtocolReader : public JSONProtocolReaderCommon {
   inline bool peekSet();
   inline bool peekList();
 
-  inline void skip(TType type);
+  inline void skip(TType type, int depth = 0);
 
  private:
   [[noreturn]] static void throwUnrecognizableAsBoolean(int8_t byte);
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #include <thrift/lib/cpp2/protocol/JSONProtocol-inl.h>

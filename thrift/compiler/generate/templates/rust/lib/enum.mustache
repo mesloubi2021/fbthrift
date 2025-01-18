@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@
 {{/enum:docs?}}
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash{{!
     }}{{#enum:serde?}}, ::serde_derive::Serialize, ::serde_derive::Deserialize{{/enum:serde?}}{{!
-    }}{{#enum:derive}}, {{.}}{{/enum:derive}}{{!
+    }}{{#program:valuable?}}, ::valuable::Valuable{{/program:valuable?}}{{#enum:derive}}, {{.}}{{/enum:derive}}{{!
 }})]
 pub struct {{enum:rust_name}}(pub ::std::primitive::i32);
 
-impl {{enum:rust_name}} {{>lib/block}}{{!
+impl {{enum:rust_name}} {{> lib/block}}{{!
     }}{{#enum:values}}
     {{#enum_value:docs?}}
     #[doc = {{enum_value:docs}}]
@@ -36,7 +36,7 @@ impl {{enum:rust_name}} {{>lib/block}}{{!
 }
 
 impl ::fbthrift::ThriftEnum for {{enum:rust_name}} {
-    fn enumerate() -> &'static [(Self, &'static str)] {
+    fn enumerate() -> &'static [(Self, &'static ::std::primitive::str)] {
         &[
             {{#enum:values}}
             (Self::{{enum_value:rust_name}}, "{{enum_value:name}}"),
@@ -44,7 +44,7 @@ impl ::fbthrift::ThriftEnum for {{enum:rust_name}} {
         ]
     }
 
-    fn variants() -> &'static [&'static str] {
+    fn variants() -> &'static [&'static ::std::primitive::str] {
         &[
             {{#enum:values}}
             "{{enum_value:name}}",
@@ -59,17 +59,21 @@ impl ::fbthrift::ThriftEnum for {{enum:rust_name}} {
             {{/enum:values}}
         ]
     }
+
+    fn inner_value(&self) -> i32 {
+        self.0
+    }
 }
 
 #[allow(clippy::derivable_impls)]
 impl ::std::default::Default for {{enum:rust_name}} {
     fn default() -> Self {
-        {{#program:default_enum_zero?}}
+        {{^program:deprecated_default_enum_min_i32?}}
         Self(0)
-        {{/program:default_enum_zero?}}
-        {{^program:default_enum_zero?}}
+        {{/program:deprecated_default_enum_min_i32?}}
+        {{#program:deprecated_default_enum_min_i32?}}
         Self(::std::primitive::i32::MIN)
-        {{/program:default_enum_zero?}}
+        {{/program:deprecated_default_enum_min_i32?}}
     }
 }
 
@@ -95,7 +99,7 @@ impl ::std::convert::From<::std::primitive::i32> for {{enum:rust_name}} {
 }
 
 impl ::std::fmt::Display for {{enum:rust_name}} {
-    fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {{>lib/block}}
+    fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {{> lib/block}}
         static VARIANTS_BY_NUMBER: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
             {{#enum:variants_by_number}}
             ("{{enum_value:name}}", {{enum_value:value}}),
@@ -127,11 +131,10 @@ impl ::std::str::FromStr for {{enum:rust_name}} {
 impl ::fbthrift::GetTType for {{enum:rust_name}} {
     const TTYPE: ::fbthrift::TType = ::fbthrift::TType::I32;
 }
-{{!newline}}
 {{#enum:thrift_uri}}
 
 impl ::fbthrift::GetUri for self::{{enum:rust_name}} {
-    fn uri() -> &'static str {
+    fn uri() -> &'static ::std::primitive::str {
         "{{enum:thrift_uri}}"
     }
 }
@@ -153,7 +156,6 @@ where
 {
     #[inline]
     fn read(p: &mut P) -> ::anyhow::Result<Self> {
-        ::std::result::Result::Ok(Self::from(p.read_i32()?))
+        ::std::result::Result::Ok(Self::from(::anyhow::Context::context(p.read_i32(), "Expected a number indicating enum variant")?))
     }
 }
-{{!newline}}

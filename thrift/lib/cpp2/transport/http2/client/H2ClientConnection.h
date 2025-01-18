@@ -28,8 +28,7 @@
 #include <thrift/lib/cpp2/transport/core/ThriftClientCallback.h>
 #include <thrift/lib/cpp2/transport/http2/common/H2Channel.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /**
  * HTTP/2 implementation of ClientConnectionIf.
@@ -75,7 +74,7 @@ class H2ClientConnection : public ClientConnectionIf,
       folly::AsyncTransport::UniquePtr transport,
       FlowControlSettings flowControlSettings = FlowControlSettings());
 
-  virtual ~H2ClientConnection() override;
+  ~H2ClientConnection() override;
 
   H2ClientConnection(const H2ClientConnection&) = delete;
   H2ClientConnection& operator=(const H2ClientConnection&) = delete;
@@ -122,5 +121,4 @@ class H2ClientConnection : public ClientConnectionIf,
   std::unordered_map<ThriftClient*, CloseCallback*> closeCallbacks_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

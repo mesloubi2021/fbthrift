@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import glob, sys
@@ -62,7 +64,7 @@ class TimeoutTest(unittest.TestCase):
                 socket.open()
                 leaky.append(socket)
         except Exception:
-            self.assert_(time.time() - starttime < 5.0)
+            self.assertTrue(time.time() - starttime < 5.0)
 
     def testWriteTimeout(self):
         starttime = time.time()
@@ -76,7 +78,7 @@ class TimeoutTest(unittest.TestCase):
                 socket.write("hi" * 100)
 
         except Exception:
-            self.assert_(time.time() - starttime < 5.0)
+            self.assertTrue(time.time() - starttime < 5.0)
 
 
 def suite():

@@ -18,25 +18,69 @@ set(COMPILER_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # Override the default install path for `make install` step.
 set(CMAKE_INSTALL_PREFIX ${THRIFT_SOURCE_DIR})
 
+check_cxx_source_compiles("
+  #include <type_traits>
+  #if _GLIBCXX_RELEASE
+  int main() {}
+  #endif"
+  FBTHRIFT_COMPILER_STDLIB_LIBSTDCXX
+)
+check_cxx_source_compiles("
+  #include <type_traits>
+  #if _GLIBCXX_RELEASE >= 9
+  int main() {}
+  #endif"
+  FBTHRIFT_COMPILER_STDLIB_LIBSTDCXX_GE_9
+)
+check_cxx_source_compiles("
+  #include <type_traits>
+  #if _LIBCPP_VERSION
+  int main() {}
+  #endif"
+  FBTHRIFT_COMPILER_STDLIB_LIBCXX
+)
+check_cxx_source_compiles("
+  #include <type_traits>
+  #if _LIBCPP_VERSION >= 9000
+  int main() {}
+  #endif"
+  FBTHRIFT_COMPILER_STDLIB_LIBCXX_GE_9
+)
+
+if (FBTHRIFT_COMPILER_STDLIB_LIBSTDCXX AND NOT FBTHRIFT_COMPILER_STDLIB_LIBSTDCXX_GE_9)
+  list (APPEND FBTHRIFT_COMPILER_LINK_CXXFS stdc++fs)
+endif()
+if (FBTHRIFT_COMPILER_STDLIB_LIBCXX AND NOT FBTHRIFT_COMPILER_STDLIB_LIBCXX_GE_9)
+  list (APPEND FBTHRIFT_COMPILER_LINK_CXXFS c++fs)
+endif ()
+
 # The Thrift AST library.
 add_library(
   compiler_ast
 
-  ast/t_base_type.cc
+  ast/t_primitive_type.cc
   ast/t_const.cc
+  ast/t_const_value.cc
+  ast/t_container.cc
   ast/t_enum.cc
+  ast/t_exception.cc
+  ast/t_field.cc
   ast/t_function.cc
+  ast/t_interaction.cc
   ast/t_interface.cc
+  ast/t_list.cc
   ast/t_named.cc
   ast/t_node.cc
+  ast/t_map.cc
   ast/t_package.cc
   ast/t_paramlist.cc
   ast/t_program.cc
   ast/t_scope.cc
+  ast/t_set.cc
   ast/t_structured.cc
   ast/t_type.cc
   ast/t_typedef.cc
-  ast/visitor.cc
+  ast/t_union.cc
 )
 target_link_libraries(
   compiler_ast
@@ -45,16 +89,28 @@ target_link_libraries(
   fmt::fmt
 )
 
-# The base library.
+# The base compiler infrastructure library
 add_library(
   compiler_base
   STATIC
 
   detail/system.cc
+  detail/pluggable_functions.cc
   diagnostic.cc
   source_location.cc
+)
+target_link_libraries(
+  compiler_base
+  fmt::fmt
+  Boost::boost
+  ${FBTHRIFT_COMPILER_LINK_CXXFS}
+)
 
-  lib/schematizer.cc
+# The base Thrift compiler library.
+add_library(
+  compiler_lib
+  STATIC
+
   parse/lexer.cc
   parse/lexer.h
   parse/parser.cc
@@ -63,20 +119,17 @@ add_library(
   parse/parse_ast.h
   parse/token.cc
   parse/token.h
-  sema/const_checker.cc
-  sema/patch_mutator.cc
+  sema/check_initializer.cc
+  sema/explicit_include_validator.cc
   sema/scope_validator.cc
-  sema/standard_mutator.cc
+  sema/sema.cc
+  sema/schematizer.cc
   sema/standard_validator.cc
 )
-target_compile_definitions(
-  compiler_base
-  PRIVATE -DTHRIFTY_HH="${COMPILER_DIR}/thrifty.hh"
-)
 target_link_libraries(
+  compiler_lib
   compiler_base
   compiler_ast
-  Boost::filesystem
   fmt::fmt
 )
 
@@ -84,34 +137,44 @@ target_link_libraries(
 add_library(
   compiler
 
-  gen/cpp/detail/gen.cc
-  gen/cpp/namespace_resolver.cc
-  gen/cpp/reference_type.cc
-  gen/cpp/type_resolver.cc
-
-  lib/cpp2/util.cc
-  lib/go/util.cc
-  lib/java/util.cc
-  lib/rust/util.cc
+  generate/cpp/reference_type.cc
+  generate/cpp/name_resolver.cc
+  generate/cpp/util.cc
+  generate/go/util.cc
+  generate/java/util.cc
+  generate/python/util.cc
+  generate/rust/util.cc
 )
 target_link_libraries(
   compiler
   compiler_ast
-  Boost::filesystem
   fmt::fmt
+  ${FBTHRIFT_COMPILER_LINK_CXXFS}
 )
 
 add_library(
-  mustache
-  detail/mustache/mstch.cpp
-  detail/mustache/render_context.cpp
-  detail/mustache/state/in_section.cpp
-  detail/mustache/state/outside_section.cpp
-  detail/mustache/template_type.cpp
-  detail/mustache/token.cpp
-  detail/mustache/utils.cpp
+  whisker
+  STATIC
+
+  whisker/detail/string.cc
+  whisker/ast.cc
+  whisker/dsl.cc
+  whisker/eval_context.cc
+  whisker/lexer.cc
+  whisker/mstch_compat.cc
+  whisker/object.cc
+  whisker/parser.cc
+  whisker/print_ast.cc
+  whisker/render.cc
+  whisker/standard_library.cc
+  whisker/token.cc
+  whisker/tree_printer.cc
 )
-target_link_libraries(mustache Boost::boost)
+target_link_libraries(
+  whisker
+  fmt::fmt
+  compiler_base
+)
 
 add_subdirectory(generate)
 
@@ -130,12 +193,13 @@ add_executable(
   thrift1
   main.cc
   compiler.cc
-  validator/validator.cc
 )
+target_compile_definitions(thrift1 PRIVATE THRIFT_OSS)
 target_link_libraries(
   thrift1
   compiler_ast
-  compiler_base
+  compiler_lib
+  ${FBTHRIFT_COMPILER_LINK_CXXFS}
   ${GENERATE_LINKED}
 )
 # Force compiler_generators linking (compiler will optimize it out otherwise).
@@ -149,13 +213,23 @@ endif ()
 if (BUILD_SHARED_LIBS)
   # All but thrift1 since it's a binary.
   set_target_properties(
-    compiler_ast compiler_base compiler mustache compiler_generators
+    compiler_ast
+    compiler_base
+    compiler_lib
+    compiler
+    whisker
+    compiler_generators
     PROPERTIES VERSION ${PACKAGE_VERSION}
   )
 endif ()
 
 install(
-  TARGETS thrift1 compiler_ast compiler_base compiler mustache
+  TARGETS thrift1
+    compiler_ast
+    compiler_base
+    compiler_lib
+    compiler
+    whisker
   EXPORT fbthrift-exports
   RUNTIME DESTINATION ${BIN_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR}

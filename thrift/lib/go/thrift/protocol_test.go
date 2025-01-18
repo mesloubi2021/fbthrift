@@ -19,20 +19,21 @@ package thrift
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
 )
 
 const PROTOCOL_BINARY_DATA_SIZE = 155
 
 type fieldData struct {
 	name  string
-	typ   Type
+	typ   types.Type
 	id    int16
 	value interface{}
 }
@@ -50,21 +51,21 @@ var (
 	int16Values    = []int16{459, 0, 1, -1, -128, 127, 32767, -32768}
 	int32Values    = []int32{459, 0, 1, -1, -128, 127, 32767, 2147483647, -2147483535}
 	int64Values    = []int64{459, 0, 1, -1, -128, 127, 32767, 2147483647, -2147483535, 34359738481, -35184372088719, -9223372036854775808, 9223372036854775807}
-	doubleValues   = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float64(), NEGATIVE_INFINITY.Float64(), NAN.Float64()}
-	floatValues    = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float32(), NEGATIVE_INFINITY.Float32(), NAN.Float32()}
+	doubleValues   = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float64(), types.NEGATIVE_INFINITY.Float64(), types.NAN.Float64()}
+	floatValues    = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float32(), types.NEGATIVE_INFINITY.Float32(), types.NAN.Float32()}
 	stringValues   = []string{"", "a", "st[uf]f", "st,u:ff with spaces", "stuff\twith\nescape\\characters'...\"lots{of}fun</xml>"}
 	structTestData = structData{
 		name: "test struct",
 		fields: []fieldData{
 			{
 				name:  "field1",
-				typ:   BOOL,
+				typ:   types.BOOL,
 				id:    1,
 				value: true,
 			},
 			{
 				name:  "field2",
-				typ:   STRING,
+				typ:   types.STRING,
 				id:    2,
 				value: "hi",
 			},
@@ -87,7 +88,7 @@ type HTTPEchoServer struct{}
 type HTTPHeaderEchoServer struct{}
 
 func (p *HTTPEchoServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(buf)
@@ -98,7 +99,7 @@ func (p *HTTPEchoServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (p *HTTPHeaderEchoServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(buf)
@@ -165,7 +166,9 @@ func tcpStreamSetupForTest(t *testing.T) (io.Reader, io.Writer) {
 	return rConn, wConn
 }
 
-type protocolTest func(t testing.TB, p Protocol, trans Transport)
+type protocolTest func(t testing.TB, p types.Format, trans io.ReadWriter)
+type protocolReaderTest func(t testing.TB, p types.Format, trans io.Reader)
+type protocolWriterTest func(t testing.TB, p types.Format, trans io.Writer)
 
 // ReadWriteProtocolParallelTest tests that a given protocol is safe to read
 // from and write to in different goroutines. This requires both a protocol
@@ -174,19 +177,24 @@ type protocolTest func(t testing.TB, p Protocol, trans Transport)
 // It also should only be used with an underlying Transport that is capable of
 // blocking reads and writes (socket, stream), since other golang Transport
 // implementations require that the data exists to be read when they are called (like bytes.Buffer)
-func ReadWriteProtocolParallelTest(t *testing.T, protocolFactory ProtocolFactory) {
+func ReadWriteProtocolParallelTest(t *testing.T, newFormat func(io.ReadWriteCloser) types.Format) {
 	rConn, wConn := tcpStreamSetupForTest(t)
 	rdr, writer := io.Pipe()
-	transports := []TransportFactory{
-		NewFramedTransportFactory(NewStreamTransportFactory(rdr, writer, false)),  // framed over pipe
-		NewFramedTransportFactory(NewStreamTransportFactory(rConn, wConn, false)), // framed over tcp
+
+	transports := []func() io.ReadWriteCloser{
+		func() io.ReadWriteCloser {
+			return newFramedTransportMaxLength(newStreamTransport(rdr, writer), DEFAULT_MAX_LENGTH)
+		}, // framed over pipe
+		func() io.ReadWriteCloser {
+			return newFramedTransportMaxLength(newStreamTransport(rConn, wConn), DEFAULT_MAX_LENGTH)
+		}, // framed over tcp
 	}
 	const iterations = 100
 
-	doForAllTransportsParallel := func(read, write protocolTest) {
+	doForAllTransportsParallel := func(read protocolReaderTest, write protocolWriterTest) {
 		for _, tf := range transports {
-			trans := tf.GetTransport(nil)
-			p := protocolFactory.GetProtocol(trans)
+			trans := tf()
+			p := newFormat(trans)
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
@@ -215,7 +223,7 @@ func ReadWriteProtocolParallelTest(t *testing.T, protocolFactory ProtocolFactory
 	doForAllTransportsParallel(ReadStruct, WriteStruct)
 
 	// perform set of many sequenced sets of reads and writes
-	doForAllTransportsParallel(func(t testing.TB, p Protocol, trans Transport) {
+	doForAllTransportsParallel(func(t testing.TB, p types.Format, trans io.Reader) {
 		ReadBool(t, p, trans)
 		ReadByte(t, p, trans)
 		ReadI16(t, p, trans)
@@ -226,7 +234,7 @@ func ReadWriteProtocolParallelTest(t *testing.T, protocolFactory ProtocolFactory
 		ReadString(t, p, trans)
 		ReadBinary(t, p, trans)
 		ReadStruct(t, p, trans)
-	}, func(t testing.TB, p Protocol, trans Transport) {
+	}, func(t testing.TB, p types.Format, trans io.Writer) {
 		WriteBool(t, p, trans)
 		WriteByte(t, p, trans)
 		WriteI16(t, p, trans)
@@ -240,19 +248,28 @@ func ReadWriteProtocolParallelTest(t *testing.T, protocolFactory ProtocolFactory
 	})
 }
 
-func ReadWriteProtocolTest(t *testing.T, protocolFactory ProtocolFactory) {
+func ReadWriteProtocolTest(t *testing.T, newFormat func(io.ReadWriteCloser) types.Format) {
 	l := HTTPClientSetupForTest(t)
 	defer l.Close()
-	transports := []TransportFactory{
-		NewMemoryBufferTransportFactory(1024),
-		NewFramedTransportFactory(NewMemoryBufferTransportFactory(1024)),
-		NewHTTPPostClientTransportFactory("http://" + l.Addr().String()),
+
+	transports := []func() io.ReadWriteCloser{
+		func() io.ReadWriteCloser { return NewMemoryBufferLen(1024) },
+		func() io.ReadWriteCloser {
+			return newFramedTransportMaxLength(NewMemoryBufferLen(1024), DEFAULT_MAX_LENGTH)
+		},
+		func() io.ReadWriteCloser {
+			http, err := newHTTPPostClient("http://" + l.Addr().String())
+			if err != nil {
+				panic(err)
+			}
+			return http
+		},
 	}
 
 	doForAllTransports := func(protTest protocolTest) {
 		for _, tf := range transports {
-			trans := tf.GetTransport(nil)
-			p := protocolFactory.GetProtocol(trans)
+			trans := tf()
+			p := newFormat(trans)
 			protTest(t, p, trans)
 			trans.Close()
 		}
@@ -270,7 +287,7 @@ func ReadWriteProtocolTest(t *testing.T, protocolFactory ProtocolFactory) {
 	doForAllTransports(ReadWriteStruct)
 
 	// perform set of many sequenced reads and writes
-	doForAllTransports(func(t testing.TB, p Protocol, trans Transport) {
+	doForAllTransports(func(t testing.TB, p types.Format, trans io.ReadWriter) {
 		ReadWriteI64(t, p, trans)
 		ReadWriteDouble(t, p, trans)
 		ReadWriteFloat(t, p, trans)
@@ -280,14 +297,14 @@ func ReadWriteProtocolTest(t *testing.T, protocolFactory ProtocolFactory) {
 	})
 }
 
-func ReadBool(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(BOOL)
+func ReadBool(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.BOOL
 	thelen := len(boolValues)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %v", "ReadBool", p, trans, err, boolValues)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadBool", p, trans, thetype, thetype2)
@@ -311,8 +328,8 @@ func ReadBool(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func WriteBool(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(BOOL)
+func WriteBool(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.BOOL
 	thelen := len(boolValues)
 	err := p.WriteListBegin(thetype, thelen)
 	if err != nil {
@@ -334,13 +351,13 @@ func WriteBool(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteBool(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteBool(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteBool(t, p, trans)
 	ReadBool(t, p, trans)
 }
 
-func WriteByte(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(BYTE)
+func WriteByte(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.BYTE
 	thelen := len(byteValues)
 	err := p.WriteListBegin(thetype, thelen)
 	if err != nil {
@@ -362,14 +379,14 @@ func WriteByte(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadByte(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(BYTE)
+func ReadByte(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.BYTE
 	thelen := len(byteValues)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %q", "ReadByte", p, trans, err, byteValues)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadByte", p, trans, thetype, thetype2)
@@ -393,13 +410,13 @@ func ReadByte(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteByte(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteByte(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteByte(t, p, trans)
 	ReadByte(t, p, trans)
 }
 
-func WriteI16(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I16)
+func WriteI16(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.I16
 	thelen := len(int16Values)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range int16Values {
@@ -409,14 +426,14 @@ func WriteI16(t testing.TB, p Protocol, trans Transport) {
 	p.Flush()
 }
 
-func ReadI16(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I16)
+func ReadI16(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.I16
 	thelen := len(int16Values)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %q", "ReadI16", p, trans, err, int16Values)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadI16", p, trans, thetype, thetype2)
@@ -440,13 +457,13 @@ func ReadI16(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteI16(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteI16(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteI16(t, p, trans)
 	ReadI16(t, p, trans)
 }
 
-func WriteI32(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I32)
+func WriteI32(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.I32
 	thelen := len(int32Values)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range int32Values {
@@ -456,14 +473,14 @@ func WriteI32(t testing.TB, p Protocol, trans Transport) {
 	p.Flush()
 }
 
-func ReadI32(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I32)
+func ReadI32(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.I32
 	thelen := len(int32Values)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %q", "ReadI32", p, trans, err, int32Values)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadI32", p, trans, thetype, thetype2)
@@ -486,13 +503,13 @@ func ReadI32(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteI32(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteI32(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteI32(t, p, trans)
 	ReadI32(t, p, trans)
 }
 
-func WriteI64(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I64)
+func WriteI64(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.I64
 	thelen := len(int64Values)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range int64Values {
@@ -502,14 +519,14 @@ func WriteI64(t testing.TB, p Protocol, trans Transport) {
 	p.Flush()
 }
 
-func ReadI64(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(I64)
+func ReadI64(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.I64
 	thelen := len(int64Values)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %q", "ReadI64", p, trans, err, int64Values)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadI64", p, trans, thetype, thetype2)
@@ -532,14 +549,14 @@ func ReadI64(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteI64(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteI64(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteI64(t, p, trans)
 	ReadI64(t, p, trans)
 }
 
-func WriteDouble(t testing.TB, p Protocol, trans Transport) {
-	doubleValues = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float64(), NEGATIVE_INFINITY.Float64(), NAN.Float64()}
-	thetype := Type(DOUBLE)
+func WriteDouble(t testing.TB, p types.Format, trans io.Writer) {
+	doubleValues = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float64(), types.NEGATIVE_INFINITY.Float64(), types.NAN.Float64()}
+	thetype := types.DOUBLE
 	thelen := len(doubleValues)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range doubleValues {
@@ -550,9 +567,9 @@ func WriteDouble(t testing.TB, p Protocol, trans Transport) {
 
 }
 
-func ReadDouble(t testing.TB, p Protocol, trans Transport) {
-	doubleValues = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float64(), NEGATIVE_INFINITY.Float64(), NAN.Float64()}
-	thetype := Type(DOUBLE)
+func ReadDouble(t testing.TB, p types.Format, trans io.Reader) {
+	doubleValues = []float64{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float64(), types.NEGATIVE_INFINITY.Float64(), types.NAN.Float64()}
+	thetype := types.DOUBLE
 	thelen := len(doubleValues)
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
@@ -583,15 +600,15 @@ func ReadDouble(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteDouble(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteDouble(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteDouble(t, p, trans)
 	ReadDouble(t, p, trans)
 }
 
-func WriteFloat(t testing.TB, p Protocol, trans Transport) {
-	floatValues = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float32(), NEGATIVE_INFINITY.Float32(), NAN.Float32()}
+func WriteFloat(t testing.TB, p types.Format, trans io.Writer) {
+	floatValues = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float32(), types.NEGATIVE_INFINITY.Float32(), types.NAN.Float32()}
 
-	thetype := Type(FLOAT)
+	thetype := types.FLOAT
 	thelen := len(floatValues)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range floatValues {
@@ -602,10 +619,10 @@ func WriteFloat(t testing.TB, p Protocol, trans Transport) {
 
 }
 
-func ReadFloat(t testing.TB, p Protocol, trans Transport) {
-	floatValues = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, INFINITY.Float32(), NEGATIVE_INFINITY.Float32(), NAN.Float32()}
+func ReadFloat(t testing.TB, p types.Format, trans io.Reader) {
+	floatValues = []float32{459.3, 0.0, -1.0, 1.0, 0.5, 0.3333, 3.14159, 1.537e-38, 1.673e25, 6.02214179e23, -6.02214179e23, types.INFINITY.Float32(), types.NEGATIVE_INFINITY.Float32(), types.NAN.Float32()}
 
-	thetype := Type(FLOAT)
+	thetype := types.FLOAT
 	thelen := len(floatValues)
 
 	thetype2, thelen2, err := p.ReadListBegin()
@@ -638,13 +655,13 @@ func ReadFloat(t testing.TB, p Protocol, trans Transport) {
 
 }
 
-func ReadWriteFloat(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteFloat(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteFloat(t, p, trans)
 	ReadFloat(t, p, trans)
 }
 
-func WriteString(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(STRING)
+func WriteString(t testing.TB, p types.Format, trans io.Writer) {
+	thetype := types.STRING
 	thelen := len(stringValues)
 	p.WriteListBegin(thetype, thelen)
 	for _, v := range stringValues {
@@ -654,15 +671,15 @@ func WriteString(t testing.TB, p Protocol, trans Transport) {
 	p.Flush()
 }
 
-func ReadString(t testing.TB, p Protocol, trans Transport) {
-	thetype := Type(STRING)
+func ReadString(t testing.TB, p types.Format, trans io.Reader) {
+	thetype := types.STRING
 	thelen := len(stringValues)
 
 	thetype2, thelen2, err := p.ReadListBegin()
 	if err != nil {
 		t.Fatalf("%s: %T %T %q Error reading list: %q", "ReadString", p, trans, err, stringValues)
 	}
-	_, ok := p.(*SimpleJSONProtocol)
+	_, ok := p.(*simpleJSONFormat)
 	if !ok {
 		if thetype != thetype2 {
 			t.Fatalf("%s: %T %T type %s != type %s", "ReadString", p, trans, thetype, thetype2)
@@ -685,18 +702,18 @@ func ReadString(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteString(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteString(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteString(t, p, trans)
 	ReadString(t, p, trans)
 }
 
-func WriteBinary(t testing.TB, p Protocol, trans Transport) {
+func WriteBinary(t testing.TB, p types.Format, trans io.Writer) {
 	v := protocolBdata
 	p.WriteBinary(v)
 	p.Flush()
 }
 
-func ReadBinary(t testing.TB, p Protocol, trans Transport) {
+func ReadBinary(t testing.TB, p types.Format, trans io.Reader) {
 	v := protocolBdata
 	value, err := p.ReadBinary()
 	if err != nil {
@@ -714,12 +731,12 @@ func ReadBinary(t testing.TB, p Protocol, trans Transport) {
 
 }
 
-func ReadWriteBinary(t testing.TB, p Protocol, trans Transport) {
+func ReadWriteBinary(t testing.TB, p types.Format, trans io.ReadWriter) {
 	WriteBinary(t, p, trans)
 	ReadBinary(t, p, trans)
 }
 
-func WriteStruct(t testing.TB, p Protocol, trans Transport) {
+func WriteStruct(t testing.TB, p types.Format, trans io.Writer) {
 	v := structTestData
 	p.WriteStructBegin(v.name)
 	p.WriteFieldBegin(v.fields[0].name, v.fields[0].typ, v.fields[0].id)
@@ -741,7 +758,7 @@ func WriteStruct(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadStruct(t testing.TB, p Protocol, trans Transport) {
+func ReadStruct(t testing.TB, p types.Format, trans io.Reader) {
 	v := structTestData
 	_, err := p.ReadStructBegin()
 	if err != nil {
@@ -801,7 +818,92 @@ func ReadStruct(t testing.TB, p Protocol, trans Transport) {
 	}
 }
 
-func ReadWriteStruct(t testing.TB, p Protocol, trans Transport) {
-	WriteStruct(t, p, trans)
-	ReadStruct(t, p, trans)
+func ReadWriteStruct(t testing.TB, p types.Format, buffer io.ReadWriter) {
+	WriteStruct(t, p, buffer)
+	ReadStruct(t, p, buffer)
+}
+
+func UnmatchedBeginEndProtocolTest(t *testing.T, formatFactory func(io.ReadWriteCloser) types.Format) {
+	// NOTE: not all protocol implementations do strict state check to
+	// return an error on unmatched Begin/End calls.
+	// This test is only meant to make sure that those unmatched Begin/End
+	// calls won't cause panic. There's no real "test" here.
+	trans := NewMemoryBuffer()
+	t.Run("Read", func(t *testing.T) {
+		t.Run("Message", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadMessageEnd()
+			p.ReadMessageEnd()
+		})
+		t.Run("Struct", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadStructEnd()
+			p.ReadStructEnd()
+		})
+		t.Run("Field", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadFieldEnd()
+			p.ReadFieldEnd()
+		})
+		t.Run("Map", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadMapEnd()
+			p.ReadMapEnd()
+		})
+		t.Run("List", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadListEnd()
+			p.ReadListEnd()
+		})
+		t.Run("Set", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.ReadSetEnd()
+			p.ReadSetEnd()
+		})
+	})
+	t.Run("Write", func(t *testing.T) {
+		t.Run("Message", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteMessageEnd()
+			p.WriteMessageEnd()
+		})
+		t.Run("Struct", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteStructEnd()
+			p.WriteStructEnd()
+		})
+		t.Run("Field", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteFieldEnd()
+			p.WriteFieldEnd()
+		})
+		t.Run("Map", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteMapEnd()
+			p.WriteMapEnd()
+		})
+		t.Run("List", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteListEnd()
+			p.WriteListEnd()
+		})
+		t.Run("Set", func(t *testing.T) {
+			trans.Reset()
+			p := formatFactory(trans)
+			p.WriteSetEnd()
+			p.WriteSetEnd()
+		})
+	})
+	trans.Close()
 }

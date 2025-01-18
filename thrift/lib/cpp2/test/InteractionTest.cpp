@@ -17,15 +17,17 @@
 #include <chrono>
 #include <memory>
 
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Collect.h>
-#include <folly/experimental/coro/FutureUtil.h>
-#include <folly/experimental/coro/GtestHelpers.h>
-#include <folly/experimental/coro/Sleep.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Collect.h>
+#include <folly/coro/FutureUtil.h>
+#include <folly/coro/GtestHelpers.h>
+#include <folly/coro/Sleep.h>
+#include <folly/coro/Task.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
+#include <thrift/lib/cpp2/server/ParallelConcurrencyController.h>
+#include <thrift/lib/cpp2/server/RoundRobinRequestPile.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/Calculator.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/Streamer.h>
@@ -77,13 +79,12 @@ struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
       : apache::thrift::ServiceHandler<Calculator>::AdditionFastIf {
     int acc_{0};
     void async_eb_accumulatePrimitive(
-        std::unique_ptr<HandlerCallback<void>> cb, int32_t a) override {
+        HandlerCallbackPtr<void> cb, int32_t a) override {
       cb->getEventBase()->checkIsInEventBaseThread();
       acc_ += a;
       cb->exception(std::runtime_error("Not Implemented Yet"));
     }
-    void async_eb_getPrimitive(
-        std::unique_ptr<HandlerCallback<int32_t>> cb) override {
+    void async_eb_getPrimitive(HandlerCallbackPtr<int32_t> cb) override {
       cb->getEventBase()->checkIsInEventBaseThread();
       cb->result(acc_);
     }
@@ -95,16 +96,13 @@ struct SemiCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
   }
 
   void async_eb_veryFastAddition(
-      std::unique_ptr<HandlerCallback<TileAndResponse<AdditionFastIf, void>>>
-          cb) override {
+      HandlerCallbackPtr<TileAndResponse<AdditionFastIf, void>> cb) override {
     cb->getEventBase()->checkIsInEventBaseThread();
     cb->result({std::make_unique<FastAdditionHandler>()});
   }
 };
 
 TEST(InteractionTest, PrioritizedInteractionRequest) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
-
   struct BlockingCalculatorHandler : public SemiCalculatorHandler {
     folly::Baton<> blockInteraction, blockNormal, startedInteraction;
 
@@ -171,7 +169,6 @@ TEST(InteractionTest, PrioritizedInteractionRequest) {
 }
 
 TEST(InteractionTest, TerminateUsed) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   folly::EventBase eb;
   CalculatorAsyncClient client(
@@ -183,7 +180,6 @@ TEST(InteractionTest, TerminateUsed) {
 }
 
 TEST(InteractionTest, TerminateActive) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   folly::EventBase eb;
   CalculatorAsyncClient client(
@@ -195,7 +191,6 @@ TEST(InteractionTest, TerminateActive) {
 }
 
 TEST(InteractionTest, TerminateUnused) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   folly::EventBase eb;
   CalculatorAsyncClient client(
@@ -207,7 +202,6 @@ TEST(InteractionTest, TerminateUnused) {
 }
 
 TEST(InteractionTest, TerminateWithoutSetup) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   folly::EventBase eb;
   CalculatorAsyncClient client(
@@ -218,7 +212,6 @@ TEST(InteractionTest, TerminateWithoutSetup) {
 }
 
 TEST(InteractionTest, TerminateUsedPRC) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -228,7 +221,6 @@ TEST(InteractionTest, TerminateUsedPRC) {
 }
 
 TEST(InteractionTest, TerminateUnusedPRC) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -238,7 +230,6 @@ TEST(InteractionTest, TerminateUnusedPRC) {
 }
 
 TEST(InteractionTest, TerminateWithoutSetupPRC) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -247,7 +238,6 @@ TEST(InteractionTest, TerminateWithoutSetupPRC) {
 }
 
 TEST(InteractionTest, TerminateStressPRC) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -259,7 +249,6 @@ TEST(InteractionTest, TerminateStressPRC) {
 }
 
 TEST(InteractionTest, IsDetachable) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   folly::EventBase eb;
   CalculatorAsyncClient client(
@@ -285,7 +274,6 @@ TEST(InteractionTest, IsDetachable) {
 }
 
 TEST(InteractionTest, QueueTimeout) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct SlowCalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
     struct SemiAdditionHandler
         : apache::thrift::ServiceHandler<Calculator>::AdditionIf {
@@ -306,7 +294,11 @@ TEST(InteractionTest, QueueTimeout) {
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
 
+  // create interaction
   auto adder = client->createAddition();
+  adder.sync_getPrimitive();
+
+  // ensure second request times out in queue
   auto f1 = adder.semifuture_getPrimitive(),
        f2 = adder.semifuture_getPrimitive();
   EXPECT_FALSE(std::move(f1).getTry().hasException());
@@ -314,7 +306,6 @@ TEST(InteractionTest, QueueTimeout) {
 }
 
 TEST(InteractionTest, OnTermination) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct TerminationHandler : apache::thrift::ServiceHandler<Calculator> {
     folly::coro::Baton create;
     folly::coro::Baton terminate;
@@ -356,12 +347,11 @@ TEST(InteractionTest, OnTermination) {
       }
 
       void async_eb_accumulatePrimitive(
-          std::unique_ptr<HandlerCallback<void>> cb, int32_t) override {
+          HandlerCallbackPtr<void> cb, int32_t) override {
         cb->done();
       }
 
-      void async_eb_getPrimitive(
-          std::unique_ptr<HandlerCallback<int32_t>> cb) override {
+      void async_eb_getPrimitive(HandlerCallbackPtr<int32_t> cb) override {
         folly::coro::toSemiFuture(std::ref(handler.terminated))
             .toUnsafeFuture()
             .thenValue([cb = std::move(cb)](auto&&) { cb->result(42); });
@@ -521,7 +511,6 @@ struct CalculatorHandler : apache::thrift::ServiceHandler<Calculator> {
 };
 
 TEST(InteractionCodegenTest, Basic) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<CalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -551,7 +540,6 @@ TEST(InteractionCodegenTest, Basic) {
 }
 
 TEST(InteractionCodegenTest, RpcOptions) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<CalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -582,7 +570,6 @@ TEST(InteractionCodegenTest, RpcOptions) {
 }
 
 TEST(InteractionCodegenTest, BasicSemiFuture) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -608,7 +595,6 @@ TEST(InteractionCodegenTest, BasicSemiFuture) {
 }
 
 TEST(InteractionCodegenTest, BasicSync) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   ScopedServerInterfaceThread runner{std::make_shared<SemiCalculatorHandler>()};
   auto client = runner.newClient<CalculatorAsyncClient>(
       nullptr, RocketClientChannel::newChannel);
@@ -635,7 +621,6 @@ TEST(InteractionCodegenTest, BasicSync) {
 }
 
 TEST(InteractionCodegenTest, Error) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct BrokenCalculatorHandler : CalculatorHandler {
     std::unique_ptr<AdditionIf> createAddition() override {
       throw std::runtime_error("Plus key is broken");
@@ -666,7 +651,6 @@ TEST(InteractionCodegenTest, Error) {
 }
 
 TEST(InteractionCodegenTest, MethodException) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct ExceptionCalculatorHandler
       : apache::thrift::ServiceHandler<Calculator> {
     struct AdditionHandler
@@ -703,7 +687,6 @@ TEST(InteractionCodegenTest, MethodException) {
 }
 
 TEST(InteractionCodegenTest, SlowConstructor) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct SlowCalculatorHandler : CalculatorHandler {
     std::unique_ptr<AdditionIf> createAddition() override {
       b.wait();
@@ -720,9 +703,9 @@ TEST(InteractionCodegenTest, SlowConstructor) {
   auto adder = client->createAddition();
   folly::EventBase eb;
 #if FOLLY_HAS_COROUTINES
-  // only release constructor once interaction methods are queued
-  adder.co_accumulatePrimitive(1).scheduleOn(&eb).start();
   adder.co_noop().scheduleOn(&eb).start();
+  adder.co_accumulatePrimitive(1).scheduleOn(&eb).start();
+  // only release constructor once interaction methods are queued
   folly::via(&eb, [&] { handler->b.post(); }).getVia(&eb);
   auto acc = folly::coro::blockingWait(adder.co_getPrimitive());
   EXPECT_EQ(acc, 1);
@@ -730,7 +713,6 @@ TEST(InteractionCodegenTest, SlowConstructor) {
 }
 
 TEST(InteractionCodegenTest, FastTermination) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct SlowCalculatorHandler : CalculatorHandler {
     struct SlowAdditionHandler : AdditionHandler {
@@ -775,7 +757,6 @@ TEST(InteractionCodegenTest, FastTermination) {
 }
 
 TEST(InteractionCodegenTest, ClientCrashDuringInteraction) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct SlowCalculatorHandler : CalculatorHandler {
     struct SlowAdditionHandler : AdditionHandler {
@@ -815,7 +796,6 @@ TEST(InteractionCodegenTest, ClientCrashDuringInteraction) {
 }
 
 TEST(InteractionCodegenTest, ClientCrashDuringInteractionConstructor) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct SlowCalculatorHandler : CalculatorHandler {
     struct SlowAdditionHandler : AdditionHandler {
@@ -862,7 +842,6 @@ TEST(InteractionCodegenTest, ClientCrashDuringInteractionConstructor) {
 }
 
 TEST(InteractionCodegenTest, ReuseIdDuringConstructor) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct SlowCalculatorHandler : CalculatorHandler {
     std::unique_ptr<AdditionIf> createAddition() override {
       if (first) {
@@ -886,7 +865,9 @@ TEST(InteractionCodegenTest, ReuseIdDuringConstructor) {
   {
     auto id = client.getChannel()->registerInteraction("Addition", 1);
     CalculatorAsyncClient::Addition adder(
-        client.getChannelShared(), std::move(id));
+        client.getChannelShared(),
+        std::move(id),
+        nullptr /* clientInterceptors */);
     adder.semifuture_noop().via(&eb).getVia(&eb);
     handler->b1.wait();
   } // sends termination while constructor is blocked
@@ -894,7 +875,9 @@ TEST(InteractionCodegenTest, ReuseIdDuringConstructor) {
 
   auto id = client.getChannel()->registerInteraction("Addition", 1);
   CalculatorAsyncClient::Addition adder(
-      client.getChannelShared(), std::move(id));
+      client.getChannelShared(),
+      std::move(id),
+      nullptr /* clientInterceptors */);
 
   auto fut = adder.semifuture_accumulatePrimitive(1);
   handler->b2.post();
@@ -902,7 +885,6 @@ TEST(InteractionCodegenTest, ReuseIdDuringConstructor) {
 }
 
 TEST(InteractionCodegenTest, ConstructorExceptionPropagated) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct SlowCalculatorHandler : CalculatorHandler {
     std::unique_ptr<AdditionIf> createAddition() override {
       b.wait();
@@ -933,7 +915,6 @@ TEST(InteractionCodegenTest, ConstructorExceptionPropagated) {
 }
 
 TEST(InteractionCodegenTest, SerialInteraction) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct SerialCalculatorHandler : CalculatorHandler {
     struct SerialAdditionHandler
@@ -1017,7 +998,6 @@ TEST(InteractionCodegenTest, SerialInteraction) {
 }
 
 TEST(InteractionCodegenTest, StreamExtendsInteractionLifetime) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct StreamingHandler : apache::thrift::ServiceHandler<Streamer> {
     StreamingHandler()
@@ -1072,7 +1052,7 @@ TEST(InteractionCodegenTest, StreamExtendsInteractionLifetime) {
             streamBaton(streamBaton_),
             publisherStreamRef(publisherStream) {}
 
-      ~StreamTile() {
+      ~StreamTile() override {
         tileBaton.post();
         tileBaton2.post();
         EXPECT_TRUE(streamBaton.try_wait_for(std::chrono::milliseconds(100)));
@@ -1163,7 +1143,6 @@ TEST(InteractionCodegenTest, StreamExtendsInteractionLifetime) {
 }
 
 TEST(InteractionCodegenTest, ShutdownDuringStreamTeardown) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
 #if FOLLY_HAS_COROUTINES
   struct StreamingHandler : apache::thrift::ServiceHandler<Streamer> {
     struct StreamTile : apache::thrift::ServiceHandler<Streamer>::StreamingIf {
@@ -1194,19 +1173,17 @@ TEST(InteractionCodegenTest, ShutdownDuringStreamTeardown) {
 }
 
 TEST(InteractionCodegenTest, BasicEB) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct ExceptionCalculatorHandler
       : apache::thrift::ServiceHandler<Calculator> {
     struct AdditionHandler
         : apache::thrift::ServiceHandler<Calculator>::AdditionFastIf {
       int acc_{0};
       void async_eb_accumulatePrimitive(
-          std::unique_ptr<HandlerCallback<void>> cb, int32_t a) override {
+          HandlerCallbackPtr<void> cb, int32_t a) override {
         acc_ += a;
         cb->exception(std::runtime_error("Not Implemented Yet"));
       }
-      void async_eb_getPrimitive(
-          std::unique_ptr<HandlerCallback<int32_t>> cb) override {
+      void async_eb_getPrimitive(HandlerCallbackPtr<int32_t> cb) override {
         cb->result(acc_);
       }
     };
@@ -1232,7 +1209,6 @@ TEST(InteractionCodegenTest, BasicEB) {
 }
 
 TEST(InteractionCodegenTest, ErrorEB) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct ExceptionCalculatorHandler
       : apache::thrift::ServiceHandler<Calculator> {
     std::unique_ptr<AdditionFastIf> createAdditionFast() override {
@@ -1257,7 +1233,6 @@ TEST(InteractionCodegenTest, ErrorEB) {
 }
 
 CO_TEST(InteractionCodegenTest, Factory) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   auto client = makeTestClient<CalculatorAsyncClient>(
       std::make_shared<SemiCalculatorHandler>());
 
@@ -1284,7 +1259,6 @@ CO_TEST(InteractionCodegenTest, Factory) {
 }
 
 CO_TEST(InteractionCodegenTest, FactoryError) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   auto client = makeTestClient<CalculatorAsyncClient>(
       std::make_shared<SemiCalculatorHandler>());
 
@@ -1296,7 +1270,6 @@ CO_TEST(InteractionCodegenTest, FactoryError) {
 }
 
 CO_TEST(InteractionCodegenTest, FactoryEager) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   auto client = makeTestClient<CalculatorAsyncClient>(
       std::make_shared<SemiCalculatorHandler>());
 
@@ -1313,7 +1286,6 @@ CO_TEST(InteractionCodegenTest, FactoryEager) {
 }
 
 TEST(InteractionCodegenTest, FactoryEb) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   auto client = makeTestClient<CalculatorAsyncClient>(
       std::make_shared<SemiCalculatorHandler>());
 
@@ -1355,11 +1327,9 @@ TEST(InteractionCodegenTest, FactoryEb) {
 }
 
 TEST(InteractionCodegenTest, FactoryHandlerCallback) {
-  THRIFT_FLAG_SET_MOCK(enable_resource_pools_for_interaction, true);
   struct HandlerResult : apache::thrift::ServiceHandler<Calculator> {
     void async_tm_newAddition(
-        std::unique_ptr<
-            apache::thrift::HandlerCallback<TileAndResponse<AdditionIf, void>>>
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, void>>
             cb) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1367,8 +1337,7 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
     }
 
     void async_tm_initializedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, int>>> cb,
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, int>> cb,
         int x) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1377,8 +1346,8 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
     }
 
     void async_tm_stringifiedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, std::unique_ptr<std::string>>>> cb,
+        apache::thrift::HandlerCallbackPtr<
+            TileAndResponse<AdditionIf, std::unique_ptr<std::string>>> cb,
         int x) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1390,8 +1359,7 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
 
   struct HandlerComplete : apache::thrift::ServiceHandler<Calculator> {
     void async_tm_newAddition(
-        std::unique_ptr<
-            apache::thrift::HandlerCallback<TileAndResponse<AdditionIf, void>>>
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, void>>
             cb) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1400,8 +1368,7 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
     }
 
     void async_tm_initializedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, int>>> cb,
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, int>> cb,
         int x) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1411,8 +1378,8 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
     }
 
     void async_tm_stringifiedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, std::unique_ptr<std::string>>>> cb,
+        apache::thrift::HandlerCallbackPtr<
+            TileAndResponse<AdditionIf, std::unique_ptr<std::string>>> cb,
         int x) override {
       auto handler =
           std::make_unique<SemiCalculatorHandler::SemiAdditionHandler>();
@@ -1426,15 +1393,13 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
 
   struct HandlerException : apache::thrift::ServiceHandler<Calculator> {
     void async_tm_newAddition(
-        std::unique_ptr<
-            apache::thrift::HandlerCallback<TileAndResponse<AdditionIf, void>>>
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, void>>
             cb) override {
       cb->exception(std::runtime_error("foo"));
     }
 
     void async_tm_initializedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, int>>> cb,
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, int>> cb,
         int) override {
       cb->exception(std::runtime_error("foo"));
     }
@@ -1442,15 +1407,13 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
 
   struct HandlerDrop : apache::thrift::ServiceHandler<Calculator> {
     void async_tm_newAddition(
-        std::unique_ptr<
-            apache::thrift::HandlerCallback<TileAndResponse<AdditionIf, void>>>
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, void>>
             cb) override {
       (void)cb; // oops!
     }
 
     void async_tm_initializedAddition(
-        std::unique_ptr<apache::thrift::HandlerCallback<
-            TileAndResponse<AdditionIf, int>>> cb,
+        apache::thrift::HandlerCallbackPtr<TileAndResponse<AdditionIf, int>> cb,
         int) override {
       (void)cb; // oops!
     }
@@ -1529,4 +1492,103 @@ TEST(InteractionCodegenTest, FactoryHandlerCallback) {
         makeTestClient<CalculatorAsyncClient>(std::make_shared<HandlerDrop>());
     EXPECT_THROW(client->sync_initializedAddition(42), TApplicationException);
   }
+}
+
+TEST(InteractionResourcePools, GeneratedAsyncProcessorFactory) {
+  if (!FLAGS_thrift_experimental_use_resource_pools) {
+    // This test is only relevant when resource pools is requested.
+    return;
+  }
+  auto handler = std::make_shared<SemiCalculatorHandler>();
+  ScopedServerInterfaceThread server(handler);
+  EXPECT_TRUE(server.getThriftServer().resourcePoolEnabled());
+}
+
+TEST(InteractionResourcePools, CustomAsyncProcessorFactory) {
+  if (!FLAGS_thrift_experimental_use_resource_pools) {
+    // This test is only relevant when resource pools is requested.
+    return;
+  }
+  class CustomAsyncProcessorFactory : public AsyncProcessorFactory {
+   public:
+    std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override {
+      return handler_.getProcessor();
+    }
+    std::vector<ServiceHandlerBase*> getServiceHandlers() override {
+      return handler_.getServiceHandlers();
+    }
+    CreateMethodMetadataResult createMethodMetadata() override {
+      return handler_.createMethodMetadata();
+    }
+    SemiCalculatorHandler handler_;
+  };
+  auto handler = std::make_shared<CustomAsyncProcessorFactory>();
+  ScopedServerInterfaceThread server(handler);
+  EXPECT_TRUE(server.getThriftServer().resourcePoolEnabled());
+}
+
+class InternalPriorityTest : public testing::Test {
+ public:
+  class TestRequestPile : public RoundRobinRequestPile {
+   public:
+    TestRequestPile()
+        : RoundRobinRequestPile(RoundRobinRequestPile::Options()) {}
+
+    ~TestRequestPile() override {
+      EXPECT_TRUE(expectedInternalPriorities_.empty());
+    }
+
+    std::optional<ServerRequestRejection> enqueue(
+        ServerRequest&& request) override {
+      auto expectedInternalPriority = expectedInternalPriorities_.front();
+      auto internalPriority =
+          detail::ServerRequestHelper::internalPriority(request);
+      EXPECT_EQ(expectedInternalPriority, internalPriority);
+      expectedInternalPriorities_.pop();
+      return RoundRobinRequestPile::enqueue(std::move(request));
+    }
+
+   private:
+    // Expect first request to be LO_PRI and subsequent requests to be MID_PRI
+    std::queue<int8_t> expectedInternalPriorities_{
+        {folly::Executor::LO_PRI,
+         folly::Executor::MID_PRI,
+         folly::Executor::MID_PRI}};
+  };
+  void SetUp() override {
+    if (!FLAGS_thrift_experimental_use_resource_pools) {
+      GTEST_SKIP() << "This test is only relevant when resource pools is used";
+    }
+    auto pile = std::make_unique<TestRequestPile>();
+    auto cc = std::make_unique<ParallelConcurrencyController>(
+        *pile.get(), *folly::getGlobalCPUExecutor().get());
+    server_ = std::make_unique<ScopedServerInterfaceThread>(
+        std::make_shared<SemiCalculatorHandler>(),
+        "::1",
+        0,
+        [&](ThriftServer& thriftServer) {
+          thriftServer.resourcePoolSet().setResourcePool(
+              ResourcePoolHandle::defaultAsync(),
+              std::move(pile),
+              folly::getUnsafeMutableGlobalCPUExecutor(),
+              std::move(cc));
+        });
+  }
+
+  std::unique_ptr<ScopedServerInterfaceThread> server_;
+};
+
+CO_TEST_F(InternalPriorityTest, FactoryFunction) {
+  auto client = server_->newClient<Client<Calculator>>();
+  auto [addition, _] = co_await client->co_initializedAddition(0);
+  co_await addition.co_getPrimitive();
+  co_await addition.co_getPrimitive();
+}
+
+CO_TEST_F(InternalPriorityTest, Constructor) {
+  auto client = server_->newClient<Client<Calculator>>();
+  auto addition = client->createAddition();
+  co_await addition.co_getPrimitive();
+  co_await addition.co_getPrimitive();
+  co_await addition.co_getPrimitive();
 }

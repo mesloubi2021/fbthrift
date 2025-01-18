@@ -16,6 +16,7 @@
 
 #include <thrift/conformance/stresstest/client/ClientFactory.h>
 
+#include <fizz/backend/openssl/certificate/CertUtils.h>
 #include <fizz/client/AsyncFizzClient.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/io/AsyncIoUringSocket.h>
@@ -23,6 +24,9 @@
 #include <folly/io/async/AsyncSSLSocket.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <quic/client/QuicClientAsyncTransport.h>
+#include <quic/common/events/FollyQuicEventBase.h>
+#include <quic/common/events/HighResQuicTimer.h>
+#include <quic/common/udpsocket/FollyQuicAsyncUDPSocket.h>
 #include <quic/fizz/client/handshake/FizzClientQuicHandshakeContext.h>
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 
@@ -89,8 +93,10 @@ std::shared_ptr<fizz::client::FizzClientContext> getFizzContext(
       std::string cert, key;
       folly::readFile(cfg.certPath.c_str(), cert);
       folly::readFile(cfg.keyPath.c_str(), key);
-      auto selfCert = fizz::CertUtils::makeSelfCert(cert, key);
-      ctx->setClientCertificate(std::move(selfCert));
+      auto selfCert = fizz::openssl::CertUtils::makeSelfCert(cert, key);
+      auto certMgr = std::make_shared<fizz::client::CertManager>();
+      certMgr->addCert(std::move(selfCert));
+      ctx->setClientCertManager(std::move(certMgr));
     }
     return ctx;
   }();
@@ -150,23 +156,22 @@ folly::AsyncTransport::UniquePtr createQuicSocket(
       .initCwndInMss = 100,
       .maxCwndInMss = quic::kLargeMaxCwndInMss,
       .maxRecvBatchSize = 64,
-      .shouldRecvBatch = true,
       .shouldUseRecvmmsgForBatchRecv = true,
   };
-
-  auto sock = std::make_unique<quic::QuicAsyncUDPSocketWrapperImpl>(evb);
+  auto qEvb = std::make_shared<quic::FollyQuicEventBase>(evb);
+  auto sock = std::make_unique<quic::FollyQuicAsyncUDPSocket>(qEvb);
   constexpr size_t kBufSize = 4 * 1024 * 1024;
   sock->setRcvBuf(kBufSize);
   sock->setSndBuf(kBufSize);
   auto quicClient = std::make_shared<quic::QuicClientTransport>(
-      evb,
+      qEvb,
       std::move(sock),
       quic::FizzClientQuicHandshakeContext::Builder()
           .setFizzClientContext(getFizzContext(cfg))
           .setCertificateVerifier(getFizzVerifier(cfg))
           .build());
-  quicClient->setPacingTimer(
-      quic::TimerHighRes::newTimer(evb, std::chrono::microseconds(200)));
+  quicClient->setPacingTimer(std::make_shared<quic::HighResQuicTimer>(
+      evb, std::chrono::microseconds(200)));
   quicClient->setTransportSettings(ts);
   quicClient->addNewPeerAddress(cfg.serverHost);
   auto quicAsyncTransport = new quic::QuicClientAsyncTransport(quicClient);
@@ -209,8 +214,7 @@ folly::AsyncTransport::UniquePtr createFizzSocket(
 
 folly::AsyncTransport::UniquePtr createIOUring(
     folly::EventBase* evb, const ClientConnectionConfig& cfg) {
-  auto backend = dynamic_cast<folly::IoUringBackend*>(evb->getBackend());
-  auto ring = new folly::AsyncIoUringSocket(evb, backend);
+  auto ring = new folly::AsyncIoUringSocket(evb);
   ring->connect(new ConnectCallback(), cfg.serverHost);
   return folly::AsyncTransport::UniquePtr(ring);
 }
@@ -218,8 +222,7 @@ folly::AsyncTransport::UniquePtr createIOUring(
 folly::AsyncTransport::UniquePtr createIOUringTLS(
     folly::EventBase* evb, const ClientConnectionConfig& cfg) {
   auto sock = folly::AsyncSSLSocket::newSocket(getSslContext(cfg), evb);
-  auto backend = dynamic_cast<folly::IoUringBackend*>(evb->getBackend());
-  auto ring = new folly::AsyncIoUringSocket(std::move(sock), backend);
+  auto ring = new folly::AsyncIoUringSocket(std::move(sock));
   ring->connect(new ConnectCallback(), cfg.serverHost);
   return folly::AsyncTransport::UniquePtr(ring);
 }
@@ -228,8 +231,7 @@ folly::AsyncTransport::UniquePtr createIOUringFizz(
     folly::EventBase* evb, const ClientConnectionConfig& cfg) {
   auto fizzClient = fizz::client::AsyncFizzClient::UniquePtr(
       new fizz::client::AsyncFizzClient(evb, getFizzContext(cfg)));
-  auto backend = dynamic_cast<folly::IoUringBackend*>(evb->getBackend());
-  auto ring = new folly::AsyncIoUringSocket(std::move(fizzClient), backend);
+  auto ring = new folly::AsyncIoUringSocket(std::move(fizzClient));
   ring->connect(new ConnectCallback(), cfg.serverHost);
   return folly::AsyncTransport::UniquePtr(ring);
 }
@@ -240,6 +242,11 @@ folly::AsyncTransport::UniquePtr createIOUringFizz(
 ClientFactory::createRocketClient(
     folly::EventBase* evb, const ClientConnectionConfig& cfg) {
   auto chan = RocketClientChannel::newChannel(createSocket(evb, cfg));
+
+  if (cfg.compressionConfigOpt) {
+    chan->setDesiredCompressionConfig(*cfg.compressionConfigOpt);
+  }
+
   return std::make_unique<StressTestAsyncClient>(std::move(chan));
 }
 
@@ -255,8 +262,8 @@ THRIFT_PLUGGABLE_FUNC_REGISTER(
     std::shared_ptr<StressTestAsyncClient> connection =
         ClientFactory::createRocketClient(evb, cfg.connConfig);
     for (size_t i = 0; i < cfg.numClientsPerConnection; i++) {
-      clients.emplace_back(
-          std::make_unique<ThriftStressTestClient>(connection, stats));
+      clients.emplace_back(std::make_unique<ThriftStressTestClient>(
+          connection, stats, cfg.enableChecksum));
     }
   }
   return clients;

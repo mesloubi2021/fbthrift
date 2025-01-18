@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
@@ -20,9 +22,14 @@ import asyncio
 import unittest
 from typing import Optional, Sequence
 
+from parameterized import parameterized
+
 from testing.thrift_services import TestingServiceInterface
 from testing.thrift_types import Color, easy
 from thrift.py3.server import SocketAddress
+from thrift.python.flagged.test.enable_resource_pools_for_python_test import (
+    mock_enable_resource_pools_for_python,
+)
 from thrift.python.server import ThriftServer
 
 
@@ -130,6 +137,7 @@ class ServicesTests(unittest.TestCase):
         NUM_IO_WORKERS = 10
         IDLE_TIMEOUT = 19.84
         QUEUE_TIMEOUT = 20.19
+        SOCKET_QUEUE_TIMEOUT = 21.37
 
         server = ThriftServer(Handler(), port=0)
         server.set_max_requests(MAX_REQUESTS)
@@ -138,12 +146,14 @@ class ServicesTests(unittest.TestCase):
         server.set_io_worker_threads(NUM_IO_WORKERS)
         server.set_idle_timeout(IDLE_TIMEOUT)
         server.set_queue_timeout(QUEUE_TIMEOUT)
+        server.set_socket_queue_timeout(SOCKET_QUEUE_TIMEOUT)
         self.assertEqual(server.get_max_requests(), MAX_REQUESTS)
         self.assertEqual(server.get_max_connections(), MAX_CONNECTIONS)
         self.assertEqual(server.get_listen_backlog(), LISTEN_BACKLOG)
         self.assertEqual(server.get_io_worker_threads(), NUM_IO_WORKERS)
         self.assertEqual(server.get_idle_timeout(), IDLE_TIMEOUT)
         self.assertEqual(server.get_queue_timeout(), QUEUE_TIMEOUT)
+        self.assertEqual(server.get_socket_queue_timeout(), SOCKET_QUEUE_TIMEOUT)
 
         self.assertFalse(server.is_plaintext_allowed_on_loopback())
         server.set_allow_plaintext_on_loopback(True)
@@ -163,3 +173,33 @@ class ServicesTests(unittest.TestCase):
         loop.run_until_complete(coro)
         self.assertTrue(handler.on_start_serving)
         self.assertTrue(handler.on_stop_requested)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_enable_resource_pool(
+        self,
+        enable_resource_pools_for_python_flag_value: bool,
+    ) -> None:
+        # GIVEN
+        expected = enable_resource_pools_for_python_flag_value
+        mock_enable_resource_pools_for_python(
+            enable_resource_pools_for_python_flag_value
+        )
+
+        # WHEN
+        actual = None
+
+        async def inner() -> None:
+            nonlocal actual
+            handler = Handler()
+            server = ThriftServer(handler, port=0)
+            serve_task = asyncio.get_event_loop().create_task(server.serve())
+            # This call causes the server to start and must be present.
+            # Otherwise, this test will never exit because server.stop() may happen
+            # before the server starts.
+            await server.get_address()
+            actual = server.is_resource_pool_enabled()
+            server.stop()
+            await serve_task
+
+        asyncio.get_event_loop().run_until_complete(inner())
+        self.assertEqual(expected, actual)

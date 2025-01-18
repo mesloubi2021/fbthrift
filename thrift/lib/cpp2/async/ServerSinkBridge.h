@@ -20,9 +20,9 @@
 #include <folly/Portability.h>
 
 #if FOLLY_HAS_COROUTINES
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/Baton.h>
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/Baton.h>
+#include <folly/coro/Task.h>
 
 #include <thrift/lib/cpp2/async/SinkBridgeUtil.h>
 #endif
@@ -31,9 +31,7 @@
 #include <thrift/lib/cpp2/async/TwoWayBridge.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 struct SinkConsumerImpl {
 #if FOLLY_HAS_COROUTINES
@@ -117,6 +115,4 @@ class ServerSinkBridge : public TwoWayBridge<
 };
 #endif
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

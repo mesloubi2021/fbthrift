@@ -15,6 +15,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, std::string val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "218",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "218",
         "bodyend": "220"
@@ -58,6 +59,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, const folly::IOBuf &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -71,7 +73,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "221",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "221",
         "bodyend": "223"
@@ -101,6 +103,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(std::string &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "std::string &amp;",
@@ -114,7 +117,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "224",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "224",
         "bodyend": "226"
@@ -149,6 +152,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(folly::IOBuf &amp;self, T &amp;&amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -162,7 +166,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "228",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "228",
         "bodyend": "230"
@@ -192,6 +196,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(folly::IOBuf &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "folly::IOBuf &amp;",
@@ -205,7 +210,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "231",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "231",
         "bodyend": "233"
@@ -240,6 +245,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(IOBufPtr &amp;self, T &amp;&amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -253,7 +259,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "235",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "235",
         "bodyend": "237"
@@ -283,6 +289,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(IOBufPtr &amp;self, const IOBufPtr &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "<code>IOBufPtr</code> &amp;",
@@ -296,7 +303,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "238",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "238",
         "bodyend": "240"
@@ -326,6 +333,7 @@
       "definition_html": "static void apache::thrift::op::detail::StringOp&lt; Tag &gt;::prepend",
       "argsstring_html": "(void *s, const Dyn &amp;val)",
       "name_html": "prepend",
+      "qualifiedname_html": "apache::thrift::op::detail::StringOp::prepend",
       "param": [
         {
           "type_html": "void *",
@@ -338,11 +346,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "line": "274",
-        "column": "1",
+        "line": "271",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
-        "bodystart": "274",
-        "bodyend": "287"
+        "bodystart": "271",
+        "bodyend": "279"
       },
       "definition": {
         "simple_html": "static void prepend(void* s, const Dyn&amp; val)",
@@ -364,5 +372,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1binary__t_01_4/prepend",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1binary__t_01_4/prepend"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1binary__t_01_4/prepend",
+  "parent_links": [
+    {
+      "text_html": "AnyOp&lt; type::binary_t &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1binary__t_01_4"
+    }
+  ]
 }

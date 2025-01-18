@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filesystem>
 #include <memory>
 #include <set>
 #include <string>
@@ -22,12 +23,10 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <fmt/format.h>
 #include <thrift/compiler/ast/t_struct.h>
+#include <thrift/compiler/generate/go/util.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/go/util.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
@@ -45,6 +44,14 @@ std::string doc_comment(const t_named* named_node) {
 class t_mstch_go_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
+
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "service:autogen_path",
+    };
+    return opts;
+  }
 
   std::string template_prefix() const override { return "go"; }
 
@@ -74,8 +81,6 @@ class mstch_go_program : public mstch_program {
             {"program:docs?", &mstch_go_program::go_has_docs},
             {"program:docs", &mstch_go_program::go_doc_comment},
             {"program:compat?", &mstch_go_program::go_gen_compat},
-            {"program:compat_getters?",
-             &mstch_go_program::go_gen_compat_getters},
             {"program:compat_setters?",
              &mstch_go_program::go_gen_compat_setters},
             {"program:thrift_imports", &mstch_go_program::thrift_imports},
@@ -86,10 +91,16 @@ class mstch_go_program : public mstch_program {
              &mstch_go_program::thrift_metadata_import},
             {"program:go_package_alias", &mstch_go_program::go_package_alias},
             {"program:gen_metadata?", &mstch_go_program::should_gen_metadata},
+            {"program:gen_default_get?",
+             &mstch_go_program::should_gen_default_get},
+            {"program:use_reflect_codec?",
+             &mstch_go_program::should_use_reflect_codec},
             {"program:import_metadata_package?",
              &mstch_go_program::should_import_metadata_package},
             {"program:metadata_qualifier",
              &mstch_go_program::metadata_qualifier},
+            {"program:thrift_metadata_types",
+             &mstch_go_program::thrift_metadata_types},
         });
   }
   mstch::node go_pkg_name() {
@@ -105,7 +116,6 @@ class mstch_go_program : public mstch_program {
   mstch::node go_has_docs() { return program_->has_doc(); }
   mstch::node go_doc_comment() { return doc_comment(program_); }
   mstch::node go_gen_compat() { return data_.compat; }
-  mstch::node go_gen_compat_getters() { return data_.compat_getters; }
   mstch::node go_gen_compat_setters() { return data_.compat_setters; }
   mstch::node thrift_imports() {
     mstch::array a;
@@ -124,6 +134,8 @@ class mstch_go_program : public mstch_program {
     return data_.get_go_package_alias(program_);
   }
   mstch::node should_gen_metadata() { return data_.gen_metadata; }
+  mstch::node should_gen_default_get() { return data_.gen_default_get; }
+  mstch::node should_use_reflect_codec() { return data_.use_reflect_codec; }
   mstch::node should_import_metadata_package() {
     // We don't need to import the metadata package if we are
     // generating metadata inside the metadata package itself. Duh.
@@ -137,6 +149,10 @@ class mstch_go_program : public mstch_program {
     } else {
       return std::string("");
     }
+  }
+  mstch::node thrift_metadata_types() {
+    return make_mstch_array(
+        data_.thrift_metadata_types, *context_.type_factory);
   }
 
  private:
@@ -188,7 +204,6 @@ class mstch_go_enum_value : public mstch_enum_value {
       go::codegen_data* data)
       : mstch_enum_value(v, ctx, pos), data_(*data) {
     (void)data_;
-    register_methods(this, {});
   }
 
  private:
@@ -318,7 +333,12 @@ class mstch_go_field : public mstch_field {
     return setter_name;
   }
   mstch::node go_arg_name() {
-    return go::munge_ident(field_->name(), /*exported*/ false);
+    auto arg_name = go::munge_ident(field_->name(), /*exported*/ false);
+    // Avoid 'context' package import collision
+    if (arg_name == "context") {
+      arg_name += "_";
+    }
+    return arg_name;
   }
   mstch::node is_pointer() {
     // See comment in the private method for details.
@@ -443,9 +463,12 @@ class mstch_go_struct : public mstch_struct {
             {"struct:go_qualified_name", &mstch_go_struct::go_qualified_name},
             {"struct:go_qualified_new_func",
              &mstch_go_struct::go_qualified_new_func},
+            {"struct:go_package_alias_prefix",
+             &mstch_go_struct::go_package_alias_prefix_},
             {"struct:go_public_req_name", &mstch_go_struct::go_public_req_name},
             {"struct:go_public_resp_name",
              &mstch_go_struct::go_public_resp_name},
+            {"struct:struct_spec_name", &mstch_go_struct::struct_spec_name},
             {"struct:req_resp?", &mstch_go_struct::is_req_resp_struct},
             {"struct:resp?", &mstch_go_struct::is_resp_struct},
             {"struct:req?", &mstch_go_struct::is_req_struct},
@@ -463,6 +486,9 @@ class mstch_go_struct : public mstch_struct {
     auto prefix = data_.go_package_alias_prefix(struct_->program());
     return prefix + go_new_func_();
   }
+  mstch::node go_package_alias_prefix_() {
+    return data_.go_package_alias_prefix(struct_->program());
+  }
   mstch::node is_req_resp_struct() {
     // Whether this is a helper request or response struct.
     return is_req_resp_struct_();
@@ -478,11 +504,15 @@ class mstch_go_struct : public mstch_struct {
         boost::algorithm::starts_with(struct_->name(), "req");
   }
   mstch::node go_public_req_name() {
-    return boost::algorithm::erase_first_copy(struct_->name(), "req") + "Args";
+    return boost::algorithm::erase_first_copy(struct_->name(), "req") +
+        "ArgsDeprecated";
   }
   mstch::node go_public_resp_name() {
     return boost::algorithm::erase_first_copy(struct_->name(), "resp") +
-        "Result";
+        "ResultDeprecated";
+  }
+  mstch::node struct_spec_name() {
+    return "premadeStructSpec_" + struct_->name();
   }
   mstch::node fields_sorted() {
     return make_mstch_fields(struct_->get_sorted_members());
@@ -582,6 +612,9 @@ class mstch_go_function : public mstch_function {
             {"function:go_name", &mstch_go_function::go_name},
             {"function:go_supported?", &mstch_go_function::is_go_supported},
             {"function:ctx_arg_name", &mstch_go_function::ctx_arg_name},
+            {"function:out_var_name", &mstch_go_function::out_var_name},
+            {"function:in_var_name", &mstch_go_function::in_var_name},
+            {"function:err_var_name", &mstch_go_function::err_var_name},
             {"function:retval_field_name",
              &mstch_go_function::retval_field_name},
             {"function:retval_nilable?", &mstch_go_function::is_retval_nilable},
@@ -595,18 +628,48 @@ class mstch_go_function : public mstch_function {
     // This helper returns the Context object name to be used in the function
     // signature. "ctx" by default, "ctx<num>" in case of name collisions with
     // other function arguments. The name is guaranteed not to collide.
-    std::set<std::string> arg_names;
+    return get_unique_name("ctx");
+  }
+
+  mstch::node out_var_name() {
+    // This helper function returns a unique "out" variable name,
+    // that doesn't conflict with any parameter names.
+    // The name is guaranteed not to collide.
+    return get_unique_name("out");
+  }
+
+  mstch::node in_var_name() {
+    // This helper function returns a unique "in" variable name,
+    // that doesn't conflict with any parameter names.
+    // The name is guaranteed not to collide.
+    return get_unique_name("in");
+  }
+
+  mstch::node err_var_name() {
+    // This helper function returns a unique "err" variable name,
+    // that doesn't conflict with any parameter names.
+    // The name is guaranteed not to collide.
+    return get_unique_name("err");
+  }
+
+  std::string get_unique_name(std::string const& name) {
     auto& members = function_->params().get_members();
-    for (auto& member : members) {
-      arg_names.insert(go::munge_ident(member->name(), /*exported*/ false));
+
+    std::vector<std::string_view> arg_names;
+    arg_names.reserve(members.size());
+    for (auto member : members) {
+      arg_names.push_back(
+          data_.maybe_munge_ident_and_cache(member, /* exported */ false));
     }
 
-    std::string ctx_name = "ctx";
+    std::string unique_name = name;
     auto current_num = 0;
-    while (arg_names.count(ctx_name) > 0) {
-      ctx_name = std::string("ctx") + std::to_string(++current_num);
+    while ( //
+        std::find(arg_names.begin(), arg_names.end(), unique_name) !=
+        arg_names.end()) {
+      unique_name = name + std::to_string(++current_num);
     }
-    return ctx_name;
+    return unique_name;
   }
 
   mstch::node is_retval_nilable() {
@@ -637,6 +700,14 @@ class mstch_go_type : public mstch_type {
         {
             {"type:go_comparable?", &mstch_go_type::is_go_comparable},
             {"type:metadata_primitive?", &mstch_go_type::is_metadata_primitive},
+            {"type:named?", &mstch_go_type::has_name},
+            {"type:full_name", &mstch_go_type::full_name},
+            {"type:metadata_name", &mstch_go_type::metadata_name},
+            {"type:metadata_thrift_type_getter",
+             &mstch_go_type::metadata_thrift_type_getter},
+            {"type:codec_type_spec_name", &mstch_go_type::codec_type_spec_name},
+            {"type:codec_type_spec_getter",
+             &mstch_go_type::codec_type_spec_getter},
         });
   }
 
@@ -645,15 +716,69 @@ class mstch_go_type : public mstch_type {
     // Whether this type is primitive from metadata.thrift perspective.
     // i.e. see ThriftPrimitiveType enum in metadata.thrift
     auto real_type = type_->get_true_type();
-    return real_type->is_bool() || real_type->is_byte() ||
-        real_type->is_i16() || real_type->is_i32() || real_type->is_i64() ||
-        real_type->is_float() || real_type->is_double() ||
-        real_type->is_binary() || real_type->is_string() ||
-        real_type->is_void();
+    return go::is_type_metadata_primitive(real_type);
+  }
+  mstch::node has_name() { return !type_->name().empty(); }
+  mstch::node full_name() { return type_->get_full_name(); }
+  mstch::node metadata_name() { return metadata_name_(); }
+  mstch::node codec_type_spec_name() { return codec_type_spec_name_(); }
+  mstch::node metadata_thrift_type_getter() {
+    // Program will be null for primitive (base) types.
+    // They should be treated as being from the current program.
+    auto is_from_current_program = type_->get_program() == nullptr ||
+        data_.is_current_program(type_->get_program());
+
+    if (is_from_current_program) {
+      // If the type is from the current program, we can simply use its
+      // corresponding *ThriftType variable already present in the program.
+      return metadata_name_();
+    } else {
+      // If the type is external, we must retrieve it from its corresponding
+      // program/package using GetMetadataThriftType helper method.
+      return fmt::format(
+          "{}.GetMetadataThriftType(\"{}\")",
+          data_.get_go_package_alias(type_->program()),
+          type_->get_full_name());
+    }
+  }
+  mstch::node codec_type_spec_getter() {
+    // Program will be null for primitive (base) types.
+    // They should be treated as being from the current program.
+    auto is_from_current_program = type_->get_program() == nullptr ||
+        data_.is_current_program(type_->get_program());
+
+    if (is_from_current_program) {
+      // If the type is from the current program, we can simply use its
+      // corresponding *ThriftType variable already present in the program.
+      return codec_type_spec_name_();
+    } else {
+      // If the type is external, we must retrieve it from its corresponding
+      // program/package using GetMetadataThriftType helper method.
+      return fmt::format(
+          "{}.GetCodecTypeSpec(\"{}\")",
+          data_.get_go_package_alias(type_->program()),
+          type_->get_full_name());
+    }
   }
 
  private:
   go::codegen_data& data_;
+
+  std::string metadata_name_() {
+    return "premadeThriftType_" + sanitized_full_name_();
+  }
+  std::string codec_type_spec_name_() {
+    return "premadeCodecTypeSpec_" + sanitized_full_name_();
+  }
+  std::string sanitized_full_name_() {
+    std::string full_name = type_->get_full_name();
+    boost::replace_all(full_name, " ", "");
+    boost::replace_all(full_name, ".", "_");
+    boost::replace_all(full_name, ",", "_");
+    boost::replace_all(full_name, "<", "_");
+    boost::replace_all(full_name, ">", "");
+    return full_name;
+  }
 };
 
 class mstch_go_typedef : public mstch_typedef {
@@ -668,7 +793,6 @@ class mstch_go_typedef : public mstch_typedef {
         this,
         {
             {"typedef:go_name", &mstch_go_typedef::go_name},
-            {"typedef:go_newtype?", &mstch_go_typedef::go_newtype},
             {"typedef:go_qualified_name", &mstch_go_typedef::go_qualified_name},
             {"typedef:go_qualified_new_func",
              &mstch_go_typedef::go_qualified_new_func},
@@ -681,10 +805,6 @@ class mstch_go_typedef : public mstch_typedef {
         });
   }
   mstch::node go_name() { return go_name_(); }
-  mstch::node go_newtype() {
-    return typedef_->find_structured_annotation_or_null(kGoNewTypeUri) !=
-        nullptr;
-  }
   mstch::node go_qualified_name() {
     auto prefix = data_.go_package_alias_prefix(typedef_->program());
     auto name = go_name_();
@@ -730,7 +850,7 @@ class mstch_go_typedef : public mstch_typedef {
 };
 
 void t_mstch_go_generator::generate_program() {
-  out_dir_base_ = "gen-go_mstch";
+  out_dir_base_ = "gen-go";
   set_mstch_factories();
 
   const t_program* program = get_program();
@@ -739,6 +859,7 @@ void t_mstch_go_generator::generate_program() {
   data_.compute_go_package_aliases();
   data_.compute_struct_to_field_names();
   data_.compute_service_to_req_resp_structs();
+  data_.compute_thrift_metadata_types();
 
   if (auto thrift_lib_import = get_option("thrift_import")) {
     data_.thrift_lib_import = *thrift_lib_import;
@@ -752,14 +873,21 @@ void t_mstch_go_generator::generate_program() {
   if (auto gen_metadata = get_option("gen_metadata")) {
     data_.gen_metadata = (gen_metadata.value() == "true");
   }
+  if (auto gen_default_get = get_option("gen_default_get")) {
+    data_.gen_default_get = (gen_default_get.value() == "true");
+  }
+  if (auto use_reflect_codec = get_option("use_reflect_codec")) {
+    data_.use_reflect_codec = (use_reflect_codec.value() == "true");
+  }
 
   const auto& prog = cached_program(program);
-  auto package_dir = boost::filesystem::path{
+  auto package_dir = std::filesystem::path{
       go::get_go_package_dir(program, data_.package_override)};
 
   render_to_file(prog, "const.go", package_dir / "const.go");
   render_to_file(prog, "types.go", package_dir / "types.go");
   render_to_file(prog, "svcs.go", package_dir / "svcs.go");
+  render_to_file(prog, "codec.go", package_dir / "codec.go");
   if (data_.gen_metadata) {
     render_to_file(prog, "metadata.go", package_dir / "metadata.go");
   }
@@ -786,6 +914,4 @@ void t_mstch_go_generator::set_mstch_factories() {
 
 THRIFT_REGISTER_GENERATOR(mstch_go, "Go", "");
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

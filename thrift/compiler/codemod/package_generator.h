@@ -18,16 +18,14 @@
 
 #include <map>
 #include <string>
+#include <utility>
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <re2/re2.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
-namespace codemod {
+namespace apache::thrift::compiler::codemod {
 
 inline constexpr auto kDefaultDomain = "meta.com";
 
@@ -191,7 +189,7 @@ class package_name_generator {
   }
 
   void create_path_and_domain(std::vector<std::string> identifiers) {
-    path_ = identifiers;
+    path_ = std::move(identifiers);
     // Convert all characters to lowercase
     for (auto& identifier : path_) {
       identifier = to_snake_case(identifier);
@@ -203,7 +201,7 @@ class package_name_generator {
         });
 
     if (iter != path_.end()) {
-      auto tld = kPotentialDomainNames.at(*iter);
+      const auto& tld = kPotentialDomainNames.at(*iter);
 
       // Check if TLD is already present in path
       auto tld_iter = std::find(path_.begin(), iter, tld);
@@ -404,7 +402,4 @@ class package_name_generator_util {
     return ordered_identifiers;
   }
 };
-} // namespace codemod
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler::codemod

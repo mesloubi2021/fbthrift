@@ -8,7 +8,7 @@
     {
       "prot": "public",
       "virtual": "non-virtual",
-      "text_html": "type::detail::EqWrap&lt; Derived, Patch &gt;"
+      "text_html": "type::detail::EqWrap&lt; Derived, Patch, type::struct_t&lt; Patch &gt; &gt;"
     }
   ],
   "derivedcompoundref": [
@@ -26,14 +26,10 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "Patch",
-      "defname_html": "Patch"
+      "type_html": "typename Patch"
     },
     {
-      "type_html": "typename",
-      "declname_html": "Derived",
-      "defname_html": "Derived"
+      "type_html": "typename Derived"
     }
   ],
   "types": [
@@ -44,12 +40,13 @@
       "definition_html": "using apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::Base =  type::detail::EqWrap&lt;Derived, Patch&gt;",
       "argsstring_html": "",
       "name_html": "Base",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::Base",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "47",
-        "column": "1",
+        "line": "52",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "47",
+        "bodystart": "52",
         "bodyend": "-1"
       },
       "parentid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch"
@@ -68,6 +65,7 @@
       "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
       "argsstring_html": "(const BasePatch &amp;)=default",
       "name_html": "BasePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
       "param": [
         {
           "type_html": "const <code>BasePatch</code> &amp;"
@@ -75,8 +73,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "52",
-        "column": "1"
+        "line": "57",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BasePatch(const BasePatch&amp;)",
@@ -96,11 +94,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "no",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
       "argsstring_html": "(BasePatch &amp;&amp;) noexcept=default",
       "name_html": "BasePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
       "param": [
         {
           "type_html": "<code>BasePatch</code> &amp;&amp;"
@@ -108,8 +108,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "53",
-        "column": "1"
+        "line": "58",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BasePatch(BasePatch&amp;&amp;)",
@@ -123,7 +123,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/BasePatch"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa76710aff5eacd91da2767e4a0e0e1bd",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aaceff0319a2732db1220ede276af1490",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -131,9 +131,10 @@
       "inline": "no",
       "virtual": "non-virtual",
       "type_html": "<code>BasePatch</code> &amp;",
-      "definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+      "definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
       "argsstring_html": "(const BasePatch &amp;)=default",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
       "param": [
         {
           "type_html": "const <code>BasePatch</code> &amp;"
@@ -141,32 +142,34 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "54",
-        "column": "1"
+        "line": "59",
+        "column": "13"
       },
       "definition": {
         "simple_html": "BasePatch&amp; operator=(const BasePatch&amp;)",
         "simple_raw": "BasePatch& operator=(const BasePatch&)",
         "detailed_html": "BasePatch&amp; operator=(const BasePatch&amp;) = default",
         "detailed_raw": "BasePatch& operator=(const BasePatch&) = default",
-        "original_definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+        "original_definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
         "original_argsstring_html": "(const BasePatch &amp;)=default"
       },
       "filepath": "fns/class/apache/thrift/op/detail/BasePatch/operator.assign",
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/operator.assign"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aeba27d087e48ba62e13892b80e2a0edb",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ac3309b0f3589d32ae3e3ec148fa857e7",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "no",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "<code>BasePatch</code> &amp;",
-      "definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+      "definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
       "argsstring_html": "(BasePatch &amp;&amp;) noexcept=default",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
       "param": [
         {
           "type_html": "<code>BasePatch</code> &amp;&amp;"
@@ -174,15 +177,15 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "55",
-        "column": "1"
+        "line": "60",
+        "column": "13"
       },
       "definition": {
         "simple_html": "BasePatch&amp; operator=(BasePatch&amp;&amp;)",
         "simple_raw": "BasePatch& operator=(BasePatch&&)",
         "detailed_html": "BasePatch&amp; operator=(BasePatch&amp;&amp;) = default noexcept",
         "detailed_raw": "BasePatch& operator=(BasePatch&&) = default noexcept",
-        "original_definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+        "original_definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
         "original_argsstring_html": "(BasePatch &amp;&amp;) noexcept=default"
       },
       "filepath": "fns/class/apache/thrift/op/detail/BasePatch/operator.assign",
@@ -205,6 +208,7 @@
       "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
       "argsstring_html": "(field_ref&lt; U &gt; field) const",
       "name_html": "apply",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -213,11 +217,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "60",
-        "column": "1",
+        "line": "65",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "60",
-        "bodyend": "62"
+        "bodystart": "65",
+        "bodyend": "67"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nvoid apply(field_ref&lt;U&gt; field) const",
@@ -250,6 +254,7 @@
       "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
       "argsstring_html": "(terse_field_ref&lt; U &gt; field) const",
       "name_html": "apply",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -258,11 +263,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "65",
-        "column": "1",
+        "line": "70",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "65",
-        "bodyend": "67"
+        "bodystart": "70",
+        "bodyend": "72"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nvoid apply(terse_field_ref&lt;U&gt; field) const",
@@ -295,6 +300,7 @@
       "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
       "argsstring_html": "(required_field_ref&lt; U &gt; field) const",
       "name_html": "apply",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/required_field_ref\">required_field_ref</a>&lt; U &gt;",
@@ -303,11 +309,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "70",
-        "column": "1",
+        "line": "75",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "70",
-        "bodyend": "72"
+        "bodystart": "75",
+        "bodyend": "77"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nvoid apply(required_field_ref&lt;U&gt; field) const",
@@ -324,7 +330,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/apply"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a9ba40bdd8c56c52083956a9ba8f98cfd",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa70a2da90c249c50cdb1cdde6e515482",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -337,9 +343,10 @@
         }
       ],
       "type_html": "type::if_not_id&lt; U &gt;",
-      "definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+      "definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
       "argsstring_html": "(field_ref&lt; U &gt; val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::assign",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -348,18 +355,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "75",
-        "column": "1",
+        "line": "80",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "75",
-        "bodyend": "77"
+        "bodystart": "80",
+        "bodyend": "82"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\ntype::if_not_id&lt;U&gt; assign(field_ref&lt;U&gt; val)",
         "simple_raw": "template <typename U>\ntype::if_not_id<U> assign(field_ref<U> val)",
         "detailed_html": "template &lt;typename U&gt;\ninline type::if_not_id&lt;U&gt; assign(field_ref&lt;U&gt; val)",
         "detailed_raw": "template <typename U>\ninline type::if_not_id<U> assign(field_ref<U> val)",
-        "original_definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+        "original_definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
         "original_argsstring_html": "(field_ref&lt; U &gt; val)"
       },
       "description": {
@@ -369,7 +376,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/assign"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1c75264cbdbc2420286de7aedf084134",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a638be9d22837cf983e62b872a73c60f2",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -382,9 +389,10 @@
         }
       ],
       "type_html": "type::if_not_id&lt; U &gt;",
-      "definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+      "definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
       "argsstring_html": "(terse_field_ref&lt; U &gt; val)",
       "name_html": "assign",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::assign",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -393,18 +401,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "80",
-        "column": "1",
+        "line": "85",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "80",
-        "bodyend": "82"
+        "bodystart": "85",
+        "bodyend": "87"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\ntype::if_not_id&lt;U&gt; assign(terse_field_ref&lt;U&gt; val)",
         "simple_raw": "template <typename U>\ntype::if_not_id<U> assign(terse_field_ref<U> val)",
         "detailed_html": "template &lt;typename U&gt;\ninline type::if_not_id&lt;U&gt; assign(terse_field_ref&lt;U&gt; val)",
         "detailed_raw": "template <typename U>\ninline type::if_not_id<U> assign(terse_field_ref<U> val)",
-        "original_definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+        "original_definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
         "original_argsstring_html": "(terse_field_ref&lt; U &gt; val)"
       },
       "description": {
@@ -414,7 +422,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/assign"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a74fcf4aaac24519c3142c65fb0b906b7",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa54a7271aaf1a812fd709c6d0f8e07bc",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -427,9 +435,10 @@
         }
       ],
       "type_html": "Derived &amp;",
-      "definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+      "definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
       "argsstring_html": "(field_ref&lt; U &gt; field)",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -438,18 +447,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "85",
-        "column": "1",
+        "line": "90",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "85",
-        "bodyend": "88"
+        "bodystart": "90",
+        "bodyend": "93"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nDerived&amp; operator=(field_ref&lt;U&gt; field)",
         "simple_raw": "template <typename U>\nDerived& operator=(field_ref<U> field)",
         "detailed_html": "template &lt;typename U&gt;\ninline Derived&amp; operator=(field_ref&lt;U&gt; field)",
         "detailed_raw": "template <typename U>\ninline Derived& operator=(field_ref<U> field)",
-        "original_definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+        "original_definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
         "original_argsstring_html": "(field_ref&lt; U &gt; field)"
       },
       "description": {
@@ -459,7 +468,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/operator.assign"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ad6317cb7bd305f72a45cf10d7d1ee9a7",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1f3d1cc595e7df269fe464721f76fb98",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -472,9 +481,10 @@
         }
       ],
       "type_html": "Derived &amp;",
-      "definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+      "definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
       "argsstring_html": "(terse_field_ref&lt; U &gt; field)",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -483,18 +493,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "91",
-        "column": "1",
+        "line": "96",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "91",
-        "bodyend": "94"
+        "bodystart": "96",
+        "bodyend": "99"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nDerived&amp; operator=(terse_field_ref&lt;U&gt; field)",
         "simple_raw": "template <typename U>\nDerived& operator=(terse_field_ref<U> field)",
         "detailed_html": "template &lt;typename U&gt;\ninline Derived&amp; operator=(terse_field_ref&lt;U&gt; field)",
         "detailed_raw": "template <typename U>\ninline Derived& operator=(terse_field_ref<U> field)",
-        "original_definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+        "original_definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
         "original_argsstring_html": "(terse_field_ref&lt; U &gt; field)"
       },
       "description": {
@@ -520,6 +530,7 @@
       "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::merge",
       "argsstring_html": "(U &amp;&amp;next)",
       "name_html": "merge",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::merge",
       "param": [
         {
           "type_html": "U &amp;&amp;",
@@ -528,11 +539,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "100",
-        "column": "1",
+        "line": "105",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "100",
-        "bodyend": "107"
+        "bodystart": "105",
+        "bodyend": "112"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nvoid merge(U&amp;&amp; next)",
@@ -549,6 +560,138 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/merge"
     },
     {
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a9e080dab7bf87dad6c957a69e6e07cf4",
+      "prot": "public",
+      "static": "no",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "refqual": "lvalue",
+      "virtual": "non-virtual",
+      "type_html": "auto &amp;&amp;",
+      "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+      "argsstring_html": "() &amp;",
+      "name_html": "toThrift",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "line": "114",
+        "column": "3",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "bodystart": "114",
+        "bodyend": "116"
+      },
+      "definition": {
+        "simple_html": "auto&amp;&amp; toThrift() &amp;",
+        "simple_raw": "auto&& toThrift() &",
+        "detailed_html": "inline auto&amp;&amp; toThrift() &amp;",
+        "detailed_raw": "inline auto&& toThrift() &",
+        "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+        "original_argsstring_html": "() &amp;"
+      },
+      "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+      "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift"
+    },
+    {
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a0232903c623315b0786991206337383b",
+      "prot": "public",
+      "static": "no",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "refqual": "rvalue",
+      "virtual": "non-virtual",
+      "type_html": "auto &amp;&amp;",
+      "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+      "argsstring_html": "() &amp;&amp;",
+      "name_html": "toThrift",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "line": "118",
+        "column": "3",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "bodystart": "118",
+        "bodyend": "120"
+      },
+      "definition": {
+        "simple_html": "auto&amp;&amp; toThrift() &amp;&amp;",
+        "simple_raw": "auto&& toThrift() &&",
+        "detailed_html": "inline auto&amp;&amp; toThrift() &amp;&amp;",
+        "detailed_raw": "inline auto&& toThrift() &&",
+        "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+        "original_argsstring_html": "() &amp;&amp;"
+      },
+      "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+      "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift"
+    },
+    {
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1c78794eee45afd65d3bed40bd0c49ba",
+      "prot": "public",
+      "static": "no",
+      "const": "yes",
+      "explicit": "no",
+      "inline": "yes",
+      "refqual": "lvalue",
+      "virtual": "non-virtual",
+      "type_html": "auto &amp;&amp;",
+      "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+      "argsstring_html": "() const &amp;",
+      "name_html": "toThrift",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "line": "122",
+        "column": "3",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "bodystart": "122",
+        "bodyend": "124"
+      },
+      "definition": {
+        "simple_html": "auto&amp;&amp; toThrift() const&amp;",
+        "simple_raw": "auto&& toThrift() const&",
+        "detailed_html": "inline auto&amp;&amp; toThrift() const&amp;",
+        "detailed_raw": "inline auto&& toThrift() const&",
+        "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+        "original_argsstring_html": "() const &amp;"
+      },
+      "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+      "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift"
+    },
+    {
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ad2687015460d0ff80984bbc6562313de",
+      "prot": "public",
+      "static": "no",
+      "const": "yes",
+      "explicit": "no",
+      "inline": "yes",
+      "refqual": "rvalue",
+      "virtual": "non-virtual",
+      "type_html": "auto &amp;&amp;",
+      "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+      "argsstring_html": "() const &amp;&amp;",
+      "name_html": "toThrift",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "line": "126",
+        "column": "3",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+        "bodystart": "126",
+        "bodyend": "128"
+      },
+      "definition": {
+        "simple_html": "auto&amp;&amp; toThrift() const&amp;&amp;",
+        "simple_raw": "auto&& toThrift() const&&",
+        "detailed_html": "inline auto&amp;&amp; toThrift() const&amp;&amp;",
+        "detailed_raw": "inline auto&& toThrift() const&&",
+        "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+        "original_argsstring_html": "() const &amp;&amp;"
+      },
+      "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+      "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift"
+    },
+    {
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1e7cad73b5ea4365b33d7096aa99e507",
       "prot": "public",
       "static": "no",
@@ -560,13 +703,14 @@
       "definition_html": "protocol::Object apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toObject",
       "argsstring_html": "() const",
       "name_html": "toObject",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toObject",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "110",
-        "column": "1",
+        "line": "131",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "110",
-        "bodyend": "113"
+        "bodystart": "131",
+        "bodyend": "135"
       },
       "definition": {
         "simple_html": "protocol::Object toObject() const",
@@ -591,10 +735,11 @@
       "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::~BasePatch",
       "argsstring_html": "()=default",
       "name_html": "~BasePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BasePatch::~BasePatch",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "119",
-        "column": "1"
+        "line": "141",
+        "column": "3"
       },
       "definition": {
         "simple_html": "~BasePatch()",
@@ -610,11 +755,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-    "line": "46",
+    "line": "50",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-    "bodystart": "46",
-    "bodyend": "120"
+    "bodystart": "51",
+    "bodyend": "142"
   },
   "namespacednames_html": [
     "apache",
@@ -629,7 +774,7 @@
   "declaration_raw": "template <\n  typename Patch,\n  typename Derived\n> class BasePatch;",
   "declaration_html": "template &lt;\n  typename Patch,\n  typename Derived\n&gt; class BasePatch;",
   "description": {
-    "detailed_html": "<p>Base class for all patch types.<ul>\n<li><p>Patch: The Thrift struct representation for the patch.</p></li><li><p>Derived: The leaf type deriving from this class. </p></li></ul>\n</p>"
+    "detailed_html": "<p>Base class for all patch types.<ul>\n<li><p>Patch: The Thrift struct representation for the patch.</p>\n</li><li><p>Derived: The leaf type deriving from this class. </p>\n</li></ul>\n</p>"
   },
   "filepath": "class/apache/thrift/op/detail/BasePatch",
   "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch",
@@ -654,6 +799,7 @@
               "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
               "argsstring_html": "(const BasePatch &amp;)=default",
               "name_html": "BasePatch",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
               "param": [
                 {
                   "type_html": "const <code>BasePatch</code> &amp;"
@@ -661,8 +807,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "52",
-                "column": "1"
+                "line": "57",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "BasePatch(const BasePatch&amp;)",
@@ -685,11 +831,13 @@
               "const": "no",
               "explicit": "no",
               "inline": "no",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "",
               "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::BasePatch",
               "argsstring_html": "(BasePatch &amp;&amp;) noexcept=default",
               "name_html": "BasePatch",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::BasePatch",
               "param": [
                 {
                   "type_html": "<code>BasePatch</code> &amp;&amp;"
@@ -697,8 +845,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "53",
-                "column": "1"
+                "line": "58",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "BasePatch(BasePatch&amp;&amp;)",
@@ -721,7 +869,13 @@
           "brief_html": "Constructs the BasePatch.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -740,10 +894,11 @@
               "definition_html": "apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::~BasePatch",
               "argsstring_html": "()=default",
               "name_html": "~BasePatch",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::~BasePatch",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "119",
-                "column": "1"
+                "line": "141",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "~BasePatch()",
@@ -765,7 +920,13 @@
           "brief_html": "Destructs the BasePatch.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch.dtor",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch.dtor"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/BasePatch.dtor",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -773,7 +934,7 @@
           "compoundname_html": "apache::thrift::op::detail::BasePatch::operator=",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa76710aff5eacd91da2767e4a0e0e1bd",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aaceff0319a2732db1220ede276af1490",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -781,9 +942,10 @@
               "inline": "no",
               "virtual": "non-virtual",
               "type_html": "<code>BasePatch</code> &amp;",
-              "definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+              "definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
               "argsstring_html": "(const BasePatch &amp;)=default",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
               "param": [
                 {
                   "type_html": "const <code>BasePatch</code> &amp;"
@@ -791,15 +953,15 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "54",
-                "column": "1"
+                "line": "59",
+                "column": "13"
               },
               "definition": {
                 "simple_html": "BasePatch&amp; operator=(const BasePatch&amp;)",
                 "simple_raw": "BasePatch& operator=(const BasePatch&)",
                 "detailed_html": "BasePatch&amp; operator=(const BasePatch&amp;) = default",
                 "detailed_raw": "BasePatch& operator=(const BasePatch&) = default",
-                "original_definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+                "original_definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
                 "original_argsstring_html": "(const BasePatch &amp;)=default"
               },
               "filepath": "fns/class/apache/thrift/op/detail/BasePatch/operator.assign",
@@ -808,17 +970,19 @@
               "compoundname_html": "apache::thrift::op::detail::BasePatch::operator="
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aeba27d087e48ba62e13892b80e2a0edb",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ac3309b0f3589d32ae3e3ec148fa857e7",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "no",
               "inline": "no",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "<code>BasePatch</code> &amp;",
-              "definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+              "definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
               "argsstring_html": "(BasePatch &amp;&amp;) noexcept=default",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
               "param": [
                 {
                   "type_html": "<code>BasePatch</code> &amp;&amp;"
@@ -826,15 +990,15 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "55",
-                "column": "1"
+                "line": "60",
+                "column": "13"
               },
               "definition": {
                 "simple_html": "BasePatch&amp; operator=(BasePatch&amp;&amp;)",
                 "simple_raw": "BasePatch& operator=(BasePatch&&)",
                 "detailed_html": "BasePatch&amp; operator=(BasePatch&amp;&amp;) = default noexcept",
                 "detailed_raw": "BasePatch& operator=(BasePatch&&) = default noexcept",
-                "original_definition_html": "BasePatch&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+                "original_definition_html": "BasePatch &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
                 "original_argsstring_html": "(BasePatch &amp;&amp;) noexcept=default"
               },
               "filepath": "fns/class/apache/thrift/op/detail/BasePatch/operator.assign",
@@ -843,7 +1007,7 @@
               "compoundname_html": "apache::thrift::op::detail::BasePatch::operator="
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a74fcf4aaac24519c3142c65fb0b906b7",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa54a7271aaf1a812fd709c6d0f8e07bc",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -856,9 +1020,10 @@
                 }
               ],
               "type_html": "Derived &amp;",
-              "definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+              "definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
               "argsstring_html": "(field_ref&lt; U &gt; field)",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -867,18 +1032,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "85",
-                "column": "1",
+                "line": "90",
+                "column": "11",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "85",
-                "bodyend": "88"
+                "bodystart": "90",
+                "bodyend": "93"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nDerived&amp; operator=(field_ref&lt;U&gt; field)",
                 "simple_raw": "template <typename U>\nDerived& operator=(field_ref<U> field)",
                 "detailed_html": "template &lt;typename U&gt;\ninline Derived&amp; operator=(field_ref&lt;U&gt; field)",
                 "detailed_raw": "template <typename U>\ninline Derived& operator=(field_ref<U> field)",
-                "original_definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+                "original_definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
                 "original_argsstring_html": "(field_ref&lt; U &gt; field)"
               },
               "description": {
@@ -890,7 +1055,7 @@
               "compoundname_html": "apache::thrift::op::detail::BasePatch::operator="
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ad6317cb7bd305f72a45cf10d7d1ee9a7",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1f3d1cc595e7df269fe464721f76fb98",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -903,9 +1068,10 @@
                 }
               ],
               "type_html": "Derived &amp;",
-              "definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+              "definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
               "argsstring_html": "(terse_field_ref&lt; U &gt; field)",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::operator=",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -914,18 +1080,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "91",
-                "column": "1",
+                "line": "96",
+                "column": "11",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "91",
-                "bodyend": "94"
+                "bodystart": "96",
+                "bodyend": "99"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nDerived&amp; operator=(terse_field_ref&lt;U&gt; field)",
                 "simple_raw": "template <typename U>\nDerived& operator=(terse_field_ref<U> field)",
                 "detailed_html": "template &lt;typename U&gt;\ninline Derived&amp; operator=(terse_field_ref&lt;U&gt; field)",
                 "detailed_raw": "template <typename U>\ninline Derived& operator=(terse_field_ref<U> field)",
-                "original_definition_html": "Derived&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
+                "original_definition_html": "Derived &amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::operator=",
                 "original_argsstring_html": "(terse_field_ref&lt; U &gt; field)"
               },
               "description": {
@@ -943,7 +1109,13 @@
           "brief_html": "Assignment operator.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/operator.assign",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/operator.assign"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/operator.assign",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -967,6 +1139,7 @@
               "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
               "argsstring_html": "(field_ref&lt; U &gt; field) const",
               "name_html": "apply",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -975,11 +1148,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "60",
-                "column": "1",
+                "line": "65",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "60",
-                "bodyend": "62"
+                "bodystart": "65",
+                "bodyend": "67"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nvoid apply(field_ref&lt;U&gt; field) const",
@@ -1014,6 +1187,7 @@
               "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
               "argsstring_html": "(terse_field_ref&lt; U &gt; field) const",
               "name_html": "apply",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -1022,11 +1196,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "65",
-                "column": "1",
+                "line": "70",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "65",
-                "bodyend": "67"
+                "bodystart": "70",
+                "bodyend": "72"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nvoid apply(terse_field_ref&lt;U&gt; field) const",
@@ -1061,6 +1235,7 @@
               "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::apply",
               "argsstring_html": "(required_field_ref&lt; U &gt; field) const",
               "name_html": "apply",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::apply",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/required_field_ref\">required_field_ref</a>&lt; U &gt;",
@@ -1069,11 +1244,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "70",
-                "column": "1",
+                "line": "75",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "70",
-                "bodyend": "72"
+                "bodystart": "75",
+                "bodyend": "77"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nvoid apply(required_field_ref&lt;U&gt; field) const",
@@ -1098,7 +1273,13 @@
           "brief_html": "<p>Applies patches to a Thrift value. </p>",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/apply",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/apply"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/apply",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1106,7 +1287,7 @@
           "compoundname_html": "apache::thrift::op::detail::BasePatch::assign",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a9ba40bdd8c56c52083956a9ba8f98cfd",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1aa70a2da90c249c50cdb1cdde6e515482",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1119,9 +1300,10 @@
                 }
               ],
               "type_html": "type::if_not_id&lt; U &gt;",
-              "definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+              "definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
               "argsstring_html": "(field_ref&lt; U &gt; val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::assign",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; U &gt;",
@@ -1130,18 +1312,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "75",
-                "column": "1",
+                "line": "80",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "75",
-                "bodyend": "77"
+                "bodystart": "80",
+                "bodyend": "82"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\ntype::if_not_id&lt;U&gt; assign(field_ref&lt;U&gt; val)",
                 "simple_raw": "template <typename U>\ntype::if_not_id<U> assign(field_ref<U> val)",
                 "detailed_html": "template &lt;typename U&gt;\ninline type::if_not_id&lt;U&gt; assign(field_ref&lt;U&gt; val)",
                 "detailed_raw": "template <typename U>\ninline type::if_not_id<U> assign(field_ref<U> val)",
-                "original_definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+                "original_definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
                 "original_argsstring_html": "(field_ref&lt; U &gt; val)"
               },
               "description": {
@@ -1153,7 +1335,7 @@
               "compoundname_html": "apache::thrift::op::detail::BasePatch::assign"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1c75264cbdbc2420286de7aedf084134",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a638be9d22837cf983e62b872a73c60f2",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1166,9 +1348,10 @@
                 }
               ],
               "type_html": "type::if_not_id&lt; U &gt;",
-              "definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+              "definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
               "argsstring_html": "(terse_field_ref&lt; U &gt; val)",
               "name_html": "assign",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::assign",
               "param": [
                 {
                   "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/terse_field_ref\">terse_field_ref</a>&lt; U &gt;",
@@ -1177,18 +1360,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "80",
-                "column": "1",
+                "line": "85",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "80",
-                "bodyend": "82"
+                "bodystart": "85",
+                "bodyend": "87"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\ntype::if_not_id&lt;U&gt; assign(terse_field_ref&lt;U&gt; val)",
                 "simple_raw": "template <typename U>\ntype::if_not_id<U> assign(terse_field_ref<U> val)",
                 "detailed_html": "template &lt;typename U&gt;\ninline type::if_not_id&lt;U&gt; assign(terse_field_ref&lt;U&gt; val)",
                 "detailed_raw": "template <typename U>\ninline type::if_not_id<U> assign(terse_field_ref<U> val)",
-                "original_definition_html": "type::if_not_id&lt;U&gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
+                "original_definition_html": "type::if_not_id&lt; U &gt; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::assign",
                 "original_argsstring_html": "(terse_field_ref&lt; U &gt; val)"
               },
               "description": {
@@ -1206,7 +1389,13 @@
           "brief_html": "<p>Replaces the existing value. </p>",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/assign",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/assign"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/assign",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1230,6 +1419,7 @@
               "definition_html": "void apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::merge",
               "argsstring_html": "(U &amp;&amp;next)",
               "name_html": "merge",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::merge",
               "param": [
                 {
                   "type_html": "U &amp;&amp;",
@@ -1238,11 +1428,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "100",
-                "column": "1",
+                "line": "105",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "100",
-                "bodyend": "107"
+                "bodystart": "105",
+                "bodyend": "112"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nvoid merge(U&amp;&amp; next)",
@@ -1267,7 +1457,173 @@
           "brief_html": "<p>Merges another patch into the current patch. After the merge (<code>patch.merge(next)</code>), <code>patch.apply(value)</code> is equivalent to <code>next.apply(patch.apply(value))</code>. </p>",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/merge",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/merge"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/merge",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
+        },
+        {
+          "kind": "overloadset",
+          "name_html": "toThrift",
+          "compoundname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+          "functions": [
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a9e080dab7bf87dad6c957a69e6e07cf4",
+              "prot": "public",
+              "static": "no",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "refqual": "lvalue",
+              "virtual": "non-virtual",
+              "type_html": "auto &amp;&amp;",
+              "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+              "argsstring_html": "() &amp;",
+              "name_html": "toThrift",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "line": "114",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "bodystart": "114",
+                "bodyend": "116"
+              },
+              "definition": {
+                "simple_html": "auto&amp;&amp; toThrift() &amp;",
+                "simple_raw": "auto&& toThrift() &",
+                "detailed_html": "inline auto&amp;&amp; toThrift() &amp;",
+                "detailed_raw": "inline auto&& toThrift() &",
+                "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+                "original_argsstring_html": "() &amp;"
+              },
+              "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "parentid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch",
+              "compoundname_html": "apache::thrift::op::detail::BasePatch::toThrift"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a0232903c623315b0786991206337383b",
+              "prot": "public",
+              "static": "no",
+              "const": "no",
+              "explicit": "no",
+              "inline": "yes",
+              "refqual": "rvalue",
+              "virtual": "non-virtual",
+              "type_html": "auto &amp;&amp;",
+              "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+              "argsstring_html": "() &amp;&amp;",
+              "name_html": "toThrift",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "line": "118",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "bodystart": "118",
+                "bodyend": "120"
+              },
+              "definition": {
+                "simple_html": "auto&amp;&amp; toThrift() &amp;&amp;",
+                "simple_raw": "auto&& toThrift() &&",
+                "detailed_html": "inline auto&amp;&amp; toThrift() &amp;&amp;",
+                "detailed_raw": "inline auto&& toThrift() &&",
+                "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+                "original_argsstring_html": "() &amp;&amp;"
+              },
+              "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "parentid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch",
+              "compoundname_html": "apache::thrift::op::detail::BasePatch::toThrift"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1a1c78794eee45afd65d3bed40bd0c49ba",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "refqual": "lvalue",
+              "virtual": "non-virtual",
+              "type_html": "auto &amp;&amp;",
+              "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+              "argsstring_html": "() const &amp;",
+              "name_html": "toThrift",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "line": "122",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "bodystart": "122",
+                "bodyend": "124"
+              },
+              "definition": {
+                "simple_html": "auto&amp;&amp; toThrift() const&amp;",
+                "simple_raw": "auto&& toThrift() const&",
+                "detailed_html": "inline auto&amp;&amp; toThrift() const&amp;",
+                "detailed_raw": "inline auto&& toThrift() const&",
+                "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+                "original_argsstring_html": "() const &amp;"
+              },
+              "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "parentid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch",
+              "compoundname_html": "apache::thrift::op::detail::BasePatch::toThrift"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch_1ad2687015460d0ff80984bbc6562313de",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "refqual": "rvalue",
+              "virtual": "non-virtual",
+              "type_html": "auto &amp;&amp;",
+              "definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+              "argsstring_html": "() const &amp;&amp;",
+              "name_html": "toThrift",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toThrift",
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "line": "126",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
+                "bodystart": "126",
+                "bodyend": "128"
+              },
+              "definition": {
+                "simple_html": "auto&amp;&amp; toThrift() const&amp;&amp;",
+                "simple_raw": "auto&& toThrift() const&&",
+                "detailed_html": "inline auto&amp;&amp; toThrift() const&amp;&amp;",
+                "detailed_raw": "inline auto&& toThrift() const&&",
+                "original_definition_html": "auto &amp;&amp; apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toThrift",
+                "original_argsstring_html": "() const &amp;&amp;"
+              },
+              "filepath": "fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/detail/BasePatch/toThrift",
+              "parentid": "classapache_1_1thrift_1_1op_1_1detail_1_1BasePatch",
+              "compoundname_html": "apache::thrift::op::detail::BasePatch::toThrift"
+            }
+          ],
+          "filepath": "f/class/apache/thrift/op/detail/BasePatch/toThrift",
+          "minprot": "public",
+          "displayname_html": "toThrift",
+          "brief_html": "",
+          "groupname_html": "",
+          "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/toThrift",
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/toThrift",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1286,13 +1642,14 @@
               "definition_html": "protocol::Object apache::thrift::op::detail::BasePatch&lt; Patch, Derived &gt;::toObject",
               "argsstring_html": "() const",
               "name_html": "toObject",
+              "qualifiedname_html": "apache::thrift::op::detail::BasePatch::toObject",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "line": "110",
-                "column": "1",
+                "line": "131",
+                "column": "20",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-                "bodystart": "110",
-                "bodyend": "113"
+                "bodystart": "131",
+                "bodyend": "135"
               },
               "definition": {
                 "simple_html": "protocol::Object toObject() const",
@@ -1314,7 +1671,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/toObject",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/toObject"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BasePatch/toObject",
+          "parent_links": [
+            {
+              "text_html": "BasePatch",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/BasePatch"
+            }
+          ]
         }
       ]
     }

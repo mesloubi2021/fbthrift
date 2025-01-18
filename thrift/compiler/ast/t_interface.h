@@ -24,9 +24,7 @@
 #include <thrift/compiler/ast/t_function.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_program;
 
@@ -39,6 +37,8 @@ class t_interface : public t_type {
  public:
   t_interface(t_program* program, std::string name)
       : t_type(program, std::move(name)) {}
+
+  ~t_interface() override;
 
   node_list_view<t_function> functions() { return functions_; }
   node_list_view<const t_function> functions() const { return functions_; }
@@ -62,6 +62,4 @@ class t_interface : public t_type {
   bool is_serial_interaction() const;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

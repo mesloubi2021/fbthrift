@@ -17,16 +17,13 @@
 #include <algorithm>
 #include <thrift/lib/cpp/EventHandlerBase.h>
 
+#include <thrift/lib/cpp2/runtime/Init.h>
+
 using std::remove;
 using std::shared_ptr;
 using std::vector;
 
-using RWMutex = folly::SharedMutex;
-using RLock = RWMutex::ReadHolder;
-using WLock = RWMutex::WriteHolder;
-
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 void EventHandlerBase::addEventHandler(
     const std::shared_ptr<TProcessorEventHandler>& handler) {
@@ -37,17 +34,6 @@ void EventHandlerBase::addEventHandler(
   handlers_->push_back(handler);
 }
 
-void EventHandlerBase::addNotNullEventHandler(
-    const folly::not_null_shared_ptr<TProcessorEventHandler>& handler) {
-  if (!handlers_) {
-    handlers_ = std::make_shared<
-        std::vector<std::shared_ptr<TProcessorEventHandler>>>();
-  }
-
-  handlers_->push_back(
-      static_cast<const std::shared_ptr<TProcessorEventHandler>>(handler));
-}
-
 folly::Range<std::shared_ptr<TProcessorEventHandler>*>
 EventHandlerBase::getEventHandlers() const {
   if (!handlers_) {
@@ -56,11 +42,16 @@ EventHandlerBase::getEventHandlers() const {
   return folly::range(*handlers_);
 }
 
+const std::shared_ptr<std::vector<std::shared_ptr<TProcessorEventHandler>>>&
+EventHandlerBase::getEventHandlersSharedPtr() const {
+  return handlers_;
+}
+
 TProcessorBase::TProcessorBase() {
-  RLock lock{getRWMutex()};
+  std::shared_lock lock{getRWMutex()};
 
   for (const auto& handler : getHandlers()) {
-    addNotNullEventHandler(handler);
+    addEventHandler(handler);
   }
 }
 
@@ -69,7 +60,7 @@ void TProcessorBase::addProcessorEventHandler(
   if (!handler) {
     return;
   }
-  WLock lock{getRWMutex()};
+  std::unique_lock lock{getRWMutex()};
   assert(
       find(getHandlers().begin(), getHandlers().end(), handler) ==
       getHandlers().end());
@@ -78,7 +69,7 @@ void TProcessorBase::addProcessorEventHandler(
 
 void TProcessorBase::removeProcessorEventHandler(
     std::shared_ptr<TProcessorEventHandler> handler) {
-  WLock lock{getRWMutex()};
+  std::unique_lock lock{getRWMutex()};
   assert(
       find(getHandlers().begin(), getHandlers().end(), handler) !=
       getHandlers().end());
@@ -87,8 +78,8 @@ void TProcessorBase::removeProcessorEventHandler(
       getHandlers().end());
 }
 
-RWMutex& TProcessorBase::getRWMutex() {
-  static auto* mutex = new RWMutex{};
+folly::SharedMutex& TProcessorBase::getRWMutex() {
+  static auto* mutex = new folly::SharedMutex{};
   return *mutex;
 }
 
@@ -101,16 +92,26 @@ TProcessorBase::getHandlers() {
 TClientBase::TClientBase() : TClientBase(Options()) {}
 
 TClientBase::TClientBase(Options options) {
-  if (!options.includeGlobalEventHandlers) {
+  if (!options.includeGlobalLegacyClientHandlers) {
     return;
   }
 
   // Automatically ask all registered factories to produce an event
   // handler, and attach the handlers
-  RLock lock{getRWMutex()};
+  std::shared_lock lock{getRWMutex()};
 
   auto& handlers = getHandlers();
-  size_t capacity = handlers.size();
+  folly::Range<std::shared_ptr<TProcessorEventHandler>*> globalHandlers;
+  if (apache::thrift::runtime::wasInitialized()) {
+    // If we reach this point, it's likely that an AsyncClient object is being
+    // used very early in the program's lifetime, possibly before the main
+    // function has been called. In such situations, calling
+    // TProcessorEventHandlers can lead to circular dependencies and may result
+    // in a deadlock at startup, which can be difficult to debug.
+    globalHandlers =
+        apache::thrift::runtime::getGlobalLegacyClientEventHandlers();
+  }
+  size_t capacity = handlers.size() + globalHandlers.size();
 
   if (capacity != 0) {
     // Initialize the handlers_ in the ctor to be owner of vector object.
@@ -119,8 +120,11 @@ TClientBase::TClientBase(Options options) {
     // production data suggests reserving capacity here.
     handlers_->reserve(capacity);
 
+    for (const auto& handler : globalHandlers) {
+      addEventHandler(handler);
+    }
     for (const auto& handler : handlers) {
-      addNotNullEventHandler(handler);
+      addEventHandler(handler);
     }
   }
 }
@@ -130,7 +134,7 @@ void TClientBase::addClientEventHandler(
   if (!handler) {
     return;
   }
-  WLock lock{getRWMutex()};
+  std::unique_lock lock{getRWMutex()};
   assert(
       find(getHandlers().begin(), getHandlers().end(), handler) ==
       getHandlers().end());
@@ -139,7 +143,7 @@ void TClientBase::addClientEventHandler(
 
 void TClientBase::removeClientEventHandler(
     std::shared_ptr<TProcessorEventHandler> handler) {
-  WLock lock{getRWMutex()};
+  std::unique_lock lock{getRWMutex()};
   assert(
       find(getHandlers().begin(), getHandlers().end(), handler) !=
       getHandlers().end());
@@ -148,8 +152,8 @@ void TClientBase::removeClientEventHandler(
       getHandlers().end());
 }
 
-RWMutex& TClientBase::getRWMutex() {
-  static auto* mutex = new RWMutex{};
+folly::SharedMutex& TClientBase::getRWMutex() {
+  static auto* mutex = new folly::SharedMutex{};
   return *mutex;
 }
 
@@ -159,5 +163,4 @@ TClientBase::getHandlers() {
   return handlers;
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

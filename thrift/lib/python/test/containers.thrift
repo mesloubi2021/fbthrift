@@ -16,13 +16,35 @@
 
 include "thrift/annotation/cpp.thrift"
 
-namespace py3 thrift.python.test
+namespace py3 python_test
 
 @cpp.Type{name = "folly::IOBuf"}
 typedef binary IOBuf
 
 struct Foo {
   1: i32 value;
+}
+
+struct OtherFoo {
+  1: i32 value;
+}
+
+enum Bar {
+  UNKNOWN = 0,
+  ONE = 1,
+  TWO = 2,
+}
+
+enum OtherBar {
+  UNKNOWN = 0,
+  ONE = 1,
+  TWO = 2,
+}
+
+enum Color {
+  red = 0,
+  blue = 1,
+  green = 2,
 }
 
 struct Lists {
@@ -37,6 +59,7 @@ struct Lists {
   97: list<binary> binaryList;
   93: list<IOBuf> iobufList;
   2: list<Foo> structList;
+  47: list<Color> colorList;
 }
 
 struct Sets {
@@ -55,6 +78,7 @@ struct Sets {
   93: set<IOBuf> iobufSet;
   # @lint-ignore THRIFTCHECKS
   2: set<Foo> structSet;
+  47: set<Color> colorSet;
 }
 
 struct Maps {
@@ -73,4 +97,5 @@ struct Maps {
   93: map<IOBuf, IOBuf> iobufMap;
   # @lint-ignore THRIFTCHECKS
   2: map<Foo, Foo> structMap;
+  47: map<Color, Color> colorMap;
 }

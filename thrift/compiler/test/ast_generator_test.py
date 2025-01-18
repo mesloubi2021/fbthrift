@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import os
 import shutil
 import subprocess
@@ -26,8 +28,6 @@ from apache.thrift.ast.thrift_types import Ast
 from apache.thrift.type.schema.thrift_types import ReturnType
 from apache.thrift.type.standard.thrift_types import TypeName, TypeUri
 
-# @manual=//thrift/compiler/test:compiler_failure_test-library
-from thrift.compiler.test.compiler_failure_test import write_file
 from thrift.python.serializer import deserialize
 
 file_manager = ExitStack()
@@ -36,6 +36,14 @@ thrift2ast = str(
 )
 
 
+def write_file(path, content):
+    if d := os.path.dirname(path):
+        os.makedirs(d)
+    with open(path, "w") as f:
+        f.write(content)
+
+
+@unittest.skipIf(sys.platform.startswith("win"), "Windows is not supported")
 class AstGeneratorTest(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.mkdtemp()
@@ -45,22 +53,32 @@ class AstGeneratorTest(unittest.TestCase):
         os.chdir(self.tmp)
         self.maxDiff = None
 
-    def run_thrift(self, file):
-        argsx = [
-            thrift2ast,
-            "--gen",
-            "ast:protocol=compact,source_ranges",
-            "-o",
-            self.tmp,
-            "-I",
-            resources.path(__package__, "implicit_includes"),
-            file,
-        ]
-        p = subprocess.run(argsx, capture_output=True)
-        print("exit status:", p.returncode)
-        print("stdout:", p.stdout.decode())
-        print("stderr:", p.stderr.decode())
-        self.assertEqual(p.returncode, 0)
+    def run_thrift(
+        self, file, backcompat=True, use_hash=False, root_program_only=False
+    ):
+        with resources.as_file(
+            resources.files(__package__).joinpath("implicit_includes")
+        ) as inc:
+            extra_args = "" if backcompat else ",no_backcompat"
+            if use_hash:
+                extra_args += ",use_hash"
+            if root_program_only:
+                extra_args += ",root_program_only"
+            argsx = [
+                thrift2ast,
+                "--gen",
+                "ast:protocol=compact,source_ranges" + extra_args,
+                "-o",
+                self.tmp,
+                "-I",
+                str(inc),
+                file,
+            ]
+            p = subprocess.run(argsx, capture_output=True)
+            print("exit status:", p.returncode)
+            print("stdout:", p.stdout.decode())
+            print("stderr:", p.stderr.decode())
+            self.assertEqual(p.returncode, 0)
 
         with open(self.tmp + "/gen-ast/" + file[:-7] + ".ast", "rb") as f:
             encoded = f.read()
@@ -99,6 +117,7 @@ class AstGeneratorTest(unittest.TestCase):
 
                 const i16 answer = 42;
                 const Foo structured = {"int": 1};
+                const double coerced = 42;
                 """
             ),
         )
@@ -113,6 +132,11 @@ class AstGeneratorTest(unittest.TestCase):
             .objectValue.members[1]
             .i64Value,
             1,
+        )
+
+        self.assertEqual(ast.definitions[3].constDef.attrs.name, "coerced")
+        self.assertEqual(
+            ast.values[ast.definitions[3].constDef.value - 1].doubleValue, 42
         )
 
     def test_service(self):
@@ -167,7 +191,6 @@ class AstGeneratorTest(unittest.TestCase):
         self.assertEqual(func.returnType.name.type, TypeName.Type.i32Type)
 
         func = serviceDef.functions[2]
-        print(func)
         self.assertEqual(func.attrs.name, "baz")
         self.assertEqual(len(func.returnTypes), 0)  # streams excluded
         self.assertEqual(func.returnType.name.type, TypeName.Type.EMPTY)
@@ -202,6 +225,8 @@ class AstGeneratorTest(unittest.TestCase):
             "foo.thrift",
             textwrap.dedent(
                 """
+                /** File docblock */
+                namespace cpp2 foo
                 /** This is a struct and its name is Foo. */
                 struct Foo {
                     1: i64 Bar;  ///< This is a field and its name is Bar.
@@ -211,19 +236,24 @@ class AstGeneratorTest(unittest.TestCase):
         )
 
         ast = self.run_thrift("foo.thrift")
-        print(ast.definitions)
+
+        docs = ast.programs[0].attrs.docs
+        self.assertEqual(docs.contents.rstrip(), "File docblock")
+        self.assertEqual(docs.sourceRange.programId, 1)
+        self.assertEqual(docs.sourceRange.beginLine, 2)
+
         self.assertEqual(ast.definitions[0].structDef.attrs.name, "Foo")
         srcRange = ast.definitions[0].structDef.attrs.sourceRange
         self.assertEqual(srcRange.programId, 1)
-        self.assertEqual(srcRange.beginLine, 3)
+        self.assertEqual(srcRange.beginLine, 5)
         docs = ast.definitions[0].structDef.attrs.docs
         self.assertEqual(
             docs.contents.rstrip(), "This is a struct and its name is Foo."
         )
         self.assertEqual(docs.sourceRange.programId, 1)
-        self.assertEqual(docs.sourceRange.beginLine, 2)
+        self.assertEqual(docs.sourceRange.beginLine, 4)
         self.assertEqual(docs.sourceRange.beginColumn, 1)
-        self.assertEqual(docs.sourceRange.endLine, 2)
+        self.assertEqual(docs.sourceRange.endLine, 4)
         self.assertEqual(docs.sourceRange.endColumn, 45)
 
         docs = ast.definitions[0].structDef.fields[0].attrs.docs
@@ -231,9 +261,9 @@ class AstGeneratorTest(unittest.TestCase):
         if os.name == "nt":
             return  # line separators differ on windows and mess up source ranges
         self.assertEqual(docs.sourceRange.programId, 1)
-        self.assertEqual(docs.sourceRange.beginLine, 4)
+        self.assertEqual(docs.sourceRange.beginLine, 6)
         self.assertEqual(docs.sourceRange.beginColumn, 18)
-        self.assertEqual(docs.sourceRange.endLine, 5)
+        self.assertEqual(docs.sourceRange.endLine, 7)
         self.assertEqual(docs.sourceRange.endColumn, 1)
 
     def test_program(self):
@@ -306,6 +336,11 @@ class AstGeneratorTest(unittest.TestCase):
             annot.objectValue.members[1].objectValue.members[3].stringValue,
             b"foo.Annot",
         )
+
+        # Disable backcompat
+        ast = self.run_thrift("foo.thrift", backcompat=False)
+        struct = ast.definitions[1].structDef
+        self.assertFalse(struct.fields[0].attrs.structuredAnnotations)
 
     def test_source_range_map(self):
         write_file(
@@ -402,3 +437,78 @@ class AstGeneratorTest(unittest.TestCase):
             spans,
             {1: "foo.thrift"},
         )
+
+    def test_hash_mode(self):
+        write_file(
+            "foo.thrift",
+            textwrap.dedent(
+                """
+                struct Foo {
+                    1: i64 int = 42;
+                }
+                struct Bar {
+                    1: Foo foo;
+                }
+                """
+            ),
+        )
+
+        ast = self.run_thrift("foo.thrift", use_hash=True)
+        for v in ast.definitionsMap.values():
+            self.assertEqual(
+                v.structDef.attrs.sourceRange.programId, ast.programs[0].id
+            )
+            if v.structDef.attrs.name == "Bar":
+                self.assertEqual(
+                    ast.definitionsMap[
+                        v.structDef.fields[0].type.name.structType.definitionKey
+                    ].structDef.attrs.name,
+                    "Foo",
+                )
+            else:
+                self.assertEqual(
+                    ast.valuesMap[v.structDef.fields[0].customDefault].i64Value, 42
+                )
+
+    def test_sharding(self):
+        files = {
+            "a.thrift": """
+            include "b.thrift"
+            include "c.thrift"
+
+            struct A {}
+            """,
+            "b.thrift": """
+            include "d.thrift"
+
+            struct B {}
+            """,
+            "c.thrift": """
+            include "d.thrift"
+
+            struct C {}
+            """,
+            "d.thrift": """
+            struct D {}
+            """,
+        }
+
+        for name, contents in files.items():
+            write_file(name, textwrap.dedent(contents))
+
+        asts = {
+            name: self.run_thrift(
+                name, backcompat=False, use_hash=True, root_program_only=True
+            )
+            for name in files
+        }
+        combined_ast = self.run_thrift("a.thrift", backcompat=False, use_hash=True)
+
+        self.assertEqual(
+            len(combined_ast.definitionsMap),
+            sum(len(ast.definitionsMap) for ast in asts.values()),
+        )
+
+        for ast in asts.values():
+            for uri, definition in ast.definitionsMap.items():
+                self.assertEqual(definition, combined_ast.definitionsMap[uri])

@@ -20,10 +20,9 @@
 #include <cstdint>
 
 #include <folly/Utility.h>
-#include <folly/experimental/observer/Observer.h>
+#include <folly/observer/Observer.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /**
  * Tracks memory consumption.
@@ -67,11 +66,14 @@ class MemoryTracker : folly::MoveOnly {
 
   size_t getUsage() { return usage_; }
 
+  size_t getMemLimit() { return *limitObserver_; }
+
+  size_t getMinIncrementSize() { return *minObserver_; }
+
  private:
   size_t usage_{0};
   AtomicObserver limitObserver_;
   AtomicObserver minObserver_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

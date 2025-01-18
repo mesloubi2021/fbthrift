@@ -21,8 +21,7 @@
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <thrift/lib/cpp2/transport/rocket/test/util/gen-cpp2/StreamService.h>
 
-namespace testutil {
-namespace testservice {
+namespace testutil::testservice {
 
 class TestStreamServiceMock
     : public apache::thrift::ServiceHandler<StreamService> {
@@ -68,15 +67,15 @@ class TestStreamServiceMock
       std::unique_ptr<folly::IOBuf> val) override;
 
   void async_eb_leakCallback(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          apache::thrift::ServerStream<int32_t>>>) override;
+      apache::thrift::HandlerCallbackPtr<apache::thrift::ServerStream<int32_t>>)
+      override;
 
   void async_eb_orderRequestStream(
-      std::unique_ptr<apache::thrift::HandlerCallback<
-          apache::thrift::ResponseAndServerStream<int32_t, int32_t>>>) override;
+      apache::thrift::HandlerCallbackPtr<
+          apache::thrift::ResponseAndServerStream<int32_t, int32_t>>) override;
 
   void async_eb_orderRequestResponse(
-      std::unique_ptr<apache::thrift::HandlerCallback<int32_t>>) override;
+      apache::thrift::HandlerCallbackPtr<int32_t>) override;
 
   apache::thrift::ServerStream<int32_t> leakPublisherCheck() override;
 
@@ -92,5 +91,4 @@ class TestStreamServiceMock
       publisher_;
 };
 
-} // namespace testservice
-} // namespace testutil
+} // namespace testutil::testservice

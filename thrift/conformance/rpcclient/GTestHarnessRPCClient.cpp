@@ -24,16 +24,15 @@
 
 #include <fmt/core.h>
 #include <folly/Subprocess.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/BlockingWait.h>
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/BlockingWait.h>
+#include <folly/coro/Sleep.h>
 #include <folly/futures/Future.h>
 #include <thrift/conformance/PluggableFunctions.h>
 #include <thrift/conformance/RpcStructComparator.h>
 #include <thrift/conformance/Utils.h>
 #include <thrift/conformance/if/gen-cpp2/RPCConformanceService.h>
 #include <thrift/lib/cpp2/async/Sink.h>
-#include <thrift/lib/cpp2/server/BaseThriftServer.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/util/ScopedServerInterfaceThread.h>
 
@@ -212,6 +211,74 @@ class ConformanceVerificationServer
             *testCase_.serverInstruction()->sinkBasic_ref()->bufferSize())};
   }
 
+  apache::thrift::ResponseAndSinkConsumer<Response, Request, Response>
+  sinkInitialResponse(std::unique_ptr<Request> req) override {
+    serverResult_.sinkInitialResponse_ref().emplace().request() = *req;
+
+    return {
+        *testCase_.serverInstruction()
+             ->sinkInitialResponse_ref()
+             ->initialResponse(),
+        apache::thrift::SinkConsumer<Request, Response>{
+            [&](folly::coro::AsyncGenerator<Request&&> gen)
+                -> folly::coro::Task<Response> {
+              while (auto item = co_await gen.next()) {
+                serverResult_.sinkInitialResponse_ref()
+                    ->sinkPayloads()
+                    ->push_back(std::move(*item));
+              }
+              co_return *testCase_.serverInstruction()
+                  ->sinkInitialResponse_ref()
+                  ->finalResponse();
+            },
+            static_cast<uint64_t>(*testCase_.serverInstruction()
+                                       ->sinkInitialResponse_ref()
+                                       ->bufferSize())}};
+  }
+
+  apache::thrift::SinkConsumer<Request, Response> sinkDeclaredException(
+      std::unique_ptr<Request> req) override {
+    auto& result = serverResult_.sinkDeclaredException_ref().emplace();
+    result.request() = *req;
+    return {
+        [&](folly::coro::AsyncGenerator<Request&&> gen)
+            -> folly::coro::Task<Response> {
+          try {
+            std::ignore = co_await gen.next();
+            throw std::logic_error("Publisher didn't throw");
+          } catch (const UserException& e) {
+            result.userException() = e;
+            throw;
+          } catch (...) {
+            throw std::logic_error(fmt::format(
+                "Publisher threw undeclared exception: {}",
+                folly::exception_wrapper(std::current_exception()).what()));
+          }
+        },
+        static_cast<uint64_t>(*testCase_.serverInstruction()
+                                   ->sinkDeclaredException_ref()
+                                   ->bufferSize())};
+  }
+
+  apache::thrift::SinkConsumer<Request, Response> sinkUndeclaredException(
+      std::unique_ptr<Request> req) override {
+    auto& result = serverResult_.sinkUndeclaredException_ref().emplace();
+    result.request() = *req;
+    return {
+        [&](folly::coro::AsyncGenerator<Request&&> gen)
+            -> folly::coro::Task<Response> {
+          try {
+            std::ignore = co_await gen.next();
+            throw std::logic_error("Publisher didn't throw");
+          } catch (const TApplicationException& e) {
+            result.exceptionMessage() = e.getMessage();
+            throw;
+          }
+        },
+        static_cast<uint64_t>(*testCase_.serverInstruction()
+                                   ->sinkUndeclaredException_ref()
+                                   ->bufferSize())};
+  }
   // =================== Interactions ===================
   class BasicInteraction : public BasicInteractionIf {
    public:
@@ -304,7 +371,8 @@ class ConformanceVerificationServer
 void createClient(
     std::string_view serviceName, std::string ipAddress, std::string port) {
   auto client = create_rpc_conformance_setup_service_client_(serviceName);
-  client->semifuture_createRPCConformanceServiceClient(ipAddress, port);
+  folly::coro::blockingWait(
+      client->co_createRPCConformanceServiceClient(ipAddress, port));
 }
 
 class RPCClientConformanceTest : public testing::Test {
@@ -333,25 +401,40 @@ class RPCClientConformanceTest : public testing::Test {
                   }
                 })),
         connectViaServer_(connectViaServer) {
-    auto port = folly::to<std::string>(server_.getPort());
-    if (testCase_.rpc_ref()->serverInstruction()->streamCreditTimeout_ref()) {
-      server_.getThriftServer().setStreamExpireTime(
-          std::chrono::milliseconds{*testCase_.rpc_ref()
-                                         ->serverInstruction()
-                                         ->streamCreditTimeout_ref()
-                                         ->streamExpireTime()});
-    }
-    if (connectViaServer_) {
-      createClient(clientCmd, server_.getAddress().getAddressStr(), port);
-    } else {
-      clientProcess_ = launch_client_process_(
-          std::vector<std::string>{std::string(clientCmd), "--port", port});
+    try {
+      auto port = folly::to<std::string>(server_.getPort());
+      if (testCase_.rpc_ref()->serverInstruction()->streamCreditTimeout_ref()) {
+        server_.getThriftServer().setStreamExpireTime(
+            std::chrono::milliseconds{*testCase_.rpc_ref()
+                                           ->serverInstruction()
+                                           ->streamCreditTimeout_ref()
+                                           ->streamExpireTime()});
+      }
+      if (connectViaServer_) {
+        createClient(clientCmd, server_.getAddress().getAddressStr(), port);
+      } else {
+        clientProcess_ = launch_client_process_(
+            std::vector<std::string>{std::string(clientCmd), "--port", port});
+      }
+    } catch (const std::exception& e) {
+      verifyConformanceResult(
+          testing::AssertionFailure() << "Unexpected Error " << e.what());
     }
   }
 
  protected:
-  void TestBody() override {
-    testing::AssertionResult conforming = runTest();
+  void TestBody() override { verifyConformanceResult(runTest()); }
+
+  void TearDown() override {
+    if (!connectViaServer_) {
+      clientProcess_.sendSignal(SIGINT);
+      clientProcess_.waitOrTerminateOrKill(
+          std::chrono::seconds(10), std::chrono::seconds(10));
+    }
+  }
+
+ private:
+  void verifyConformanceResult(testing::AssertionResult conforming) {
     if (conforming_) {
       EXPECT_TRUE(conforming) << "For more detail see:"
                               << std::endl
@@ -366,51 +449,45 @@ class RPCClientConformanceTest : public testing::Test {
           << "    thrift/conformance/data/nonconforming.txt" << std::endl;
     }
   }
-
-  void TearDown() override {
-    if (!connectViaServer_) {
-      clientProcess_.sendSignal(SIGINT);
-      clientProcess_.waitOrTerminateOrKill(
-          std::chrono::seconds(10), std::chrono::seconds(10));
-    }
-  }
-
- private:
   testing::AssertionResult runTest() {
-    // Wait for client to fetch test case
-    bool getTestReceived =
-        handler_->getTestReceived().wait(std::chrono::seconds(10));
+    try { // Wait for client to fetch test case
+      bool getTestReceived =
+          handler_->getTestReceived().wait(std::chrono::seconds(10));
 
-    // End test if client was unable to fetch test case
-    if (!getTestReceived) {
-      return testing::AssertionFailure();
+      // End test if client was unable to fetch test case
+      if (!getTestReceived) {
+        return testing::AssertionFailure()
+            << "client failed to fetch test case";
+      }
+
+      // Wait for result from client
+      folly::Try<ClientTestResult> actualClientResult =
+          handler_->clientResult().within(std::chrono::seconds(10)).getTry();
+
+      // End test if result was not received
+      if (actualClientResult.hasException()) {
+        return testing::AssertionFailure() << actualClientResult.exception();
+      }
+
+      auto& expectedClientResult = *testCase_.rpc_ref()->clientTestResult();
+      if (!equal(*actualClientResult, expectedClientResult)) {
+        return testing::AssertionFailure()
+            << "\nExpected client result: " << jsonify(expectedClientResult)
+            << "\nActual client result: " << jsonify(*actualClientResult);
+      }
+
+      auto& actualServerResult = handler_->serverResult();
+      auto& expectedServerResult = *testCase_.rpc_ref()->serverTestResult();
+      if (!equal(actualServerResult, expectedServerResult)) {
+        return testing::AssertionFailure()
+            << "\nExpected server result: " << jsonify(expectedServerResult)
+            << "\nActual server result: " << jsonify(actualServerResult);
+      }
+
+      return testing::AssertionSuccess();
+    } catch (const std::exception& e) {
+      return testing::AssertionFailure() << "Unexpected error " << e.what();
     }
-
-    // Wait for result from client
-    folly::Try<ClientTestResult> actualClientResult =
-        handler_->clientResult().within(std::chrono::seconds(10)).getTry();
-
-    // End test if result was not received
-    if (actualClientResult.hasException()) {
-      return testing::AssertionFailure();
-    }
-
-    auto& expectedClientResult = *testCase_.rpc_ref()->clientTestResult();
-    if (!equal(*actualClientResult, expectedClientResult)) {
-      return testing::AssertionFailure()
-          << "\nExpected client result: " << jsonify(expectedClientResult)
-          << "\nActual client result: " << jsonify(*actualClientResult);
-    }
-
-    auto& actualServerResult = handler_->serverResult();
-    auto& expectedServerResult = *testCase_.rpc_ref()->serverTestResult();
-    if (actualServerResult != expectedServerResult) {
-      return testing::AssertionFailure()
-          << "\nExpected server result: " << jsonify(expectedServerResult)
-          << "\nActual server result: " << jsonify(actualServerResult);
-    }
-
-    return testing::AssertionSuccess();
   }
 
   const TestSuite& suite_;

@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <string>
 #include <variant>
 
@@ -28,22 +29,19 @@
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp/server/TServerObserver.h>
 #include <thrift/lib/cpp/transport/THeader.h>
+#include <thrift/lib/cpp2/server/Overload.h>
+#include <thrift/lib/cpp2/server/PreprocessResult.h>
+#include <thrift/lib/cpp2/server/ServiceInterceptorBase.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
-
-using PreprocessResult = std::variant<
-    std::monostate, // Allow request through
-    AppClientException,
-    AppServerException,
-    AppOverloadedException>;
+namespace apache::thrift {
 
 class Cpp2ConnContext;
 class Cpp2RequestContext;
 class AdaptiveConcurrencyController;
 class CPUConcurrencyController;
 class ResourcePoolSet;
+class TProcessorEventHandler;
 
 namespace concurrency {
 class ThreadManager;
@@ -64,12 +62,12 @@ class ServerConfigs {
   virtual ~ServerConfigs() = default;
 
   /**
-   * @see BaseThriftServer::getMaxResponseSize function.
+   * @see ThriftServer::getMaxResponseSize function.
    */
   virtual uint64_t getMaxResponseSize() const = 0;
 
   /**
-   * @see BaseThriftServer::getTaskExpireTimeForRequest function.
+   * @see ThriftServer::getTaskExpireTimeForRequest function.
    */
   virtual bool getTaskExpireTimeForRequest(
       std::chrono::milliseconds clientQueueTimeoutMs,
@@ -77,10 +75,10 @@ class ServerConfigs {
       std::chrono::milliseconds& queueTimeout,
       std::chrono::milliseconds& taskTimeout) const = 0;
 
-  // @see BaseThriftServer::getObserver function.
+  // @see ThriftServer::getObserver function.
   virtual server::TServerObserver* getObserver() const = 0;
 
-  // @see BaseThriftServer::getAdaptiveConcurrencyController function.
+  // @see ThriftServer::getAdaptiveConcurrencyController function.
   virtual AdaptiveConcurrencyController& getAdaptiveConcurrencyController() = 0;
   virtual const AdaptiveConcurrencyController&
   getAdaptiveConcurrencyController() const = 0;
@@ -89,21 +87,20 @@ class ServerConfigs {
   virtual const CPUConcurrencyController& getCPUConcurrencyController()
       const = 0;
 
-  // @see BaseThriftServer::getNumIOWorkerThreads function.
+  // @see ThriftServer::getNumIOWorkerThreads function.
   virtual size_t getNumIOWorkerThreads() const = 0;
 
-  // @see BaseThriftServer::getStreamExpireTime function.
+  // @see ThriftServer::getStreamExpireTime function.
   virtual std::chrono::milliseconds getStreamExpireTime() const = 0;
 
-  // @see BaseThriftServer::getLoad function.
+  // @see ThriftServer::getLoad function.
   virtual int64_t getLoad(
       const std::string& counter = "", bool check_custom = true) const = 0;
 
   // @see ThriftServer::checkOverload function.
-  using ErrorCodeAndMessage = std::pair<std::string, std::string>;
-  virtual folly::Optional<ErrorCodeAndMessage> checkOverload(
-      const transport::THeader::StringToStringMap* readHeaders,
-      const std::string* method) = 0;
+  virtual folly::Optional<OverloadResult> checkOverload(
+      const transport::THeader::StringToStringMap& readHeaders,
+      const std::string& method) = 0;
 
   // @see ThriftServer::preprocess function.
   virtual PreprocessResult preprocess(const PreprocessParams& params) const = 0;
@@ -116,12 +113,12 @@ class ServerConfigs {
 
   virtual bool resourcePoolEnabled() const { return false; }
 
-  // @see BaseThriftServer::resourcePoolSet function.
+  // @see ThriftServer::resourcePoolSet function.
   virtual const ResourcePoolSet& resourcePoolSet() const {
     LOG(FATAL) << "Unimplemented resourcePoolSet const";
   }
 
-  // @see BaseThriftServer::resourcePoolSet function.
+  // @see ThriftServer::resourcePoolSet function.
   virtual ResourcePoolSet& resourcePoolSet() {
     LOG(FATAL) << "Unimplemented resourcePoolSet";
   }
@@ -223,6 +220,32 @@ class ServerConfigs {
     return concurrency::ThreadManager::ExecutionScope(defaultPriority);
   }
 
+  virtual std::chrono::milliseconds getQueueTimeout() const = 0;
+
+  virtual uint32_t getQueueTimeoutPct() const = 0;
+
+  virtual bool getUseClientTimeout() const = 0;
+
+  virtual std::chrono::milliseconds getTaskExpireTime() const = 0;
+
+  virtual const std::vector<std::shared_ptr<TProcessorEventHandler>>&
+  getLegacyEventHandlers() const {
+    static const std::vector<std::shared_ptr<TProcessorEventHandler>> kEmpty;
+    return kEmpty;
+  }
+
+  struct ServiceInterceptorInfo {
+    // The naming format is "{module_name}.{interceptor_name}"
+    std::string qualifiedName;
+    std::shared_ptr<ServiceInterceptorBase> interceptor;
+  };
+  virtual const std::vector<ServiceInterceptorInfo>& getServiceInterceptors()
+      const {
+    static const folly::Indestructible<std::vector<ServiceInterceptorInfo>>
+        kEmpty;
+    return *kEmpty;
+  }
+
  private:
   folly::relaxed_atomic<int32_t> activeRequests_{0};
 
@@ -233,5 +256,4 @@ class ServerConfigs {
 };
 
 } // namespace server
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

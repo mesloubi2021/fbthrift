@@ -24,8 +24,7 @@
 #include <thrift/lib/cpp/transport/THeader.h>
 #include <thrift/lib/cpp2/transport/core/ThriftChannelIf.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class H2ClientConnection;
 class ThriftProcessor;
@@ -63,7 +62,7 @@ class H2Channel : public ThriftChannelIf {
   static constexpr folly::StringPiece RPC_KIND = "rpckind";
 
   H2Channel() = default;
-  virtual ~H2Channel() = default;
+  ~H2Channel() override = default;
 
   // Called from Proxygen at the beginning of the stream.
   virtual void onH2StreamBegin(
@@ -109,5 +108,4 @@ class H2Channel : public ThriftChannelIf {
       const std::string& value) noexcept;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

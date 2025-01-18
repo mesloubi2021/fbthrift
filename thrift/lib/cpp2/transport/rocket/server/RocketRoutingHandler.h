@@ -19,10 +19,11 @@
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/server/TransportRoutingHandler.h>
+#include <thrift/lib/cpp2/server/metrics/StreamMetricCallback.h>
 #include <thrift/lib/cpp2/transport/rocket/server/SetupFrameHandler.h>
+#include <thrift/lib/cpp2/transport/rocket/server/SetupFrameInterceptor.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class Cpp2Worker;
 namespace rocket {
@@ -40,9 +41,14 @@ namespace detail {
 THRIFT_DETAIL_DECLARE_SERVER_EXTENSION(createRocketDebugSetupFrameHandler)
 THRIFT_DETAIL_DECLARE_SERVER_EXTENSION(createRocketMonitoringSetupFrameHandler)
 THRIFT_DETAIL_DECLARE_SERVER_EXTENSION(createRocketProfilingSetupFrameHandler)
+THRIFT_DETAIL_DECLARE_SERVER_EXTENSION(createSecuritySetupFrameHandler)
 
 #undef THRIFT_DETAIL_DECLARE_EXTENSION_DEFAULT
 
+THRIFT_PLUGGABLE_FUNC_DECLARE(
+    std::unique_ptr<apache::thrift::rocket::SetupFrameInterceptor>,
+    createSecuritySetupFrameInterceptor,
+    apache::thrift::ThriftServer&);
 } // namespace detail
 
 class RocketRoutingHandler : public TransportRoutingHandler {
@@ -70,6 +76,8 @@ class RocketRoutingHandler : public TransportRoutingHandler {
  private:
   std::atomic<bool> listening_{true};
   std::vector<std::unique_ptr<rocket::SetupFrameHandler>> setupFrameHandlers_;
+  std::vector<std::unique_ptr<rocket::SetupFrameInterceptor>>
+      setupFrameInterceptors_;
+  StreamMetricCallback& streamMetricCallback_;
 };
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

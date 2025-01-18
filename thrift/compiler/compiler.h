@@ -20,12 +20,10 @@
 #include <string>
 #include <vector>
 
-#include <thrift/compiler/ast/diagnostic_context.h>
+#include <thrift/compiler/diagnostic.h>
 #include <thrift/compiler/parse/parse_ast.h> // parsing_params
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_program_bundle;
 
@@ -62,13 +60,6 @@ parse_and_mutate_program(
     const std::string& filename,
     parsing_params params,
     diagnostic_params dparams = {});
-std::unique_ptr<t_program_bundle> parse_and_mutate_program(
-    source_manager& sm,
-    diagnostic_context& ctx,
-    const std::string& filename,
-    parsing_params params,
-    bool return_nullptr_on_failure = false,
-    t_program_bundle* already_parsed = nullptr);
 
 /**
  * Runs the Thrift parser with the specified (command-line) arguments and
@@ -85,6 +76,4 @@ std::unique_ptr<t_program_bundle> parse_and_get_program(
 compile_result compile(
     const std::vector<std::string>& arguments, source_manager& sm);
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

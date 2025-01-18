@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <folly/experimental/coro/Task.h>
+#include <folly/coro/Task.h>
 #include <folly/stats/Histogram.h>
 #include <thrift/conformance/stresstest/if/gen-cpp2/StressTest.h>
 
@@ -51,6 +51,7 @@ class StressTestClient {
   virtual folly::coro::Task<void> co_requestResponseTm(const BasicRequest&) = 0;
   virtual folly::coro::Task<void> co_streamTm(const StreamRequest&) = 0;
   virtual folly::coro::Task<void> co_sinkTm(const StreamRequest&) = 0;
+  virtual folly::coro::Task<double> co_calculateSquares(int32_t) = 0;
 
   bool connectionGood() const { return connectionGood_; }
 
@@ -65,8 +66,12 @@ class StressTestClient {
 class ThriftStressTestClient : public StressTestClient {
  public:
   explicit ThriftStressTestClient(
-      std::shared_ptr<StressTestAsyncClient> client, ClientRpcStats& stats)
-      : StressTestClient(stats), client_(std::move(client)) {}
+      std::shared_ptr<StressTestAsyncClient> client,
+      ClientRpcStats& stats,
+      bool enableChecksum = false)
+      : StressTestClient(stats),
+        client_(std::move(client)),
+        enableChecksum_(enableChecksum) {}
 
   folly::coro::Task<void> co_ping() override;
 
@@ -82,11 +87,15 @@ class ThriftStressTestClient : public StressTestClient {
 
   folly::coro::Task<void> co_sinkTm(const StreamRequest&) override;
 
+  folly::coro::Task<double> co_calculateSquares(int32_t) override;
+
  private:
   template <class Fn>
   folly::coro::Task<void> timedExecute(Fn&& fn);
 
   std::shared_ptr<StressTestAsyncClient> client_;
+
+  const bool enableChecksum_;
 };
 
 } // namespace stress

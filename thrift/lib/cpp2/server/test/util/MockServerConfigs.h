@@ -67,10 +67,10 @@ class MockServerConfigs : public apache::thrift::server::ServerConfigs {
 
   // using ErrorCodeAndMessage = std::pair<std::string, std::string>;
   MOCK_METHOD(
-      folly::Optional<ErrorCodeAndMessage>,
+      folly::Optional<OverloadResult>,
       checkOverload,
-      (const apache::thrift::transport::THeader::StringToStringMap*,
-       const std::string* method),
+      (const apache::thrift::transport::THeader::StringToStringMap&,
+       const std::string& method),
       (override));
   MOCK_METHOD(
       apache::thrift::PreprocessResult,
@@ -103,6 +103,12 @@ class MockServerConfigs : public apache::thrift::server::ServerConfigs {
       getHandlerExecutorKeepAlive,
       (),
       (const, override));
+  MOCK_METHOD(
+      std::chrono::milliseconds, getQueueTimeout, (), (const, override));
+  MOCK_METHOD(uint32_t, getQueueTimeoutPct, (), (const, override));
+  MOCK_METHOD(bool, getUseClientTimeout, (), (const, override));
+  MOCK_METHOD(
+      std::chrono::milliseconds, getTaskExpireTime, (), (const, override));
 };
 
 } // namespace apache::thrift::server::test

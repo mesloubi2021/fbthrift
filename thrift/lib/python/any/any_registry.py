@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 
 from __future__ import annotations
 
+import enum
 import types
 import typing
 
@@ -51,7 +54,7 @@ from thrift.python.types import Enum, StructOrUnion, Union
 _ELEM_TYPE_FOR_EMPTY_CONTAINERS = Type(name=TypeName(boolType=Void.Unused))
 
 
-from thrift.python.any.typestub import (
+from thrift.lib.python.any.typestub import (
     ClassWithUri,
     ObjWithUri,
     PrimitiveType,
@@ -62,6 +65,11 @@ from thrift.python.any.typestub import (
     TSerializable,
     TValue,
 )
+
+
+class TypeUriOption(enum.Enum):
+    URI = "uri"
+    HASH_PREFIX = "typeHashPrefixSha2_256"
 
 
 def _standard_protocol_to_serializer_protocol(
@@ -86,9 +94,17 @@ def _get_type_hash_prefix(obj: ObjWithUri) -> bytes:
     )
 
 
-def _infer_type_from_obj(obj: SerializableType) -> Type:
+def _infer_type_from_obj(
+    obj: SerializableType,
+    typeuri_option: TypeUriOption = TypeUriOption.HASH_PREFIX,
+) -> Type:
     if isinstance(obj, (Enum, GeneratedError, StructOrUnion)):
-        type_uri = TypeUri(typeHashPrefixSha2_256=_get_type_hash_prefix(obj))
+        if typeuri_option == TypeUriOption.URI:
+            type_uri = TypeUri(uri=obj.__get_thrift_uri__())
+        elif typeuri_option == TypeUriOption.HASH_PREFIX:
+            type_uri = TypeUri(typeHashPrefixSha2_256=_get_type_hash_prefix(obj))
+        else:
+            raise ValueError(f"Unsupported typeuri_option: {typeuri_option}")
         if isinstance(obj, Enum):
             return Type(name=TypeName(enumType=type_uri))
         if isinstance(obj, Union):
@@ -144,6 +160,10 @@ class AnyRegistry:
         self,
         obj: SerializableTypeOrContainers,
         protocol: typing.Optional[Protocol] = None,
+        # If HASH_PREFIX, ThriftStruct's type uri in Any will be typeHashPrefixSha2_256
+        # (https://fburl.com/code/ftvf5eb4); If URI, ThriftStruct's type uri in
+        # Any will be human readable uri (https://fburl.com/code/s7nvqelm)
+        typeuri_option: TypeUriOption = TypeUriOption.HASH_PREFIX,
     ) -> Any:
         if protocol is None:
             protocol = Protocol(standard=StandardProtocol.Compact)
@@ -152,7 +172,9 @@ class AnyRegistry:
                 f"Unsupported non-standard protocol: {protocol.value}"
             )
         if isinstance(obj, (GeneratedError, StructOrUnion)):
-            return self._store_struct(obj, protocol=protocol)
+            return self._store_struct(
+                obj, protocol=protocol, typeuri_option=typeuri_option
+            )
         if isinstance(obj, (bool, int, float, str, bytes, IOBuf, Enum)):
             return self._store_primitive(obj, protocol=protocol)
         if isinstance(obj, typing.Sequence):
@@ -163,9 +185,14 @@ class AnyRegistry:
             return self._store_map(obj, protocol=protocol)
         raise ValueError(f"Unsupported type: {type(obj)}")
 
-    def _store_struct(self, obj: StructOrUnionOrException, protocol: Protocol) -> Any:
+    def _store_struct(
+        self,
+        obj: StructOrUnionOrException,
+        protocol: Protocol,
+        typeuri_option: TypeUriOption,
+    ) -> Any:
         return Any(
-            type=_infer_type_from_obj(obj),
+            type=_infer_type_from_obj(obj, typeuri_option=typeuri_option),
             protocol=protocol,
             data=serializer.serialize_iobuf(
                 obj,
@@ -340,10 +367,7 @@ class AnyRegistry:
 
     def _load_primitive(self, any_obj: Any) -> PrimitiveType:
         return deserialize_primitive(
-            # pyre-fixme[6]: For 1st argument expected `Type[Variable[TPrimitive
-            #  (bound to Union[Enum, IOBuf, bool, bytes, float, int, str])]]` but got
-            #  `Type[Union[Enum, GeneratedError, IOBuf, StructOrUnion, bool, bytes,
-            #  float, int, str]]`.
+            # pyre-fixme[6]: The deserializer expects primitive, but this to_serializable_type function can give any valid type
             self._type_name_to_serializable_type(any_obj.type.name),
             any_obj.data,
             protocol=_standard_protocol_to_serializer_protocol(

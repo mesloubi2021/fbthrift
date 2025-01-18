@@ -30,9 +30,7 @@
 #include <thrift/lib/thrift/gen-cpp2/type_rep_types.h>
 #include <thrift/lib/thrift/gen-cpp2/type_rep_types_custom_protocol.h>
 
-namespace apache {
-namespace thrift {
-namespace type {
+namespace apache::thrift::type {
 
 // A class that can represent any concrete Thrift type.
 //
@@ -106,14 +104,25 @@ class Type : public detail::Wrap<TypeStruct> {
 
   // If the complete and non-empty type information is present.
   //
-  // Specifically, that all contained 'type name' values are not empty and
-  // have full, human-readable, Thrift URIs.
+  // Specifically, that all contained 'type name' values are not empty.
   bool isFull() const { return isFull(data_); }
 
+  // If the Type information is full, contains correct number of valid
+  // parameters and have full, human-readable, Thrift URIs.
+  bool isValid() const { return isFull(data_, true, true); }
+
+  // Human readable string describing the type.
+  // DISCLAIMER: We provide NO guarantees of stability on the format used.
+  // DO NOT ATTEMPT TO PARSE THIS!!!
+  std::string debugString() const;
+
  private:
-  static bool isFull(const TypeUri& typeUri);
-  static bool isFull(const TypeName& typeName);
-  static bool isFull(const TypeStruct& type);
+  static bool isFull(const TypeUri& typeUri, bool validate_uri);
+  static bool isFull(const TypeName& typeName, bool validate_uri);
+  static bool isFull(
+      const TypeStruct& type,
+      bool ensure_params = false,
+      bool validate_uri = false);
 
   friend bool operator==(Type lhs, Type rhs) noexcept {
     return lhs.data_ == rhs.data_;
@@ -203,8 +212,13 @@ class Type : public detail::Wrap<TypeStruct> {
   struct Helper<cpp_type<T, Tag>> : Helper<Tag> {};
 };
 
-} // namespace type
-} // namespace thrift
-} // namespace apache
+// TODO(dokwon): Consider moving this to either op::equal or op::identical
+bool identicalTypeStruct(const TypeStruct& lhs, const TypeStruct& rhs);
+
+inline bool identicalType(const Type& lhs, const Type& rhs) {
+  return identicalTypeStruct(lhs.toThrift(), rhs.toThrift());
+}
+
+} // namespace apache::thrift::type
 
 FBTHRIFT_STD_HASH_WRAP_DATA(apache::thrift::type::Type)

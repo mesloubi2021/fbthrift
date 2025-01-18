@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 public final class {{struct:javaCapitalName}} implements com.facebook.thrift.payload.ThriftSerializable {
     {{> struct/AdapterDefinition}}
 
+    private static final boolean allowNullFieldValues =
+        System.getProperty("thrift.union.allow-null-field-values", "false").equalsIgnoreCase("true");
+
     private static final TStruct STRUCT_DESC = new TStruct("{{struct:name}}");
     private static final Map<String, Integer> NAMES_TO_IDS = new HashMap();
     public static final Map<String, Integer> THRIFT_NAMES_TO_IDS = new HashMap();
@@ -42,7 +45,7 @@ public final class {{struct:javaCapitalName}} implements com.facebook.thrift.pay
 
     {{#struct:fields}}
     public static final int _{{field:javaAllCapsName}} = {{field:key}};
-    private static final TField {{field:javaTFieldName}} = new TField("{{field:javaName}}", TType.{{#field:type}}{{> TType}}{{/field:type}}, (short){{field:key}});
+    private static final TField {{field:javaTFieldName}} = new TField("{{#field:FieldNameUnmangled?}}{{field:name}}{{/field:FieldNameUnmangled?}}{{^field:FieldNameUnmangled?}}{{field:javaName}}{{/field:FieldNameUnmangled?}}", TType.{{#field:type}}{{> TType}}{{/field:type}}, (short){{field:key}});
     {{/struct:fields}}
 
     static {
@@ -60,6 +63,13 @@ public final class {{struct:javaCapitalName}} implements com.facebook.thrift.pay
 
     private java.lang.Object value;
     private short id;
+
+    public enum TypeEnum {
+      __FBTHRIFT_EMPTY_UNION__,
+      {{#struct:fields}}
+      {{field:javaConstantName}},
+      {{/struct:fields}}
+    }
 
     public static {{struct:javaCapitalName}} from(int _id, java.lang.Object _field) {
         return from((short) _id, _field);
@@ -118,6 +128,19 @@ public final class {{struct:javaCapitalName}} implements com.facebook.thrift.pay
         return this.id;
     }
 
+    public TypeEnum getThriftUnionType() {
+      switch(this.id) {
+        case 0:
+          return TypeEnum.__FBTHRIFT_EMPTY_UNION__;
+        {{#struct:fields}}
+        case {{field:key}}:
+          return TypeEnum.{{field:javaConstantName}};
+        {{/struct:fields}}
+        default:
+          throw new IllegalStateException("unreachable");
+      }
+    }
+
     public String getThriftName() {
         TField tField = (TField) FIELD_METADATA.get((int) this.id);
         if (tField == null) {
@@ -127,13 +150,14 @@ public final class {{struct:javaCapitalName}} implements com.facebook.thrift.pay
         }
     }
 
-    public void accept(Visitor visitor) {
+    public <T> T accept(Visitor<T> visitor) {
     {{#struct:fields}}
         if (isSet{{field:javaCapitalName}}()) {
-            visitor.visit{{field:javaCapitalName}}({{> GetterName}}());
-            return;
+            return visitor.visit{{field:javaCapitalName}}({{> GetterName}}());
         }
     {{/struct:fields}}
+
+        throw new IllegalStateException("Visitor missing for type " + this.getThriftUnionType());
     }
 
     @java.lang.Override
@@ -169,9 +193,13 @@ public final class {{struct:javaCapitalName}} implements com.facebook.thrift.pay
         });
     }
 
-    public interface Visitor {
+    public interface Visitor<T> {
+        default T visit({{struct:javaCapitalName}} acceptor) {
+        return acceptor.accept(this);
+        }
+
     {{#struct:fields}}
-        void visit{{field:javaCapitalName}}({{> FieldType}} {{field:javaName}});
+        T visit{{field:javaCapitalName}}({{> FieldType}} {{field:javaName}});
     {{/struct:fields}}
     }
 

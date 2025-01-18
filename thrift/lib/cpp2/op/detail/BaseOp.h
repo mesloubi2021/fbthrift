@@ -21,10 +21,7 @@
 #include <thrift/lib/cpp2/type/NativeType.h>
 #include <thrift/lib/cpp2/type/detail/Runtime.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 using FieldId = type::FieldId;
 using Ptr = type::detail::Ptr;
 using Dyn = type::detail::Dyn;
@@ -39,7 +36,7 @@ const TypeInfo& getAnyTypeInfo();
 template <typename Tag, typename T = type::native_type<Tag>>
 RuntimeType getAnyType() {
   static_assert(
-      std::is_same<folly::remove_cvref_t<T>, type::native_type<Tag>>::value,
+      std::is_same_v<folly::remove_cvref_t<T>, type::native_type<Tag>>,
       "type missmatch");
   return RuntimeType::create<T>(getAnyTypeInfo<Tag>());
 }
@@ -105,7 +102,4 @@ struct BaseOp : type::detail::BaseErasedOp {
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

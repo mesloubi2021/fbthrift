@@ -15,13 +15,14 @@
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::optional_boxed_field_ref&lt; T &gt;::operator*",
       "argsstring_html": "() const",
       "name_html": "operator*",
+      "qualifiedname_html": "apache::thrift::optional_boxed_field_ref::operator*",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "972",
-        "column": "1",
+        "line": "975",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "972",
-        "bodyend": "972"
+        "bodystart": "975",
+        "bodyend": "975"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type operator*() const",
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/optional_boxed_field_ref/operator.mul",
-  "refid": "/ref/cpp/f/class/apache/thrift/optional_boxed_field_ref/operator.mul"
+  "refid": "/ref/cpp/f/class/apache/thrift/optional_boxed_field_ref/operator.mul",
+  "parent_links": [
+    {
+      "text_html": "optional_boxed_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/optional_boxed_field_ref"
+    }
+  ]
 }

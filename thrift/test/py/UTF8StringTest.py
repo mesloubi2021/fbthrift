@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from ThriftTest.ttypes import *
 import sys
 import unittest
@@ -39,9 +41,9 @@ class AbstractTest:
 
     def testUnicodeString(self):
         obj2 = self._deserialize(ListTypeVersioningV2, self._serialize(self.obj))
-        self.assertEquals(obj2.strings[0], self.obj.strings[0])
-        self.assertEquals(obj2.strings[1], self.obj.strings[1])
-        self.assertEquals(obj2.hello, self.obj.hello)
+        self.assertEqual(obj2.strings[0], self.obj.strings[0])
+        self.assertEqual(obj2.strings[1], self.obj.strings[1])
+        self.assertEqual(obj2.hello, self.obj.hello)
 
 
 class NormalBinaryTest(AbstractTest, unittest.TestCase):

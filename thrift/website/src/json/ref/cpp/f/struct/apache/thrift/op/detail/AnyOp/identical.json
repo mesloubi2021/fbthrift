@@ -15,6 +15,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -58,6 +59,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -71,7 +73,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -101,6 +103,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -114,7 +117,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -144,6 +147,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -157,7 +161,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -187,6 +191,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -200,7 +205,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -230,6 +235,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -243,7 +249,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -273,6 +279,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -286,7 +293,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -316,6 +323,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -329,7 +337,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -359,6 +367,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -372,7 +381,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -402,6 +411,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -415,7 +425,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -445,6 +455,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -458,7 +469,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -488,6 +499,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -501,7 +513,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -531,6 +543,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -544,7 +557,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -574,6 +587,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -587,7 +601,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -617,6 +631,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -630,7 +645,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -660,6 +675,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -673,7 +689,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -703,6 +719,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -716,7 +733,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -746,6 +763,7 @@
       "definition_html": "static bool apache::thrift::op::detail::BaseOp&lt; Tag &gt;::identical",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "identical",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::identical",
       "param": [
         {
           "type_html": "const void *",
@@ -759,7 +777,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "81",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -784,5 +802,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/identical",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/identical"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/identical",
+  "parent_links": [
+    {
+      "text_html": "AnyOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/AnyOp"
+    }
+  ]
 }

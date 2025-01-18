@@ -26,10 +26,9 @@ namespace folly {
 class SocketAddress;
 }
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
-class BaseThriftServer;
+class ThriftServer;
 
 namespace concurrency {
 class Thread;
@@ -52,7 +51,7 @@ class ScopedServerThread {
   /**
    * Create a ScopedServerThread object and automatically start it.
    */
-  explicit ScopedServerThread(std::shared_ptr<BaseThriftServer> server);
+  explicit ScopedServerThread(std::shared_ptr<ThriftServer> server);
 
   ScopedServerThread(const ScopedServerThread&) = delete;
   ScopedServerThread& operator=(const ScopedServerThread&) = delete;
@@ -67,7 +66,7 @@ class ScopedServerThread {
    * @param server The server to run in the new thread.
    */
   using Func = folly::Function<void()>;
-  void start(std::shared_ptr<BaseThriftServer> server, Func onExit = {});
+  void start(std::shared_ptr<ThriftServer> server, Func onExit = {});
 
   /**
    * Stop the server thread.
@@ -88,7 +87,7 @@ class ScopedServerThread {
   /**
    * Get the server.
    */
-  std::weak_ptr<BaseThriftServer> getServer() const;
+  std::weak_ptr<ThriftServer> getServer() const;
 
   /**
    * Set name on the underlying server thread.
@@ -105,7 +104,6 @@ class ScopedServerThread {
 };
 
 } // namespace util
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // THRIFT_UTIL_SCOPEDSERVERTHREAD_H_

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -57,7 +59,7 @@ class SlotsServiceThrowsTest(unittest.TestCase):
                 except UserException2:
                     pass
 
-                self.assertEquals(b"UserException2", transport.get_headers()[b"uex"])
+                self.assertEqual(b"UserException2", transport.get_headers()[b"uex"])
                 self.assertIn(b"Some message", transport.get_headers()[b"uexw"])
 
                 try:
@@ -66,7 +68,7 @@ class SlotsServiceThrowsTest(unittest.TestCase):
                 except TApplicationException:
                     pass
 
-                self.assertEquals(
+                self.assertEqual(
                     b"TApplicationException", transport.get_headers()[b"uex"]
                 )
                 self.assertIn(b"a message!", transport.get_headers()[b"uexw"])

@@ -17,23 +17,35 @@
 #include <memory>
 #include <thrift/lib/cpp2/protocol/TableBasedSerializerImpl.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
+
+const void* getFieldValuesBasePtr(
+    const StructInfo& structInfo, const void* targetObject) {
+  const auto getFieldValuesBasePtrFn = structInfo.getFieldValuesBasePtr;
+
+  return getFieldValuesBasePtrFn != nullptr
+      ? getFieldValuesBasePtrFn(targetObject)
+      : targetObject;
+}
+
+void* getFieldValuesBasePtr(const StructInfo& structInfo, void* targetObject) {
+  return const_cast<void*>(
+      getFieldValuesBasePtr(structInfo, const_cast<const void*>(targetObject)));
+}
 
 // Returns active field id for a Thrift union object.
-int getActiveId(const void* object, const StructInfo& info) {
-  auto getActiveIdFunc = info.unionExt->getActiveId;
+int getActiveId(const void* unionObject, const StructInfo& info) {
+  auto* getActiveIdFunc = info.unionExt->getActiveId;
   if (getActiveIdFunc != nullptr) {
-    return getActiveIdFunc(object);
+    return getActiveIdFunc(unionObject);
   }
   return *reinterpret_cast<const int*>(
-      static_cast<const char*>(object) + info.unionExt->unionTypeOffset);
+      static_cast<const char*>(unionObject) + info.unionExt->unionTypeOffset);
 }
 
 // Sets the active field id for a Thrift union object.
 void setActiveId(void* object, const StructInfo& info, int value) {
-  auto setActiveIdFunc = info.unionExt->setActiveId;
+  auto* setActiveIdFunc = info.unionExt->setActiveId;
   if (setActiveIdFunc != nullptr) {
     setActiveIdFunc(object, value);
   } else {
@@ -42,25 +54,28 @@ void setActiveId(void* object, const StructInfo& info, int value) {
   }
 }
 
-// Checks whether if a field value is safe to retrieve. For an optional field,
-// a field is nullable, so it is safe to get the field value if it is
-// explicitly set. An unqualified and terse fields are always safe to retrive
-// their values.
-bool hasFieldValue(
-    const void* object, const FieldInfo& info, const StructInfo& structInfo) {
-  switch (info.qualifier) {
+bool structFieldHasValue(
+    const void* targetObject,
+    const FieldInfo& fieldInfo,
+    const StructInfo& structInfo) {
+  // DO_BEFORE(aristidis,20240901): DCHECK(structInfo.unionExt == nullptr);
+  switch (fieldInfo.qualifier) {
     case FieldQualifier::Unqualified:
     case FieldQualifier::Terse:
       return true;
     case FieldQualifier::Optional: {
       if (structInfo.getIsset != nullptr) {
-        return structInfo.getIsset(object, info.issetOffset);
+        return structInfo.getIsset(targetObject, fieldInfo.issetOffset);
       }
-      if (info.issetOffset == 0) {
-        return true; // return true for union fields
+      if (fieldInfo.issetOffset == 0) {
+        // return true for union fields
+        // NOTE: In practice this case should never happen, as this function
+        // should not be called for union types, and therefore
+        // `fieldInfo.issetOffset` should never be 0.
+        return true;
       }
       return *reinterpret_cast<const bool*>(
-          static_cast<const char*>(object) + info.issetOffset);
+          static_cast<const char*>(targetObject) + fieldInfo.issetOffset);
     }
   }
   return false;
@@ -77,7 +92,8 @@ void setToIntrinsicDefault(void* value, const FieldInfo& info) {
       const auto& structInfo = *static_cast<const StructInfo*>(typeInfoExt);
       for (std::int16_t index = 0; index < structInfo.numFields; index++) {
         const auto& fieldInfo = structInfo.fieldInfos[index];
-        setToIntrinsicDefault(getMember(fieldInfo, structField), fieldInfo);
+        setToIntrinsicDefault(
+            getFieldValuePtr(fieldInfo, structField), fieldInfo);
       }
       break;
     }
@@ -116,7 +132,10 @@ void setToIntrinsicDefault(void* value, const FieldInfo& info) {
           static_cast<std::string*>(value)->clear();
           break;
         case StringFieldType::IOBufObj: {
-          static_cast<folly::IOBuf*>(value)->clear();
+          OptionalThriftValue thriftValue = getValue(typeInfo, value);
+          if (thriftValue.hasValue()) {
+            thriftValue.value().iobuf->clear();
+          }
           break;
         }
         case StringFieldType::IOBuf:
@@ -132,7 +151,7 @@ void setToIntrinsicDefault(void* value, const FieldInfo& info) {
           }
           break;
         }
-      };
+      }
       break;
     }
     case protocol::TType::T_MAP: {
@@ -172,7 +191,7 @@ void clearTerseField(void* value, const FieldInfo& info) {
       const auto& structInfo = *static_cast<const StructInfo*>(typeInfoExt);
       for (std::int16_t index = 0; index < structInfo.numFields; index++) {
         const auto& fieldInfo = structInfo.fieldInfos[index];
-        clearTerseField(getMember(fieldInfo, structField), fieldInfo);
+        clearTerseField(getFieldValuePtr(fieldInfo, structField), fieldInfo);
       }
       break;
     }
@@ -198,14 +217,9 @@ void clearTerseField(void* value, const FieldInfo& info) {
   }
 }
 
-// A terse field skips serialization if it is equal to the intrinsic default.
-// Note, for a struct terse field, serialization is skipped if it is empty. If
-// it has an unqualified field, it is not eligible to be empty. A struct is
-// empty, if optional fields are not explicitly and terse fields are equal to
-// the intrinsic default.
-bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& info) {
-  const void* typeInfoExt = info.typeInfo->typeExt;
-  switch (info.typeInfo->type) {
+bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& fieldInfo) {
+  const void* typeInfoExt = fieldInfo.typeInfo->typeExt;
+  switch (fieldInfo.typeInfo->type) {
     case protocol::TType::T_STRUCT: {
       const auto& structInfo = *static_cast<const StructInfo*>(typeInfoExt);
       // union.
@@ -214,15 +228,22 @@ bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& info) {
       }
       // struct and exception.
       for (std::int16_t index = 0; index < structInfo.numFields; index++) {
-        const auto& fieldInfo = structInfo.fieldInfos[index];
-        if (hasFieldValue(value.object, fieldInfo, structInfo)) {
-          if (OptionalThriftValue fieldValue = getValue(
-                  *fieldInfo.typeInfo, getMember(fieldInfo, value.object))) {
-            if (isFieldNotEmpty(
-                    value.object, fieldValue.value(), fieldInfo, structInfo)) {
-              return true;
-            }
-          }
+        const auto& nestedFieldInfo = structInfo.fieldInfos[index];
+        if (!structFieldHasValue(value.object, nestedFieldInfo, structInfo)) {
+          continue;
+        }
+        OptionalThriftValue fieldValue = getValue(
+            *nestedFieldInfo.typeInfo,
+            getFieldValuePtr(nestedFieldInfo, value.object));
+        if (!fieldValue) {
+          continue;
+        }
+        if (isFieldNotEmpty(
+                value.object,
+                fieldValue.value(),
+                nestedFieldInfo,
+                structInfo)) {
+          return true;
         }
       }
       return false;
@@ -258,7 +279,7 @@ bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& info) {
           return !(*static_cast<const std::unique_ptr<folly::IOBuf>*>(
                        value.object))
                       ->empty();
-      };
+      }
     }
     case protocol::TType::T_MAP: {
       const auto& ext = *static_cast<const MapFieldExt*>(typeInfoExt);
@@ -287,31 +308,29 @@ bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& info) {
 bool isFieldNotEmpty(
     const void* object,
     const ThriftValue& value,
-    const FieldInfo& info,
+    const FieldInfo& fieldInfo,
     const StructInfo& structInfo) {
-  switch (info.qualifier) {
+  switch (fieldInfo.qualifier) {
     case FieldQualifier::Unqualified:
     case FieldQualifier::Optional:
-      return hasFieldValue(object, info, structInfo);
+      return structFieldHasValue(object, fieldInfo, structInfo);
     case FieldQualifier::Terse:
-      return isTerseFieldSet(value, info);
+      return isTerseFieldSet(value, fieldInfo);
   }
   return false;
 }
 
 void markFieldAsSet(
-    void* object, const FieldInfo& info, const StructInfo& structInfo) {
+    void* object, const FieldInfo& fieldInfo, const StructInfo& structInfo) {
   if (structInfo.setIsset != nullptr) {
-    structInfo.setIsset(object, info.issetOffset, true);
+    structInfo.setIsset(object, fieldInfo.issetOffset, true);
     return;
   }
-  if (info.issetOffset == 0) {
+  if (fieldInfo.issetOffset == 0) {
     return;
   }
-  *reinterpret_cast<bool*>(static_cast<char*>(object) + info.issetOffset) =
+  *reinterpret_cast<bool*>(static_cast<char*>(object) + fieldInfo.issetOffset) =
       true;
 }
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

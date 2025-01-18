@@ -27,7 +27,6 @@
 #include <fmt/core.h>
 
 #include <thrift/compiler/ast/node_list.h>
-#include <thrift/compiler/ast/t_base_type.h>
 #include <thrift/compiler/ast/t_const.h>
 #include <thrift/compiler/ast/t_enum.h>
 #include <thrift/compiler/ast/t_exception.h>
@@ -37,6 +36,7 @@
 #include <thrift/compiler/ast/t_map.h>
 #include <thrift/compiler/ast/t_named.h>
 #include <thrift/compiler/ast/t_package.h>
+#include <thrift/compiler/ast/t_primitive_type.h>
 #include <thrift/compiler/ast/t_scope.h>
 #include <thrift/compiler/ast/t_service.h>
 #include <thrift/compiler/ast/t_set.h>
@@ -46,9 +46,7 @@
 #include <thrift/compiler/ast/t_typedef.h>
 #include <thrift/compiler/ast/t_union.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * Top level class representing an entire thrift program.
@@ -63,9 +61,13 @@ class t_program : public t_named {
    *
    * @param path - A *.thrift file path.
    */
-  explicit t_program(std::string path, const t_program* parent = nullptr)
+  explicit t_program(
+      std::string path,
+      std::string full_path,
+      const t_program* parent = nullptr)
       : t_program(
             std::move(path),
+            std::move(full_path),
             parent ? parent->scope_ : std::make_shared<t_scope>()) {}
 
   void set_package(t_package package) { package_ = std::move(package); }
@@ -153,7 +155,8 @@ class t_program : public t_named {
    * @param language - The target language (i.e. py, cpp) to generate code
    * @param name_space - //TODO add definition of name_space
    */
-  void set_namespace(std::string language, std::string name_space) {
+  void set_namespace(
+      const std::string& language, const std::string& name_space) {
     namespaces_.emplace(language, name_space);
   }
 
@@ -161,6 +164,8 @@ class t_program : public t_named {
    * t_program getters
    */
   const std::string& path() const { return path_; }
+
+  const std::string& full_path() const { return full_path_; }
 
   const std::string& include_prefix() const { return include_prefix_; }
 
@@ -170,12 +175,14 @@ class t_program : public t_named {
    * well as the location of the include statement.
    */
   const std::vector<t_include*>& includes() const { return includes_; }
+  std::vector<t_include*>& includes() { return includes_; }
 
   /**
    * Returns a list of programs that are included by this program.
    */
   std::vector<t_program*> get_included_programs() const {
     std::vector<t_program*> included_programs;
+    included_programs.reserve(includes_.size());
     for (const auto& include : includes_) {
       included_programs.push_back(include->get_program());
     }
@@ -269,17 +276,6 @@ class t_program : public t_named {
     return scope_name(node.name());
   }
 
-  enum class value_id : int64_t {};
-
-  // Adds value to intern list and returns ID
-  value_id intern_value(std::unique_ptr<t_const_value> val) {
-    auto type = val->ttype();
-    intern_list_.push_back(
-        std::make_unique<t_const>(this, type, "", std::move(val)));
-    return static_cast<value_id>(intern_list_.size());
-  }
-  const node_list<t_const>& intern_list() const { return intern_list_; }
-
  private:
   t_package package_;
 
@@ -307,48 +303,27 @@ class t_program : public t_named {
   std::vector<t_service*> services_;
   std::vector<t_include*> includes_;
   std::vector<t_interaction*> interactions_;
-  node_list<t_const> intern_list_;
 
   std::string path_; // initialized in ctor init-list
+  std::string full_path_;
   std::string include_prefix_;
   std::map<std::string, std::string> namespaces_;
   std::unordered_map<std::string, std::vector<std::string>> language_includes_;
   std::shared_ptr<t_scope> scope_;
 
-  t_program(std::string path, std::shared_ptr<t_scope> scope)
-      : path_(std::move(path)), scope_(std::move(scope)) {
+  t_program(
+      std::string path, std::string full_path, std::shared_ptr<t_scope> scope)
+      : path_(std::move(path)),
+        full_path_(std::move(full_path)),
+        scope_(std::move(scope)) {
     set_name(compute_name_from_file_path(path_));
   }
 
-  // TODO(afuller): Remove everything below this comment. It is only provided
-  // for backwards compatibility.
+  // TODO (satishvk): There was a TODO from afuller here to remove other
+  // deprecated functions like add_service, etc. Did inherit_annotation_or_null
+  // accidentally end up at the bottom of the function below that TODO OR
+  // is it also meant to be removed?
  public:
-  void add_typedef(std::unique_ptr<t_typedef> node) {
-    add_definition(std::move(node));
-  }
-  void add_enum(std::unique_ptr<t_enum> node) {
-    add_definition(std::move(node));
-  }
-  void add_const(std::unique_ptr<t_const> node) {
-    add_definition(std::move(node));
-  }
-  void add_struct(std::unique_ptr<t_struct> node) {
-    add_definition(std::move(node));
-  }
-  void add_exception(std::unique_ptr<t_exception> node) {
-    add_definition(std::move(node));
-  }
-  void add_service(std::unique_ptr<t_service> node) {
-    add_definition(std::move(node));
-  }
-  void add_interaction(std::unique_ptr<t_interaction> node) {
-    add_definition(std::move(node));
-  }
-  void add_xception(std::unique_ptr<t_exception> tx) {
-    add_exception(std::move(tx));
-  }
-  const std::vector<t_exception*>& xceptions() const { return exceptions(); }
-
   // Looks for an annotation on the given node, then if not found, and the node
   // is not generated, looks for the same annotation on the program.
   const t_const* inherit_annotation_or_null(
@@ -362,6 +337,4 @@ class t_program : public t_named {
   }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

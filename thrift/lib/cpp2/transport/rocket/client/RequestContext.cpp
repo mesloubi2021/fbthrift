@@ -26,16 +26,13 @@
 #include <folly/lang/Assume.h>
 
 #include <thrift/lib/cpp/transport/TTransportException.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 #include <thrift/lib/cpp2/transport/rocket/client/RequestContextQueue.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Frames.h>
 
 using apache::thrift::transport::TTransportException;
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 folly::Try<void> RequestContext::waitForWriteToComplete() {
   baton_.wait();
@@ -148,6 +145,4 @@ void RequestContext::onWriteSuccess() noexcept {
   }
 }
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

@@ -25,12 +25,13 @@
       "definition_html": "using apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::adapted_tag =  type::adapted&lt;Adapter, Tag&gt;",
       "argsstring_html": "",
       "name_html": "adapted_tag",
+      "qualifiedname_html": "apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::adapted_tag",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-        "line": "207",
-        "column": "1",
+        "line": "152",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-        "bodystart": "207",
+        "bodystart": "152",
         "bodyend": "-1"
       },
       "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4"
@@ -41,6 +42,7 @@
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4_1ad403c2143936204503d3dc13e6287bc3",
       "prot": "public",
       "static": "no",
+      "constexpr": "yes",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
@@ -51,24 +53,25 @@
           "defval_html": "type::native_type&lt;<code>adapted_tag</code>&gt;"
         }
       ],
-      "type_html": "constexpr T",
-      "definition_html": "constexpr T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
+      "type_html": "T",
+      "definition_html": "T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
       "argsstring_html": "() const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-        "line": "211",
-        "column": "1",
+        "line": "156",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-        "bodystart": "211",
-        "bodyend": "216"
+        "bodystart": "156",
+        "bodyend": "161"
       },
       "definition": {
-        "simple_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\nconstexpr T operator()() const",
-        "simple_raw": "template <typename T = type::native_type<adapted_tag>>\nconstexpr T operator()() const",
-        "detailed_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\ninline constexpr T operator()() const",
-        "detailed_raw": "template <typename T = type::native_type<adapted_tag>>\ninline constexpr T operator()() const",
-        "original_definition_html": "constexpr T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
+        "simple_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\nT operator()() const",
+        "simple_raw": "template <typename T = type::native_type<adapted_tag>>\nT operator()() const",
+        "detailed_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\ninline T operator()() const",
+        "detailed_raw": "template <typename T = type::native_type<adapted_tag>>\ninline T operator()() const",
+        "original_definition_html": "T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
         "original_argsstring_html": "() const"
       },
       "filepath": "fns/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4/operator.call",
@@ -77,11 +80,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-    "line": "206",
+    "line": "151",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-    "bodystart": "206",
-    "bodyend": "217"
+    "bodystart": "151",
+    "bodyend": "162"
   },
   "namespacednames_html": [
     "apache",
@@ -111,6 +114,7 @@
               "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4_1ad403c2143936204503d3dc13e6287bc3",
               "prot": "public",
               "static": "no",
+              "constexpr": "yes",
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
@@ -121,24 +125,25 @@
                   "defval_html": "type::native_type&lt;<code>adapted_tag</code>&gt;"
                 }
               ],
-              "type_html": "constexpr T",
-              "definition_html": "constexpr T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
+              "type_html": "T",
+              "definition_html": "T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
               "argsstring_html": "() const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-                "line": "211",
-                "column": "1",
+                "line": "156",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Create.h",
-                "bodystart": "211",
-                "bodyend": "216"
+                "bodystart": "156",
+                "bodyend": "161"
               },
               "definition": {
-                "simple_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\nconstexpr T operator()() const",
-                "simple_raw": "template <typename T = type::native_type<adapted_tag>>\nconstexpr T operator()() const",
-                "detailed_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\ninline constexpr T operator()() const",
-                "detailed_raw": "template <typename T = type::native_type<adapted_tag>>\ninline constexpr T operator()() const",
-                "original_definition_html": "constexpr T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
+                "simple_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\nT operator()() const",
+                "simple_raw": "template <typename T = type::native_type<adapted_tag>>\nT operator()() const",
+                "detailed_html": "template &lt;typename T = type::native_type&lt;adapted_tag&gt;&gt;\ninline T operator()() const",
+                "detailed_raw": "template <typename T = type::native_type<adapted_tag>>\ninline T operator()() const",
+                "original_definition_html": "T apache::thrift::op::detail::Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;::operator()",
                 "original_argsstring_html": "() const"
               },
               "filepath": "fns/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4/operator.call",
@@ -153,7 +158,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4/operator.call",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4/operator.call"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4/operator.call",
+          "parent_links": [
+            {
+              "text_html": "Create&lt; type::adapted&lt; Adapter, Tag &gt; &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Create_3_01type_1_1adapted_3_01Adapter_00_01Tag_01_4_01_4"
+            }
+          ]
         }
       ]
     }

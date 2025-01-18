@@ -24,13 +24,14 @@
 #include <thrift/lib/cpp2/FieldRef.h>
 #include <thrift/lib/cpp2/op/Clear.h>
 #include <thrift/lib/cpp2/protocol/Object.h>
+#include <thrift/lib/cpp2/type/Field.h>
 #include <thrift/lib/cpp2/type/Id.h>
 #include <thrift/lib/cpp2/type/detail/Wrap.h>
 
-static_assert(FOLLY_CPLUSPLUS >= 201703L, "Thrift Patch requires C++17");
-
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
+namespace ident {
+struct patch;
+}
 namespace op {
 
 class bad_patch_access : public std::runtime_error {
@@ -45,7 +46,8 @@ namespace detail {
 /// - Patch: The Thrift struct representation for the patch.
 /// - Derived: The leaf type deriving from this class.
 template <typename Patch, typename Derived>
-class BasePatch : public type::detail::EqWrap<Derived, Patch> {
+class BasePatch
+    : public type::detail::EqWrap<Derived, Patch, type::struct_t<Patch>> {
   using Base = type::detail::EqWrap<Derived, Patch>;
 
  public:
@@ -107,19 +109,19 @@ class BasePatch : public type::detail::EqWrap<Derived, Patch> {
       std::forward<U>(next).customVisit(derived());
     }
   }
-  [[deprecated("Use customVisit(...) method to read the patch.")]] auto&&
+  [[deprecated("ERROR: Use customVisit(...) method to read the patch.")]] auto&&
   toThrift() & {
     return Base::toThrift();
   }
-  [[deprecated("Use customVisit(...) method to read the patch.")]] auto&&
+  [[deprecated("ERROR: Use customVisit(...) method to read the patch.")]] auto&&
   toThrift() && {
     return Base::toThrift();
   }
-  [[deprecated("Use customVisit(...) method to read the patch.")]] auto&&
+  [[deprecated("ERROR: Use customVisit(...) method to read the patch.")]] auto&&
   toThrift() const& {
     return Base::toThrift();
   }
-  [[deprecated("Use customVisit(...) method to read the patch.")]] auto&&
+  [[deprecated("ERROR: Use customVisit(...) method to read the patch.")]] auto&&
   toThrift() const&& {
     return Base::toThrift();
   }
@@ -174,7 +176,8 @@ class BaseAssignPatch : public BasePatch<Patch, Derived> {
 
   // A 'value' patch only applies to set optional values.
   template <typename U>
-  if_opt_type<folly::remove_cvref_t<U>> apply(U&& field) const {
+  type::if_optional_or_union_field_ref<folly::remove_cvref_t<U>> apply(
+      U&& field) const {
     if (field.has_value()) {
       derived().apply(*std::forward<U>(field));
     }
@@ -183,6 +186,12 @@ class BaseAssignPatch : public BasePatch<Patch, Derived> {
   template <typename U>
   void apply(union_field_ref<U> field) const {
     if (field.has_value()) {
+      derived().apply(*field);
+    }
+  }
+  template <typename U>
+  void apply(std::unique_ptr<U>& field) const {
+    if (field) {
       derived().apply(*field);
     }
   }
@@ -199,7 +208,7 @@ class BaseAssignPatch : public BasePatch<Patch, Derived> {
   using Base::resetAnd;
   ~BaseAssignPatch() = default; // abstract base class
 
-  FOLLY_NODISCARD bool hasAssign() const { return hasValue(data_.assign()); }
+  FOLLY_NODISCARD bool hasAssign() const { return data_.assign().has_value(); }
   FOLLY_NODISCARD value_type& assignOr(value_type& value) noexcept {
     return hasAssign() ? *data_.assign() : value;
   }
@@ -235,7 +244,8 @@ class BaseClearPatch : public BaseAssignPatch<Patch, Derived> {
 
   // Clear resets optional fields.
   template <typename U>
-  if_opt_type<folly::remove_cvref_t<U>> apply(U&& field) const {
+  type::if_optional_or_union_field_ref<folly::remove_cvref_t<U>> apply(
+      U&& field) const {
     if (data_.clear() == true && !hasAssign()) {
       field.reset();
     } else if (field.has_value()) {
@@ -252,17 +262,22 @@ class BaseClearPatch : public BaseAssignPatch<Patch, Derived> {
   using Base::resetAnd;
   ~BaseClearPatch() = default;
 
-  template <typename Visitor>
-  bool customVisitAssignAndClear(Visitor&& v) const {
-    if (hasAssign()) {
-      std::forward<Visitor>(v).assign(*data_.assign());
+ private:
+  template <typename Self, typename Visitor>
+  static bool customVisitAssignAndClearImpl(Self&& self, Visitor&& v) {
+    if (std::forward<Self>(self).hasAssign()) {
+      std::forward<Visitor>(v).assign(*std::forward<Self>(self).data_.assign());
       return true;
     }
-    if (data_.clear() == true) {
+    if (std::forward<Self>(self).data_.clear() == true) {
       std::forward<Visitor>(v).clear();
     }
     return false;
   }
+
+ protected:
+  FOLLY_FOR_EACH_THIS_OVERLOAD_IN_CLASS_BODY_DELEGATE(
+      customVisitAssignAndClear, customVisitAssignAndClearImpl);
 
   /// Clears the value.
   void clear() { resetAnd().clear() = true; }
@@ -288,5 +303,4 @@ class BaseContainerPatch : public BaseClearPatch<Patch, Derived> {
 
 } // namespace detail
 } // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

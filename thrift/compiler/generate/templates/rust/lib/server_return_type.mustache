@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,17 +14,22 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-}}{{!
-}}::std::result::Result<{{!
+}}
+::std::result::Result<{{!
     }}{{#function:return_type}}{{!
         }}{{#function:creates_interaction?}}{{!
-            }}{{#type:void?}}{{!
-                }}::std::boxed::Box<dyn {{function:interaction_name}}>{{!
-            }}{{/type:void?}}{{^type:void?}}{{!
-                }}(::std::boxed::Box<dyn {{function:interaction_name}}>, {{>lib/server_ok_type}}){{!
-            }}{{/type:void?}}{{!
+            }}{{#function:stream?}}{{!
+                }}(::std::boxed::Box<dyn {{function:interaction_name}}>, {{> lib/server_ok_type}}){{!
+            }}{{/function:stream?}}{{!
+            }}{{^function:stream?}}{{!
+                }}{{#type:void?}}{{!
+                    }}::std::boxed::Box<dyn {{function:interaction_name}}>{{!
+                }}{{/type:void?}}{{^type:void?}}{{!
+                    }}(::std::boxed::Box<dyn {{function:interaction_name}}>, {{> lib/server_ok_type}}){{!
+                }}{{/type:void?}}{{!
+            }}{{/function:stream?}}{{!
         }}{{/function:creates_interaction?}}{{^function:creates_interaction?}}{{!
-            }}{{>lib/server_ok_type}}{{!
+            }}{{> lib/server_ok_type}}{{!
         }}{{/function:creates_interaction?}}{{!
     }}{{/function:return_type}}{{!
     }}, {{program:crate}}::services::{{service:snake}}::{{function:upcamel}}Exn{{!

@@ -26,6 +26,7 @@ file exposes Python wrappers of the services to the end user.
 
 }}
 {{> common/auto_generated_py}}
+{{^program:auto_migrate?}}
 
 from thrift.py3.server cimport ServiceInterface
 
@@ -50,3 +51,4 @@ cdef class {{service:name}}Interface({{#service:extends}}{{#service:externalProg
     pass
 
 {{/program:services}}
+{{/program:auto_migrate?}}

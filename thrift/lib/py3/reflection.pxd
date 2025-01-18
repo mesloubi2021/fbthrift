@@ -46,10 +46,6 @@ cdef class StructSpec:
     cdef readonly object kind
     cdef readonly object annotations
 
-    @staticmethod
-    cdef _fbthrift_create(str name, StructType kind, dict annotations)
-    cdef void add_field(self, FieldSpec field)
-
 
 cdef class FieldSpec:
     cdef readonly int id
@@ -61,33 +57,15 @@ cdef class FieldSpec:
     cdef readonly object default "default_"
     cdef readonly object annotations
 
-    @staticmethod
-    cdef _fbthrift_create(
-        int id,
-        str name,
-        str py_name,
-        object type,
-        NumberType kind,
-        Qualifier qualifier,
-        object default,
-        dict annotations,
-    )
-
 
 cdef class ListSpec:
     cdef readonly object value
     cdef readonly object kind
 
-    @staticmethod
-    cdef _fbthrift_create(object value, NumberType kind)
-
 
 cdef class SetSpec:
     cdef readonly object value
     cdef readonly object kind
-
-    @staticmethod
-    cdef _fbthrift_create(object value, NumberType kind)
 
 
 cdef class MapSpec:
@@ -96,23 +74,11 @@ cdef class MapSpec:
     cdef readonly object value
     cdef readonly object value_kind
 
-    @staticmethod
-    cdef _fbthrift_create(
-        object key,
-        NumberType key_kind,
-        object value,
-        NumberType value_kind,
-    )
-
 
 cdef class InterfaceSpec:
     cdef readonly str name
-    cdef cvector[PyObject*] _methods
+    cdef list _methods
     cdef readonly object annotations
-
-    @staticmethod
-    cdef _fbthrift_create(str name, dict annotations)
-    cdef void add_method(self, MethodSpec method)
 
 
 cdef class MethodSpec:
@@ -123,22 +89,9 @@ cdef class MethodSpec:
     cdef readonly tuple exceptions
     cdef readonly object annotations
 
-    @staticmethod
-    cdef _fbthrift_create(
-        str name,
-        tuple arguments,
-        NumberType result_kind,
-        object result,
-        tuple exceptions,
-        dict annotations,
-    )
-
 
 cdef class ArgumentSpec:
     cdef readonly str name
     cdef readonly object kind
     cdef readonly object type
     cdef readonly object annotations
-
-    @staticmethod
-    cdef _fbthrift_create(str name, NumberType kind, object type, dict annotations)

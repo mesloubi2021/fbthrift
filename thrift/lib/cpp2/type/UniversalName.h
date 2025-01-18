@@ -23,11 +23,12 @@
 #include <folly/lang/Exception.h>
 #include <thrift/lib/cpp2/type/UniversalHashAlgorithm.h>
 
-namespace apache {
-namespace thrift {
-namespace type {
+namespace apache::thrift::type {
+
 using hash_size_t = int8_t;
+
 inline constexpr hash_size_t kDisableUniversalHash = 0;
+inline constexpr hash_size_t kDefaultTypeHashBytes = 16;
 
 // Validates that uri is a valid universal name uri of the form:
 // {domain}/{path}. For example: facebook.com/thrift/Value.
@@ -99,6 +100,4 @@ auto findByUniversalHash(C& sortedMap, const K& universalHashPrefix) {
   return itr;
 }
 
-} // namespace type
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::type

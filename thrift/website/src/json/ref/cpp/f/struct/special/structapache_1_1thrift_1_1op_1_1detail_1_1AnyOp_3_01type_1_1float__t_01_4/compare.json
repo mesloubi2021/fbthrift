@@ -4,6 +4,50 @@
   "compoundname_html": "apache::thrift::op::detail::AnyOp&lt; type::float_t &gt;::compare",
   "functions": [
     {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1aa5173cbe10f3e2a83460fa12ae605259",
+      "prot": "public",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "type_html": "folly::partial_ordering",
+      "definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
+      "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
+      "name_html": "compare",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::compare",
+      "param": [
+        {
+          "type_html": "const void *",
+          "declname_html": "lhs"
+        },
+        {
+          "type_html": "const <code>Dyn</code> &amp;",
+          "declname_html": "rhs"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+        "line": "87",
+        "column": "34",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
+        "bodystart": "87",
+        "bodyend": "94"
+      },
+      "definition": {
+        "simple_html": "static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
+        "simple_raw": "static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
+        "detailed_html": "inline static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
+        "detailed_raw": "inline static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
+        "original_definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
+        "original_argsstring_html": "(const void *lhs, const Dyn &amp;rhs)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/compare",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/compare",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
+      "compoundname_html": "apache::thrift::op::detail::AnyOp&lt; type::float_t &gt;::compare"
+    },
+    {
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1NumberOp_1ad7fcb53eb02e397b85c2bfc2e60be0d9",
       "prot": "public",
       "static": "yes",
@@ -23,6 +67,7 @@
       "definition_html": "static folly::ordering apache::thrift::op::detail::NumberOp&lt; Tag &gt;::compare",
       "argsstring_html": "(const L &amp;lhs, const R &amp;rhs)",
       "name_html": "compare",
+      "qualifiedname_html": "apache::thrift::op::detail::NumberOp::compare",
       "param": [
         {
           "type_html": "const L &amp;",
@@ -36,7 +81,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "45",
-        "column": "1",
+        "column": "26",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "45",
         "bodyend": "47"
@@ -66,6 +111,7 @@
       "definition_html": "static folly::partial_ordering apache::thrift::op::detail::NumberOp&lt; Tag &gt;::compare",
       "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
       "name_html": "compare",
+      "qualifiedname_html": "apache::thrift::op::detail::NumberOp::compare",
       "param": [
         {
           "type_html": "const void *",
@@ -79,7 +125,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "53",
-        "column": "1",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "53",
         "bodyend": "72"
@@ -96,49 +142,6 @@
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/NumberOp/compare",
       "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1NumberOp",
       "compoundname_html": "apache::thrift::op::detail::AnyOp&lt; type::float_t &gt;::compare"
-    },
-    {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp_1aa5173cbe10f3e2a83460fa12ae605259",
-      "prot": "public",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "type_html": "folly::partial_ordering",
-      "definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
-      "argsstring_html": "(const void *lhs, const Dyn &amp;rhs)",
-      "name_html": "compare",
-      "param": [
-        {
-          "type_html": "const void *",
-          "declname_html": "lhs"
-        },
-        {
-          "type_html": "const <code>Dyn</code> &amp;",
-          "declname_html": "rhs"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-        "line": "87",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
-        "bodystart": "87",
-        "bodyend": "94"
-      },
-      "definition": {
-        "simple_html": "static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
-        "simple_raw": "static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
-        "detailed_html": "inline static folly::partial_ordering compare(const void* lhs, const Dyn&amp; rhs)",
-        "detailed_raw": "inline static folly::partial_ordering compare(const void* lhs, const Dyn& rhs)",
-        "original_definition_html": "static folly::partial_ordering apache::thrift::op::detail::BaseOp&lt; Tag &gt;::compare",
-        "original_argsstring_html": "(const void *lhs, const Dyn &amp;rhs)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/BaseOp/compare",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/BaseOp/compare",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1BaseOp",
-      "compoundname_html": "apache::thrift::op::detail::AnyOp&lt; type::float_t &gt;::compare"
     }
   ],
   "filepath": "f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1float__t_01_4/compare",
@@ -147,5 +150,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1float__t_01_4/compare",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1float__t_01_4/compare"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1float__t_01_4/compare",
+  "parent_links": [
+    {
+      "text_html": "AnyOp&lt; type::float_t &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1AnyOp_3_01type_1_1float__t_01_4"
+    }
+  ]
 }

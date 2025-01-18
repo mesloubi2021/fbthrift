@@ -16,48 +16,28 @@
 
 #include <thrift/compiler/generate/t_mstch_generator.h>
 
-#include <algorithm>
-#include <fstream>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
-#include <thrift/compiler/detail/mustache/mstch.h>
+#include <fmt/format.h>
 
-#include <thrift/compiler/detail/system.h>
-#include <thrift/compiler/generate/t_generator.h>
-#include <thrift/compiler/generate/templates.h>
+#include <thrift/compiler/whisker/ast.h>
+#include <thrift/compiler/whisker/mstch_compat.h>
+#include <thrift/compiler/whisker/parser.h>
+#include <thrift/compiler/whisker/source_location.h>
+#include <thrift/compiler/whisker/standard_library.h>
 
 using namespace std;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
-namespace {
-
-fs::path from_components(
-    fs::path::const_iterator begin, fs::path::const_iterator end) {
-  fs::path tmp;
-  while (begin != end) {
-    tmp /= *begin++;
-  }
-  return tmp;
-}
-
-bool is_last_char(const string& data, char c) {
-  return !data.empty() && data.back() == c;
-}
-
-void chomp_last_char(string* data, char c) {
-  if (is_last_char(*data, c)) {
-    data->pop_back();
-  }
-}
-
-} // namespace
+namespace {} // namespace
 
 mstch::map t_mstch_generator::dump(const t_program& program) {
   mstch::map result{
@@ -140,7 +120,7 @@ mstch::map t_mstch_generator::dump(const t_type& orig_type) {
       {"union?", type.is_union()},
       {"enum?", type.is_enum()},
       {"service?", type.is_service()},
-      {"base?", type.is_base_type()},
+      {"base?", type.is_primitive_type()},
       {"container?", type.is_container()},
       {"list?", type.is_list()},
       {"set?", type.is_set()},
@@ -247,8 +227,8 @@ mstch::map t_mstch_generator::dump(const t_const& cnst) {
 }
 
 mstch::map t_mstch_generator::dump(const t_const_value& value) {
-  using cv = t_const_value::t_const_value_type;
-  const cv type = value.get_type();
+  using cv = t_const_value::t_const_value_kind;
+  const cv type = value.kind();
   mstch::map result{
       {"bool?", type == cv::CV_BOOL},
       {"double?", type == cv::CV_DOUBLE},
@@ -265,14 +245,14 @@ mstch::map t_mstch_generator::dump(const t_const_value& value) {
 
   switch (type) {
     case cv::CV_DOUBLE:
-      result.emplace("value", fmt::format("{}", value.get_double()));
-      result.emplace("double_value", fmt::format("{}", value.get_double()));
+      result.emplace("value", value.get_double());
+      result.emplace("double_value", value.get_double());
       result.emplace("nonzero?", value.get_double() != 0.0);
       break;
     case cv::CV_BOOL:
-      result.emplace("value", std::to_string(value.get_bool()));
-      result.emplace("bool_value", value.get_bool() == true);
-      result.emplace("nonzero?", value.get_bool() == true);
+      result.emplace("value", value.get_bool() ? 1 : 0);
+      result.emplace("bool_value", value.get_bool());
+      result.emplace("nonzero?", value.get_bool());
       break;
     case cv::CV_INTEGER:
       if (value.get_enum_value()) {
@@ -295,7 +275,7 @@ mstch::map t_mstch_generator::dump(const t_const_value& value) {
       break;
     default:
       std::ostringstream err;
-      err << "Unhandled t_const_value_type " << value.get_type();
+      err << "Unhandled t_const_value_kind " << value.kind();
       throw std::domain_error{err.str()};
   }
 
@@ -404,69 +384,24 @@ mstch::map t_mstch_generator::extend_annotation(const annotation&) {
   return {};
 }
 
-void t_mstch_generator::gen_template_map(const boost::filesystem::path& root) {
-  for (size_t i = 0; i < templates_size; ++i) {
-    auto name = boost::filesystem::path(
-        templates_name_datas[i],
-        templates_name_datas[i] + templates_name_sizes[i]);
-    auto mm = std::mismatch(name.begin(), name.end(), root.begin(), root.end());
-    if (mm.second == root.end()) {
-      name = from_components(mm.first, name.end());
-      name = name.parent_path() / name.stem();
-
-      auto tpl = std::string(
-          templates_content_datas[i],
-          templates_content_datas[i] + templates_content_sizes[i]);
-      // Remove a single '\n' or '\r\n' or '\r' at end, if present.
-      chomp_last_char(&tpl, '\n');
-      chomp_last_char(&tpl, '\r');
-      if (convert_delimiter()) {
-        tpl = "{{=<% %>=}}\n" + tpl;
-      }
-
-      template_map_.emplace(name.generic_string(), std::move(tpl));
-    }
-  }
-}
-
 const std::string& t_mstch_generator::get_template(
     const std::string& template_name) {
-  auto itr = template_map_.find(template_name);
-  if (itr == template_map_.end()) {
-    std::ostringstream err;
-    err << "Could not find template \"" << template_name << "\"";
-    throw std::runtime_error{err.str()};
+  const templates_map& templates = templates_by_path();
+  if (auto t = templates.find(template_name); t != templates.end()) {
+    return t->second;
   }
-  return itr->second;
-}
-
-void t_mstch_generator::write_output(
-    const boost::filesystem::path& path, const std::string& data) {
-  auto base_path = boost::filesystem::path{get_out_dir()};
-  auto abs_path = detail::make_abs_path(base_path, path);
-  boost::filesystem::create_directories(abs_path.parent_path());
-  std::ofstream ofs{abs_path.string()};
-  if (!ofs) {
-    std::ostringstream err;
-    err << "Couldn't open \"" << abs_path.string() << "\" for writing.";
-    throw std::runtime_error{err.str()};
-  }
-  ofs << data;
-  if (!is_last_char(data, '\n')) {
-    // Terminate with newline.
-    ofs << '\n';
-  }
-  record_genfile(abs_path.string());
+  throw std::runtime_error(
+      fmt::format("Could not find template '{}'", template_name));
 }
 
 bool t_mstch_generator::has_option(const std::string& option) const {
   return options_.find(option) != options_.end();
 }
 
-boost::optional<std::string> t_mstch_generator::get_option(
+std::optional<std::string> t_mstch_generator::get_option(
     const std::string& option) const {
   auto itr = options_.find(option);
-  return itr != options_.end() ? itr->second : boost::optional<std::string>();
+  return itr != options_.end() ? itr->second : std::optional<std::string>();
 }
 
 mstch::map t_mstch_generator::prepend_prefix(
@@ -478,17 +413,36 @@ mstch::map t_mstch_generator::prepend_prefix(
   return res;
 }
 
+whisker::map t_mstch_generator::globals() const {
+  auto options = render_options();
+  whisker::map result;
+  for (const auto& undefined_name : options.allowed_undefined_variables) {
+    result.insert({undefined_name, whisker::make::null});
+  }
+  return result;
+}
+
+t_mstch_generator::strictness_options t_mstch_generator::strictness() const {
+  strictness_options strict;
+  // Our legacy code has a ton of non-boolean conditionals
+  strict.boolean_conditional = false;
+  // Our legacy code relies on printing null as empty string
+  strict.printable_types = false;
+  // Undefined variables are covered by globals(...)
+  strict.undefined_variables = true;
+  return strict;
+}
+
 std::string t_mstch_generator::render(
     const std::string& template_name, const mstch::node& context) {
-  return mstch::render(
-      get_template(template_name), context, get_template_map());
+  return render(template_name, whisker::from_mstch(context));
 }
 
 void t_mstch_generator::render_to_file(
     const mstch::map& context,
     const std::string& template_name,
-    const boost::filesystem::path& path) {
-  write_output(path, render(template_name, context));
+    const std::filesystem::path& path) {
+  write_to_file(path, render(template_name, context));
 }
 
 const std::shared_ptr<mstch_base>& t_mstch_generator::cached_program(
@@ -506,6 +460,4 @@ const std::shared_ptr<mstch_base>& t_mstch_generator::cached_program(
   return itr->second;
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

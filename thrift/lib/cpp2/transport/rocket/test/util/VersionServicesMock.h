@@ -22,8 +22,7 @@
 #include <thrift/lib/cpp2/transport/rocket/test/util/gen-cpp2/NewVersion.h>
 #include <thrift/lib/cpp2/transport/rocket/test/util/gen-cpp2/OldVersion.h>
 
-namespace testutil {
-namespace testservice {
+namespace testutil::testservice {
 
 class OldServiceMock : public apache::thrift::ServiceHandler<OldVersion> {
  public:
@@ -31,14 +30,14 @@ class OldServiceMock : public apache::thrift::ServiceHandler<OldVersion> {
 
   int32_t AddOne(int32_t i) override { return i + 1; }
 
-  void DeletedMethod() {}
+  void DeletedMethod() override {}
 
-  apache::thrift::ServerStream<Message> DeletedStreamMethod() {
+  apache::thrift::ServerStream<Message> DeletedStreamMethod() override {
     return apache::thrift::ServerStream<Message>::createEmpty();
   }
 
   apache::thrift::ResponseAndServerStream<Message, Message>
-  DeletedResponseAndStreamMethod() {
+  DeletedResponseAndStreamMethod() override {
     return {{}, apache::thrift::ServerStream<Message>::createEmpty()};
   }
 
@@ -109,11 +108,11 @@ class NewServiceMock : public apache::thrift::ServiceHandler<NewVersion> {
   }
 
  protected:
-  void StreamToRequestResponse() {
+  void StreamToRequestResponse() override {
     LOG(DFATAL) << "StreamToRequestResponse should not be executed";
   }
 
-  void ResponseandStreamToRequestResponse() {
+  void ResponseandStreamToRequestResponse() override {
     LOG(DFATAL) << "ResponseandStreamToRequestResponse should not be executed";
   }
 
@@ -133,5 +132,4 @@ class NewServiceMock : public apache::thrift::ServiceHandler<NewVersion> {
  protected:
   folly::ScopedEventBaseThread executor_;
 };
-} // namespace testservice
-} // namespace testutil
+} // namespace testutil::testservice

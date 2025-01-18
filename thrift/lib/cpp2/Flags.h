@@ -24,14 +24,13 @@
 
 #include <folly/CPortability.h>
 #include <folly/Indestructible.h>
-#include <folly/experimental/observer/Observer.h>
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/observer/Observer.h>
+#include <folly/observer/SimpleObservable.h>
 #include <folly/synchronization/DelayedInit.h>
 
 #include <thrift/lib/cpp2/PluggableFunction.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace detail {
 
 class FlagsBackend {
@@ -76,10 +75,18 @@ getFlagObserver<std::string>(std::string_view name) {
 }
 
 template <typename T>
+class FlagWrapper;
+
+template <typename T>
+void registerFlagWrapper(std::string_view name, FlagWrapper<T>* wrapper);
+
+template <typename T>
 class FlagWrapper {
  public:
   FlagWrapper(std::string_view name, T defaultValue)
-      : name_(name), defaultValue_(std::move(defaultValue)) {}
+      : name_(name), defaultValue_(std::move(defaultValue)) {
+    registerFlagWrapper<T>(name, this);
+  }
 
   T get() { return get(ensureInit()); }
 
@@ -148,7 +155,6 @@ class FlagWrapper {
   folly::observer::SimpleObservable<std::optional<T>> mockObservable_{
       std::nullopt};
 };
-
 } // namespace detail
 
 #define THRIFT_FLAG_DEFINE(_name, _type, _default)                             \
@@ -187,5 +193,10 @@ class FlagWrapper {
 #define THRIFT_FLAG_SET_MOCK(_name, _val) \
   THRIFT_FLAG_WRAPPER__##_name().setMockValue(_val)
 
-} // namespace thrift
-} // namespace apache
+struct ThriftFlagInfo {
+  std::string name;
+  std::string currentValue;
+};
+
+std::vector<ThriftFlagInfo> getAllThriftFlags();
+} // namespace apache::thrift

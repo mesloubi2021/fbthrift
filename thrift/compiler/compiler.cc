@@ -31,30 +31,28 @@
 #else
 #include <unistd.h>
 #endif
+#include <stdio.h>
+#include <algorithm>
 #include <ctime>
+#include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <set>
 
-#include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <boost/filesystem.hpp>
 
-#include <thrift/compiler/ast/diagnostic_context.h>
+#include <thrift/annotation/bundled_annotations.h>
 #include <thrift/compiler/ast/t_program_bundle.h>
 #include <thrift/compiler/detail/system.h>
 #include <thrift/compiler/diagnostic.h>
 #include <thrift/compiler/generate/t_generator.h>
 #include <thrift/compiler/parse/parse_ast.h>
-#include <thrift/compiler/sema/standard_mutator.h>
+#include <thrift/compiler/sema/ast_validator.h>
+#include <thrift/compiler/sema/sema.h>
+#include <thrift/compiler/sema/sema_context.h>
 #include <thrift/compiler/sema/standard_validator.h>
-#include <thrift/compiler/validator/validator.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 namespace {
-
 /**
  * Flags to control code generation
  */
@@ -64,64 +62,128 @@ struct gen_params {
   std::vector<std::string> targets;
   std::string out_path;
   bool add_gen_dir = true;
+
+  // If true, code generation will be skipped (regardless of other parameters).
+  // This is useful, for example, to parse and validate source Thrift IDL
+  // without a particular target language in mind.
+  bool skip_gen = false;
+
+  bool inject_schema_const = false;
 };
 
-/**
- * Display the usage message.
- */
-void usage() {
-  fprintf(stderr, "Usage: thrift [options] file\n");
-  fprintf(stderr, "Options:\n");
-  fprintf(
-      stderr,
-      "  -o dir      Set the output directory for gen-* packages\n"
-      "              (default: current directory)\n");
-  fprintf(
-      stderr,
-      "  -out dir    Set the output location for generated files\n"
-      "              (no gen-* folder will be created)\n");
-  fprintf(
-      stderr,
-      "  -I dir      Add a directory to the list of directories\n"
-      "              searched for include directives\n");
-  fprintf(stderr, "  -nowarn     Suppress all compiler warnings (BAD!)\n");
-  fprintf(
-      stderr,
-      "  -legacy-strict     Strict compiler warnings on (DEPRECATED)\n");
-  fprintf(stderr, "  -v[erbose]  Verbose mode\n");
-  fprintf(stderr, "  -r[ecurse]  Also generate included files\n");
-  fprintf(stderr, "  -debug      Parse debug trace to stdout\n");
-  fprintf(
-      stderr,
-      "  --allow-neg-keys  Allow negative field keys (Used to preserve protocol\n"
-      "                    compatibility with older .thrift files)\n");
-  fprintf(
-      stderr,
-      "  --allow-neg-enum-vals Allow negative enum vals (DEPRECATED)\n");
-  fprintf(
-      stderr,
-      "  --allow-64bit-consts  Do not print warnings about using 64-bit constants\n");
-  fprintf(
-      stderr,
-      "  --gen STR   Generate code with a dynamically-registered generator.\n"
-      "              STR has the form language[:key1=val1[,key2,[key3=val3]]].\n"
-      "              Keys and values are options passed to the generator.\n"
-      "              Many options will not require values.\n");
-  fprintf(
-      stderr,
-      "  --record-genfiles FILE\n"
-      "              Save the list of generated files to FILE,\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Available generators (and options):\n");
+constexpr bool bundle_annotations() {
+#ifdef THRIFT_OSS
+  return false;
+#else
+  return true;
+#endif
+}
 
+/**
+ * Display the usage message to the given C stream.
+ *
+ * @param stream See https://en.cppreference.com/w/c/io/FILE
+ */
+void printUsageTo(FILE* stream) {
+  fprintf(stream, R"(Usage: thrift [options] file
+
+Options:
+  --help      Print this message to stdout and exit (successfully).
+  -o dir      Set the output directory for gen-* packages (default: current
+              directory).
+              At most one of this option (-o) or -out (see below) can be
+              specified.
+  -out dir    Set the output location for generated files (no gen-* folder will
+              be created).
+              At most one of this option (-out) or -o (see above) can be
+              specified.
+  -I dir      Add a directory to the list of directories searched for include
+              directives
+
+  -nowarn     Suppress all compiler warnings (BAD!)
+  -legacy-strict
+              Strict compiler warnings on (DEPRECATED)
+  -v[erbose]  Verbose mode
+  -r[ecurse]  Also generate included files
+  -debug      Parse debug trace to stdout
+  --allow-neg-keys
+              Allow negative field keys (IGNORED: always true).
+  --allow-neg-enum-vals
+              Allow negative enum vals (DEPRECATED)
+  --allow-64bit-consts
+              Do not print warnings about using 64-bit constants
+
+  --gen STR   Generate code with a dynamically-registered generator.
+              STR has the form language[:key1=val1[,key2,[key3=val3]]].
+              Keys and values are options passed to the generator.
+              Many options will not require values.
+              If --skip-gen (see below) is specified, then --gen
+              cannot be used. Otherwise (i.e., --skip-gen is NOT
+              specified), then --gen must be specified at least once,
+              and may be specified multiple times (eg. to generate
+              multiple languages).
+  --skip-gen  Skip code generation. This is useful, for example, to
+              parse and validate Thrift IDL without generating code
+              for any particular language.
+              If --skip-gen is specified, no --gen argument may be
+              given (see above).
+  --record-genfiles FILE
+              Save the list of generated files to FILE
+  --inject-schema-const
+              Inject generated schema constant (must use thrift2ast)
+  --extra-validation
+              Comma-separated list of opt-in validators to run. Recognized
+              values include:
+                unstructured_annotations_on_field_type
+
+                forbid_non_optional_cpp_ref_fields (IGNORED: set by default).
+                  Struct (and exception) fields with a @cpp.Ref (or
+                  cpp[2].ref[_type]) annotation must be optional, unless
+                  annotated with @cpp.AllowLegacyNonOptionalRef.
+
+                  TEMPORARY NOTE: As of Jan 2025, this is enabled by default.
+                  As a short-term escape hatch, in case we missed any existing
+                  use case, users can specify this validator prefixed with a
+                  "-", to explicitly disable this enforcement, i.e.:
+                  "-forbid_non_optional_cpp_ref_fields"
+                  Note however that this is only a temporary, short-term option:
+                  support for "-forbid_non_optional_cpp_ref_fields" will be
+                  removed soon (and will fail if provided in the future).
+
+                implicit_field_ids (IGNORED: always present, i.e. implicit field
+                  IDs are always forbidden).
+
+Available generators (and options):
+)");
   for (const auto& gen : generator_registry::get_generators()) {
+    const generator_factory& generator_factory = *gen.second;
     fmt::print(
-        stderr,
+        stream,
         "  {} ({}):\n{}",
-        gen.second->name(),
-        gen.second->long_name(),
-        gen.second->documentation());
+        generator_factory.name(),
+        generator_factory.long_name(),
+        generator_factory.documentation());
   }
+}
+
+/**
+ * Display the usage message to the standard error stream.
+ */
+void printUsageError() {
+  printUsageTo(stderr);
+}
+
+/**
+ * If `arguments` includes "--help" (in any position), prints usage message
+ * to STDOUT and returns true. Otherwise returns false.
+ */
+bool maybeHandleHelpInvocation(const std::vector<std::string>& arguments) {
+  if (std::find(arguments.begin(), arguments.end(), "--help") ==
+      arguments.end()) {
+    return false;
+  }
+  printUsageTo(stdout);
+  return true;
 }
 
 bool isPathSeparator(const char& c) {
@@ -132,53 +194,155 @@ bool isPathSeparator(const char& c) {
 #endif
 }
 
+/**
+ * Grabs the next argument, if possible.
+ *
+ * On success (i.e., if there is an argument after the current arg_i),
+ * returns a pointer to that argument and increments arg_i (which then
+ * corresponds to the returned argument).
+ *
+ * Otherwise, if no next argument is available, prints an error message to
+ * stderr and returns nullptr.
+ *
+ * @param arg_name Human readable description of the next (expected) argument,
+ *        for logging purposes only.
+ */
+const std::string* consume_next_arg(
+    const char* arg_name,
+    const std::vector<std::string>& arguments,
+    size_t& arg_i) {
+  // Note: The input filename must be the last argument.
+  if (arg_i + 2 >= arguments.size()) {
+    fprintf(
+        stderr,
+        "!!! Missing %s between %s and '%s'\n\n",
+        arg_name,
+        arguments[arg_i].c_str(),
+        arguments[arg_i + 1].c_str());
+    printUsageError();
+    return nullptr;
+  }
+  return &arguments[++arg_i];
+}
+
+/**
+ * Attempts to parse and return a flag name from the given argument (removing up
+ * to two leading '-' characters), otherwise prints an error message and returns
+ * the empty string.
+ *
+ * eg:
+ *
+ * If `argument == "--foo"`, returns "foo"
+ * If `argument == "-bar"`, returns "bar"
+ * If `argument == "foo"`, `argument == "-"` or `argument == "--"`:
+ *      prints error and returns empty string.
+ */
+std::string parse_flag(const std::string& argument) {
+  if (argument.size() < 2 || argument[0] != '-' || (argument == "--")) {
+    fprintf(stderr, "!!! Expected flag, got: %s\n\n", argument.c_str());
+    printUsageError();
+    return {};
+  }
+
+  // argument starts with "-" and is at least 2 chars long.
+
+  if (argument[1] == '-') {
+    // argument starts with "--"
+    return argument.substr(2);
+  }
+
+  return argument.substr(1);
+}
+
+/**
+ * Returns true iff the given parameters are valid.
+ *
+ * Otherwise, prints error messages (to stderr) and returns false.
+ */
+bool validate_params(const gen_params& gparams) {
+  // 1. Check target generators
+  // Generation must either be explicitly disabled (via --skip-gen) or some
+  // generators must be specified (via --gen), but not both!
+  const bool has_targets = !gparams.targets.empty();
+  const bool skip_gen = gparams.skip_gen;
+  if (has_targets && skip_gen) {
+    fprintf(stderr, "!!! Cannot specify both --skip-gen and --gen.\n\n");
+    printUsageError();
+    return false;
+  }
+  if (!has_targets && !skip_gen) {
+    fprintf(
+        stderr,
+        "!!! No output language(s) specified: need --gen or --skip-gen.\n\n");
+    printUsageError();
+    return false;
+  }
+  // Exactly one of skip_gen and has_targets is true => valid.
+
+  // 2. Check output path (if any)
+  const std::string& out_path = gparams.out_path;
+  if (!out_path.empty()) {
+    if (!gparams.add_gen_dir) {
+      // Invoker specified `-out blah`. We are supposed to output directly
+      // into blah, e.g. `blah/Foo.java`. Make the directory if necessary,
+      // just like how for `-o blah` we make `blah/gen-java`
+      std::error_code errc;
+      std::filesystem::create_directory(out_path, errc);
+      if (errc) {
+        fprintf(
+            stderr,
+            "Could not create output directory: %s (error: %s)\n",
+            out_path.c_str(),
+            errc.message().c_str());
+        return false;
+      }
+    }
+    if (!std::filesystem::is_directory(out_path)) {
+      fprintf(
+          stderr,
+          "Output path %s is unusable or not a directory\n",
+          out_path.c_str());
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // Returns the input file name if successful, otherwise returns an empty
 // string.
 std::string parse_args(
     const std::vector<std::string>& arguments,
     parsing_params& pparams,
     gen_params& gparams,
-    diagnostic_params& dparams) {
+    diagnostic_params& dparams,
+    sema_params& sparams) {
   // Check for necessary arguments, you gotta have at least a filename and
   // an output language flag.
   if (arguments.size() < 3 && gparams.targets.empty()) {
-    usage();
+    printUsageError();
     return {};
   }
 
-  // A helper that grabs the next argument, if possible.
-  // Outputs an error and returns nullptr if not.
   size_t arg_i = 1; // Skip the binary name.
+
+  // Convenient closure to call consume_next_arg() without repeating local
+  // variables.
   auto consume_arg = [&](const char* arg_name) -> const std::string* {
-    // Note: The input filename must be the last argument.
-    if (arg_i + 2 >= arguments.size()) {
-      fprintf(
-          stderr,
-          "!!! Missing %s between %s and '%s'\n",
-          arg_name,
-          arguments[arg_i].c_str(),
-          arguments[arg_i + 1].c_str());
-      usage();
-      return nullptr;
-    }
-    return &arguments[++arg_i];
+    return consume_next_arg(arg_name, arguments, arg_i);
   };
 
   // Hacky parameter handling... I didn't feel like using a library sorry!
-  bool nowarn =
-      false; // Guard so --nowarn and --legacy-strict are order agnostic.
+
+  // Guard so --nowarn and --legacy-strict are order agnostic.
+  bool nowarn = false;
+
   for (; arg_i < arguments.size() - 1;
        ++arg_i) { // Last argument is the src file.
     // Parse flag.
-    std::string flag;
-    if (arguments[arg_i].size() < 2 || arguments[arg_i][0] != '-') {
-      fprintf(stderr, "!!! Expected flag, got: %s\n", arguments[arg_i].c_str());
-      usage();
+    const std::string flag = parse_flag(arguments[arg_i]);
+    if (flag.empty()) {
       return {};
-    } else if (arguments[arg_i][1] == '-') {
-      flag = arguments[arg_i].substr(2);
-    } else {
-      flag = arguments[arg_i].substr(1);
     }
 
     // Interpret flag.
@@ -197,37 +361,45 @@ std::string parse_args(
     } else if (flag == "r" || flag == "recurse") {
       gparams.gen_recurse = true;
     } else if (flag == "allow-neg-keys") {
-      pparams.allow_neg_field_keys = true;
+      // no-op
     } else if (flag == "allow-neg-enum-vals") {
       // no-op
     } else if (flag == "allow-64bit-consts") {
       pparams.allow_64bit_consts = true;
     } else if (flag == "record-genfiles") {
-      auto* arg = consume_arg("genfile file specification");
+      const std::string* arg = consume_arg("genfile file specification");
       if (arg == nullptr) {
         return {};
       }
       gparams.genfile = *arg;
     } else if (flag == "gen") {
-      auto* arg = consume_arg("generator specification");
+      const std::string* arg = consume_arg("generator specification");
       if (arg == nullptr) {
         return {};
       }
       gparams.targets.push_back(*arg);
+    } else if (flag == "skip-gen") {
+      gparams.skip_gen = true;
     } else if (flag == "I") {
-      auto* arg = consume_arg("include directory");
+      const std::string* arg = consume_arg("include directory");
       if (arg == nullptr) {
         return {};
       }
       // An argument of "-I\ asdf" is invalid and has unknown results
       pparams.incl_searchpath.push_back(*arg);
     } else if (flag == "o" || flag == "out") {
-      auto* arg = consume_arg("output directory");
+      const std::string* arg = consume_arg("output directory");
       if (arg == nullptr) {
         return {};
       }
+
+      if (!gparams.out_path.empty()) {
+        fprintf(stderr, "!!! Cannot specify both -o and --out.\n\n");
+        printUsageError();
+        return {};
+      }
+
       std::string out_path = *arg;
-      bool add_gen_dir = (flag == "o");
 
       // Strip out trailing \ on a Windows path
       if (detail::platform_is_windows()) {
@@ -237,33 +409,40 @@ std::string parse_args(
         }
       }
 
-      if (!add_gen_dir) {
-        // Invoker specified `-out blah`. We are supposed to output directly
-        // into blah, e.g. `blah/Foo.java`. Make the directory if necessary,
-        // just like how for `-o blah` we make `o/gen-java`
-        boost::system::error_code errc;
-        boost::filesystem::create_directory(out_path, errc);
-        if (errc) {
+      gparams.out_path = std::move(out_path);
+      gparams.add_gen_dir = (flag == "o");
+    } else if (flag == "inject-schema-const") {
+      gparams.inject_schema_const = true;
+    } else if (flag == "extra-validation") {
+      const std::string* arg = consume_arg("extra validation");
+      if (arg == nullptr) {
+        return {};
+      }
+      std::vector<std::string> validators;
+      boost::algorithm::split(
+          validators, *arg, [](char c) { return c == ','; });
+      for (const auto& validator : validators) {
+        if (validator == "unstructured_annotations_on_field_type") {
+          sparams.forbid_unstructured_annotations_on_field_types = true;
+        } else if (validator == "forbid_non_optional_cpp_ref_fields") {
+          // no-op
+        } else if (validator == "-forbid_non_optional_cpp_ref_fields") {
+          // DO_BEFORE(aristidis,20250201): Remove support for escape hatch:
+          // -forbid_non_optional_cpp_ref_fields
+          sparams.forbid_non_optional_cpp_ref_fields = false;
+        } else if (validator == "implicit_field_ids") {
+          // no-op
+        } else {
           fprintf(
-              stderr,
-              "Output path %s is unusable or not a directory\n",
-              out_path.c_str());
+              stderr, "!!! Unrecognized validator: %s\n\n", validator.c_str());
+          printUsageError();
           return {};
         }
       }
-      if (!boost::filesystem::is_directory(out_path)) {
-        fprintf(
-            stderr,
-            "Output path %s is unusable or not a directory\n",
-            out_path.c_str());
-        return {};
-      }
-      gparams.out_path = std::move(out_path);
-      gparams.add_gen_dir = add_gen_dir;
     } else {
       fprintf(
-          stderr, "!!! Unrecognized option: %s\n", arguments[arg_i].c_str());
-      usage();
+          stderr, "!!! Unrecognized option: %s\n\n", arguments[arg_i].c_str());
+      printUsageError();
       return {};
     }
   }
@@ -275,15 +454,26 @@ std::string parse_args(
         pparams.incl_searchpath.end(), components.begin(), components.end());
   }
 
-  // You gotta generate something!
-  if (gparams.targets.empty()) {
-    fprintf(stderr, "!!! No output language(s) specified\n\n");
-    usage();
+  if (!validate_params(gparams)) {
     return {};
   }
 
   // Return the input file name.
   assert(arg_i == arguments.size() - 1);
+  if (detail::platform_is_windows()) {
+    // The path here is used in schema.thrift
+    //
+    // * In Linux, buck uses relative path.
+    // * In Windows, buck uses absolute path.
+    //
+    // To make the generated schema.thrift consistent with Unix, we need to
+    // convert it to relative path when possible.
+    //
+    // Not that the path might not exist since when thrift compiler is used as
+    // library, user's code can use `source_manager::add_virtual_file(...)`
+    // method to create a virtual file.
+    return std::filesystem::proximate(arguments[arg_i]).generic_string();
+  }
   return arguments[arg_i];
 }
 
@@ -350,21 +540,21 @@ generator_specs parse_generator_specs(const std::string& target) {
  * @return successfully created generator, or `nullptr` on failure.
  *
  * @throws std::exception if the generator options could not be processed (see
- * `t_generator::process_options()`).
+ * `t_generator::process_options`).
  */
 std::unique_ptr<t_generator> create_generator(
     const std::string& target,
     const gen_params& params,
     t_program& program,
     t_program_bundle& program_bundle,
-    source_manager& source_mgr) {
+    diagnostics_engine& diags) {
   const auto [generator_name, generator_options] =
       parse_generator_specs(target);
   std::unique_ptr<t_generator> generator = generator_registry::make_generator(
-      generator_name, program, source_mgr, program_bundle);
+      generator_name, program, program_bundle, diags);
   if (generator == nullptr) {
     fmt::print(stderr, "Error: Invalid generator name: {}\n", generator_name);
-    usage();
+    printUsageError();
     return nullptr;
   }
   generator->process_options(
@@ -383,7 +573,7 @@ std::unique_ptr<t_generator> create_generator(
  */
 bool validate_program(t_generator& generator, diagnostics_engine& diags) {
   bool success = true;
-  diagnostics_engine validator_diags(
+  sema_context validator_ctx(
       diags.source_mgr(),
       [&](diagnostic d) {
         if (d.level() == diagnostic_level::error) {
@@ -392,9 +582,9 @@ bool validate_program(t_generator& generator, diagnostics_engine& diags) {
         diags.report(std::move(d));
       },
       diags.params());
-  validator_list validators(validator_diags);
-  generator.fill_validator_list(validators);
-  validators.traverse(generator.get_program());
+  ast_validator validator;
+  generator.fill_validator_visitors(validator);
+  validator(validator_ctx, *generator.get_program());
   return success;
 }
 
@@ -417,8 +607,8 @@ bool generate_code_for_single_program(
     }
 
     for (const std::string& target : params.targets) {
-      std::unique_ptr<t_generator> generator = create_generator(
-          target, params, program, program_bundle, diags.source_mgr());
+      std::unique_ptr<t_generator> generator =
+          create_generator(target, params, program, program_bundle, diags);
       if (generator == nullptr) {
         continue;
       }
@@ -441,7 +631,7 @@ bool generate_code_for_single_program(
         }
       }
     }
-    return all_targets_successful;
+    return all_targets_successful && !diags.has_errors();
   } catch (const std::string& s) {
     printf("Error: %s\n", s.c_str());
     return false;
@@ -501,7 +691,7 @@ bool generate_code_recursively(
 compile_retcode generate_code_for_program_bundle(
     t_program_bundle& program_bundle,
     const gen_params& gparams,
-    diagnostic_context& ctx) {
+    sema_context& ctx) {
   compile_retcode retcode = compile_retcode::failure;
 
   ctx.begin_visit(*program_bundle.root_program());
@@ -574,87 +764,80 @@ std::string get_include_path(
  */
 std::unique_ptr<t_program_bundle> parse_and_mutate(
     source_manager& source_mgr,
-    diagnostic_context& ctx,
+    sema_context& ctx,
     const std::string& input_filename,
     const parsing_params& pparams,
     const gen_params& gparams) {
+  auto found_or_error = source_manager::path_or_error();
+  if constexpr (bundle_annotations()) {
+    const auto& annotation_files =
+        apache::thrift::detail::bundled_annotations::files();
+    for (const auto& [path, content] : annotation_files) {
+      found_or_error = source_mgr.find_include_file(
+          path, input_filename, pparams.incl_searchpath);
+      if (found_or_error.index() != 0) {
+        // Fall back to the bundled annotation files.
+        source_mgr.add_virtual_file(path, content);
+      }
+    }
+  }
+
   // Parse it!
-  std::unique_ptr<t_program_bundle> program_bundle = parse_and_mutate_program(
-      source_mgr,
-      ctx,
-      input_filename,
-      pparams,
-      true /* return_nullptr_on_failure */);
-  if (program_bundle == nullptr) {
+  std::unique_ptr<t_program_bundle> program_bundle = parse_ast(
+      source_mgr, ctx, input_filename, pparams, &ctx.sema_parameters());
+  if (!program_bundle || ctx.has_errors()) {
     return nullptr;
   }
 
   // Load standard library if available.
-  static const std::string kSchemaPath = "thrift/lib/thrift/schema.thrift";
-  auto found_or_error =
-      source_mgr.find_include_file(kSchemaPath, "", pparams.incl_searchpath);
+  const std::string schema_path = "thrift/lib/thrift/schema.thrift";
+  found_or_error =
+      source_mgr.find_include_file(schema_path, "", pparams.incl_searchpath);
   if (found_or_error.index() == 0) {
-    // Found
-    if (!program_bundle->find_program(kSchemaPath)) {
-      diagnostic_context stdlib_ctx(
+    if (!program_bundle->find_program_by_full_path(
+            std::get<0>(found_or_error))) {
+      sema_context stdlib_ctx(
           source_mgr,
           [&](diagnostic&& d) {
-            ctx.warning(
+            ctx.report(
                 source_location{},
+                diagnostic_level::debug,
                 "Could not load Thrift standard libraries: {}",
-                d.str());
+                d);
           },
           diagnostic_params::only_errors());
-      std::unique_ptr<t_program_bundle> inc = parse_and_mutate_program(
+      std::unique_ptr<t_program_bundle> inc = parse_ast(
           source_mgr,
           stdlib_ctx,
-          kSchemaPath,
+          schema_path,
           pparams,
-          true /* return_nullptr_on_failure */,
+          nullptr,
           program_bundle.get());
-      if (inc) {
+      if (inc && !stdlib_ctx.has_errors()) {
         program_bundle->add_implicit_includes(std::move(inc));
       }
     }
-  } else {
-    // Not found
-    ctx.warning(
-        source_location{},
-        "Could not load Thrift standard libraries: {}",
-        std::get<1>(found_or_error));
+  }
+
+  // C++ codegen inserts an empty const if this is false. Other languages may
+  // dynamically determine whether the schema const exists.
+  if (gparams.inject_schema_const) {
+    if (found_or_error.index() != 0) {
+      ctx.warning(
+          source_location(),
+          "Could not load Thrift standard libraries: {}",
+          std::get<1>(found_or_error));
+    }
+    sema::add_schema(ctx, *program_bundle);
   }
 
   program_bundle->root_program()->set_include_prefix(
       get_include_path(gparams.targets, input_filename));
 
-  // Validate it!
-  validator::validate(program_bundle->root_program(), ctx);
-  standard_validator()(ctx, *program_bundle->root_program());
   return ctx.has_errors() ? nullptr : std::move(program_bundle);
 }
 
 } // namespace
-
-std::unique_ptr<t_program_bundle> parse_and_mutate_program(
-    source_manager& sm,
-    diagnostic_context& ctx,
-    const std::string& filename,
-    parsing_params params,
-    bool return_nullptr_on_failure,
-    t_program_bundle* already_parsed) {
-  auto programs =
-      parse_ast(sm, ctx, filename, std::move(params), already_parsed);
-  if (!programs || ctx.has_errors()) {
-    // Mutations should be only performed on a valid AST.
-    return !return_nullptr_on_failure ? std::move(programs) : nullptr;
-  }
-  auto result = standard_mutators()(ctx, *programs);
-  if (result.unresolvable_typeref && return_nullptr_on_failure) {
-    // Stop processing if there is unresolvable typeref.
-    programs = nullptr;
-  }
-  return programs;
-}
 
 std::pair<std::unique_ptr<t_program_bundle>, diagnostic_results>
 parse_and_mutate_program(
@@ -663,9 +846,8 @@ parse_and_mutate_program(
     parsing_params params,
     diagnostic_params dparams) {
   diagnostic_results results;
-  diagnostic_context ctx(sm, results, std::move(dparams));
-  return {
-      parse_and_mutate_program(sm, ctx, filename, std::move(params)), results};
+  diagnostics_engine diags(sm, results, std::move(dparams));
+  return {parse_ast(sm, diags, filename, std::move(params)), results};
 }
 
 std::unique_ptr<t_program_bundle> parse_and_dump_diagnostics(
@@ -674,13 +856,12 @@ std::unique_ptr<t_program_bundle> parse_and_dump_diagnostics(
     parsing_params pparams,
     diagnostic_params dparams) {
   diagnostic_results results;
-  diagnostic_context ctx(sm, results, std::move(dparams));
-  auto program =
-      parse_and_mutate_program(sm, ctx, filename, std::move(pparams));
+  diagnostics_engine diags(sm, results, std::move(dparams));
+  auto programs = parse_ast(sm, diags, filename, std::move(pparams));
   for (const auto& diag : results.diagnostics()) {
-    std::cerr << diag << "\n";
+    fmt::print(stderr, "{}\n", diag);
   }
-  return program;
+  return programs;
 }
 
 std::unique_ptr<t_program_bundle> parse_and_get_program(
@@ -690,36 +871,54 @@ std::unique_ptr<t_program_bundle> parse_and_get_program(
   pparams.allow_missing_includes = true;
   gen_params gparams;
   diagnostic_params dparams;
+  sema_params sparams;
   gparams.targets.push_back(""); // Avoid needing to pass --gen
-  std::string filename = parse_args(arguments, pparams, gparams, dparams);
+  std::string filename =
+      parse_args(arguments, pparams, gparams, dparams, sparams);
   if (filename.empty()) {
     return {};
   }
 
-  diagnostic_context ctx(
+  diagnostics_engine diags(
       sm,
-      [](const diagnostic& d) { fmt::print(stderr, "{}\n", d.str()); },
+      [](const diagnostic& d) { fmt::print(stderr, "{}\n", d); },
       diagnostic_params::only_errors());
-  return parse_ast(sm, ctx, filename, std::move(pparams));
+  sparams.skip_lowering_annotations = true;
+  return parse_ast(sm, diags, filename, std::move(pparams), &sparams);
 }
 
 compile_result compile(
     const std::vector<std::string>& arguments, source_manager& source_mgr) {
   compile_result result;
 
+  // If --help is explicitly passed, print (non-error) usage and return
+  // successfully.
+  if (maybeHandleHelpInvocation(arguments)) {
+    result.retcode = compile_retcode::success;
+    return result;
+  }
+
   // Parse arguments.
   parsing_params pparams;
   gen_params gparams;
   diagnostic_params dparams;
-  std::string input_filename = parse_args(arguments, pparams, gparams, dparams);
+  sema_params sparams;
+  std::string input_filename =
+      parse_args(arguments, pparams, gparams, dparams, sparams);
   if (input_filename.empty()) {
     return result;
   }
-  diagnostic_context ctx(source_mgr, result.detail, std::move(dparams));
+  sema_context ctx(source_mgr, result.detail, std::move(dparams));
+  ctx.sema_parameters() = std::move(sparams);
 
   std::unique_ptr<t_program_bundle> program_bundle =
       parse_and_mutate(source_mgr, ctx, input_filename, pparams, gparams);
   if (program_bundle == nullptr) {
+    return result;
+  }
+
+  if (gparams.skip_gen) {
+    result.retcode = compile_retcode::success;
     return result;
   }
 
@@ -728,6 +927,4 @@ compile_result compile(
   return result;
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

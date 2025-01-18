@@ -49,8 +49,7 @@ static int msTimeFromTimeval(struct timeval s) {
 }
 
 ostream& operator<<(ostream& os, const TSocket::Options& o) {
-  os << "SOCKET OPTIONS"
-     << "\n";
+  os << "SOCKET OPTIONS" << "\n";
   os << "connTimeout = " << o.connTimeout << "\n";
   os << "sendTimeout = " << o.sendTimeout << "\n";
   os << "recvTimeout = " << o.recvTimeout << "\n";
@@ -385,7 +384,7 @@ void TSocket::local_open() {
 void TSocket::close() {
   if (socket_ >= 0) {
     shutdown(socket_, SHUT_RDWR);
-    ::close(socket_);
+    folly::fileops::close(socket_);
   }
   socket_ = -1;
   peerHost_.clear();

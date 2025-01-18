@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -26,32 +26,38 @@ impl ::std::default::Default for {{struct:rust_name}} {
 impl ::fbthrift::GetTType for {{struct:rust_name}} {
     const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
 }
-{{!newline}}
 {{#struct:thrift_uri}}
 
 impl ::fbthrift::GetUri for self::{{struct:rust_name}} {
-    fn uri() -> &'static str {
+    fn uri() -> &'static ::std::primitive::str {
         "{{struct:thrift_uri}}"
     }
 }
 {{/struct:thrift_uri}}
 
+impl ::fbthrift::GetTypeNameType for self::{{struct:rust_name}} {
+    fn type_name_type() -> fbthrift::TypeNameType {
+        ::fbthrift::TypeNameType::UnionType
+    }
+}
+
 impl<P> ::fbthrift::Serialize<P> for {{struct:rust_name}}
 where
     P: ::fbthrift::ProtocolWriter,
 {
+    #[inline]
     fn write(&self, p: &mut P) {
         p.write_struct_begin("{{struct:name}}");
-        match self {{>lib/block}}{{!
+        match self {{> lib/block}}{{!
             }}{{#struct:fields}}
             Self::{{field:rust_name}}(inner) => {
                 p.write_field_begin({{!
                     }}"{{field:name}}", {{!
-                    }}{{#field:type}}{{>lib/ttype}}{{/field:type}}, {{!
+                    }}{{#field:type}}{{> lib/ttype}}{{/field:type}}, {{!
                     }}{{field:key}}{{!
                 }});
-                {{#field:type}}{{>lib/write}}{{/field:type}}({{!
-                }}{{#field:has_adapter?}}&{{>lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                {{#field:type}}{{#field:type_annotation?}}{{> lib/annfieldwrite}}{{/field:type_annotation?}}{{^field:type_annotation?}}{{> lib/write}}{{/field:type_annotation?}}{{/field:type}}({{!
+                }}{{#field:has_adapter?}}&{{> lib/adapter/qualified}}::to_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
                 }}inner{{!
                 }}{{#field:has_adapter?}}, {{field:key}}){{/field:has_adapter?}}{{!
                 }}, p);
@@ -69,13 +75,14 @@ impl<P> ::fbthrift::Deserialize<P> for {{struct:rust_name}}
 where
     P: ::fbthrift::ProtocolReader,
 {
+    #[inline]
     fn read(p: &mut P) -> ::anyhow::Result<Self> {
         static FIELDS: &[::fbthrift::Field] = &[
             {{#struct:fields_by_name}}
-            ::fbthrift::Field::new("{{field:name}}", {{#field:type}}{{>lib/ttype}}{{/field:type}}, {{field:key}}),
+            ::fbthrift::Field::new("{{field:name}}", {{#field:type}}{{> lib/ttype}}{{/field:type}}, {{field:key}}),
             {{/struct:fields_by_name}}
         ];
-        let _ = p.read_struct_begin(|_| ())?;
+        let _ = ::anyhow::Context::context(p.read_struct_begin(|_| ()), "Expected a {{struct:name}}")?;
         let {{#struct:fields?}}mut {{/struct:fields?}}once = false;
         let {{#struct:fields?}}mut {{/struct:fields?}}alt = ::std::option::Option::None;
         loop {
@@ -83,11 +90,11 @@ where
             match (fty, fid as ::std::primitive::i32, once) {
                 (::fbthrift::TType::Stop, _, _) => break,{{!
                 }}{{#struct:fields}}
-                ({{#field:type}}{{>lib/ttype}}{{/field:type}}, {{field:key}}, false) => {
+                ({{#field:type}}{{> lib/ttype}}{{/field:type}}, {{field:key}}, false) => {
                     once = true;
                     alt = ::std::option::Option::Some(Self::{{field:rust_name}}({{!
-                    }}{{#field:has_adapter?}}{{>lib/adapter/qualified}}::from_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
-                    }}{{#field:type}}{{>lib/read}}{{/field:type}}(p)?{{!
+                    }}{{#field:has_adapter?}}{{> lib/adapter/qualified}}::from_thrift_field::<{{struct:rust_name}}>({{/field:has_adapter?}}{{!
+                    }}{{#field:type}}{{#field:type_annotation?}}{{> lib/annfieldread}}{{/field:type_annotation?}}{{^field:type_annotation?}}{{> lib/read}}{{/field:type_annotation?}}{{/field:type}}(p)?{{!
                     }}{{#field:has_adapter?}}, {{field:key}})?{{/field:has_adapter?}}{{!
                     }}));
                 }{{!
@@ -108,17 +115,16 @@ where
 
 impl {{struct:rust_name}} {
     /// Return current union variant name as a tuple of (Rust name, original name).
-    pub fn variant_name(&self) -> Option<(&'static str, &'static str)> {
+    pub fn variant_name(&self) -> ::std::option::Option<(&'static ::std::primitive::str, &'static ::std::primitive::str)> {
         match self {
             {{#struct:fields}}
-            Self::{{field:rust_name}}(_) => Some(("{{field:rust_name}}", "{{field:name}}")),
+            Self::{{field:rust_name}}(_) => ::std::option::Option::Some(("{{field:rust_name}}", "{{field:name}}")),
             {{/struct:fields}}
-            Self::UnknownField(_) => None,
+            Self::UnknownField(_) => ::std::option::Option::None,
         }
     }
 }
 {{#program:rust_gen_native_metadata?}}
-{{>lib/metadata/struct}}
+{{> lib/metadata/struct}}
 {{/program:rust_gen_native_metadata?}}
 {{/struct:union?}}
-{{!newline}}

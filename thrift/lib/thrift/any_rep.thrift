@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-include "thrift/annotation/thrift.thrift"
 include "thrift/lib/thrift/type.thrift"
 include "thrift/lib/thrift/standard.thrift"
+include "thrift/annotation/python.thrift"
 
 /**
  * The **underlying representations** for Thrift: Any.
@@ -45,14 +45,16 @@ struct AnyStruct {
    *
    * Must not be empty.
    */
-  1: type.Type type (py3.hidden);
+  @python.Py3Hidden
+  1: type.Type type;
 
   /**
    * The protocol used to encode `data`.
    *
    * Must not be empty.
    */
-  2: type.Protocol protocol (py3.hidden);
+  @python.Py3Hidden
+  2: type.Protocol protocol;
 
   /** The encoded data. */
   3: standard.ByteBuffer data;
@@ -61,14 +63,30 @@ struct AnyStruct {
 /**
  * Like Any, except all fields are mutable and can be empty.
  *
- * Can be upgraded to an Any after all the field are populated.
+ * A SemiAny may contain arbitrary data, in which case type and protocol fields are unset.
+ *
+ * A SemiAny may contain a thrift supported value, in which case it can be
+ * promoted to an AnyStruct provided that the type and the protocol are both
+ * populated in the struct.
+ *
+ * It is up to the producer and consumer to agree on how to interpret the
+ * bytes contained in the data field.
+ *
  */
 struct SemiAnyStruct {
-  /** The type stored in `data`, if known. */
-  1: type.Type type (py3.hidden);
+  /**
+   * The type stored in `data`, if known. If unset, it indicates the type is not
+   * known *or* that the data is not in a standard thrift format.
+   */
+  @python.Py3Hidden
+  1: type.Type type;
 
-  /** The protocol used to encode `data`, if known. */
-  2: type.Protocol protocol (py3.hidden);
+  /**
+   * The protocol used to encode `data`, if known. If unset, it indicates the protocol
+   * is not known *or* that the data is not in a standard thrift format.
+   */
+  @python.Py3Hidden
+  2: type.Protocol protocol;
 
   /** The encoded data. */
   3: standard.ByteBuffer data;

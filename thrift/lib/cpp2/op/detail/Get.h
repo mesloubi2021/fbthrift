@@ -23,10 +23,7 @@
 #include <thrift/lib/cpp2/type/Tag.h>
 #include <thrift/lib/cpp2/type/ThriftType.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 using pa = ::apache::thrift::detail::st::private_access;
 
 template <typename Id, typename T, typename = void>
@@ -36,7 +33,7 @@ template <typename Id, typename Tag>
 struct GetOrdinalImpl;
 
 template <size_t... I, typename F>
-void for_each_ordinal_impl(F&& f, std::index_sequence<I...>);
+constexpr void for_each_ordinal_impl(F&& f, std::index_sequence<I...>);
 
 template <typename F, size_t I = 0>
 using ord_result_t =
@@ -103,7 +100,4 @@ struct GetValueOrNull {
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <memory>
 
 #include <folly/ExceptionWrapper.h>
@@ -25,13 +26,14 @@
 #include <thrift/lib/cpp2/async/RequestCallback.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /**
  * Callback object for a single response RPC.
  */
 class ThriftClientCallback final : public folly::HHWheelTimer::Callback {
+  using clock = std::chrono::steady_clock;
+
  public:
   ThriftClientCallback(
       folly::EventBase* evb,
@@ -39,7 +41,7 @@ class ThriftClientCallback final : public folly::HHWheelTimer::Callback {
       RequestClientCallback::Ptr cb,
       std::chrono::milliseconds timeout);
 
-  virtual ~ThriftClientCallback();
+  ~ThriftClientCallback() override;
 
   ThriftClientCallback(const ThriftClientCallback&) = delete;
   ThriftClientCallback& operator=(const ThriftClientCallback&) = delete;
@@ -87,7 +89,9 @@ class ThriftClientCallback final : public folly::HHWheelTimer::Callback {
   bool active_;
   std::chrono::milliseconds timeout_;
   folly::Function<void()> onTimedout_;
+
+  const clock::time_point timeBeginSend_;
+  clock::time_point timeEndSend_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

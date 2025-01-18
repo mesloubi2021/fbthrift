@@ -114,9 +114,7 @@ struct defaultStruct {
     2: [{"age": 28, "name": "BatMan"}, {"age": 12, "name": "Robin"}],
     5: [{"age": 12, "name": "RatMan"}, {"age": 6, "name": "Catman"}],
   };
-  21: map<i64, string> (
-    java.swift.type = "it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap<String>",
-  ) mapJavaTypeDFset = {15: 'a_value', 2: 'b_value'};
+  21: map_i64_string_5732 mapJavaTypeDFset = {15: 'a_value', 2: 'b_value'};
   22: map<i64, i32> emptyMap = {};
   23: map<string, map<i32, MyEnum>> enumMapDFset = {
     "SANDY BRIDGE": {16: MyEnum.MyValue1, 144: MyEnum.MyValue1},
@@ -179,14 +177,10 @@ struct ComplexNestedStruct {
 }
 
 struct TypeRemapped {
-  1: map<i64, string> (
-    java.swift.type = "it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap<String>",
-  ) lsMap;
-  2: map<i32, FMap> (
-    java.swift.type = "it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap<it.unimi.dsi.fastutil.ints.Int2LongArrayMap>",
-  ) ioMap;
-  3: i32 (java.swift.type = "java.math.BigInteger") BigInteger;
-  4: binary (java.swift.type = "java.nio.ByteBuffer") binaryTestBuffer;
+  1: map_i64_string_5732 lsMap;
+  2: map_i32_FMap_6797 ioMap;
+  3: i32_1194 BigInteger;
+  4: binary_4918 binaryTestBuffer;
 }
 
 exception emptyXcep {}
@@ -207,7 +201,64 @@ exception complexException {
   3: MyEnum errorEnum;
   4: optional MyUnion unionError;
   5: MyStruct structError;
-  6: map<i64, string> (
-    java.swift.type = "it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap<String>",
-  ) lsMap;
+  6: map_i64_string_5732 lsMap;
+}
+
+// The following were automatically generated and may benefit from renaming.
+typedef binary (java.swift.type = "java.nio.ByteBuffer") binary_4918
+typedef i32 (java.swift.type = "java.math.BigInteger") i32_1194
+typedef map<i32, FMap> (
+  java.swift.type = "it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap<it.unimi.dsi.fastutil.ints.Int2LongArrayMap>",
+) map_i32_FMap_6797
+typedef map<i64, string> (
+  java.swift.type = "it.unimi.dsi.fastutil.longs.Long2ObjectArrayMap<String>",
+) map_i64_string_5732
+
+struct Containers {
+  1: list<MyStruct> struct_list;
+  2: list<MyUnion> union_list;
+  3: list<MyEnum> enum_list;
+
+  4: set<MyStruct> struct_set;
+  5: set<MyUnion> union_set;
+  6: set<MyEnum> enum_set;
+
+  7: map<MyStruct, i64> struct_map;
+  8: map<MyUnion, i64> union_map;
+  9: map<MyEnum, i64> enum_map;
+
+  10: map<i32, MyStruct> struct_map_2;
+  11: map<i32, MyUnion> union_map_2;
+  12: map<i32, MyEnum> enum_map_2;
+
+  13: map<list<i32>, i32> list_map;
+  14: map<i32, list<i32>> list_map_2;
+
+  15: map<set<i32>, i32> set_map;
+  16: map<i32, set<i32>> set_map_2;
+
+  17: map<map<i32, i32>, i32> map_map;
+  18: map<i32, map<i32, i32>> map_map_2;
+
+  19: list<list<i32>> list_list_i32;
+  20: list<list<MyStruct>> list_list_struct;
+  21: list<set<i32>> list_set_i32;
+  22: list<set<MyStruct>> list_set_struct;
+  23: list<map<i32, i32>> list_map_i32_i32;
+  24: list<map<i32, MyStruct>> list_map_i32_struct;
+  25: list<map<MyStruct, i32>> list_map_struct_i32;
+
+  26: set<list<i32>> set_list_i32;
+  27: set<list<MyStruct>> set_list_struct;
+  28: set<set<i32>> set_set_i32;
+  29: set<set<MyStruct>> set_set_struct;
+  30: set<map<i32, i32>> set_map_i32_i32;
+  31: set<map<i32, MyStruct>> set_map_i32_struct;
+  32: set<map<MyStruct, i32>> set_map_struct_i32;
+
+  33: map<i32, map<i32, i32>> map_i32_map_i32_i32;
+  34: map<i32, map<MyStruct, i32>> map_i32_map_struct_i32;
+  35: map<i32, map<i32, MyStruct>> map_i32_map_i32_struct;
+  36: map<i32, list<map<i32, i32>>> map_i32_map_list_i32_i32;
+  37: map<i32, list<map<MyStruct, i32>>> map_i32_map_list_struct_i32;
 }

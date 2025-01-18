@@ -29,7 +29,6 @@
 #include <folly/ObserverContainer.h>
 #include <folly/Portability.h>
 #include <folly/container/F14Map.h>
-#include <folly/experimental/observer/Observer.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/SocketOptionMap.h>
 #include <folly/io/async/AsyncSocket.h>
@@ -37,15 +36,18 @@
 #include <folly/io/async/DelayedDestruction.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/net/NetOps.h>
+#include <folly/observer/Observer.h>
 
 #include <wangle/acceptor/ManagedConnection.h>
 
 #include <thrift/lib/cpp2/async/MessageChannel.h>
 #include <thrift/lib/cpp2/server/MemoryTracker.h>
+#include <thrift/lib/cpp2/server/metrics/StreamMetricCallback.h>
 #include <thrift/lib/cpp2/transport/core/ManagedConnectionIf.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Parser.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnectionObserver.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerFrameContext.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerHandler.h>
@@ -53,8 +55,7 @@
 
 THRIFT_FLAG_DECLARE_bool(enable_rocket_connection_observers);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class Cpp2ConnContext;
 class RocketSinkClientCallback;
@@ -84,6 +85,7 @@ class RocketServerConnection final
     size_t egressBufferBackpressureThreshold{0};
     double egressBufferBackpressureRecoveryFactor{0.0};
     const folly::SocketOptionMap* socketOptions{nullptr};
+    std::shared_ptr<rocket::ParserAllocatorType> parserAllocator{nullptr};
   };
 
   RocketServerConnection(
@@ -91,6 +93,7 @@ class RocketServerConnection final
       std::unique_ptr<RocketServerHandler> frameHandler,
       MemoryTracker& ingressMemoryTracker,
       MemoryTracker& egressMemoryTracker,
+      StreamMetricCallback& streamMetricCallback,
       const Config& cfg = {});
 
   void send(
@@ -98,6 +101,8 @@ class RocketServerConnection final
       MessageChannel::SendCallbackPtr cb = nullptr,
       StreamId streamId = StreamId(),
       folly::SocketFds fds = folly::SocketFds{});
+
+  void sendErrorAfterDrain(StreamId streamId, RocketException&& rex);
 
   // does not create callback and returns nullptr if streamId is already in use
   RocketStreamClientCallback* FOLLY_NULLABLE createStreamClientCallback(
@@ -203,16 +208,14 @@ class RocketServerConnection final
     onWriteQuiescence_ = std::move(cb);
   }
 
-  bool incMemoryUsage(uint32_t memSize) {
-    if (!ingressMemoryTracker_.increment(memSize)) {
-      ingressMemoryTracker_.decrement(memSize);
-      socket_->setReadCB(nullptr);
-      startDrain(DrainCompleteCode::EXCEEDED_INGRESS_MEM_LIMIT);
-      return false;
-    } else {
-      return true;
-    }
+  bool isDecodingMetadataUsingBinaryProtocol() {
+    // NOTE: state check in RocketServerConnection::handleFrame should
+    // guarantee decodeMetadataUsingBinary_ has value when this method is
+    // invoked.
+    return decodeMetadataUsingBinary_.value();
   }
+
+  bool incMemoryUsage(uint32_t memSize);
 
   void decMemoryUsage(uint32_t memSize) {
     ingressMemoryTracker_.decrement(memSize);
@@ -308,7 +311,7 @@ class RocketServerConnection final
    * available.
    */
   RocketServerConnectionObserverContainer* getObserverContainer() const {
-    if (THRIFT_FLAG(enable_rocket_connection_observers)) {
+    if (enableObservers_) {
       return const_cast<RocketServerConnectionObserverContainer*>(
           &observerContainer_);
     }
@@ -325,9 +328,11 @@ class RocketServerConnection final
   folly::AsyncSocket* const rawSocket_;
   folly::SocketAddress peerAddress_;
 
-  Parser<RocketServerConnection> parser_{*this};
+  Parser<RocketServerConnection> parser_;
   std::unique_ptr<RocketServerHandler> frameHandler_;
   bool setupFrameReceived_{false};
+  std::optional<bool> decodeMetadataUsingBinary_;
+
   folly::F14NodeMap<
       StreamId,
       std::variant<
@@ -557,8 +562,9 @@ class RocketServerConnection final
 
   MemoryTracker& ingressMemoryTracker_;
   MemoryTracker& egressMemoryTracker_;
+  StreamMetricCallback& streamMetricCallback_;
 
-  ~RocketServerConnection();
+  ~RocketServerConnection() override;
 
   void closeIfNeeded();
   void flushWrites(
@@ -633,6 +639,7 @@ class RocketServerConnection final
 
   friend class RocketServerFrameContext;
 
+  const bool enableObservers_;
   // Container of observers for the RocketServerConnection.
   //
   // This member MUST be last in the list of members to ensure it is destroyed
@@ -643,5 +650,4 @@ class RocketServerConnection final
 };
 
 } // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

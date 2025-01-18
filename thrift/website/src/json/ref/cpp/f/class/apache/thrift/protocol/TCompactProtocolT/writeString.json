@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::writeString",
       "argsstring_html": "(const char *str)",
       "name_html": "writeString",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::writeString",
       "param": [
         {
           "type_html": "const char *",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "176",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "284",
         "bodyend": "286"
@@ -62,6 +63,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::writeString",
       "argsstring_html": "(const String_ &amp;str)",
       "name_html": "writeString",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::writeString",
       "param": [
         {
           "type_html": "const String_ &amp;",
@@ -71,7 +73,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "179",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "290",
         "bodyend": "292"
@@ -96,5 +98,11 @@
   "brief_html": "<p>Write a string to the wire with a varint size preceding. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeString",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeString"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeString",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

@@ -16,13 +16,11 @@
 
 #include <thrift/lib/cpp2/server/IOUringUtil.h>
 
-#ifdef HAS_IO_URING
+#if FOLLY_HAS_LIBURING
 #include <folly/experimental/io/IoUringEventBaseLocal.h>
 #include <folly/system/HardwareConcurrency.h>
 
-namespace apache {
-namespace thrift {
-namespace io_uring_util {
+namespace apache::thrift::io_uring_util {
 
 std::unique_ptr<folly::EventBaseBackendBase> getIOUringEventbaseBackendFunc() {
   try {
@@ -82,8 +80,6 @@ bool validateExecutorSupportsIOUring(
   return false;
 }
 
-} // namespace io_uring_util
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::io_uring_util
 
 #endif

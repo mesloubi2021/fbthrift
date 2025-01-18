@@ -18,11 +18,14 @@
 
 #include <utility>
 
+#include <folly/Traits.h>
 #include <folly/dynamic.h>
 #include <thrift/lib/cpp/protocol/TProtocolException.h>
 #include <thrift/lib/cpp/protocol/TType.h>
 #include <thrift/lib/cpp2/op/Encode.h>
 #include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
+#include <thrift/lib/cpp2/protocol/FieldMask.h>
+#include <thrift/lib/cpp2/protocol/detail/FieldMaskUtil.h>
 #include <thrift/lib/cpp2/protocol/detail/Object.h>
 #include <thrift/lib/thrift/gen-cpp2/protocol_types.h>
 
@@ -32,11 +35,16 @@ namespace apache::thrift::protocol {
 //
 // TT: The thrift type to use, for example
 // apache::thrift::type::binary_t.
-template <typename TT, typename T = type::native_type<TT>>
-Value asValueStruct(T&& value) {
-  Value result;
-  detail::ValueHelper<TT>::set(result, std::forward<T>(value));
-  return result;
+using detail::asValueStruct;
+
+// Creates a Object struct for the given structured.
+template <typename T>
+std::enable_if_t<
+    is_thrift_struct_v<folly::remove_cvref_t<T>> ||
+        is_thrift_union_v<folly::remove_cvref_t<T>>,
+    Object>
+asObject(T&& obj) {
+  return asValueStruct<type::struct_c>(std::forward<T>(obj)).as_object();
 }
 
 // Schemaless deserialization of thrift serialized data
@@ -53,15 +61,23 @@ template <class Protocol>
 Object parseObject(const folly::IOBuf& buf, bool string_to_binary = true) {
   Protocol prot;
   prot.setInput(&buf);
-  auto result = detail::parseValue(prot, protocol::T_STRUCT, string_to_binary);
-  return std::move(*result.objectValue_ref());
+  Object obj;
+  detail::parseObjectInplace(prot, obj, string_to_binary);
+  return obj;
+}
+
+template <class Protocol>
+Object parseObject(Protocol& prot, bool string_to_binary = true) {
+  Object obj;
+  detail::parseObjectInplace(prot, obj, string_to_binary);
+  return obj;
 }
 
 // Schemaless deserialization of thrift serialized data with mask.
 // Only parses values that are masked. Unmasked fields are stored in MaskedData.
 template <typename Protocol>
 Object parseObjectWithoutExcludedData(
-    const folly::IOBuf& buf, Mask mask, bool string_to_binary = true) {
+    const folly::IOBuf& buf, const Mask& mask, bool string_to_binary = true) {
   return detail::parseObject<Protocol, false>(
              buf, mask, noneMask(), string_to_binary)
       .included;
@@ -71,7 +87,7 @@ Object parseObjectWithoutExcludedData(
 // Only parses values that are masked. Unmasked fields are stored in MaskedData.
 template <typename Protocol>
 MaskedDecodeResult parseObject(
-    const folly::IOBuf& buf, Mask mask, bool string_to_binary = true) {
+    const folly::IOBuf& buf, const Mask& mask, bool string_to_binary = true) {
   return detail::parseObject<Protocol, true>(
       buf, mask, noneMask(), string_to_binary);
 }
@@ -82,8 +98,8 @@ MaskedDecodeResult parseObject(
 template <typename Protocol>
 MaskedDecodeResult parseObject(
     const folly::IOBuf& buf,
-    Mask readMask,
-    Mask writeMask,
+    const Mask& readMask,
+    const Mask& writeMask,
     bool string_to_binary = true) {
   return detail::parseObject<
       Protocol,
@@ -95,46 +111,42 @@ MaskedDecodeResult parseObject(
 // protocol Protocol: protocol to use eg. apache::thrift::BinaryProtocolWriter
 // val: Value to be serialized Serialized output is same as schema based
 // serialization except when struct contains an empty list, set or map
-template <class Protocol>
-std::unique_ptr<folly::IOBuf> serializeValue(const Value& val) {
-  Protocol prot;
-  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
-  prot.setOutput(&queue);
-  detail::serializeValue(prot, val);
-  return queue.move();
-}
+using detail::serializeValue;
 
 // Schemaless serialization of protocol::Object into thrift serialization
 // protocol Protocol: protocol to use eg. apache::thrift::BinaryProtocolWriter
 // obj: object to be serialized Serialized output is same as schema based
 // serialization except when struct contains an empty list, set or map
 template <class Protocol>
-std::unique_ptr<folly::IOBuf> serializeObject(const Object& val) {
+void serializeObject(const Object& val, folly::IOBufQueue& queue) {
   Protocol prot;
-  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   prot.setOutput(&queue);
   detail::serializeObject(prot, val);
+}
+
+template <class Protocol>
+std::unique_ptr<folly::IOBuf> serializeObject(const Object& val) {
+  folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
+  serializeObject<Protocol>(val, queue);
   return queue.move();
 }
 
 // Serialization of protocol::Object with MaskedProtocolData.
 template <class Protocol>
 std::unique_ptr<folly::IOBuf> serializeObject(
-    const Object& obj, MaskedProtocolData& protocolData) {
+    const Object& obj, const MaskedProtocolData& protocolData) {
   assert(*protocolData.protocol() == detail::get_standard_protocol<Protocol>);
   Protocol prot;
   folly::IOBufQueue queue(folly::IOBufQueue::cacheChainLength());
   prot.setOutput(&queue);
-  Value val;
-  val.emplace_object(obj);
   if (protocolData.data()->full_ref()) { // entire object is not parsed
     const EncodedValue& value = detail::getByValueId(
         *protocolData.values(), protocolData.data()->full_ref().value());
     prot.writeRaw(*value.data());
   } else if (!protocolData.data()->fields_ref()) { // entire object is parsed
-    detail::serializeValue(prot, val);
+    detail::serializeObject(prot, obj);
   } else { // use both object and masked data to serialize
-    detail::serializeValue(prot, val, protocolData, *protocolData.data());
+    detail::serializeObject(prot, obj, protocolData, *protocolData.data());
   }
   return queue.move();
 }
@@ -155,20 +167,32 @@ Value parseValue(const folly::IOBuf& buf, bool string_to_binary = true) {
       buf, type::detail::getBaseType(Tag{}), string_to_binary);
 }
 
+template <class Protocol>
+Value parseValue(
+    Protocol& prot, type::BaseType baseType, bool string_to_binary) {
+  return detail::parseValue(prot, type::toTType(baseType), string_to_binary);
+}
+
+template <class Protocol, typename Tag>
+Value parseValue(Protocol& prot, bool string_to_binary = true) {
+  return parseValue<Protocol>(
+      prot, type::detail::getBaseType(Tag{}), string_to_binary);
+}
+
 /// Convert protocol::Value to native thrift value.
 template <class Tag>
 auto fromValueStruct(const protocol::Value& v) {
-  // TODO: Use always-on reflection to optimize the performance.
-  return detail::deserializeBinaryProtocol<Tag>(
-      serializeValue<BinaryProtocolWriter>(v).get());
+  type::native_type<Tag> t;
+  detail::ProtocolValueToThriftValue<Tag>{}(v, t);
+  return t;
 }
 
 /// Convert protocol::Object to native thrift value.
 template <class Tag>
 auto fromObjectStruct(const protocol::Object& o) {
-  // TODO: Use always-on reflection to optimize the performance.
-  return detail::deserializeBinaryProtocol<Tag>(
-      serializeObject<BinaryProtocolWriter>(o).get());
+  type::native_type<Tag> t;
+  detail::ProtocolValueToThriftValue<Tag>{}(o, t);
+  return t;
 }
 
 // Returns whether the protocol::Value/ Object is its intrinsic default.

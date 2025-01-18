@@ -4,17 +4,19 @@
   "compoundname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
   "functions": [
     {
-      "refid": "structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4_1a49e92751d0ae8bf57803d5d076bd4c18",
+      "refid": "structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4_1a9bdb673fe8c1b52eb056d5c93be59636",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/detail/IntWrapper\">IntWrapper</a> &amp;",
-      "definition_html": "IntWrapper&amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
+      "definition_html": "IntWrapper &amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
       "argsstring_html": "(const IntWrapper &amp;other) noexcept",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
       "param": [
         {
           "type_html": "const <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/detail/IntWrapper\">IntWrapper</a> &amp;",
@@ -23,18 +25,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "84",
-        "column": "1",
+        "line": "77",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "84",
-        "bodyend": "88"
+        "bodystart": "77",
+        "bodyend": "81"
       },
       "definition": {
         "simple_html": "IntWrapper&amp; operator=(const IntWrapper&amp; other)",
         "simple_raw": "IntWrapper& operator=(const IntWrapper& other)",
         "detailed_html": "inline IntWrapper&amp; operator=(const IntWrapper&amp; other) noexcept",
         "detailed_raw": "inline IntWrapper& operator=(const IntWrapper& other) noexcept",
-        "original_definition_html": "IntWrapper&amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
+        "original_definition_html": "IntWrapper &amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
         "original_argsstring_html": "(const IntWrapper &amp;other) noexcept"
       },
       "filepath": "fns/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4/operator.assign",
@@ -43,17 +45,19 @@
       "compoundname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator="
     },
     {
-      "refid": "structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4_1a901be839db8a980f26f613f7fc71639e",
+      "refid": "structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4_1a757c4d81e09922e3a480e1cdb9c2daa6",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/detail/IntWrapper\">IntWrapper</a> &amp;",
-      "definition_html": "IntWrapper&amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
+      "definition_html": "IntWrapper &amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
       "argsstring_html": "(IntWrapper &amp;&amp;other) noexcept",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/detail/IntWrapper\">IntWrapper</a> &amp;&amp;",
@@ -62,18 +66,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "90",
-        "column": "1",
+        "line": "83",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "90",
-        "bodyend": "94"
+        "bodystart": "83",
+        "bodyend": "87"
       },
       "definition": {
         "simple_html": "IntWrapper&amp; operator=(IntWrapper&amp;&amp; other)",
         "simple_raw": "IntWrapper& operator=(IntWrapper&& other)",
         "detailed_html": "inline IntWrapper&amp; operator=(IntWrapper&amp;&amp; other) noexcept",
         "detailed_raw": "inline IntWrapper& operator=(IntWrapper&& other) noexcept",
-        "original_definition_html": "IntWrapper&amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
+        "original_definition_html": "IntWrapper &amp; apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::operator=",
         "original_argsstring_html": "(IntWrapper &amp;&amp;other) noexcept"
       },
       "filepath": "fns/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4/operator.assign",
@@ -88,5 +92,11 @@
   "brief_html": "Assignment operator.",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4/operator.assign",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4/operator.assign"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4/operator.assign",
+  "parent_links": [
+    {
+      "text_html": "IntWrapper&lt; std::atomic&lt; U &gt; &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1detail_1_1IntWrapper_3_01std_1_1atomic_3_01U_01_4_01_4"
+    }
+  ]
 }

@@ -22,11 +22,11 @@
 
 #include <fizz/client/AsyncFizzClient.h>
 #include <fizz/experimental/util/CertExtraction.h>
+#include <fizz/protocol/DefaultFactory.h>
 #include <fizz/protocol/Exporter.h>
 #include <fizz/server/AsyncFizzServer.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 // private class meant to encapsulate all the information that needs to be
 // preserved across sockets for the tls downgrade scenario
@@ -95,7 +95,7 @@ class StopTLSSocket : public Parent {
     if (exportedMasterSecret_ == nullptr) {
       return nullptr;
     }
-    auto factory = fizz::OpenSSLFactory();
+    auto factory = ::fizz::DefaultFactory();
     return fizz::Exporter::getExportedKeyingMaterial(
         factory,
         origCipherSuite_,
@@ -216,5 +216,4 @@ template folly::AsyncSocketTransport::UniquePtr moveToPlaintext(
     fizz::client::AsyncFizzClient* socket);
 template folly::AsyncSocketTransport::UniquePtr moveToPlaintext(
     fizz::server::AsyncFizzServer* socket);
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

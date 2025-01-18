@@ -23,57 +23,10 @@ THRIFT_FLAG_DEFINE_int64(
     server_ingress_memory_limit_enforcement_payload_size_min_bytes, 1024);
 THRIFT_FLAG_DEFINE_bool(server_reject_header_connections, false);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 const size_t ThriftServerConfig::T_ASYNC_DEFAULT_WORKER_THREADS =
     std::thread::hardware_concurrency();
-
-ThriftServerConfig::ThriftServerConfig(
-    const ThriftServerInitialConfig& initialConfig)
-    : ThriftServerConfig() {
-  if (auto& [value, isSet] = initialConfig.maxRequests_; isSet) {
-    maxRequests_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.maxConnections_; isSet) {
-    maxConnections_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.maxResponseSize_; isSet) {
-    maxResponseSize_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.useClientTimeout_; isSet) {
-    useClientTimeout_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.taskExpireTimeout_; isSet) {
-    taskExpireTime_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.streamExpireTimeout_; isSet) {
-    streamExpireTime_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.queueTimeout_; isSet) {
-    queueTimeout_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.socketQueueTimeout_; isSet) {
-    socketQueueTimeout_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.egressMemoryLimit_; isSet) {
-    egressMemoryLimit_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.egressBufferBackpressureThreshold_;
-      isSet) {
-    egressBufferBackpressureThreshold_.setDefault(
-        folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] = initialConfig.ingressMemoryLimit_; isSet) {
-    ingressMemoryLimit_.setDefault(folly::observer::makeStaticObserver(value));
-  }
-  if (auto& [value, isSet] =
-          initialConfig.minPayloadSizeToEnforceIngressMemoryLimit_;
-      isSet) {
-    minPayloadSizeToEnforceIngressMemoryLimit_.setDefault(
-        folly::observer::makeStaticObserver(value));
-  }
-}
 
 std::string ThriftServerConfig::getCPUWorkerThreadName() const {
   return poolThreadName_.get();
@@ -82,6 +35,15 @@ std::string ThriftServerConfig::getCPUWorkerThreadName() const {
 std::optional<std::string> ThriftServerConfig::getBaselineCPUWorkerThreadName()
     const {
   return poolThreadName_.getBaseline();
+}
+
+bool ThriftServerConfig::getUseInMemoryTicketSeeds() const {
+  return tlsConfig_.useInMemoryTicketSeeds_.get();
+}
+
+std::optional<bool> ThriftServerConfig::getBaselineUseInMemoryTicketSeeds()
+    const {
+  return tlsConfig_.useInMemoryTicketSeeds_.getBaseline();
 }
 
 std::chrono::seconds ThriftServerConfig::getWorkersJoinTimeout() const {
@@ -319,6 +281,18 @@ void ThriftServerConfig::setCPUWorkerThreadName(
 
 void ThriftServerConfig::resetCPUWorkerThreadName(AttributeSource source) {
   resetStaticAttribute(poolThreadName_, source);
+}
+
+void ThriftServerConfig::setUseInMemoryTicketSeeds(
+    bool useInMemoryTicketSeeds, AttributeSource source) {
+  setStaticAttribute(
+      tlsConfig_.useInMemoryTicketSeeds_,
+      std::move(useInMemoryTicketSeeds),
+      source);
+}
+
+void ThriftServerConfig::resetUseInMemoryTicketSeeds(AttributeSource source) {
+  resetStaticAttribute(tlsConfig_.useInMemoryTicketSeeds_, source);
 }
 
 void ThriftServerConfig::setWorkersJoinTimeout(
@@ -582,5 +556,4 @@ void ThriftServerConfig::setPerConnectionSocketOptions(
   perConnectionSocketOptions_.set(std::move(options), source);
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

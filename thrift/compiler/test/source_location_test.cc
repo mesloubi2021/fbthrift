@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include <folly/experimental/TestUtil.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
+#include <folly/testing/TestUtil.h>
 #include <thrift/compiler/source_location.h>
 
 using namespace apache::thrift::compiler;
@@ -65,6 +65,16 @@ TEST(SourceLocationTest, get_text) {
   auto text = source.text.data();
   EXPECT_EQ(sm.get_text(source.start), text);
   EXPECT_EQ(sm.get_text(source.start + 2), text + 2);
+}
+
+TEST(SourceLocationTest, get_text_range) {
+  source_manager sm;
+  auto source = sm.add_virtual_file("path/to/file", R"(First line
+Second    Line)");
+  EXPECT_EQ(sm.get_text_range({source.start, source.start + 5}), "First");
+  EXPECT_EQ(
+      sm.get_text_range({source.start + 5, source.start + 17}),
+      " line\nSecond");
 }
 
 TEST(SourceLocationTest, stable_file_name) {

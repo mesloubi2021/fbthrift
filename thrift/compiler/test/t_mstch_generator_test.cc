@@ -21,11 +21,9 @@
 #include <thrift/compiler/ast/t_program_bundle.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
-TEST(t_mstch_generator_test, cache_leaks) {
+TEST(MstchGeneratorTest, cache_leaks) {
   class leaky_program : public mstch_program {
    public:
     leaky_program(
@@ -36,7 +34,7 @@ TEST(t_mstch_generator_test, cache_leaks) {
         : mstch_program(program, ctx, pos), object_count_(object_count) {
       ++*object_count_;
     }
-    virtual ~leaky_program() override { --*object_count_; }
+    ~leaky_program() override { --*object_count_; }
 
    private:
     int* object_count_;
@@ -45,7 +43,8 @@ TEST(t_mstch_generator_test, cache_leaks) {
   class leaky_generator : public t_mstch_generator {
    public:
     leaky_generator(t_program& program, int* object_count, t_program_bundle& pb)
-        : t_mstch_generator(program, source_mgr_, pb),
+        : t_mstch_generator(program, pb, diags_),
+          diags_(diagnostics_engine::ignore_all(source_mgr_)),
           object_count_(object_count) {}
 
     std::string template_prefix() const override { return "."; }
@@ -57,12 +56,14 @@ TEST(t_mstch_generator_test, cache_leaks) {
 
    private:
     source_manager source_mgr_;
+    diagnostics_engine diags_;
     int* object_count_;
   };
 
   int object_count = 0;
   {
-    t_program_bundle pb(std::make_unique<t_program>("my_leak.thrift"));
+    t_program_bundle pb(
+        std::make_unique<t_program>("my_leak.thrift", "my_leak.thrift"));
     leaky_generator generator(*pb.get_root_program(), &object_count, pb);
     generator.generate_program();
   }
@@ -70,6 +71,4 @@ TEST(t_mstch_generator_test, cache_leaks) {
   EXPECT_EQ(object_count, 0);
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

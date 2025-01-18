@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
+import reactor.netty.resources.LoopResources;
 
 /**
  * Facade for accessing resources used by Thrift Java. Call shutdown to cleanup the resources being
@@ -62,6 +63,10 @@ public final class RpcResources {
     return INSTANCE.doGet().getEventLoopGroup();
   }
 
+  public static LoopResources getLoopResources() {
+    return INSTANCE.doGet().getLoopResources();
+  }
+
   public static int getEventLoopGroupPendingTasks() {
     return INSTANCE.doGet().pendingTasksForEventLoop();
   }
@@ -92,6 +97,10 @@ public final class RpcResources {
 
   public static boolean isForceExecutionOffEventLoop() {
     return INSTANCE.doGet().isForceExecutionOffEventLoop();
+  }
+
+  public static boolean isForceClientExecutionOffEventLoop() {
+    return INSTANCE.doGet().isForceClientExecutionOffEventLoop();
   }
 
   public static ThriftMeterRegistry getThriftMeterRegistry() {

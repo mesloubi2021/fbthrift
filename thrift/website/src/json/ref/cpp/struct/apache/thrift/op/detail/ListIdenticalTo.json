@@ -4,6 +4,14 @@
   "language": "C++",
   "prot": "public",
   "compoundname_html": "apache::thrift::op::detail::ListIdenticalTo",
+  "derivedcompoundref": [
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1list_3_01VTag_01_4_01_4",
+      "prot": "public",
+      "virtual": "non-virtual",
+      "text_html": "apache::thrift::op::detail::IdenticalTo&lt; type::list&lt; VTag &gt; &gt;"
+    }
+  ],
   "includes": {
     "refid": "detail_2Compare_8h",
     "local": "no",
@@ -11,20 +19,14 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "VTag",
-      "defname_html": "VTag"
+      "type_html": "typename VTag"
     },
     {
-      "type_html": "typename",
-      "declname_html": "Tag",
-      "defname_html": "Tag",
+      "type_html": "typename Tag",
       "defval_html": "type::list&lt;VTag&gt;"
     },
     {
-      "type_html": "typename",
-      "declname_html": "T",
-      "defname_html": "T",
+      "type_html": "typename T",
       "defval_html": "type::native_type&lt;Tag&gt;"
     }
   ],
@@ -41,6 +43,7 @@
       "definition_html": "bool apache::thrift::op::detail::ListIdenticalTo&lt; VTag, Tag, T &gt;::operator()",
       "argsstring_html": "(const T &amp;lhs, const T &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ListIdenticalTo::operator()",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -53,11 +56,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "408",
-        "column": "1",
+        "line": "454",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "408",
-        "bodyend": "413"
+        "bodystart": "454",
+        "bodyend": "459"
       },
       "definition": {
         "simple_html": "bool operator()(const T&amp; lhs, const T&amp; rhs) const",
@@ -73,11 +76,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "line": "407",
+    "line": "453",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "bodystart": "407",
-    "bodyend": "417"
+    "bodystart": "453",
+    "bodyend": "463"
   },
   "namespacednames_html": [
     "apache",
@@ -98,12 +101,13 @@
       "definition_html": "IdenticalTo&lt;VTag&gt; apache::thrift::op::detail::ListIdenticalTo&lt; VTag, Tag, T &gt;::cmp",
       "argsstring_html": "",
       "name_html": "cmp",
+      "qualifiedname_html": "apache::thrift::op::detail::ListIdenticalTo::cmp",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "416",
-        "column": "1",
+        "line": "462",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "416",
+        "bodystart": "462",
         "bodyend": "-1"
       }
     }
@@ -134,6 +138,7 @@
               "definition_html": "bool apache::thrift::op::detail::ListIdenticalTo&lt; VTag, Tag, T &gt;::operator()",
               "argsstring_html": "(const T &amp;lhs, const T &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::ListIdenticalTo::operator()",
               "param": [
                 {
                   "type_html": "const T &amp;",
@@ -146,11 +151,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "408",
-                "column": "1",
+                "line": "454",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "408",
-                "bodyend": "413"
+                "bodystart": "454",
+                "bodyend": "459"
               },
               "definition": {
                 "simple_html": "bool operator()(const T&amp; lhs, const T&amp; rhs) const",
@@ -172,7 +177,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/ListIdenticalTo/operator.call",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ListIdenticalTo/operator.call"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ListIdenticalTo/operator.call",
+          "parent_links": [
+            {
+              "text_html": "ListIdenticalTo",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/ListIdenticalTo"
+            }
+          ]
         }
       ]
     }

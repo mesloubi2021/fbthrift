@@ -18,7 +18,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"time"
 
 	"apache/thrift/test/load"
@@ -42,22 +42,15 @@ func Serve(addr string) error {
 	}
 
 	glog.Infof("starting thrift server on '%s'", addr)
-	return srv.Serve()
+	return srv.ServeContext(context.Background())
 }
 
-func newServer(processor thrift.ProcessorContext, addr string) (thrift.Server, error) {
-	socket, err := thrift.NewServerSocket(addr)
+func newServer(processor thrift.Processor, addr string) (thrift.Server, error) {
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	if err = socket.Listen(); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed listen on %s", addr))
-	}
-	tFactory := thrift.NewHeaderTransportFactory(thrift.NewTransportFactory())
-	pFactory := thrift.NewHeaderProtocolFactory()
-
-	return thrift.NewSimpleServerContext(
-		processor, socket, thrift.TransportFactories(tFactory), thrift.ProtocolFactories(pFactory)), nil
+	return thrift.NewServer(processor, listener, thrift.TransportIDUpgradeToRocket), nil
 }
 
 // Echo - does echo

@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 }}{{#function:sink?}}{{!
     }}{{#function:sink_has_first_response?}}reactor.core.publisher.Flux<ResponseWrapper<com.facebook.thrift.model.StreamResponse<{{!
-    }}{{#function:sink_first_response_type}}{{ >BoxedType}}{{/function:sink_first_response_type}},{{!
-    }}{{#function:sink_final_response_type}}{{ >BoxedType}}{{/function:sink_final_response_type}}>>>{{!
+    }}{{#function:sink_first_response_type}}{{> BoxedType}}{{/function:sink_first_response_type}},{{!
+    }}{{#function:sink_final_response_type}}{{> BoxedType}}{{/function:sink_final_response_type}}>>>{{!
     }}{{/function:sink_has_first_response?}}{{!
     }}{{^function:sink_has_first_response?}}{{!
-    }}{{#function:sink_final_response_type}}reactor.core.publisher.Mono<ResponseWrapper<{{ >BoxedType}}>>{{/function:sink_final_response_type}}{{!
+    }}{{#function:sink_final_response_type}}reactor.core.publisher.Mono<ResponseWrapper<{{> BoxedType}}>>{{/function:sink_final_response_type}}{{!
     }}{{/function:sink_has_first_response?}}{{!
 }}{{/function:sink?}}

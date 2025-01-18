@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -48,12 +50,10 @@ class EnumTest(unittest.TestCase):
         self.assertEqual(MyEnum1.ME1_1.value, 1)
         self.assertEqual(MyEnum1.ME1_1.__hash__(), MyEnum1(1).__hash__())
 
-        with self.assertWarns(RuntimeWarning):
-            self.assertFalse(MyEnum1.ME1_1 == 1)
-        with self.assertWarns(RuntimeWarning):
-            self.assertTrue(MyEnum1.ME1_1 != 1)
+        self.assertEqual(MyEnum1.ME1_1, 1)
+        self.assertNotEqual(MyEnum1.ME1_1, 2)
         with self.assertRaises(TypeError):
-            MyEnum1.ME1_1 > 0
+            MyEnum1.ME1_1 > 0  # noqa
 
 
 if __name__ == "__main__":

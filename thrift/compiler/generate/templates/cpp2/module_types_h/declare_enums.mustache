@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,71 +14,73 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%>// BEGIN declare_enums
-<%#program:enums?%>
-<% > common/namespace_cpp2_begin%>
+}}// BEGIN declare_enums
+{{#program:enums?}}
+namespace {{program:qualified_namespace}} {
+{{#program:enums}}
 
-<%#program:enums%>
-
-enum <%^enum:cpp_is_unscoped%>class <%/enum:cpp_is_unscoped%><%enum:cpp_name%><%#enum:cpp_enum_type%> : <%enum:cpp_enum_type%><%/enum:cpp_enum_type%> {
-<%#enum:values%>
-  <%enum_value:cpp_name%> = <%enum_value:value%>,
-<%/enum:values%>
+{{> common/enum_docblock }}
+enum {{^enum:cpp_is_unscoped}}class {{/enum:cpp_is_unscoped}}{{enum:cpp_name}}{{#enum:cpp_enum_type}} : {{enum:cpp_enum_type}}{{/enum:cpp_enum_type}} {
+{{#enum:values}}
+  {{enum_value:cpp_name}} = {{enum_value:value}},
+{{/enum:values}}
 };
 
-<%#enum:cpp_declare_bitwise_ops%>
-<% > module_types_h/enum_bitwise_ops%>
-<%/enum:cpp_declare_bitwise_ops%>
+{{#enum:cpp_declare_bitwise_ops}}
+{{> module_types_h/enum_bitwise_ops}}
+{{/enum:cpp_declare_bitwise_ops}}
 
-<%/program:enums%>
+{{/program:enums}}
 
-<% > common/namespace_cpp2_end%>
-
+} // namespace {{program:qualified_namespace}}
 
 namespace std {
-<%#program:enums%>
-template<> struct hash<<% > common/namespace_cpp2%><%enum:cpp_name%>> :
-  ::apache::thrift::detail::enum_hash<<% > common/namespace_cpp2%><%enum:cpp_name%>> {};
-<%/program:enums%>
+{{#program:enums}}
+template<> struct hash<::{{program:qualified_namespace}}::{{enum:cpp_name}}> :
+  ::apache::thrift::detail::enum_hash<::{{program:qualified_namespace}}::{{enum:cpp_name}}> {};
+{{/program:enums}}
 } // std
 
 namespace apache { namespace thrift {
 
-<%#program:enums%>
+{{#program:enums}}
 
-template <> struct TEnumDataStorage<<% > common/namespace_cpp2%><%enum:cpp_name%>>;
+template <> struct TEnumDataStorage<::{{program:qualified_namespace}}::{{enum:cpp_name}}>;
 
-template <> struct TEnumTraits<<% > common/namespace_cpp2%><%enum:cpp_name%>> {
-  using type = <% > common/namespace_cpp2%><%enum:cpp_name%>;
+template <> struct TEnumTraits<::{{program:qualified_namespace}}::{{enum:cpp_name}}> {
+  using type = ::{{program:qualified_namespace}}::{{enum:cpp_name}};
 
-  static constexpr std::size_t const size = <%enum:size%>;
+  static constexpr std::size_t const size = {{enum:size}};
   static folly::Range<type const*> const values;
-  static folly::Range<folly::StringPiece const*> const names;
+  static folly::Range<std::string_view const*> const names;
+  static const std::string_view __fbthrift_module_name_internal_do_not_use;
 
-  static bool findName(type value, folly::StringPiece* out) noexcept;
-  static bool findValue(folly::StringPiece name, type* out) noexcept;
+  static bool findName(type value, std::string_view* out) noexcept;
+  static bool findValue(std::string_view name, type* out) noexcept;
 
-#if FOLLY_HAS_STRING_VIEW
-  static bool findName(type value, std::string_view* out) noexcept {
-    folly::StringPiece outp;
-    return findName(value, &outp) && ((*out = outp), true);
+  FOLLY_ERASE static std::string_view typeName() noexcept {
+    return "{{enum:name}}";
   }
-#endif
+
+  FOLLY_ERASE static constexpr std::string_view moduleName() noexcept {
+    return "{{program:name}}";
+  }
+
   static char const* findName(type value) noexcept {
-    folly::StringPiece ret;
+    std::string_view ret;
     (void)findName(value, &ret);
     return ret.data();
   }
-  <%^enum:empty?%>
-  static constexpr type min() { return type::<%enum:min%>; }
-  static constexpr type max() { return type::<%enum:max%>; }
-  <%/enum:empty?%>
+  {{^enum:empty?}}
+  static constexpr type min() { return type::{{enum:min}}; }
+  static constexpr type max() { return type::{{enum:max}}; }
+  {{/enum:empty?}}
 };
 
-<%/program:enums%>
+{{/program:enums}}
 
 }} // apache::thrift
 
-<%/program:enums?%>
+{{/program:enums?}}
 
 // END declare_enums

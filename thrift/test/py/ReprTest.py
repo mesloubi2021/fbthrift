@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import textwrap
@@ -28,7 +30,7 @@ from thrift.test.UnionTest.ttypes import (
 
 class TestRepr(unittest.TestCase):
     def assertReprEquals(self, obj):
-        self.assertEquals(obj, eval(repr(obj)))
+        self.assertEqual(obj, eval(repr(obj)))
 
     def test_repr(self):
         """Ensure that __repr__() return a valid expression that can be
@@ -50,7 +52,7 @@ class TestRepr(unittest.TestCase):
         output = """\
             RandomStuff(
                 bigint=123)"""
-        self.assertEquals(repr(obj), textwrap.dedent(output))
+        self.assertEqual(repr(obj), textwrap.dedent(output))
 
     def test_defaults(self):
         """Ensure repr() includes fields which have default values."""
@@ -63,7 +65,7 @@ class TestRepr(unittest.TestCase):
                 byte_list=[1, 2, 3],
                 i16_list=[1, 2, 3],
                 i64_list=[1, 2, 3])"""
-        self.assertEquals(repr(obj), textwrap.dedent(output))
+        self.assertEqual(repr(obj), textwrap.dedent(output))
 
     def test_double_underscore_field_repr(self):
         obj = StructWithDoubleUnderscoreField(__field=123, field=456)
@@ -71,4 +73,4 @@ class TestRepr(unittest.TestCase):
             StructWithDoubleUnderscoreField(
                 __field=123,
                 field=456)"""
-        self.assertEquals(repr(obj), textwrap.dedent(output))
+        self.assertEqual(repr(obj), textwrap.dedent(output))

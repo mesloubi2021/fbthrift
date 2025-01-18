@@ -26,9 +26,7 @@
 #include <thrift/compiler/ast/t_program.h>
 #include <thrift/compiler/ast/t_typedef.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 const std::string& t_type::type_name(type t) {
   static const auto& kTypeNames =
@@ -49,8 +47,8 @@ const std::string& t_type::type_name(type t) {
             "service",
             "program",
             "float",
-            "", // unused
-            "stream",
+            "", // unused [sink]
+            "", // unused [stream]
             "binary"}});
   return kTypeNames.at(static_cast<size_t>(t));
 }
@@ -91,6 +89,10 @@ bool t_type_ref::resolve() {
     if (!unresolved_type_->resolve()) {
       return false;
     }
+    // Try to excise the placeholder typedef so dynamic_cast works.
+    if (unresolved_type_->annotations().empty()) {
+      type_ = unresolved_type_->get_type();
+    }
     unresolved_type_ = nullptr;
   }
   return true;
@@ -124,6 +126,39 @@ const t_type_ref& t_type_ref::none() {
   return empty;
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+std::optional<t_type::value_type> t_type::as_value_type() const {
+  switch (get_type_value()) {
+    case type::t_bool:
+      return value_type::BOOL;
+    case type::t_byte:
+      return value_type::BYTE;
+    case type::t_i16:
+      return value_type::I16;
+    case type::t_i32:
+      return value_type::I32;
+    case type::t_i64:
+      return value_type::I64;
+    case type::t_float:
+      return value_type::FLOAT;
+    case type::t_double:
+      return value_type::DOUBLE;
+    case type::t_string:
+      return value_type::STRING;
+    case type::t_binary:
+      return value_type::BINARY;
+    case type::t_list:
+      return value_type::LIST;
+    case type::t_set:
+      return value_type::SET;
+    case type::t_map:
+      return value_type::MAP;
+    case type::t_enum:
+      return value_type::I32;
+    case type::t_structured:
+    case type::t_service:
+    case type::t_void:
+      return std::nullopt;
+  }
+}
+
+} // namespace apache::thrift::compiler

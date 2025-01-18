@@ -20,31 +20,26 @@
 
 #include <folly/io/IOBuf.h>
 
-#include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
-#include <thrift/lib/cpp2/protocol/SimpleJSONProtocol.h>
 #include <thrift/lib/python/types.h>
 
-namespace apache {
-namespace thrift {
-namespace python {
+namespace apache::thrift::python {
 
-template <typename Writer>
-std::unique_ptr<folly::IOBuf> serialize(
+template <typename TProtocolWriter>
+std::unique_ptr<folly::IOBuf> serializeWithWriter(
     const DynamicStructInfo& dynamicStructInfo, const PyObject* object) {
-  auto queue = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
-  Writer writer(SHARE_EXTERNAL_BUFFER);
+  folly::IOBufQueue queue{folly::IOBufQueue::cacheChainLength()};
+  TProtocolWriter writer(SHARE_EXTERNAL_BUFFER);
   writer.setOutput(&queue);
   detail::write(&writer, dynamicStructInfo.getStructInfo(), object);
   return queue.move();
 }
 
-template <typename Reader>
-size_t deserialize(
+template <typename TProtocolReader>
+size_t deserializeWithReader(
     const DynamicStructInfo& dynamicStructInfo,
     const folly::IOBuf* buf,
     PyObject* object) {
-  Reader reader(SHARE_EXTERNAL_BUFFER);
+  TProtocolReader reader(SHARE_EXTERNAL_BUFFER);
   reader.setInput(buf);
   detail::read(&reader, dynamicStructInfo.getStructInfo(), object);
   return reader.getCursor().getCurrentPosition();
@@ -55,39 +50,35 @@ using apache::thrift::protocol::PROTOCOL_TYPES;
 std::unique_ptr<folly::IOBuf> serialize(
     const DynamicStructInfo& dynamicStructInfo,
     const PyObject* object,
-    PROTOCOL_TYPES protocol) {
-  switch (protocol) {
-    case PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
-      return serialize<CompactProtocolWriter>(dynamicStructInfo, object);
-    case PROTOCOL_TYPES::T_BINARY_PROTOCOL:
-      return serialize<BinaryProtocolWriter>(dynamicStructInfo, object);
-    case PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
-      return serialize<SimpleJSONProtocolWriter>(dynamicStructInfo, object);
-    default:
-      throw TProtocolException(
-          TProtocolException::NOT_IMPLEMENTED, "protocol not supported yet");
-  }
-}
+    PROTOCOL_TYPES protocol);
+
+/**
+ * It receives an `object` which should be a valid Python list object, and it
+ * calls `serialize()` function above with a pointer to the beginning of the
+ * 'item' array in the PyListObject, where memory is allocated for the members.
+ * (see `getListObjectItemBase()`)
+ */
+std::unique_ptr<folly::IOBuf> mutable_serialize(
+    const DynamicStructInfo& dynamicStructInfo,
+    const void* object,
+    PROTOCOL_TYPES protocol);
 
 size_t deserialize(
     const DynamicStructInfo& dynamicStructInfo,
     const folly::IOBuf* buf,
     PyObject* object,
-    PROTOCOL_TYPES protocol) {
-  switch (protocol) {
-    case PROTOCOL_TYPES::T_COMPACT_PROTOCOL:
-      return deserialize<CompactProtocolReader>(dynamicStructInfo, buf, object);
-    case PROTOCOL_TYPES::T_BINARY_PROTOCOL:
-      return deserialize<BinaryProtocolReader>(dynamicStructInfo, buf, object);
-    case PROTOCOL_TYPES::T_SIMPLE_JSON_PROTOCOL:
-      return deserialize<SimpleJSONProtocolReader>(
-          dynamicStructInfo, buf, object);
-    default:
-      throw TProtocolException(
-          TProtocolException::NOT_IMPLEMENTED, "protocol not supported yet");
-  }
-}
+    PROTOCOL_TYPES protocol);
 
-} // namespace python
-} // namespace thrift
-} // namespace apache
+/**
+ * It receives an `object` which should be a valid Python list object, and it
+ * calls `deserialize()` function above with a pointer to the beginning of the
+ * 'item' array in the PyListObject, where memory is allocated for the members.
+ * (see `getListObjectItemBase()`)
+ */
+size_t mutable_deserialize(
+    const DynamicStructInfo& dynamicStructInfo,
+    const folly::IOBuf* buf,
+    void* object,
+    PROTOCOL_TYPES protocol);
+
+} // namespace apache::thrift::python

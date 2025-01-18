@@ -18,14 +18,16 @@
 
 #include <atomic>
 #include <chrono>
+#include <variant>
 
 #include <folly/Synchronized.h>
-#include <folly/experimental/FunctionScheduler.h>
-#include <folly/experimental/observer/Observer.h>
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/executors/FunctionScheduler.h>
+#include <folly/observer/Observer.h>
+#include <folly/observer/SimpleObservable.h>
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/cpp2/server/ServerConfigs.h>
 #include <thrift/lib/cpp2/server/ThriftServerConfig.h>
+#include <thrift/lib/thrift/gen-cpp2/serverdbginfo_types.h>
 
 namespace apache::thrift {
 
@@ -45,22 +47,27 @@ THRIFT_PLUGGABLE_FUNC_DECLARE(
 
 class CPUConcurrencyController {
  public:
-  enum class Mode {
+  using LoadFunc =
+      std::function<int64_t(std::chrono::milliseconds, CPULoadSource)>;
+
+  enum class Mode : uint8_t {
     DISABLED,
     DRY_RUN,
     ENABLED,
   };
 
-  enum class Method {
-    CONCURRENCY_LIMITS,
-    TOKEN_BUCKET,
+  enum class Method : uint8_t {
+    MAX_REQUESTS,
+    MAX_QPS,
   };
 
   struct Config {
+    struct UseStaticLimit {};
+
     // Operating mode
     Mode mode = Mode::DISABLED;
     // CPU concurrency enforcement method
-    Method method = Method::TOKEN_BUCKET;
+    Method method = Method::MAX_QPS;
     // CPU target in the range [0, 100]
     uint8_t cpuTarget = 90;
     // Source of CPU load metrics (container-only, host-only, or
@@ -94,7 +101,7 @@ class CPUConcurrencyController {
     // How many samples to collect for the initial estimate
     uint32_t collectionSampleSize = 500;
     // Don't go above this concurrency limit, ever.
-    uint32_t concurrencyUpperBound = 1 << 16;
+    std::variant<int32_t, UseStaticLimit> concurrencyUpperBound = 1 << 16;
     // Don't go below this concurrency limit, ever.
     uint32_t concurrencyLowerBound = 1;
 
@@ -108,6 +115,12 @@ class CPUConcurrencyController {
 
     std::string_view concurrencyUnit() const;
 
+    // Returns a string representation of the CPU load source
+    std::string_view cpuLoadSourceName() const;
+
+    // Returns a string representation of the concurrencyUpperBound value
+    std::string concurrencyUpperBoundName() const;
+
     // Returns a string description of the Config
     std::string describe() const;
   };
@@ -115,7 +128,8 @@ class CPUConcurrencyController {
   CPUConcurrencyController(
       folly::observer::Observer<Config> config,
       apache::thrift::server::ServerConfigs& serverConfigs,
-      apache::thrift::ThriftServerConfig& thriftServerConfig);
+      apache::thrift::ThriftServerConfig& thriftServerConfig,
+      std::optional<LoadFunc> loadFunc = std::nullopt);
 
   ~CPUConcurrencyController();
 
@@ -131,7 +145,7 @@ class CPUConcurrencyController {
   void setEventHandler(std::shared_ptr<EventHandler> eventHandler);
 
   void requestStarted();
-  void requestShed();
+  bool requestShed(std::optional<Method> method = std::nullopt);
 
   int64_t getStableEstimate() const {
     return stableEstimate_.load(std::memory_order_relaxed);
@@ -143,9 +157,19 @@ class CPUConcurrencyController {
 
   int64_t getLoad() const { return getLoadInternal(config()); }
 
+  uint32_t getConcurrencyUpperBound() const {
+    return getConcurrencyUpperBoundInternal(config());
+  }
+
   bool enabled() const { return (*config_.rlock())->enabled(); }
 
   std::shared_ptr<const Config> config() const { return config_.copy(); }
+
+  serverdbginfo::CPUConcurrencyControllerDbgInfo getDbgInfo() const;
+
+  /* Allows to set custom LoadFunc for this CPU-CC. If function is not set we'll
+   * falback to THRIFT_PLUGGABLE_FUNCTION called getCPULoadCounter() */
+  void setLoadFunc(LoadFunc loadFunc) { loadFunc_ = std::move(loadFunc); }
 
  private:
   void cycleOnce();
@@ -161,9 +185,12 @@ class CPUConcurrencyController {
   bool isRefractoryPeriodInternal(
       const std::shared_ptr<const Config>& config) const;
   int64_t getLoadInternal(const std::shared_ptr<const Config>& config) const;
+  uint32_t getConcurrencyUpperBoundInternal(
+      const std::shared_ptr<const Config>& config) const;
 
   folly::Synchronized<std::shared_ptr<const Config>> config_;
   std::atomic<bool> enabled_;
+  std::atomic<Method> method_;
 
   folly::observer::CallbackHandle configSchedulerCallback_;
   folly::observer::SimpleObservable<std::optional<uint32_t>>
@@ -177,8 +204,8 @@ class CPUConcurrencyController {
   folly::FunctionScheduler scheduler_;
   folly::Synchronized<std::shared_ptr<EventHandler>> eventHandler_{nullptr};
 
-  std::chrono::steady_clock::time_point lastOverloadStart_{
-      std::chrono::steady_clock::now()};
+  folly::relaxed_atomic<std::chrono::steady_clock::time_point>
+      lastOverloadStart_{std::chrono::steady_clock::now()};
 
   std::vector<uint32_t> stableConcurrencySamples_;
   std::atomic<int64_t> stableEstimate_{-1};
@@ -191,14 +218,16 @@ class CPUConcurrencyController {
   folly::relaxed_atomic<bool> recentShedRequest_{false};
   std::chrono::steady_clock::time_point lastTotalRequestReset_{
       std::chrono::steady_clock::now()};
+
+  std::optional<LoadFunc> loadFunc_;
 };
 
-class BaseThriftServer;
+class ThriftServer;
 
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_DECLARE(
     folly::observer::Observer<CPUConcurrencyController::Config>,
     makeCPUConcurrencyControllerConfig,
-    BaseThriftServer*);
+    ThriftServer*);
 } // namespace detail
 } // namespace apache::thrift

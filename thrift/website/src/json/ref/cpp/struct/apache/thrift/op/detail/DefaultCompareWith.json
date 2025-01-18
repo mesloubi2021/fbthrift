@@ -11,38 +11,26 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "LTag",
-      "defname_html": "LTag"
+      "type_html": "typename LTag"
     },
     {
-      "type_html": "typename",
-      "declname_html": "RTag",
-      "defname_html": "RTag",
+      "type_html": "typename RTag",
       "defval_html": "LTag"
     },
     {
-      "type_html": "typename",
-      "declname_html": "EqualTo",
-      "defname_html": "EqualTo",
+      "type_html": "typename <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/op/detail/EqualTo\">EqualTo</a>",
       "defval_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/op/detail/EqualTo\">EqualTo</a>&lt;LTag, RTag&gt;"
     },
     {
-      "type_html": "typename",
-      "declname_html": "LessThan",
-      "defname_html": "LessThan",
+      "type_html": "typename <a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/op/detail/LessThan\">LessThan</a>",
       "defval_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/struct/apache/thrift/op/detail/LessThan\">LessThan</a>&lt;LTag, RTag&gt;"
     },
     {
-      "type_html": "typename",
-      "declname_html": "L",
-      "defname_html": "L",
+      "type_html": "typename L",
       "defval_html": "type::native_type&lt;LTag&gt;"
     },
     {
-      "type_html": "typename",
-      "declname_html": "R",
-      "defname_html": "R",
+      "type_html": "typename R",
       "defval_html": "type::native_type&lt;RTag&gt;"
     },
     {
@@ -55,14 +43,16 @@
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1DefaultCompareWith_1a733c90deea5e7b764863c00d4bb1e73e",
       "prot": "public",
       "static": "no",
+      "constexpr": "yes",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "virtual": "non-virtual",
-      "type_html": "constexpr folly::ordering",
-      "definition_html": "constexpr folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
+      "type_html": "folly::ordering",
+      "definition_html": "folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
       "argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::DefaultCompareWith::operator()",
       "param": [
         {
           "type_html": "const L &amp;",
@@ -75,18 +65,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "167",
-        "column": "1",
+        "line": "172",
+        "column": "29",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "167",
-        "bodyend": "174"
+        "bodystart": "172",
+        "bodyend": "179"
       },
       "definition": {
-        "simple_html": "constexpr folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
-        "simple_raw": "constexpr folly::ordering operator()(const L& lhs, const R& rhs) const",
-        "detailed_html": "inline constexpr folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
-        "detailed_raw": "inline constexpr folly::ordering operator()(const L& lhs, const R& rhs) const",
-        "original_definition_html": "constexpr folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
+        "simple_html": "folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
+        "simple_raw": "folly::ordering operator()(const L& lhs, const R& rhs) const",
+        "detailed_html": "inline folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
+        "detailed_raw": "inline folly::ordering operator()(const L& lhs, const R& rhs) const",
+        "original_definition_html": "folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
         "original_argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const"
       },
       "filepath": "fns/struct/apache/thrift/op/detail/DefaultCompareWith/operator.call",
@@ -95,11 +85,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "line": "166",
+    "line": "171",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "bodystart": "166",
-    "bodyend": "179"
+    "bodystart": "171",
+    "bodyend": "184"
   },
   "namespacednames_html": [
     "apache",
@@ -120,12 +110,13 @@
       "definition_html": "EqualTo apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::equalTo",
       "argsstring_html": "",
       "name_html": "equalTo",
+      "qualifiedname_html": "apache::thrift::op::detail::DefaultCompareWith::equalTo",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "177",
-        "column": "1",
+        "line": "182",
+        "column": "11",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "177",
+        "bodystart": "182",
         "bodyend": "-1"
       }
     },
@@ -138,12 +129,13 @@
       "definition_html": "LessThan apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::lessThan",
       "argsstring_html": "",
       "name_html": "lessThan",
+      "qualifiedname_html": "apache::thrift::op::detail::DefaultCompareWith::lessThan",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "178",
-        "column": "1",
+        "line": "183",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "178",
+        "bodystart": "183",
         "bodyend": "-1"
       }
     }
@@ -166,14 +158,16 @@
               "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1DefaultCompareWith_1a733c90deea5e7b764863c00d4bb1e73e",
               "prot": "public",
               "static": "no",
+              "constexpr": "yes",
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
               "virtual": "non-virtual",
-              "type_html": "constexpr folly::ordering",
-              "definition_html": "constexpr folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
+              "type_html": "folly::ordering",
+              "definition_html": "folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
               "argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::DefaultCompareWith::operator()",
               "param": [
                 {
                   "type_html": "const L &amp;",
@@ -186,18 +180,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "167",
-                "column": "1",
+                "line": "172",
+                "column": "29",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "167",
-                "bodyend": "174"
+                "bodystart": "172",
+                "bodyend": "179"
               },
               "definition": {
-                "simple_html": "constexpr folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
-                "simple_raw": "constexpr folly::ordering operator()(const L& lhs, const R& rhs) const",
-                "detailed_html": "inline constexpr folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
-                "detailed_raw": "inline constexpr folly::ordering operator()(const L& lhs, const R& rhs) const",
-                "original_definition_html": "constexpr folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
+                "simple_html": "folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
+                "simple_raw": "folly::ordering operator()(const L& lhs, const R& rhs) const",
+                "detailed_html": "inline folly::ordering operator()(const L&amp; lhs, const R&amp; rhs) const",
+                "detailed_raw": "inline folly::ordering operator()(const L& lhs, const R& rhs) const",
+                "original_definition_html": "folly::ordering apache::thrift::op::detail::DefaultCompareWith&lt; LTag, RTag, EqualTo, LessThan, L, R, typename &gt;::operator()",
                 "original_argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const"
               },
               "filepath": "fns/struct/apache/thrift/op/detail/DefaultCompareWith/operator.call",
@@ -212,7 +206,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultCompareWith/operator.call",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultCompareWith/operator.call"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultCompareWith/operator.call",
+          "parent_links": [
+            {
+              "text_html": "DefaultCompareWith",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/DefaultCompareWith"
+            }
+          ]
         }
       ]
     }

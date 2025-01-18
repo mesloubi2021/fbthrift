@@ -34,7 +34,7 @@ from pathlib import Path
 import os
 
 from enum import Enum
-from thrift.py3.common import Priority, Headers
+from thrift.python.common import Priority, Headers
 
 SocketAddress = collections.namedtuple('SocketAddress', 'ip port path')
 
@@ -111,6 +111,25 @@ cdef class AsyncProcessorFactory:
     async def onStopRequested(self):
         pass
 
+    cdef cbool requireResourcePools(AsyncProcessorFactory self):
+        """
+        Override this method to conditionally call the requireResourcePools
+        method of ThriftServer.
+        NOTE: Once resource pools are the only option, it may be possible
+        to remove this method.
+        """
+        # Tests for some implementations that use py3 servers fail
+        # if this function returns True.
+        # Some py3 tests implementation do not create metadata, which is a
+        # prerequisite to call requireResourcePools() on the ThriftServer.
+        # This function can return False with no adverse effects
+        # in production. The effect is that py3 tests will not run with
+        # resource pools enabled.
+        # This function is still relevant because derived implementations
+        # like thrift-python may enable resource pools
+        # due to better guarantees about the presence of metadata.
+        return False
+
 
 cdef class ServiceInterface(AsyncProcessorFactory):
     pass
@@ -129,7 +148,7 @@ def getServiceName(ServiceInterface svc not None):
     return (<bytes>name).decode('utf-8')
 
 
-cdef void handleAddressCallback(PyObject* future, cfollySocketAddress address):
+cdef void handleAddressCallback(PyObject* future, cfollySocketAddress address) noexcept:
     (<object>future).set_result(_get_SocketAddress(&address))
 
 
@@ -137,13 +156,21 @@ cdef class ThriftServer:
     def __cinit__(self):
         self.server = make_shared[cThriftServer]()
 
-    def __init__(self, AsyncProcessorFactory handler, int port=0, ip=None, path=None):
+    def __init__(self, AsyncProcessorFactory handler, int port=0, ip=None, path=None, socket_fd=None):
         self.loop = asyncio.get_event_loop()
         self.factory = handler
         if handler is not None:
             self.server.get().setThreadManagerFromExecutor(get_executor(), b'python_executor')
             if handler._cpp_obj:
-                self.server.get().setProcessorFactory(handler._cpp_obj)
+                self.server.get().setInterface(handler._cpp_obj)
+                # Per the Thrift Resource Pools documentation, to enable resource pools,
+                # use `requireResourcePools()` on the server before it starts.
+                # Provide the opportunity for the handler implementation to
+                # determine whether to enable resource pools.
+                # For example, python servers have a Thrift Flag that gates the use of
+                # resource pools.
+                if handler.requireResourcePools():
+                    self.server.get().requireResourcePools()
             else:
                 raise RuntimeError(
                     'The handler is not valid, it has no C++ handler. Maybe its not a '
@@ -151,8 +178,10 @@ cdef class ThriftServer:
                 )
         else:
             # This thrift server is only for monitoring/status/control
-            self.server.get().setProcessorFactory(make_shared[EmptyAsyncProcessorFactory]())
-        if path:
+            self.server.get().setInterface(make_shared[EmptyAsyncProcessorFactory]())
+        if socket_fd:
+            self.server.get().useExistingSocket(int(socket_fd))
+        elif path:
             fspath = os.fsencode(path)
             self.server.get().setAddress(
                 makeFromPath(
@@ -277,6 +306,12 @@ cdef class ThriftServer:
     def get_queue_timeout(self):
         return self.server.get().getQueueTimeout().count() / 1000
 
+    def set_socket_queue_timeout(self, seconds):
+        self.server.get().setSocketQueueTimeout(milliseconds(<int64_t>(seconds * 1000)))
+
+    def get_socket_queue_timeout(self):
+        return self.server.get().getSocketQueueTimeoutMs().count() / 1000
+    
     cdef void set_is_overloaded(self, cIsOverloadedFunc is_overloaded):
         self.server.get().setIsOverloaded(cmove(is_overloaded))
 
@@ -306,6 +341,23 @@ cdef class ThriftServer:
 
     def set_quick_exit_on_shutdown_timeout(self, cbool quick_exit_on_shutdown_timeout):
         self.server.get().setQuickExitOnShutdownTimeout(quick_exit_on_shutdown_timeout)
+
+    cdef void add_routing_handler(self, unique_ptr[cTransportRoutingHandler] handler):
+        self.server.get().addRoutingHandler(cmove(handler))
+
+    def disable_info_logging(self):
+        self.server.get().disableInfoLogging()
+
+    def is_resource_pool_enabled(self) -> bool:
+        return self.server.get().resourcePoolEnabled()
+
+    def set_task_expire_time(self, seconds):
+        self.server.get().setTaskExpireTime(milliseconds(<int64_t>(seconds * 1000)))
+
+    def set_use_client_timeout(self, cbool use_client_timeout):
+        self.server.get().setUseClientTimeout(use_client_timeout)
+
+
 
 cdef class ClientMetadata:
     @staticmethod

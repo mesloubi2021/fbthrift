@@ -21,19 +21,13 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "Tag",
-      "defname_html": "Tag"
+      "type_html": "typename Tag"
     },
     {
-      "type_html": "typename",
-      "declname_html": "Reader",
-      "defname_html": "Reader"
+      "type_html": "typename Reader"
     },
     {
-      "type_html": "typename",
-      "declname_html": "Writer",
-      "defname_html": "Writer"
+      "type_html": "typename Writer"
     }
   ],
   "types": [
@@ -44,10 +38,11 @@
       "definition_html": "using apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::Base =  TagSerializer&lt;Tag, ProtocolSerializer&gt;",
       "argsstring_html": "",
       "name_html": "Base",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::Base",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "146",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "146",
         "bodyend": "-1"
@@ -61,10 +56,11 @@
       "definition_html": "using apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::T =  type::native_type&lt;Tag&gt;",
       "argsstring_html": "",
       "name_html": "T",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::T",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "147",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "147",
         "bodyend": "-1"
@@ -85,6 +81,7 @@
       "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::encode",
       "argsstring_html": "(const T &amp;value, folly::io::QueueAppender &amp;&amp;appender) const",
       "name_html": "encode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -98,7 +95,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "151",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "151",
         "bodyend": "155"
@@ -126,6 +123,7 @@
       "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::decode",
       "argsstring_html": "(folly::io::Cursor &amp;cursor, T &amp;value) const",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
       "param": [
         {
           "type_html": "folly::io::Cursor &amp;",
@@ -139,7 +137,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "158",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "158",
         "bodyend": "163"
@@ -159,28 +157,43 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a936bdd16280346c3f02570b6818bc8f3",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "final": "yes",
-      "virtual": "non-virtual",
+      "virtual": "virtual",
       "type_html": "void",
       "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
       "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
       "name_html": "encode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
+      "reimplements": {
+        "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a713ad5f2468b37e9bcb44de42abbfac9",
+        "text_html": "encode"
+      },
+      "param": [
+        {
+          "type_html": "type::ConstRef",
+          "declname_html": "value"
+        },
+        {
+          "type_html": "folly::io::QueueAppender &amp;&amp;",
+          "declname_html": "appender"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "150",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "105",
         "bodyend": "108"
       },
       "definition": {
-        "simple_html": "void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
-        "simple_raw": "void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final",
-        "detailed_html": "inline void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final final",
-        "detailed_raw": "inline void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final final",
+        "simple_html": "virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
+        "simple_raw": "virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final",
+        "detailed_html": "inline virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final final",
+        "detailed_raw": "inline virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final final",
         "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
         "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
       },
@@ -191,86 +204,45 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "final": "yes",
-      "virtual": "non-virtual",
+      "virtual": "virtual",
       "type_html": "void",
       "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
       "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
       "name_html": "encode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
+      "reimplements": {
+        "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad6d654079be29fed2b2bd5b59f6102e1",
+        "text_html": "encode"
+      },
+      "param": [
+        {
+          "type_html": "type::AnyConstRef",
+          "declname_html": "value"
+        },
+        {
+          "type_html": "folly::io::QueueAppender &amp;&amp;",
+          "declname_html": "appender"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "150",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "109",
         "bodyend": "112"
       },
       "definition": {
-        "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
-        "simple_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const final",
-        "detailed_html": "inline void encode(type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender)\n    const final final",
-        "detailed_raw": "inline void encode(type::AnyConstRef value, folly::io::QueueAppender&& appender)\n    const final final",
+        "simple_html": "virtual void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
+        "simple_raw": "virtual void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const final",
+        "detailed_html": "inline virtual void encode(\n    type::AnyConstRef value,\n    folly::io::QueueAppender&amp;&amp; appender) const final final",
+        "detailed_raw": "inline virtual void encode(\n    type::AnyConstRef value,\n    folly::io::QueueAppender&& appender) const final final",
         "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
         "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
-      },
-      "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-      "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode"
-    },
-    {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a713ad5f2468b37e9bcb44de42abbfac9",
-      "prot": "public",
-      "static": "no",
-      "const": "no",
-      "explicit": "no",
-      "inline": "no",
-      "virtual": "non-virtual",
-      "type_html": "void",
-      "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-      "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
-      "name_html": "encode",
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-        "line": "150",
-        "column": "1"
-      },
-      "definition": {
-        "simple_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-        "simple_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-        "detailed_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-        "detailed_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-        "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-        "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
-      },
-      "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-      "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode"
-    },
-    {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ad6d654079be29fed2b2bd5b59f6102e1",
-      "prot": "public",
-      "static": "no",
-      "const": "no",
-      "explicit": "no",
-      "inline": "no",
-      "virtual": "non-virtual",
-      "type_html": "void",
-      "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-      "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
-      "name_html": "encode",
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-        "line": "150",
-        "column": "1"
-      },
-      "definition": {
-        "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-        "simple_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-        "detailed_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-        "detailed_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-        "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-        "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
       },
       "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
       "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode"
@@ -279,28 +251,43 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a9bfd650df9708d077d48821f5cb27818",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "final": "yes",
-      "virtual": "non-virtual",
+      "virtual": "virtual",
       "type_html": "void",
       "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
       "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+      "reimplements": {
+        "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
+        "text_html": "decode"
+      },
+      "param": [
+        {
+          "type_html": "folly::io::Cursor &amp;",
+          "declname_html": "cursor"
+        },
+        {
+          "type_html": "type::Ref",
+          "declname_html": "value"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "115",
         "bodyend": "118"
       },
       "definition": {
-        "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final",
-        "simple_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const final",
-        "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final final",
-        "detailed_raw": "inline void decode(folly::io::Cursor& cursor, type::Ref value) const final final",
+        "simple_html": "virtual void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final",
+        "simple_raw": "virtual void decode(folly::io::Cursor& cursor, type::Ref value) const final",
+        "detailed_html": "inline virtual void decode(\n    folly::io::Cursor&amp; cursor, type::Ref value) const final final",
+        "detailed_raw": "inline virtual void decode(\n    folly::io::Cursor& cursor, type::Ref value) const final final",
         "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
         "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final"
       },
@@ -311,28 +298,47 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "final": "yes",
-      "virtual": "non-virtual",
+      "virtual": "virtual",
       "type_html": "void",
       "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
       "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+      "reimplements": {
+        "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ab349fdc3718ba30606de84d559b15556",
+        "text_html": "decode"
+      },
+      "param": [
+        {
+          "type_html": "const type::Type &amp;",
+          "declname_html": "type"
+        },
+        {
+          "type_html": "folly::io::Cursor &amp;",
+          "declname_html": "cursor"
+        },
+        {
+          "type_html": "type::AnyValue &amp;",
+          "declname_html": "value"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "119",
         "bodyend": "130"
       },
       "definition": {
-        "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final",
-        "simple_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final",
-        "detailed_html": "inline void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final final",
-        "detailed_raw": "inline void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final final",
+        "simple_html": "virtual void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final",
+        "simple_raw": "virtual void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final",
+        "detailed_html": "inline virtual void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final final",
+        "detailed_raw": "inline virtual void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final final",
         "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
         "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final"
       },
@@ -343,114 +349,45 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a145852f76866e12537467a26da5b3b43",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "final": "yes",
-      "virtual": "non-virtual",
+      "virtual": "virtual",
       "type_html": "void",
       "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
       "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+      "reimplements": {
+        "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aebfebfb7c4d13190a9136fdf518767b0",
+        "text_html": "decode"
+      },
+      "param": [
+        {
+          "type_html": "folly::io::Cursor &amp;",
+          "declname_html": "cursor"
+        },
+        {
+          "type_html": "type::AnyRef",
+          "declname_html": "value"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "132",
         "bodyend": "135"
       },
       "definition": {
-        "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const final",
-        "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const final",
-        "detailed_html": "inline void decode(\n    folly::io::Cursor&amp; cursor, type::AnyRef value) const final final",
-        "detailed_raw": "inline void decode(\n    folly::io::Cursor& cursor, type::AnyRef value) const final final",
+        "simple_html": "virtual void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const final",
+        "simple_raw": "virtual void decode(folly::io::Cursor& cursor, type::AnyRef value) const final",
+        "detailed_html": "inline virtual void decode(\n    folly::io::Cursor&amp; cursor, type::AnyRef value) const final final",
+        "detailed_raw": "inline virtual void decode(\n    folly::io::Cursor& cursor, type::AnyRef value) const final final",
         "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
         "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final"
-      },
-      "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-      "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode"
-    },
-    {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
-      "prot": "public",
-      "static": "no",
-      "const": "no",
-      "explicit": "no",
-      "inline": "no",
-      "virtual": "non-virtual",
-      "type_html": "void",
-      "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-      "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0",
-      "name_html": "decode",
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-        "line": "157",
-        "column": "1"
-      },
-      "definition": {
-        "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-        "simple_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-        "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-        "detailed_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-        "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-        "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0"
-      },
-      "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-      "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode"
-    },
-    {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab349fdc3718ba30606de84d559b15556",
-      "prot": "public",
-      "static": "no",
-      "const": "no",
-      "explicit": "no",
-      "inline": "no",
-      "virtual": "non-virtual",
-      "type_html": "void",
-      "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-      "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0",
-      "name_html": "decode",
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-        "line": "157",
-        "column": "1"
-      },
-      "definition": {
-        "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-        "simple_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-        "detailed_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-        "detailed_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-        "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-        "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0"
-      },
-      "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-      "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode"
-    },
-    {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aebfebfb7c4d13190a9136fdf518767b0",
-      "prot": "public",
-      "static": "no",
-      "const": "no",
-      "explicit": "no",
-      "inline": "no",
-      "virtual": "non-virtual",
-      "type_html": "void",
-      "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-      "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0",
-      "name_html": "decode",
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-        "line": "157",
-        "column": "1"
-      },
-      "definition": {
-        "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-        "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-        "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-        "detailed_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-        "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-        "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0"
       },
       "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
       "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode"
@@ -459,7 +396,7 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1af4c89e835cdfd0dd91739b1797c8ba10",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "no",
       "virtual": "non-virtual",
@@ -467,10 +404,21 @@
       "definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
       "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+      "param": [
+        {
+          "type_html": "const type::Type &amp;",
+          "declname_html": "type"
+        },
+        {
+          "type_html": "folly::io::Cursor &amp;",
+          "declname_html": "cursor"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1"
+        "column": "3"
       },
       "definition": {
         "simple_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
@@ -487,7 +435,7 @@
       "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aead77b848648db244849d5ffa3a0c2de",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "virtual": "non-virtual",
@@ -495,10 +443,21 @@
       "definition_html": "void apache::thrift::op::Serializer::decode",
       "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+      "param": [
+        {
+          "type_html": "folly::io::Cursor &amp;",
+          "declname_html": "cursor"
+        },
+        {
+          "type_html": "type::AnyValue &amp;",
+          "declname_html": "value"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "77",
         "bodyend": "79"
@@ -515,10 +474,10 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ad3308d95e13606220cc12474d742cb41",
+      "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aec9a381a7c9fcce3ce10280e11af1737",
       "prot": "public",
       "static": "no",
-      "const": "no",
+      "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "virtual": "non-virtual",
@@ -528,9 +487,10 @@
         }
       ],
       "type_html": "type::native_type&lt; Tag &gt;",
-      "definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+      "definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
       "argsstring_html": "(folly::io::Cursor &amp;cursor) const",
       "name_html": "decode",
+      "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
       "param": [
         {
           "type_html": "folly::io::Cursor &amp;",
@@ -540,7 +500,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "157",
-        "column": "1",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "bodystart": "81",
         "bodyend": "85"
@@ -550,7 +510,7 @@
         "simple_raw": "template <typename Tag>\ntype::native_type<Tag> decode(folly::io::Cursor& cursor) const",
         "detailed_html": "template &lt;typename Tag&gt;\ninline type::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
         "detailed_raw": "template <typename Tag>\ninline type::native_type<Tag> decode(folly::io::Cursor& cursor) const",
-        "original_definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+        "original_definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
         "original_argsstring_html": "(folly::io::Cursor &amp;cursor) const"
       },
       "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
@@ -559,10 +519,10 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-    "line": "145",
+    "line": "144",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-    "bodystart": "144",
+    "bodystart": "145",
     "bodyend": "164"
   },
   "namespacednames_html": [
@@ -599,10 +559,11 @@
               "definition_html": "virtual apache::thrift::op::Serializer::~Serializer",
               "argsstring_html": "()=default",
               "name_html": "~Serializer",
+              "qualifiedname_html": "apache::thrift::op::Serializer::~Serializer",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "49",
-                "column": "1"
+                "column": "11"
               },
               "definition": {
                 "simple_html": "virtual ~Serializer()",
@@ -624,7 +585,13 @@
           "brief_html": "Destructs the Serializer.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/Serializer.dtor",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/Serializer.dtor"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/Serializer.dtor",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -632,20 +599,59 @@
           "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a954c63ec527b225f5ec5342649f5b64d",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a713ad5f2468b37e9bcb44de42abbfac9",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
+              "inline": "no",
+              "virtual": "pure-virtual",
               "type_html": "void",
-              "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::encode",
-              "argsstring_html": "(const T &amp;value, folly::io::QueueAppender &amp;&amp;appender) const",
+              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
+              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
               "name_html": "encode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::encode",
+              "reimplementedby": [
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1a936bdd16280346c3f02570b6818bc8f3",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1ab7e9bae488ed22a8d1ae10392cbc4986",
+                  "text_html": "encode"
+                }
+              ],
               "param": [
                 {
-                  "type_html": "const T &amp;",
+                  "type_html": "type::ConstRef",
                   "declname_html": "value"
                 },
                 {
@@ -655,109 +661,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "151",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "151",
-                "bodyend": "155"
-              },
-              "definition": {
-                "simple_html": "void encode(const T&amp; value, folly::io::QueueAppender&amp;&amp; appender) const",
-                "simple_raw": "void encode(const T& value, folly::io::QueueAppender&& appender) const",
-                "detailed_html": "inline void encode(const T&amp; value, folly::io::QueueAppender&amp;&amp; appender) const",
-                "detailed_raw": "inline void encode(const T& value, folly::io::QueueAppender&& appender) const",
-                "original_definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::encode",
-                "original_argsstring_html": "(const T &amp;value, folly::io::QueueAppender &amp;&amp;appender) const"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "final": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
-              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
-              "name_html": "encode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "150",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "105",
-                "bodyend": "108"
-              },
-              "definition": {
-                "simple_html": "void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
-                "simple_raw": "void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final",
-                "detailed_html": "inline void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final final",
-                "detailed_raw": "inline void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final final",
-                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
-                "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "final": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
-              "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
-              "name_html": "encode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "150",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "109",
-                "bodyend": "112"
-              },
-              "definition": {
-                "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
-                "simple_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const final",
-                "detailed_html": "inline void encode(type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender)\n    const final final",
-                "detailed_raw": "inline void encode(type::AnyConstRef value, folly::io::QueueAppender&& appender)\n    const final final",
-                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
-                "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a713ad5f2468b37e9bcb44de42abbfac9",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
-              "name_html": "encode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "150",
-                "column": "1"
+                "line": "59",
+                "column": "16"
               },
               "definition": {
                 "simple_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
@@ -767,27 +672,76 @@
                 "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
                 "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/encode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/encode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ad6d654079be29fed2b2bd5b59f6102e1",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad6d654079be29fed2b2bd5b59f6102e1",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "no",
-              "virtual": "non-virtual",
+              "virtual": "pure-virtual",
               "type_html": "void",
               "definition_html": "virtual void apache::thrift::op::Serializer::encode",
               "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
               "name_html": "encode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::encode",
+              "reimplementedby": [
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
+                  "text_html": "encode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1aa8d950721c75da04a276ac67c14b0e03",
+                  "text_html": "encode"
+                }
+              ],
+              "param": [
+                {
+                  "type_html": "type::AnyConstRef",
+                  "declname_html": "value"
+                },
+                {
+                  "type_html": "folly::io::QueueAppender &amp;&amp;",
+                  "declname_html": "appender"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "150",
-                "column": "1"
+                "line": "61",
+                "column": "16"
               },
               "definition": {
                 "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
@@ -797,9 +751,9 @@
                 "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
                 "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/encode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/encode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
             },
             {
@@ -815,6 +769,7 @@
               "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
               "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
               "name_html": "encode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::encode",
               "reimplements": {
                 "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a713ad5f2468b37e9bcb44de42abbfac9",
                 "text_html": "encode"
@@ -832,7 +787,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "105",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "105",
                 "bodyend": "108"
@@ -863,6 +818,7 @@
               "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
               "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
               "name_html": "encode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::encode",
               "reimplements": {
                 "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad6d654079be29fed2b2bd5b59f6102e1",
                 "text_html": "encode"
@@ -880,7 +836,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "109",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "109",
                 "bodyend": "112"
@@ -899,103 +855,23 @@
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9f5d1db8df09df266c60228096d018ba",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const=0",
-              "name_html": "encode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "104",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "simple_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "detailed_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "detailed_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-                "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const=0"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1af6bd2c539f14b5f04f1429dbe3dd94da",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-              "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const=0",
-              "name_html": "encode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "104",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "simple_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "detailed_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "detailed_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-                "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const=0"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a713ad5f2468b37e9bcb44de42abbfac9",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a936bdd16280346c3f02570b6818bc8f3",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "no",
-              "virtual": "pure-virtual",
+              "inline": "yes",
+              "final": "yes",
+              "virtual": "virtual",
               "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
+              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
+              "argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
               "name_html": "encode",
-              "reimplementedby": [
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a936bdd16280346c3f02570b6818bc8f3",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1ab7e9bae488ed22a8d1ae10392cbc4986",
-                  "text_html": "encode"
-                }
-              ],
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
+              "reimplements": {
+                "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a713ad5f2468b37e9bcb44de42abbfac9",
+                "text_html": "encode"
+              },
               "param": [
                 {
                   "type_html": "type::ConstRef",
@@ -1008,60 +884,43 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "59",
-                "column": "1"
+                "line": "150",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "105",
+                "bodyend": "108"
               },
               "definition": {
-                "simple_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "simple_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "detailed_html": "void encode(type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "detailed_raw": "void encode(type::ConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-                "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
+                "simple_html": "virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
+                "simple_raw": "virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final",
+                "detailed_html": "inline virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final final",
+                "detailed_raw": "inline virtual void encode(\n    type::ConstRef value, folly::io::QueueAppender&& appender) const final final",
+                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
+                "original_argsstring_html": "(type::ConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad6d654079be29fed2b2bd5b59f6102e1",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "no",
-              "virtual": "pure-virtual",
+              "inline": "yes",
+              "final": "yes",
+              "virtual": "virtual",
               "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::encode",
-              "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0",
+              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
+              "argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final",
               "name_html": "encode",
-              "reimplementedby": [
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a77c27c60ba28e9a70dda78f0024d2cde",
-                  "text_html": "encode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1aa8d950721c75da04a276ac67c14b0e03",
-                  "text_html": "encode"
-                }
-              ],
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
+              "reimplements": {
+                "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad6d654079be29fed2b2bd5b59f6102e1",
+                "text_html": "encode"
+              },
               "param": [
                 {
                   "type_html": "type::AnyConstRef",
@@ -1074,20 +933,67 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "61",
-                "column": "1"
+                "line": "150",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "109",
+                "bodyend": "112"
               },
               "definition": {
-                "simple_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "simple_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "detailed_html": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const = 0",
-                "detailed_raw": "void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::encode",
-                "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const =0"
+                "simple_html": "virtual void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&amp;&amp; appender) const final",
+                "simple_raw": "virtual void encode(\n    type::AnyConstRef value, folly::io::QueueAppender&& appender) const final",
+                "detailed_html": "inline virtual void encode(\n    type::AnyConstRef value,\n    folly::io::QueueAppender&amp;&amp; appender) const final final",
+                "detailed_raw": "inline virtual void encode(\n    type::AnyConstRef value,\n    folly::io::QueueAppender&& appender) const final final",
+                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::encode",
+                "original_argsstring_html": "(type::AnyConstRef value, folly::io::QueueAppender &amp;&amp;appender) const final"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/encode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/encode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a954c63ec527b225f5ec5342649f5b64d",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "void",
+              "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::encode",
+              "argsstring_html": "(const T &amp;value, folly::io::QueueAppender &amp;&amp;appender) const",
+              "name_html": "encode",
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::encode",
+              "param": [
+                {
+                  "type_html": "const T &amp;",
+                  "declname_html": "value"
+                },
+                {
+                  "type_html": "folly::io::QueueAppender &amp;&amp;",
+                  "declname_html": "appender"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "line": "151",
+                "column": "8",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "151",
+                "bodyend": "155"
+              },
+              "definition": {
+                "simple_html": "void encode(const T&amp; value, folly::io::QueueAppender&amp;&amp; appender) const",
+                "simple_raw": "void encode(const T& value, folly::io::QueueAppender&& appender) const",
+                "detailed_html": "inline void encode(const T&amp; value, folly::io::QueueAppender&amp;&amp; appender) const",
+                "detailed_raw": "inline void encode(const T& value, folly::io::QueueAppender&& appender) const",
+                "original_definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::encode",
+                "original_argsstring_html": "(const T &amp;value, folly::io::QueueAppender &amp;&amp;appender) const"
+              },
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/encode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::encode"
             }
           ],
@@ -1097,7 +1003,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/encode",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/encode"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/encode",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1105,166 +1017,70 @@
           "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a7a58974946008c007f66a4b39c62378a",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
+              "inline": "no",
+              "virtual": "pure-virtual",
               "type_html": "void",
-              "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, T &amp;value) const",
+              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
+              "reimplementedby": [
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1a9bfd650df9708d077d48821f5cb27818",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1a579b4389ff77bb3065d9c358c7d7ae1b",
+                  "text_html": "decode"
+                }
+              ],
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
                   "declname_html": "cursor"
                 },
                 {
-                  "type_html": "T &amp;",
+                  "type_html": "type::Ref",
                   "declname_html": "value"
                 }
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "158",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "158",
-                "bodyend": "163"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, T&amp; value) const",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, T& value) const",
-                "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, T&amp; value) const",
-                "detailed_raw": "inline void decode(folly::io::Cursor& cursor, T& value) const",
-                "original_definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, T &amp;value) const"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a9bfd650df9708d077d48821f5cb27818",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "final": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "115",
-                "bodyend": "118"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const final",
-                "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final final",
-                "detailed_raw": "inline void decode(folly::io::Cursor& cursor, type::Ref value) const final final",
-                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "final": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "119",
-                "bodyend": "130"
-              },
-              "definition": {
-                "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final",
-                "simple_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final",
-                "detailed_html": "inline void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final final",
-                "detailed_raw": "inline void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final final",
-                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a145852f76866e12537467a26da5b3b43",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "final": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "132",
-                "bodyend": "135"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const final",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const final",
-                "detailed_html": "inline void decode(\n    folly::io::Cursor&amp; cursor, type::AnyRef value) const final final",
-                "detailed_raw": "inline void decode(\n    folly::io::Cursor& cursor, type::AnyRef value) const final final",
-                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final"
-              },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1"
+                "line": "69",
+                "column": "16"
               },
               "definition": {
                 "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
@@ -1274,27 +1090,80 @@
                 "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab349fdc3718ba30606de84d559b15556",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ab349fdc3718ba30606de84d559b15556",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "no",
-              "virtual": "non-virtual",
+              "virtual": "pure-virtual",
               "type_html": "void",
               "definition_html": "virtual void apache::thrift::op::Serializer::decode",
               "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
+              "reimplementedby": [
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1a65ed149088bff9ec84b3c71807adf5b7",
+                  "text_html": "decode"
+                }
+              ],
+              "param": [
+                {
+                  "type_html": "const type::Type &amp;",
+                  "declname_html": "type"
+                },
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                },
+                {
+                  "type_html": "type::AnyValue &amp;",
+                  "declname_html": "value"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1"
+                "line": "70",
+                "column": "16"
               },
               "definition": {
                 "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
@@ -1304,27 +1173,76 @@
                 "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aebfebfb7c4d13190a9136fdf518767b0",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aebfebfb7c4d13190a9136fdf518767b0",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "no",
-              "virtual": "non-virtual",
+              "virtual": "pure-virtual",
               "type_html": "void",
               "definition_html": "virtual void apache::thrift::op::Serializer::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
+              "reimplementedby": [
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1a145852f76866e12537467a26da5b3b43",
+                  "text_html": "decode"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1aaa03fe4008507caf378556a2b1f73387",
+                  "text_html": "decode"
+                }
+              ],
+              "param": [
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                },
+                {
+                  "type_html": "type::AnyRef",
+                  "declname_html": "value"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1"
+                "line": "74",
+                "column": "16"
               },
               "definition": {
                 "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
@@ -1334,16 +1252,16 @@
                 "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1af4c89e835cdfd0dd91739b1797c8ba10",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1af4c89e835cdfd0dd91739b1797c8ba10",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "no",
               "virtual": "non-virtual",
@@ -1351,10 +1269,21 @@
               "definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
               "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
+              "param": [
+                {
+                  "type_html": "const type::Type &amp;",
+                  "declname_html": "type"
+                },
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1"
+                "line": "75",
+                "column": "18"
               },
               "definition": {
                 "simple_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
@@ -1364,16 +1293,16 @@
                 "original_definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aead77b848648db244849d5ffa3a0c2de",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aead77b848648db244849d5ffa3a0c2de",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "yes",
               "virtual": "non-virtual",
@@ -1381,10 +1310,21 @@
               "definition_html": "void apache::thrift::op::Serializer::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
+              "param": [
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                },
+                {
+                  "type_html": "type::AnyValue &amp;",
+                  "declname_html": "value"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1",
+                "line": "77",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "77",
                 "bodyend": "79"
@@ -1397,16 +1337,16 @@
                 "original_definition_html": "void apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ad3308d95e13606220cc12474d742cb41",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aec9a381a7c9fcce3ce10280e11af1737",
               "prot": "public",
               "static": "no",
-              "const": "no",
+              "const": "yes",
               "explicit": "no",
               "inline": "yes",
               "virtual": "non-virtual",
@@ -1416,9 +1356,10 @@
                 }
               ],
               "type_html": "type::native_type&lt; Tag &gt;",
-              "definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+              "definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::Serializer::decode",
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
@@ -1427,8 +1368,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "157",
-                "column": "1",
+                "line": "81",
+                "column": "21",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "81",
                 "bodyend": "85"
@@ -1438,12 +1379,142 @@
                 "simple_raw": "template <typename Tag>\ntype::native_type<Tag> decode(folly::io::Cursor& cursor) const",
                 "detailed_html": "template &lt;typename Tag&gt;\ninline type::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
                 "detailed_raw": "template <typename Tag>\ninline type::native_type<Tag> decode(folly::io::Cursor& cursor) const",
-                "original_definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+                "original_definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor) const"
               },
-              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1af4c89e835cdfd0dd91739b1797c8ba10",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "no",
+              "virtual": "non-virtual",
+              "type_html": "type::AnyValue",
+              "definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
+              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const",
+              "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
+              "param": [
+                {
+                  "type_html": "const type::Type &amp;",
+                  "declname_html": "type"
+                },
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "line": "114",
+                "column": "3"
+              },
+              "definition": {
+                "simple_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
+                "simple_raw": "type::AnyValue decode(const type::Type& type, folly::io::Cursor& cursor) const",
+                "detailed_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
+                "detailed_raw": "type::AnyValue decode(const type::Type& type, folly::io::Cursor& cursor) const",
+                "original_definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
+                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const"
+              },
+              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
+              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1aead77b848648db244849d5ffa3a0c2de",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "void",
+              "definition_html": "void apache::thrift::op::Serializer::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const",
+              "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
+              "param": [
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                },
+                {
+                  "type_html": "type::AnyValue &amp;",
+                  "declname_html": "value"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "line": "114",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "77",
+                "bodyend": "79"
+              },
+              "definition": {
+                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyValue&amp; value) const",
+                "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyValue& value) const",
+                "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, type::AnyValue&amp; value) const",
+                "detailed_raw": "inline void decode(folly::io::Cursor& cursor, type::AnyValue& value) const",
+                "original_definition_html": "void apache::thrift::op::Serializer::decode",
+                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const"
+              },
+              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
+              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1aec9a381a7c9fcce3ce10280e11af1737",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "tparams": [
+                {
+                  "type_html": "typename Tag"
+                }
+              ],
+              "type_html": "type::native_type&lt; Tag &gt;",
+              "definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor) const",
+              "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
+              "param": [
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "line": "114",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "81",
+                "bodyend": "85"
+              },
+              "definition": {
+                "simple_html": "template &lt;typename Tag&gt;\ntype::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
+                "simple_raw": "template <typename Tag>\ntype::native_type<Tag> decode(folly::io::Cursor& cursor) const",
+                "detailed_html": "template &lt;typename Tag&gt;\ninline type::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
+                "detailed_raw": "template <typename Tag>\ninline type::native_type<Tag> decode(folly::io::Cursor& cursor) const",
+                "original_definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
+                "original_argsstring_html": "(folly::io::Cursor &amp;cursor) const"
+              },
+              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
@@ -1459,6 +1530,7 @@
               "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
               "reimplements": {
                 "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
                 "text_html": "decode"
@@ -1476,7 +1548,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "115",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "115",
                 "bodyend": "118"
@@ -1507,6 +1579,7 @@
               "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
               "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
               "reimplements": {
                 "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ab349fdc3718ba30606de84d559b15556",
                 "text_html": "decode"
@@ -1528,7 +1601,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "119",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "119",
                 "bodyend": "130"
@@ -1559,6 +1632,7 @@
               "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::decode",
               "reimplements": {
                 "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aebfebfb7c4d13190a9136fdf518767b0",
                 "text_html": "decode"
@@ -1576,7 +1650,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "132",
-                "column": "1",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "132",
                 "bodyend": "135"
@@ -1595,240 +1669,23 @@
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ad270204f0e5af85601ff7e2950cf9f9e",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const=0",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-                "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-                "detailed_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const=0"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a4f7966d9d024f46f86681c1b8a227e60",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const=0",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-                "simple_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-                "detailed_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-                "detailed_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const=0"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1acc480fd90295bfdddb23549112adb8f3",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const=0",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-                "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-                "detailed_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const=0"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1af4c89e835cdfd0dd91739b1797c8ba10",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "no",
-              "virtual": "non-virtual",
-              "type_html": "type::AnyValue",
-              "definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1"
-              },
-              "definition": {
-                "simple_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
-                "simple_raw": "type::AnyValue decode(const type::Type& type, folly::io::Cursor& cursor) const",
-                "detailed_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
-                "detailed_raw": "type::AnyValue decode(const type::Type& type, folly::io::Cursor& cursor) const",
-                "original_definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1aead77b848648db244849d5ffa3a0c2de",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "type_html": "void",
-              "definition_html": "void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const",
-              "name_html": "decode",
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "77",
-                "bodyend": "79"
-              },
-              "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyValue&amp; value) const",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyValue& value) const",
-                "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, type::AnyValue&amp; value) const",
-                "detailed_raw": "inline void decode(folly::io::Cursor& cursor, type::AnyValue& value) const",
-                "original_definition_html": "void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ad3308d95e13606220cc12474d742cb41",
-              "prot": "public",
-              "static": "no",
-              "const": "no",
-              "explicit": "no",
-              "inline": "yes",
-              "virtual": "non-virtual",
-              "tparams": [
-                {
-                  "type_html": "typename Tag"
-                }
-              ],
-              "type_html": "type::native_type&lt; Tag &gt;",
-              "definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor) const",
-              "name_html": "decode",
-              "param": [
-                {
-                  "type_html": "folly::io::Cursor &amp;",
-                  "declname_html": "cursor"
-                }
-              ],
-              "location": {
-                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "114",
-                "column": "1",
-                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "bodystart": "81",
-                "bodyend": "85"
-              },
-              "definition": {
-                "simple_html": "template &lt;typename Tag&gt;\ntype::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
-                "simple_raw": "template <typename Tag>\ntype::native_type<Tag> decode(folly::io::Cursor& cursor) const",
-                "detailed_html": "template &lt;typename Tag&gt;\ninline type::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
-                "detailed_raw": "template <typename Tag>\ninline type::native_type<Tag> decode(folly::io::Cursor& cursor) const",
-                "original_definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor) const"
-              },
-              "filepath": "fns/class/apache/thrift/op/TagSerializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/TagSerializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1TagSerializer",
-              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
-            },
-            {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a9bfd650df9708d077d48821f5cb27818",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "no",
-              "virtual": "pure-virtual",
+              "inline": "yes",
+              "final": "yes",
+              "virtual": "virtual",
               "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0",
+              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final",
               "name_html": "decode",
-              "reimplementedby": [
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a9bfd650df9708d077d48821f5cb27818",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1a579b4389ff77bb3065d9c358c7d7ae1b",
-                  "text_html": "decode"
-                }
-              ],
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+              "reimplements": {
+                "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a91a2e9c9d6a2f998d0c15c5f11820ac8",
+                "text_html": "decode"
+              },
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
@@ -1841,60 +1698,43 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "69",
-                "column": "1"
+                "line": "157",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "115",
+                "bodyend": "118"
               },
               "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-                "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::Ref value) const = 0",
-                "detailed_raw": "void decode(folly::io::Cursor& cursor, type::Ref value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const =0"
+                "simple_html": "virtual void decode(folly::io::Cursor&amp; cursor, type::Ref value) const final",
+                "simple_raw": "virtual void decode(folly::io::Cursor& cursor, type::Ref value) const final",
+                "detailed_html": "inline virtual void decode(\n    folly::io::Cursor&amp; cursor, type::Ref value) const final final",
+                "detailed_raw": "inline virtual void decode(\n    folly::io::Cursor& cursor, type::Ref value) const final final",
+                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::Ref value) const final"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ab349fdc3718ba30606de84d559b15556",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "no",
-              "virtual": "pure-virtual",
+              "inline": "yes",
+              "final": "yes",
+              "virtual": "virtual",
               "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0",
+              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+              "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final",
               "name_html": "decode",
-              "reimplementedby": [
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ab7126b5a1198ebd30fa62943a4461a43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1a65ed149088bff9ec84b3c71807adf5b7",
-                  "text_html": "decode"
-                }
-              ],
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+              "reimplements": {
+                "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ab349fdc3718ba30606de84d559b15556",
+                "text_html": "decode"
+              },
               "param": [
                 {
                   "type_html": "const type::Type &amp;",
@@ -1911,60 +1751,43 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "70",
-                "column": "1"
+                "line": "157",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "119",
+                "bodyend": "130"
               },
               "definition": {
-                "simple_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-                "simple_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-                "detailed_html": "void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const = 0",
-                "detailed_raw": "void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const =0"
+                "simple_html": "virtual void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final",
+                "simple_raw": "virtual void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final",
+                "detailed_html": "inline virtual void decode(\n    const type::Type&amp; type,\n    folly::io::Cursor&amp; cursor,\n    type::AnyValue&amp; value) const final final",
+                "detailed_raw": "inline virtual void decode(\n    const type::Type& type,\n    folly::io::Cursor& cursor,\n    type::AnyValue& value) const final final",
+                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+                "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const final"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aebfebfb7c4d13190a9136fdf518767b0",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a145852f76866e12537467a26da5b3b43",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
-              "inline": "no",
-              "virtual": "pure-virtual",
+              "inline": "yes",
+              "final": "yes",
+              "virtual": "virtual",
               "type_html": "void",
-              "definition_html": "virtual void apache::thrift::op::Serializer::decode",
-              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0",
+              "definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final",
               "name_html": "decode",
-              "reimplementedby": [
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a145852f76866e12537467a26da5b3b43",
-                  "text_html": "decode"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1aaa03fe4008507caf378556a2b1f73387",
-                  "text_html": "decode"
-                }
-              ],
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+              "reimplements": {
+                "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aebfebfb7c4d13190a9136fdf518767b0",
+                "text_html": "decode"
+              },
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
@@ -1977,24 +1800,27 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "74",
-                "column": "1"
+                "line": "157",
+                "column": "3",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "132",
+                "bodyend": "135"
               },
               "definition": {
-                "simple_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-                "simple_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-                "detailed_html": "void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const = 0",
-                "detailed_raw": "void decode(folly::io::Cursor& cursor, type::AnyRef value) const = 0",
-                "original_definition_html": "virtual void apache::thrift::op::Serializer::decode",
-                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const =0"
+                "simple_html": "virtual void decode(folly::io::Cursor&amp; cursor, type::AnyRef value) const final",
+                "simple_raw": "virtual void decode(folly::io::Cursor& cursor, type::AnyRef value) const final",
+                "detailed_html": "inline virtual void decode(\n    folly::io::Cursor&amp; cursor, type::AnyRef value) const final final",
+                "detailed_raw": "inline virtual void decode(\n    folly::io::Cursor& cursor, type::AnyRef value) const final final",
+                "original_definition_html": "void apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::decode",
+                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyRef value) const final"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1af4c89e835cdfd0dd91739b1797c8ba10",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1af4c89e835cdfd0dd91739b1797c8ba10",
               "prot": "public",
               "static": "no",
               "const": "yes",
@@ -2005,6 +1831,7 @@
               "definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
               "argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
               "param": [
                 {
                   "type_html": "const type::Type &amp;",
@@ -2017,8 +1844,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "75",
-                "column": "1"
+                "line": "157",
+                "column": "3"
               },
               "definition": {
                 "simple_html": "type::AnyValue decode(const type::Type&amp; type, folly::io::Cursor&amp; cursor) const",
@@ -2028,13 +1855,13 @@
                 "original_definition_html": "type::AnyValue apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(const type::Type &amp;type, folly::io::Cursor &amp;cursor) const"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aead77b848648db244849d5ffa3a0c2de",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aead77b848648db244849d5ffa3a0c2de",
               "prot": "public",
               "static": "no",
               "const": "yes",
@@ -2045,6 +1872,7 @@
               "definition_html": "void apache::thrift::op::Serializer::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
@@ -2057,8 +1885,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "77",
-                "column": "1",
+                "line": "157",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "77",
                 "bodyend": "79"
@@ -2071,13 +1899,13 @@
                 "original_definition_html": "void apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor, type::AnyValue &amp;value) const"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             },
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1ad3308d95e13606220cc12474d742cb41",
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1aec9a381a7c9fcce3ce10280e11af1737",
               "prot": "public",
               "static": "no",
               "const": "yes",
@@ -2090,9 +1918,10 @@
                 }
               ],
               "type_html": "type::native_type&lt; Tag &gt;",
-              "definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+              "definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
               "argsstring_html": "(folly::io::Cursor &amp;cursor) const",
               "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
               "param": [
                 {
                   "type_html": "folly::io::Cursor &amp;",
@@ -2101,8 +1930,8 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
-                "line": "81",
-                "column": "1",
+                "line": "157",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "81",
                 "bodyend": "85"
@@ -2112,12 +1941,56 @@
                 "simple_raw": "template <typename Tag>\ntype::native_type<Tag> decode(folly::io::Cursor& cursor) const",
                 "detailed_html": "template &lt;typename Tag&gt;\ninline type::native_type&lt;Tag&gt; decode(folly::io::Cursor&amp; cursor) const",
                 "detailed_raw": "template <typename Tag>\ninline type::native_type<Tag> decode(folly::io::Cursor& cursor) const",
-                "original_definition_html": "type::native_type&lt;Tag&gt; apache::thrift::op::Serializer::decode",
+                "original_definition_html": "type::native_type&lt; Tag &gt; apache::thrift::op::Serializer::decode",
                 "original_argsstring_html": "(folly::io::Cursor &amp;cursor) const"
               },
-              "filepath": "fns/class/apache/thrift/op/Serializer/decode",
-              "href": "/ref/cpp/fns/class/apache/thrift/op/Serializer/decode",
-              "parentid": "classapache_1_1thrift_1_1op_1_1Serializer",
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
+              "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
+            },
+            {
+              "refid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer_1a7a58974946008c007f66a4b39c62378a",
+              "prot": "public",
+              "static": "no",
+              "const": "yes",
+              "explicit": "no",
+              "inline": "yes",
+              "virtual": "non-virtual",
+              "type_html": "void",
+              "definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::decode",
+              "argsstring_html": "(folly::io::Cursor &amp;cursor, T &amp;value) const",
+              "name_html": "decode",
+              "qualifiedname_html": "apache::thrift::op::ProtocolSerializer::decode",
+              "param": [
+                {
+                  "type_html": "folly::io::Cursor &amp;",
+                  "declname_html": "cursor"
+                },
+                {
+                  "type_html": "T &amp;",
+                  "declname_html": "value"
+                }
+              ],
+              "location": {
+                "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "line": "158",
+                "column": "8",
+                "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
+                "bodystart": "158",
+                "bodyend": "163"
+              },
+              "definition": {
+                "simple_html": "void decode(folly::io::Cursor&amp; cursor, T&amp; value) const",
+                "simple_raw": "void decode(folly::io::Cursor& cursor, T& value) const",
+                "detailed_html": "inline void decode(folly::io::Cursor&amp; cursor, T&amp; value) const",
+                "detailed_raw": "inline void decode(folly::io::Cursor& cursor, T& value) const",
+                "original_definition_html": "void apache::thrift::op::ProtocolSerializer&lt; Tag, Reader, Writer &gt;::decode",
+                "original_argsstring_html": "(folly::io::Cursor &amp;cursor, T &amp;value) const"
+              },
+              "filepath": "fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "href": "/ref/cpp/fns/class/apache/thrift/op/ProtocolSerializer/decode",
+              "parentid": "classapache_1_1thrift_1_1op_1_1ProtocolSerializer",
               "compoundname_html": "apache::thrift::op::ProtocolSerializer::decode"
             }
           ],
@@ -2127,7 +2000,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/decode",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/decode"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/decode",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2135,7 +2014,7 @@
           "compoundname_html": "apache::thrift::op::ProtocolSerializer::derived",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1ad4af17e1a80fc04030596d16f9fcbfe1",
+              "refid": "classapache_1_1thrift_1_1op_1_1TagSerializer_1a2f273f6111878339fb53e268657c13b1",
               "prot": "private",
               "static": "no",
               "const": "yes",
@@ -2143,13 +2022,14 @@
               "inline": "yes",
               "virtual": "non-virtual",
               "type_html": "const Derived &amp;",
-              "definition_html": "const Derived&amp; apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::derived",
+              "definition_html": "const Derived &amp; apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::derived",
               "argsstring_html": "() const",
               "name_html": "derived",
+              "qualifiedname_html": "apache::thrift::op::TagSerializer::derived",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "138",
-                "column": "1",
+                "column": "17",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "bodystart": "138",
                 "bodyend": "138"
@@ -2159,7 +2039,7 @@
                 "simple_raw": "const Derived& derived() const",
                 "detailed_html": "private inline const Derived&amp; derived() const",
                 "detailed_raw": "private inline const Derived& derived() const",
-                "original_definition_html": "const Derived&amp; apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::derived",
+                "original_definition_html": "const Derived &amp; apache::thrift::op::TagSerializer&lt; Tag, Derived &gt;::derived",
                 "original_argsstring_html": "() const"
               },
               "filepath": "fns/class/apache/thrift/op/TagSerializer/derived",
@@ -2174,7 +2054,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/derived",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/derived"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/derived",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2182,7 +2068,7 @@
           "compoundname_html": "apache::thrift::op::ProtocolSerializer::getProtocol",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1aac740edce23d26118eafe9b9882e0f84",
+              "refid": "classapache_1_1thrift_1_1op_1_1Serializer_1a487851c7f0a5445712918944c779f8cc",
               "prot": "public",
               "static": "no",
               "const": "yes",
@@ -2190,38 +2076,39 @@
               "inline": "no",
               "virtual": "pure-virtual",
               "type_html": "const type::Protocol &amp;",
-              "definition_html": "virtual const type::Protocol&amp; apache::thrift::op::Serializer::getProtocol",
+              "definition_html": "virtual const type::Protocol &amp; apache::thrift::op::Serializer::getProtocol",
               "argsstring_html": "() const =0",
               "name_html": "getProtocol",
+              "qualifiedname_html": "apache::thrift::op::Serializer::getProtocol",
               "reimplementedby": [
                 {
-                  "refid": "classapache_1_1thrift_1_1op_1_1StdSerializer_1ad04b3269158cd5a404fd7f8afdff8d53",
+                  "refid": "classapache_1_1thrift_1_1op_1_1StdSerializer_1a98775fd3075594637d850da2e52f4e10",
+                  "text_html": "getProtocol"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1a2dfd59466cdd2014d5ffc1e414d04186",
+                  "text_html": "getProtocol"
+                },
+                {
+                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1a611a386c1bc520d71278149f17f02dd0",
                   "text_html": "getProtocol"
                 },
                 {
                   "refid": "classapache_1_1thrift_1_1test_1_1Number1Serializer_1ad455636db6232684bf1cf165dc923d14",
-                  "text_html": "getProtocol"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1FollyToStringSerializer_1acac5c18e189813fa1ed33598d1a5764d",
-                  "text_html": "getProtocol"
-                },
-                {
-                  "refid": "classapache_1_1thrift_1_1test_1_1MultiSerializer_1aeed7c3cedd1a8daef9aa6d2242c4587a",
                   "text_html": "getProtocol"
                 }
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "52",
-                "column": "1"
+                "column": "32"
               },
               "definition": {
                 "simple_html": "const type::Protocol&amp; getProtocol() const = 0",
                 "simple_raw": "const type::Protocol& getProtocol() const = 0",
                 "detailed_html": "const type::Protocol&amp; getProtocol() const = 0",
                 "detailed_raw": "const type::Protocol& getProtocol() const = 0",
-                "original_definition_html": "virtual const type::Protocol&amp; apache::thrift::op::Serializer::getProtocol",
+                "original_definition_html": "virtual const type::Protocol &amp; apache::thrift::op::Serializer::getProtocol",
                 "original_argsstring_html": "() const =0"
               },
               "filepath": "fns/class/apache/thrift/op/Serializer/getProtocol",
@@ -2236,7 +2123,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/getProtocol",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/getProtocol"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/getProtocol",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2255,6 +2148,7 @@
               "definition_html": "void apache::thrift::op::Serializer::checkType",
               "argsstring_html": "(const type::Type &amp;actual, const type::Type &amp;expected)",
               "name_html": "checkType",
+              "qualifiedname_html": "apache::thrift::op::Serializer::checkType",
               "param": [
                 {
                   "type_html": "const type::Type &amp;",
@@ -2268,7 +2162,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
                 "line": "89",
-                "column": "1",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.cpp",
                 "bodystart": "33",
                 "bodyend": "38"
@@ -2293,7 +2187,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/checkType",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/checkType"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/ProtocolSerializer/checkType",
+          "parent_links": [
+            {
+              "text_html": "ProtocolSerializer",
+              "href": "/ref/cpp/class/apache/thrift/op/ProtocolSerializer"
+            }
+          ]
         }
       ]
     }

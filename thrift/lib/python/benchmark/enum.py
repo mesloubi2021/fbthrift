@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ NAMESPACES = {
     "py-deprecated": "ttypes",
     "py3": "types",
     "python": "thrift_types",
+    "mutable-python": "thrift_mutable_types",
 }
 ENUM_SIZES = [
     1000,

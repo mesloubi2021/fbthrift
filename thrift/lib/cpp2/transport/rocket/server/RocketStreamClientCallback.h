@@ -20,22 +20,22 @@
 #include <folly/io/async/HHWheelTimer.h>
 
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnection.h>
 
 namespace folly {
 class EventBase;
 } // namespace folly
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 class RocketStreamClientCallback final : public StreamClientCallback {
  public:
   RocketStreamClientCallback(
       StreamId streamId,
       RocketServerConnection& connection,
-      uint32_t initialRequestN);
+      uint32_t initialRequestN,
+      StreamMetricCallback& streamMetricCallback);
   ~RocketStreamClientCallback() override = default;
 
   bool onFirstResponse(
@@ -69,6 +69,13 @@ class RocketStreamClientCallback final : public StreamClientCallback {
     serverCallbackOrCancelled_ = kCancelledFlag;
   }
 
+  void setRpcMethodName(std::string rpcMethodName) {
+    rpcMethodName_ = std::move(rpcMethodName);
+  }
+  std::string_view getRpcMethodName() const { return rpcMethodName_; }
+
+  StreamId getStreamId() const { return streamId_; }
+
  private:
   StreamServerCallback* serverCallback() const {
     return reinterpret_cast<StreamServerCallback*>(serverCallbackOrCancelled_);
@@ -82,11 +89,11 @@ class RocketStreamClientCallback final : public StreamClientCallback {
   std::unique_ptr<folly::HHWheelTimer::Callback> timeoutCallback_;
   protocol::PROTOCOL_TYPES protoId_;
   std::unique_ptr<CompressionConfig> compressionConfig_;
+  std::string rpcMethodName_{"<unknown_stream_method>"};
+  StreamMetricCallback& streamMetricCallback_;
 
   void scheduleTimeout();
   void cancelTimeout();
 };
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

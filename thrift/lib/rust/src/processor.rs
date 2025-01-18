@@ -17,7 +17,6 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::sync::Mutex;
 
 use anyhow::bail;
 use anyhow::Error;
@@ -49,8 +48,6 @@ pub enum SerializedStreamElement<Payload> {
     DeclaredException(Payload),
     /// Contains the application exception.
     ApplicationException(ApplicationException),
-    /// The serialization failed. Contains the error.
-    SerializationError(Error),
 }
 
 pub trait ReplyState<F>
@@ -59,15 +56,15 @@ where
 {
     type RequestContext;
 
-    fn send_reply(&mut self, reply: FramingEncodedFinal<F>);
+    fn send_reply(&self, reply: FramingEncodedFinal<F>);
     fn send_stream_reply(
-        &mut self,
+        &self,
         response: FramingEncodedFinal<F>,
         stream: Option<BoxStream<'static, SerializedStreamElement<FramingEncodedFinal<F>>>>,
         protocol_id: ProtocolID,
     ) -> Result<()>;
     fn set_interaction_processor(
-        &mut self,
+        &self,
         _processor: Arc<
             dyn ThriftService<
                     F,
@@ -80,6 +77,37 @@ where
     ) -> Result<()> {
         bail!("Thrift server does not support interactions");
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
+pub enum InteractionType {
+    Unknown = 0,
+    None,
+    InteractionV1,
+}
+
+// Source of truth: https://www.internalfb.com/code/fbsource/[747e817d8fc6ee1505b03e47629e34f40749b0ac]/fbcode/thrift/lib/thrift/RpcMetadata.thrift?lines=67-76
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+pub enum RpcKind {
+    SINGLE_REQUEST_SINGLE_RESPONSE = 0,
+    SINGLE_REQUEST_NO_RESPONSE = 1,
+    // Unused:
+    // STREAMING_REQUEST_SINGLE_RESPONSE = 2,
+    // STREAMING_REQUEST_NO_RESPONSE = 3,
+    SINGLE_REQUEST_STREAMING_RESPONSE = 4,
+    // STREAMING_REQUEST_STREAMING_RESPONSE = 5,
+    SINK = 6,
+}
+
+pub struct MethodMetadata {
+    pub interaction_type: InteractionType,
+    pub rpc_kind: RpcKind,
+    pub name: &'static str,
+    pub starts_interaction: bool,
+    pub interaction_name: Option<&'static str>,
 }
 
 #[async_trait]
@@ -95,7 +123,7 @@ where
         &self,
         req: FramingDecoded<F>,
         req_ctxt: &Self::RequestContext,
-        reply_state: Arc<Mutex<Self::ReplyState>>,
+        reply_state: Arc<Self::ReplyState>,
     ) -> Result<(), Error>;
 
     fn create_interaction(
@@ -115,12 +143,12 @@ where
         bail!("Thrift server does not support interactions");
     }
 
-    /// Returns function names this thrift service is able to handle, similar
-    /// to the keys of C++'s createMethodMetadata().
+    /// Returns function metadata for this thrift service, similar
+    /// to C++'s createMethodMetadata().
     ///
     /// Return value includes inherited functions from parent thrift services,
     /// and interactions' functions.
-    fn get_method_names(&self) -> &'static [&'static str];
+    fn get_method_metadata(&self) -> &'static [MethodMetadata];
 
     /// Applies to interactions only
     ///
@@ -148,7 +176,7 @@ where
         &self,
         req: FramingDecoded<F>,
         req_ctxt: &Self::RequestContext,
-        reply_state: Arc<Mutex<Self::ReplyState>>,
+        reply_state: Arc<Self::ReplyState>,
     ) -> Result<(), Error> {
         (**self).call(req, req_ctxt, reply_state).await
     }
@@ -170,8 +198,8 @@ where
         (**self).create_interaction(name)
     }
 
-    fn get_method_names(&self) -> &'static [&'static str] {
-        (**self).get_method_names()
+    fn get_method_metadata(&self) -> &'static [MethodMetadata] {
+        (**self).get_method_metadata()
     }
 
     async fn on_termination(&self) {
@@ -195,7 +223,7 @@ where
         &self,
         req: FramingDecoded<F>,
         req_ctxt: &Self::RequestContext,
-        reply_state: Arc<Mutex<Self::ReplyState>>,
+        reply_state: Arc<Self::ReplyState>,
     ) -> Result<(), Error> {
         (**self).call(req, req_ctxt, reply_state).await
     }
@@ -217,8 +245,8 @@ where
         (**self).create_interaction(name)
     }
 
-    fn get_method_names(&self) -> &'static [&'static str] {
-        (**self).get_method_names()
+    fn get_method_metadata(&self) -> &'static [MethodMetadata] {
+        (**self).get_method_metadata()
     }
 
     async fn on_termination(&self) {
@@ -250,7 +278,7 @@ where
         d: &mut P::Deserializer,
         req: ProtocolDecoded<P>,
         req_ctxt: &Self::RequestContext,
-        reply_state: Arc<Mutex<Self::ReplyState>>,
+        reply_state: Arc<Self::ReplyState>,
         seqid: u32,
     ) -> Result<(), Error>;
 
@@ -328,7 +356,7 @@ where
         _d: &mut P::Deserializer,
         _req: ProtocolDecoded<P>,
         _req_ctxt: &R,
-        _reply_state: Arc<Mutex<RS>>,
+        _reply_state: Arc<RS>,
         _seqid: u32,
     ) -> Result<(), Error> {
         // Should never be called since method_idx() always returns an error
@@ -376,7 +404,7 @@ where
         &self,
         req: ProtocolDecoded<P>,
         rctxt: &R,
-        reply_state: Arc<Mutex<RS>>,
+        reply_state: Arc<RS>,
     ) -> Result<(), Error> {
         let mut p = P::deserializer(req);
 
@@ -396,7 +424,7 @@ where
             ae.write(p);
             p.write_message_end();
         });
-        reply_state.lock().unwrap().send_reply(res);
+        reply_state.send_reply(res);
         Ok(())
     }
 
@@ -417,7 +445,7 @@ where
         bail!("Unimplemented interaction {}", name);
     }
 
-    fn get_method_names(&self) -> &'static [&'static str] {
+    fn get_method_metadata(&self) -> &'static [MethodMetadata] {
         &[]
     }
 

@@ -11,9 +11,7 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "T",
-      "defname_html": "T"
+      "type_html": "typename T"
     }
   ],
   "types": [
@@ -24,12 +22,13 @@
       "definition_html": "using apache::thrift::terse_field_ref&lt; T &gt;::value_type =  std::remove_reference_t&lt;T&gt;",
       "argsstring_html": "",
       "name_html": "value_type",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::value_type",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2254",
-        "column": "1",
+        "line": "2318",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2254",
+        "bodystart": "2318",
         "bodyend": "-1"
       },
       "parentid": "classapache_1_1thrift_1_1terse__field__ref"
@@ -41,12 +40,13 @@
       "definition_html": "using apache::thrift::terse_field_ref&lt; T &gt;::reference_type =  T",
       "argsstring_html": "",
       "name_html": "reference_type",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::reference_type",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2255",
-        "column": "1",
+        "line": "2319",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2255",
+        "bodystart": "2319",
         "bodyend": "-1"
       },
       "parentid": "classapache_1_1thrift_1_1terse__field__ref"
@@ -60,11 +60,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
       "argsstring_html": "(reference_type value) noexcept",
       "name_html": "terse_field_ref",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
       "param": [
         {
           "type_html": "<code>reference_type</code>",
@@ -73,11 +75,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2257",
-        "column": "1",
+        "line": "2321",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2257",
-        "bodyend": "2257"
+        "bodystart": "2321",
+        "bodyend": "2321"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE terse_field_ref(reference_type value)",
@@ -97,6 +99,7 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -104,13 +107,14 @@
         },
         {
           "type_html": "typename",
-          "defval_html": "<code>detail::EnableIfImplicit</code>&lt;T, U&gt;"
+          "defval_html": "<code>apache::thrift::detail::EnableIfImplicit</code>&lt;T, U&gt;"
         }
       ],
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
       "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept",
       "name_html": "terse_field_ref",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
       "param": [
         {
           "type_html": "const <code>terse_field_ref</code>&lt; U &gt; &amp;",
@@ -119,17 +123,17 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2260",
-        "column": "1",
+        "line": "2326",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2260",
-        "bodyend": "2262"
+        "bodystart": "2326",
+        "bodyend": "2328"
       },
       "definition": {
-        "simple_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other)",
-        "simple_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other)",
-        "detailed_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other) noexcept",
-        "detailed_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other) noexcept",
+        "simple_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other)",
+        "simple_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other)",
+        "detailed_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other) noexcept",
+        "detailed_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other) noexcept",
         "original_definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
         "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept"
       },
@@ -137,39 +141,41 @@
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/terse_field_ref"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1aba79ca7990b3b96a948085826a5ed6f2",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a7c47801004e3b332799b10d45d53162e",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "yes",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
           "type_html": "typename U"
         },
         {
-          "type_html": "std::enable_if_t&lt; std::is_same&lt; T, U &amp;&amp;&gt;{}||std::is_same&lt; T, const U &amp;&amp;&gt;{}, int &gt;",
+          "type_html": "std::enable_if_t&lt; std::is_same&lt; T, U &amp;&amp; &gt;{}||std::is_same&lt; T, const U &amp;&amp; &gt;{}, int &gt;",
           "defval_html": "0"
         }
       ],
       "type_html": "FOLLY_ERASE",
       "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
-      "argsstring_html": "(const terse_field_ref&lt; U &amp;&gt; &amp;other) noexcept",
+      "argsstring_html": "(const terse_field_ref&lt; U &amp; &gt; &amp;other) noexcept",
       "name_html": "terse_field_ref",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
       "param": [
         {
-          "type_html": "const <code>terse_field_ref</code>&lt; U &amp;&gt; &amp;",
+          "type_html": "const <code>terse_field_ref</code>&lt; U &amp; &gt; &amp;",
           "declname_html": "other"
         }
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2269",
-        "column": "1",
+        "line": "2335",
+        "column": "24",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2269",
-        "bodyend": "2271"
+        "bodystart": "2335",
+        "bodyend": "2337"
       },
       "definition": {
         "simple_html": "template &lt;\n    typename U,\n    std::enable_if_t&lt;\n        std::is_same&lt;T, U&amp;&amp;&gt;{} || std::is_same&lt;T, const U&amp;&amp;&gt;{},\n        int&gt; = 0&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&amp;&gt;&amp; other)",
@@ -177,29 +183,32 @@
         "detailed_html": "template &lt;\n    typename U,\n    std::enable_if_t&lt;\n        std::is_same&lt;T, U&amp;&amp;&gt;{} || std::is_same&lt;T, const U&amp;&amp;&gt;{},\n        int&gt; = 0&gt;\nexplicit inline FOLLY_ERASE terse_field_ref(\n    const terse_field_ref&lt;U&amp;&gt;&amp; other) noexcept",
         "detailed_raw": "template <\n    typename U,\n    std::enable_if_t<\n        std::is_same<T, U&&>{} || std::is_same<T, const U&&>{},\n        int> = 0>\nexplicit inline FOLLY_ERASE terse_field_ref(\n    const terse_field_ref<U&>& other) noexcept",
         "original_definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
-        "original_argsstring_html": "(const terse_field_ref&lt; U &amp;&gt; &amp;other) noexcept"
+        "original_argsstring_html": "(const terse_field_ref&lt; U &amp; &gt; &amp;other) noexcept"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/terse_field_ref",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/terse_field_ref"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a0a3496a3dec30a3c9b69d98172d85981",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1af1a87d7f1f0294d43e05396dbe7ed47b",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
+      "noexceptexpression": "std::is_nothrow_assignable< value_type &, U && >::value",
       "tparams": [
         {
           "type_html": "typename U",
           "defval_html": "<code>value_type</code>"
         }
       ],
-      "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_assignable&lt; <code>value_type</code> &amp;, U &amp;&amp; &gt;::<code>value</code>, <code>terse_field_ref</code> &amp; &gt;",
-      "definition_html": "FOLLY_ERASE std:: enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-      "argsstring_html": "(U &amp;&amp;value) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &amp;&amp;&gt;::value)",
+      "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_assignable&lt; <code>value_type</code> &amp;, U &amp;&amp; &gt;<code>::value</code>, <code>terse_field_ref</code> &amp; &gt;",
+      "definition_html": "FOLLY_ERASE std:: enable_if_t&lt; std::is_assignable&lt; value_type &amp;, U &amp;&amp; &gt;::value, terse_field_ref &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+      "argsstring_html": "(U &amp;&amp;value)",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator=",
       "param": [
         {
           "type_html": "U &amp;&amp;",
@@ -208,35 +217,38 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2276",
-        "column": "1",
+        "line": "2342",
+        "column": "7",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2276",
-        "bodyend": "2280"
+        "bodystart": "2342",
+        "bodyend": "2346"
       },
       "definition": {
         "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value)",
         "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value)",
-        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value) noexcept(\n        (std::is_nothrow_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value))",
-        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value) noexcept(\n        (std::is_nothrow_assignable<value_type&, U&&>::value))",
-        "original_definition_html": "FOLLY_ERASE std:: enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-        "original_argsstring_html": "(U &amp;&amp;value) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &amp;&amp;&gt;::value)"
+        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value)",
+        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value)",
+        "original_definition_html": "FOLLY_ERASE std:: enable_if_t&lt; std::is_assignable&lt; value_type &amp;, U &amp;&amp; &gt;::value, terse_field_ref &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+        "original_argsstring_html": "(U &amp;&amp;value)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/operator.assign",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.assign"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1aa0e20c7df79f2015e9faca2a4ad2e2e6",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1aabe7c8684d31fa172965b5096080dfa3",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
+      "noexceptexpression": "std::is_nothrow_move_assignable< value_type >::value",
       "type_html": "FOLLY_ERASE <code>terse_field_ref</code> &amp;",
-      "definition_html": "FOLLY_ERASE terse_field_ref&amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-      "argsstring_html": "(value_type &amp;&amp;value) noexcept(std::is_nothrow_move_assignable&lt; value_type &gt;::value)",
+      "definition_html": "FOLLY_ERASE terse_field_ref &amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+      "argsstring_html": "(value_type &amp;&amp;value)",
       "name_html": "operator=",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator=",
       "param": [
         {
           "type_html": "<code>value_type</code> &amp;&amp;",
@@ -245,19 +257,19 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2283",
-        "column": "1",
+        "line": "2349",
+        "column": "31",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2283",
-        "bodyend": "2288"
+        "bodystart": "2349",
+        "bodyend": "2353"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value)",
         "simple_raw": "FOLLY_ERASE terse_field_ref& operator=(value_type&& value)",
-        "detailed_html": "inline FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value) noexcept(\n    (std::is_nothrow_move_assignable&lt;value_type&gt;::value))",
-        "detailed_raw": "inline FOLLY_ERASE terse_field_ref& operator=(value_type&& value) noexcept(\n    (std::is_nothrow_move_assignable<value_type>::value))",
-        "original_definition_html": "FOLLY_ERASE terse_field_ref&amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-        "original_argsstring_html": "(value_type &amp;&amp;value) noexcept(std::is_nothrow_move_assignable&lt; value_type &gt;::value)"
+        "detailed_html": "inline FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value)",
+        "detailed_raw": "inline FOLLY_ERASE terse_field_ref& operator=(value_type&& value)",
+        "original_definition_html": "FOLLY_ERASE terse_field_ref &amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+        "original_argsstring_html": "(value_type &amp;&amp;value)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/operator.assign",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.assign"
@@ -269,7 +281,9 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
+      "noexceptexpression": "std::is_nothrow_assignable< value_type &, U >::value",
       "tparams": [
         {
           "type_html": "typename U"
@@ -277,8 +291,9 @@
       ],
       "type_html": "FOLLY_ERASE void",
       "definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::copy_from",
-      "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &gt;::value)",
+      "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other)",
       "name_html": "copy_from",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::copy_from",
       "param": [
         {
           "type_html": "const <code>terse_field_ref</code>&lt; U &gt; &amp;",
@@ -287,31 +302,33 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2291",
-        "column": "1",
+        "line": "2356",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2291",
-        "bodyend": "2294"
+        "bodystart": "2356",
+        "bodyend": "2359"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nFOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other)",
         "simple_raw": "template <typename U>\nFOLLY_ERASE void copy_from(const terse_field_ref<U>& other)",
-        "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other) noexcept(\n    (std::is_nothrow_assignable&lt;value_type&amp;, U&gt;::value))",
-        "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void copy_from(const terse_field_ref<U>& other) noexcept(\n    (std::is_nothrow_assignable<value_type&, U>::value))",
+        "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other)",
+        "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void copy_from(const terse_field_ref<U>& other)",
         "original_definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::copy_from",
-        "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &gt;::value)"
+        "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/copy_from",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/copy_from"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a9418899f488bfa85932f26c4edff4a9c",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1ae9ddc6e14e3ec7c0e7471cdc496a8799",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
+      "noexceptexpression": "std::is_nothrow_assignable< value_type &, std::remove_reference_t< U > && >::value",
       "tparams": [
         {
           "type_html": "typename U"
@@ -319,8 +336,9 @@
       ],
       "type_html": "FOLLY_ERASE void",
       "definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::move_from",
-      "argsstring_html": "(terse_field_ref&lt; U &gt; other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, std::remove_reference_t&lt; U &gt; &amp;&amp;&gt;::value)",
+      "argsstring_html": "(terse_field_ref&lt; U &gt; other)",
       "name_html": "move_from",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::move_from",
       "param": [
         {
           "type_html": "<code>terse_field_ref</code>&lt; U &gt;",
@@ -329,19 +347,19 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2297",
-        "column": "1",
+        "line": "2362",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2297",
-        "bodyend": "2301"
+        "bodystart": "2362",
+        "bodyend": "2366"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nFOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other)",
         "simple_raw": "template <typename U>\nFOLLY_ERASE void move_from(terse_field_ref<U> other)",
-        "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other) noexcept(\n    (std::is_nothrow_assignable&lt;value_type&amp;, std::remove_reference_t&lt;U&gt;&amp;&amp;&gt;::\n         value))",
-        "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void move_from(terse_field_ref<U> other) noexcept(\n    (std::is_nothrow_assignable<value_type&, std::remove_reference_t<U>&&>::\n         value))",
+        "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other)",
+        "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void move_from(terse_field_ref<U> other)",
         "original_definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::move_from",
-        "original_argsstring_html": "(terse_field_ref&lt; U &gt; other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, std::remove_reference_t&lt; U &gt; &amp;&amp;&gt;::value)"
+        "original_argsstring_html": "(terse_field_ref&lt; U &gt; other)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/move_from",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/move_from"
@@ -353,18 +371,20 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE <code>reference_type</code>",
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_field_ref&lt; T &gt;::value",
       "argsstring_html": "() const noexcept",
       "name_html": "value",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::value",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2303",
-        "column": "1",
+        "line": "2368",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2303",
-        "bodyend": "2305"
+        "bodystart": "2368",
+        "bodyend": "2370"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type value() const",
@@ -384,18 +404,20 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE <code>reference_type</code>",
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_field_ref&lt; T &gt;::operator*",
       "argsstring_html": "() const noexcept",
       "name_html": "operator*",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator*",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2307",
-        "column": "1",
+        "line": "2372",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2307",
-        "bodyend": "2309"
+        "bodystart": "2372",
+        "bodyend": "2374"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type operator*() const",
@@ -409,12 +431,13 @@
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.mul"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1ace42e46a96d553629d6f8d7eef098954",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a6d0fdc3fe3955c2799bdbbdfc5022e1e",
       "prot": "public",
       "static": "no",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -422,36 +445,38 @@
           "defval_html": "<code>value_type</code>"
         }
       ],
-      "type_html": "FOLLY_ERASE <code>detail::EnableIfNonConst</code>&lt; U &gt; *",
-      "definition_html": "FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+      "type_html": "FOLLY_ERASE <code>apache::thrift::detail::EnableIfNonConst</code>&lt; U &gt; *",
+      "definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
       "argsstring_html": "() const noexcept",
       "name_html": "operator-&gt;",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2316",
-        "column": "1",
+        "line": "2381",
+        "column": "7",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2316",
-        "bodyend": "2318"
+        "bodystart": "2381",
+        "bodyend": "2383"
       },
       "definition": {
-        "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const",
-        "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE detail::EnableIfNonConst<U>* operator->() const",
-        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const noexcept",
-        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE detail::EnableIfNonConst<U>* operator->() const noexcept",
-        "original_definition_html": "FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+        "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const",
+        "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U>* operator->() const",
+        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt;U&gt;* operator-&gt;()\n    const noexcept",
+        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U>* operator->()\n    const noexcept",
+        "original_definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
         "original_argsstring_html": "() const noexcept"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.arrow"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a55f16c1dc6a2e439791f7624a6b5f949",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1aa6e8a31d3e373b06bca95972fe53c2a3",
       "prot": "public",
       "static": "no",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -459,55 +484,58 @@
           "defval_html": "<code>value_type</code>"
         }
       ],
-      "type_html": "FOLLY_ERASE <code>detail::EnableIfConst</code>&lt; U &gt; *",
-      "definition_html": "FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+      "type_html": "FOLLY_ERASE <code>apache::thrift::detail::EnableIfConst</code>&lt; U &gt; *",
+      "definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
       "argsstring_html": "() const noexcept",
       "name_html": "operator-&gt;",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2321",
-        "column": "1",
+        "line": "2386",
+        "column": "53",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2321",
-        "bodyend": "2323"
+        "bodystart": "2386",
+        "bodyend": "2389"
       },
       "definition": {
-        "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE detail::EnableIfConst&lt;U&gt;* operator-&gt;() const",
-        "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE detail::EnableIfConst<U>* operator->() const",
-        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* operator-&gt;() const noexcept",
-        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE detail::EnableIfConst<U>* operator->() const noexcept",
-        "original_definition_html": "FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+        "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE apache::thrift::detail::EnableIfConst&lt;U&gt;* operator-&gt;() const",
+        "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const",
+        "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt;U&gt;* operator-&gt;()\n    const noexcept",
+        "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->()\n    const noexcept",
+        "original_definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
         "original_argsstring_html": "() const noexcept"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.arrow"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a0ae9ecaaf072f722d47d2a013f9fb677",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1acbdfa5e7bb9c35f8387ecf72c766cadb",
       "prot": "public",
       "static": "no",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE <code>value_type</code> *",
-      "definition_html": "FOLLY_ERASE value_type* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+      "definition_html": "FOLLY_ERASE value_type * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
       "argsstring_html": "() noexcept",
       "name_html": "operator-&gt;",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2325",
-        "column": "1",
+        "line": "2391",
+        "column": "26",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2325",
-        "bodyend": "2325"
+        "bodystart": "2391",
+        "bodyend": "2391"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE value_type* operator-&gt;()",
         "simple_raw": "FOLLY_ERASE value_type* operator->()",
         "detailed_html": "inline FOLLY_ERASE value_type* operator-&gt;() noexcept",
         "detailed_raw": "inline FOLLY_ERASE value_type* operator->() noexcept",
-        "original_definition_html": "FOLLY_ERASE value_type* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+        "original_definition_html": "FOLLY_ERASE value_type * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
         "original_argsstring_html": "() noexcept"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
@@ -530,6 +558,7 @@
       "definition_html": "FOLLY_ERASE auto apache::thrift::terse_field_ref&lt; T &gt;::operator[]",
       "argsstring_html": "(const Index &amp;index) const -&gt; decltype(auto)",
       "name_html": "operator[]",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::operator[]",
       "param": [
         {
           "type_html": "const Index &amp;",
@@ -538,11 +567,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2328",
-        "column": "1",
+        "line": "2394",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2328",
-        "bodyend": "2330"
+        "bodystart": "2394",
+        "bodyend": "2396"
       },
       "definition": {
         "simple_html": "template &lt;typename Index&gt;\nFOLLY_ERASE auto operator[](const Index&amp; index) const -&gt; decltype(auto)",
@@ -556,7 +585,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.at"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a14b72ca33180d8ab7d69173f32f38bfc",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a89b10413e7bca27f9a661ff030de27c1",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -571,9 +600,10 @@
         }
       ],
       "type_html": "FOLLY_ERASE <code>value_type</code> &amp;",
-      "definition_html": "FOLLY_ERASE value_type&amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+      "definition_html": "FOLLY_ERASE value_type &amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
       "argsstring_html": "(Args &amp;&amp;... args)",
       "name_html": "emplace",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::emplace",
       "param": [
         {
           "type_html": "Args &amp;&amp;...",
@@ -582,25 +612,25 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2333",
-        "column": "1",
+        "line": "2399",
+        "column": "26",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2333",
-        "bodyend": "2336"
+        "bodystart": "2399",
+        "bodyend": "2402"
       },
       "definition": {
         "simple_html": "template &lt;typename... Args&gt;\nFOLLY_ERASE value_type&amp; emplace(Args&amp;&amp;... args)",
         "simple_raw": "template <typename... Args>\nFOLLY_ERASE value_type& emplace(Args&&... args)",
         "detailed_html": "template &lt;typename... Args&gt;\ninline FOLLY_ERASE value_type&amp; emplace(Args&amp;&amp;... args)",
         "detailed_raw": "template <typename... Args>\ninline FOLLY_ERASE value_type& emplace(Args&&... args)",
-        "original_definition_html": "FOLLY_ERASE value_type&amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+        "original_definition_html": "FOLLY_ERASE value_type &amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
         "original_argsstring_html": "(Args &amp;&amp;... args)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/emplace",
       "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/emplace"
     },
     {
-      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a041d76b806d8f3262336f2c5207df9e3",
+      "refid": "classapache_1_1thrift_1_1terse__field__ref_1a69afe4d80931e93c9a53c8d8169d5564",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -617,10 +647,11 @@
           "defname_html": "Args"
         }
       ],
-      "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; <code>value_type</code>, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;::<code>value</code>, <code>value_type</code> &amp; &gt;",
-      "definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;:: value, value_type&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+      "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; <code>value_type</code>, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;<code>::value</code>, <code>value_type</code> &amp; &gt;",
+      "definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; value_type, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;:: value, value_type &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
       "argsstring_html": "(std::initializer_list&lt; U &gt; ilist, Args &amp;&amp;... args)",
       "name_html": "emplace",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::emplace",
       "param": [
         {
           "type_html": "std::initializer_list&lt; U &gt;",
@@ -633,18 +664,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2343",
-        "column": "1",
+        "line": "2409",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2343",
-        "bodyend": "2346"
+        "bodystart": "2409",
+        "bodyend": "2412"
       },
       "definition": {
         "simple_html": "template &lt;class U, class... Args&gt;\nFOLLY_ERASE std::enable_if_t&lt;\n    std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;::\n        value,\n    value_type&amp;&gt;\nemplace(std::initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args)",
         "simple_raw": "template <class U, class... Args>\nFOLLY_ERASE std::enable_if_t<\n    std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::\n        value,\n    value_type&>\nemplace(std::initializer_list<U> ilist, Args&&... args)",
         "detailed_html": "template &lt;class U, class... Args&gt;\ninline FOLLY_ERASE std::enable_if_t&lt;\n    std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;::\n        value,\n    value_type&amp;&gt;\nemplace(std::initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args)",
         "detailed_raw": "template <class U, class... Args>\ninline FOLLY_ERASE std::enable_if_t<\n    std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::\n        value,\n    value_type&>\nemplace(std::initializer_list<U> ilist, Args&&... args)",
-        "original_definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;:: value, value_type&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+        "original_definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; value_type, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;:: value, value_type &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
         "original_argsstring_html": "(std::initializer_list&lt; U &gt; ilist, Args &amp;&amp;... args)"
       },
       "filepath": "fns/class/apache/thrift/terse_field_ref/emplace",
@@ -665,27 +696,33 @@
           "type_html": "typename U"
         }
       ],
-      "type_html": "friend class",
+      "type_html": "class",
       "definition_html": "friend class terse_field_ref",
       "argsstring_html": "",
       "name_html": "terse_field_ref",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
+      "param": [
+        {
+          "type_html": "<code>terse_field_ref</code>"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2251",
-        "column": "1",
+        "line": "2315",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2248",
+        "bodystart": "2315",
         "bodyend": "-1"
       }
     }
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-    "line": "2247",
+    "line": "2311",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-    "bodystart": "2247",
-    "bodyend": "2350"
+    "bodystart": "2311",
+    "bodyend": "2416"
   },
   "namespacednames_html": [
     "apache",
@@ -703,12 +740,13 @@
       "definition_html": "value_type&amp; apache::thrift::terse_field_ref&lt; T &gt;::value_",
       "argsstring_html": "",
       "name_html": "value_",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::value_",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2349",
-        "column": "1",
+        "line": "2415",
+        "column": "14",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2349",
+        "bodystart": "2415",
         "bodyend": "-1"
       }
     }
@@ -733,11 +771,13 @@
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "FOLLY_ERASE",
               "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
               "argsstring_html": "(reference_type value) noexcept",
               "name_html": "terse_field_ref",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
               "param": [
                 {
                   "type_html": "<code>reference_type</code>",
@@ -746,11 +786,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2257",
-                "column": "1",
+                "line": "2321",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2257",
-                "bodyend": "2257"
+                "bodystart": "2321",
+                "bodyend": "2321"
               },
               "definition": {
                 "simple_html": "FOLLY_ERASE terse_field_ref(reference_type value)",
@@ -773,6 +813,7 @@
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "tparams": [
                 {
@@ -780,13 +821,14 @@
                 },
                 {
                   "type_html": "typename",
-                  "defval_html": "<code>detail::EnableIfImplicit</code>&lt;T, U&gt;"
+                  "defval_html": "<code>apache::thrift::detail::EnableIfImplicit</code>&lt;T, U&gt;"
                 }
               ],
               "type_html": "FOLLY_ERASE",
               "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
               "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept",
               "name_html": "terse_field_ref",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
               "param": [
                 {
                   "type_html": "const <code>terse_field_ref</code>&lt; U &gt; &amp;",
@@ -795,17 +837,17 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2260",
-                "column": "1",
+                "line": "2326",
+                "column": "16",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2260",
-                "bodyend": "2262"
+                "bodystart": "2326",
+                "bodyend": "2328"
               },
               "definition": {
-                "simple_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other)",
-                "simple_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other)",
-                "detailed_html": "template &lt;typename U, typename = detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other) noexcept",
-                "detailed_raw": "template <typename U, typename = detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other) noexcept",
+                "simple_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other)",
+                "simple_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\nFOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other)",
+                "detailed_html": "template &lt;typename U, typename = apache::thrift::detail::EnableIfImplicit&lt;T, U&gt;&gt;\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&gt;&amp; other) noexcept",
+                "detailed_raw": "template <typename U, typename = apache::thrift::detail::EnableIfImplicit<T, U>>\ninline FOLLY_ERASE terse_field_ref(const terse_field_ref<U>& other) noexcept",
                 "original_definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
                 "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept"
               },
@@ -816,39 +858,41 @@
               "compoundname_html": "apache::thrift::terse_field_ref::terse_field_ref"
             },
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1aba79ca7990b3b96a948085826a5ed6f2",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a7c47801004e3b332799b10d45d53162e",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "yes",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "tparams": [
                 {
                   "type_html": "typename U"
                 },
                 {
-                  "type_html": "std::enable_if_t&lt; std::is_same&lt; T, U &amp;&amp;&gt;{}||std::is_same&lt; T, const U &amp;&amp;&gt;{}, int &gt;",
+                  "type_html": "std::enable_if_t&lt; std::is_same&lt; T, U &amp;&amp; &gt;{}||std::is_same&lt; T, const U &amp;&amp; &gt;{}, int &gt;",
                   "defval_html": "0"
                 }
               ],
               "type_html": "FOLLY_ERASE",
               "definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
-              "argsstring_html": "(const terse_field_ref&lt; U &amp;&gt; &amp;other) noexcept",
+              "argsstring_html": "(const terse_field_ref&lt; U &amp; &gt; &amp;other) noexcept",
               "name_html": "terse_field_ref",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::terse_field_ref",
               "param": [
                 {
-                  "type_html": "const <code>terse_field_ref</code>&lt; U &amp;&gt; &amp;",
+                  "type_html": "const <code>terse_field_ref</code>&lt; U &amp; &gt; &amp;",
                   "declname_html": "other"
                 }
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2269",
-                "column": "1",
+                "line": "2335",
+                "column": "24",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2269",
-                "bodyend": "2271"
+                "bodystart": "2335",
+                "bodyend": "2337"
               },
               "definition": {
                 "simple_html": "template &lt;\n    typename U,\n    std::enable_if_t&lt;\n        std::is_same&lt;T, U&amp;&amp;&gt;{} || std::is_same&lt;T, const U&amp;&amp;&gt;{},\n        int&gt; = 0&gt;\nFOLLY_ERASE terse_field_ref(const terse_field_ref&lt;U&amp;&gt;&amp; other)",
@@ -856,7 +900,7 @@
                 "detailed_html": "template &lt;\n    typename U,\n    std::enable_if_t&lt;\n        std::is_same&lt;T, U&amp;&amp;&gt;{} || std::is_same&lt;T, const U&amp;&amp;&gt;{},\n        int&gt; = 0&gt;\nexplicit inline FOLLY_ERASE terse_field_ref(\n    const terse_field_ref&lt;U&amp;&gt;&amp; other) noexcept",
                 "detailed_raw": "template <\n    typename U,\n    std::enable_if_t<\n        std::is_same<T, U&&>{} || std::is_same<T, const U&&>{},\n        int> = 0>\nexplicit inline FOLLY_ERASE terse_field_ref(\n    const terse_field_ref<U&>& other) noexcept",
                 "original_definition_html": "FOLLY_ERASE apache::thrift::terse_field_ref&lt; T &gt;::terse_field_ref",
-                "original_argsstring_html": "(const terse_field_ref&lt; U &amp;&gt; &amp;other) noexcept"
+                "original_argsstring_html": "(const terse_field_ref&lt; U &amp; &gt; &amp;other) noexcept"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/terse_field_ref",
               "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/terse_field_ref",
@@ -871,7 +915,13 @@
           "brief_html": "Constructs the terse_field_ref.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/terse_field_ref",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/terse_field_ref"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/terse_field_ref",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -879,23 +929,26 @@
           "compoundname_html": "apache::thrift::terse_field_ref::operator=",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a0a3496a3dec30a3c9b69d98172d85981",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1af1a87d7f1f0294d43e05396dbe7ed47b",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
+              "noexceptexpression": "std::is_nothrow_assignable< value_type &, U && >::value",
               "tparams": [
                 {
                   "type_html": "typename U",
                   "defval_html": "<code>value_type</code>"
                 }
               ],
-              "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_assignable&lt; <code>value_type</code> &amp;, U &amp;&amp; &gt;::<code>value</code>, <code>terse_field_ref</code> &amp; &gt;",
-              "definition_html": "FOLLY_ERASE std:: enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-              "argsstring_html": "(U &amp;&amp;value) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &amp;&amp;&gt;::value)",
+              "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_assignable&lt; <code>value_type</code> &amp;, U &amp;&amp; &gt;<code>::value</code>, <code>terse_field_ref</code> &amp; &gt;",
+              "definition_html": "FOLLY_ERASE std:: enable_if_t&lt; std::is_assignable&lt; value_type &amp;, U &amp;&amp; &gt;::value, terse_field_ref &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+              "argsstring_html": "(U &amp;&amp;value)",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator=",
               "param": [
                 {
                   "type_html": "U &amp;&amp;",
@@ -904,19 +957,19 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2276",
-                "column": "1",
+                "line": "2342",
+                "column": "7",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2276",
-                "bodyend": "2280"
+                "bodystart": "2342",
+                "bodyend": "2346"
               },
               "definition": {
                 "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value)",
                 "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value)",
-                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value) noexcept(\n        (std::is_nothrow_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value))",
-                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value) noexcept(\n        (std::is_nothrow_assignable<value_type&, U&&>::value))",
-                "original_definition_html": "FOLLY_ERASE std:: enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-                "original_argsstring_html": "(U &amp;&amp;value) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &amp;&amp;&gt;::value)"
+                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE std::\n    enable_if_t&lt;std::is_assignable&lt;value_type&amp;, U&amp;&amp;&gt;::value, terse_field_ref&amp;&gt;\n    operator=(U&amp;&amp; value)",
+                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE std::\n    enable_if_t<std::is_assignable<value_type&, U&&>::value, terse_field_ref&>\n    operator=(U&& value)",
+                "original_definition_html": "FOLLY_ERASE std:: enable_if_t&lt; std::is_assignable&lt; value_type &amp;, U &amp;&amp; &gt;::value, terse_field_ref &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+                "original_argsstring_html": "(U &amp;&amp;value)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/operator.assign",
               "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.assign",
@@ -924,17 +977,20 @@
               "compoundname_html": "apache::thrift::terse_field_ref::operator="
             },
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1aa0e20c7df79f2015e9faca2a4ad2e2e6",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1aabe7c8684d31fa172965b5096080dfa3",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
+              "noexceptexpression": "std::is_nothrow_move_assignable< value_type >::value",
               "type_html": "FOLLY_ERASE <code>terse_field_ref</code> &amp;",
-              "definition_html": "FOLLY_ERASE terse_field_ref&amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-              "argsstring_html": "(value_type &amp;&amp;value) noexcept(std::is_nothrow_move_assignable&lt; value_type &gt;::value)",
+              "definition_html": "FOLLY_ERASE terse_field_ref &amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+              "argsstring_html": "(value_type &amp;&amp;value)",
               "name_html": "operator=",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator=",
               "param": [
                 {
                   "type_html": "<code>value_type</code> &amp;&amp;",
@@ -943,19 +999,19 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2283",
-                "column": "1",
+                "line": "2349",
+                "column": "31",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2283",
-                "bodyend": "2288"
+                "bodystart": "2349",
+                "bodyend": "2353"
               },
               "definition": {
                 "simple_html": "FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value)",
                 "simple_raw": "FOLLY_ERASE terse_field_ref& operator=(value_type&& value)",
-                "detailed_html": "inline FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value) noexcept(\n    (std::is_nothrow_move_assignable&lt;value_type&gt;::value))",
-                "detailed_raw": "inline FOLLY_ERASE terse_field_ref& operator=(value_type&& value) noexcept(\n    (std::is_nothrow_move_assignable<value_type>::value))",
-                "original_definition_html": "FOLLY_ERASE terse_field_ref&amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
-                "original_argsstring_html": "(value_type &amp;&amp;value) noexcept(std::is_nothrow_move_assignable&lt; value_type &gt;::value)"
+                "detailed_html": "inline FOLLY_ERASE terse_field_ref&amp; operator=(value_type&amp;&amp; value)",
+                "detailed_raw": "inline FOLLY_ERASE terse_field_ref& operator=(value_type&& value)",
+                "original_definition_html": "FOLLY_ERASE terse_field_ref &amp; apache::thrift::terse_field_ref&lt; T &gt;::operator=",
+                "original_argsstring_html": "(value_type &amp;&amp;value)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/operator.assign",
               "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/operator.assign",
@@ -969,7 +1025,13 @@
           "brief_html": "Assignment operator.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.assign",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.assign"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.assign",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -983,7 +1045,9 @@
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
+              "noexceptexpression": "std::is_nothrow_assignable< value_type &, U >::value",
               "tparams": [
                 {
                   "type_html": "typename U"
@@ -991,8 +1055,9 @@
               ],
               "type_html": "FOLLY_ERASE void",
               "definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::copy_from",
-              "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &gt;::value)",
+              "argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other)",
               "name_html": "copy_from",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::copy_from",
               "param": [
                 {
                   "type_html": "const <code>terse_field_ref</code>&lt; U &gt; &amp;",
@@ -1001,19 +1066,19 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2291",
-                "column": "1",
+                "line": "2356",
+                "column": "20",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2291",
-                "bodyend": "2294"
+                "bodystart": "2356",
+                "bodyend": "2359"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nFOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other)",
                 "simple_raw": "template <typename U>\nFOLLY_ERASE void copy_from(const terse_field_ref<U>& other)",
-                "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other) noexcept(\n    (std::is_nothrow_assignable&lt;value_type&amp;, U&gt;::value))",
-                "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void copy_from(const terse_field_ref<U>& other) noexcept(\n    (std::is_nothrow_assignable<value_type&, U>::value))",
+                "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void copy_from(const terse_field_ref&lt;U&gt;&amp; other)",
+                "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void copy_from(const terse_field_ref<U>& other)",
                 "original_definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::copy_from",
-                "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, U &gt;::value)"
+                "original_argsstring_html": "(const terse_field_ref&lt; U &gt; &amp;other)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/copy_from",
               "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/copy_from",
@@ -1027,7 +1092,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/copy_from",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/copy_from"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/copy_from",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1035,13 +1106,15 @@
           "compoundname_html": "apache::thrift::terse_field_ref::move_from",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a9418899f488bfa85932f26c4edff4a9c",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1ae9ddc6e14e3ec7c0e7471cdc496a8799",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
+              "noexceptexpression": "std::is_nothrow_assignable< value_type &, std::remove_reference_t< U > && >::value",
               "tparams": [
                 {
                   "type_html": "typename U"
@@ -1049,8 +1122,9 @@
               ],
               "type_html": "FOLLY_ERASE void",
               "definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::move_from",
-              "argsstring_html": "(terse_field_ref&lt; U &gt; other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, std::remove_reference_t&lt; U &gt; &amp;&amp;&gt;::value)",
+              "argsstring_html": "(terse_field_ref&lt; U &gt; other)",
               "name_html": "move_from",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::move_from",
               "param": [
                 {
                   "type_html": "<code>terse_field_ref</code>&lt; U &gt;",
@@ -1059,19 +1133,19 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2297",
-                "column": "1",
+                "line": "2362",
+                "column": "20",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2297",
-                "bodyend": "2301"
+                "bodystart": "2362",
+                "bodyend": "2366"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nFOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other)",
                 "simple_raw": "template <typename U>\nFOLLY_ERASE void move_from(terse_field_ref<U> other)",
-                "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other) noexcept(\n    (std::is_nothrow_assignable&lt;value_type&amp;, std::remove_reference_t&lt;U&gt;&amp;&amp;&gt;::\n         value))",
-                "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void move_from(terse_field_ref<U> other) noexcept(\n    (std::is_nothrow_assignable<value_type&, std::remove_reference_t<U>&&>::\n         value))",
+                "detailed_html": "template &lt;typename U&gt;\ninline FOLLY_ERASE void move_from(terse_field_ref&lt;U&gt; other)",
+                "detailed_raw": "template <typename U>\ninline FOLLY_ERASE void move_from(terse_field_ref<U> other)",
                 "original_definition_html": "FOLLY_ERASE void apache::thrift::terse_field_ref&lt; T &gt;::move_from",
-                "original_argsstring_html": "(terse_field_ref&lt; U &gt; other) noexcept(std::is_nothrow_assignable&lt; value_type &amp;, std::remove_reference_t&lt; U &gt; &amp;&amp;&gt;::value)"
+                "original_argsstring_html": "(terse_field_ref&lt; U &gt; other)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/move_from",
               "href": "/ref/cpp/fns/class/apache/thrift/terse_field_ref/move_from",
@@ -1085,7 +1159,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/move_from",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/move_from"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/move_from",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1099,18 +1179,20 @@
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "FOLLY_ERASE <code>reference_type</code>",
               "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_field_ref&lt; T &gt;::value",
               "argsstring_html": "() const noexcept",
               "name_html": "value",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::value",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2303",
-                "column": "1",
+                "line": "2368",
+                "column": "30",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2303",
-                "bodyend": "2305"
+                "bodystart": "2368",
+                "bodyend": "2370"
               },
               "definition": {
                 "simple_html": "FOLLY_ERASE reference_type value() const",
@@ -1132,7 +1214,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1146,18 +1234,20 @@
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "FOLLY_ERASE <code>reference_type</code>",
               "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_field_ref&lt; T &gt;::operator*",
               "argsstring_html": "() const noexcept",
               "name_html": "operator*",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator*",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2307",
-                "column": "1",
+                "line": "2372",
+                "column": "30",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2307",
-                "bodyend": "2309"
+                "bodystart": "2372",
+                "bodyend": "2374"
               },
               "definition": {
                 "simple_html": "FOLLY_ERASE reference_type operator*() const",
@@ -1179,7 +1269,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.mul",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.mul"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.mul",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1187,12 +1283,13 @@
           "compoundname_html": "apache::thrift::terse_field_ref::operator-&gt;",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1ace42e46a96d553629d6f8d7eef098954",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a6d0fdc3fe3955c2799bdbbdfc5022e1e",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "tparams": [
                 {
@@ -1200,24 +1297,25 @@
                   "defval_html": "<code>value_type</code>"
                 }
               ],
-              "type_html": "FOLLY_ERASE <code>detail::EnableIfNonConst</code>&lt; U &gt; *",
-              "definition_html": "FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+              "type_html": "FOLLY_ERASE <code>apache::thrift::detail::EnableIfNonConst</code>&lt; U &gt; *",
+              "definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
               "argsstring_html": "() const noexcept",
               "name_html": "operator-&gt;",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2316",
-                "column": "1",
+                "line": "2381",
+                "column": "7",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2316",
-                "bodyend": "2318"
+                "bodystart": "2381",
+                "bodyend": "2383"
               },
               "definition": {
-                "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const",
-                "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE detail::EnableIfNonConst<U>* operator->() const",
-                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const noexcept",
-                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE detail::EnableIfNonConst<U>* operator->() const noexcept",
-                "original_definition_html": "FOLLY_ERASE detail::EnableIfNonConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+                "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt;U&gt;* operator-&gt;() const",
+                "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U>* operator->() const",
+                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt;U&gt;* operator-&gt;()\n    const noexcept",
+                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE apache::thrift::detail::EnableIfNonConst<U>* operator->()\n    const noexcept",
+                "original_definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfNonConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
                 "original_argsstring_html": "() const noexcept"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
@@ -1226,12 +1324,13 @@
               "compoundname_html": "apache::thrift::terse_field_ref::operator-&gt;"
             },
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a55f16c1dc6a2e439791f7624a6b5f949",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1aa6e8a31d3e373b06bca95972fe53c2a3",
               "prot": "public",
               "static": "no",
               "const": "yes",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "tparams": [
                 {
@@ -1239,24 +1338,25 @@
                   "defval_html": "<code>value_type</code>"
                 }
               ],
-              "type_html": "FOLLY_ERASE <code>detail::EnableIfConst</code>&lt; U &gt; *",
-              "definition_html": "FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+              "type_html": "FOLLY_ERASE <code>apache::thrift::detail::EnableIfConst</code>&lt; U &gt; *",
+              "definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
               "argsstring_html": "() const noexcept",
               "name_html": "operator-&gt;",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2321",
-                "column": "1",
+                "line": "2386",
+                "column": "53",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2321",
-                "bodyend": "2323"
+                "bodystart": "2386",
+                "bodyend": "2389"
               },
               "definition": {
-                "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE detail::EnableIfConst&lt;U&gt;* operator-&gt;() const",
-                "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE detail::EnableIfConst<U>* operator->() const",
-                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* operator-&gt;() const noexcept",
-                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE detail::EnableIfConst<U>* operator->() const noexcept",
-                "original_definition_html": "FOLLY_ERASE detail::EnableIfConst&lt;U&gt;* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+                "simple_html": "template &lt;typename U = value_type&gt;\nFOLLY_ERASE apache::thrift::detail::EnableIfConst&lt;U&gt;* operator-&gt;() const",
+                "simple_raw": "template <typename U = value_type>\nFOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->() const",
+                "detailed_html": "template &lt;typename U = value_type&gt;\ninline FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt;U&gt;* operator-&gt;()\n    const noexcept",
+                "detailed_raw": "template <typename U = value_type>\ninline FOLLY_ERASE apache::thrift::detail::EnableIfConst<U>* operator->()\n    const noexcept",
+                "original_definition_html": "FOLLY_ERASE apache::thrift::detail::EnableIfConst&lt; U &gt; * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
                 "original_argsstring_html": "() const noexcept"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
@@ -1265,31 +1365,33 @@
               "compoundname_html": "apache::thrift::terse_field_ref::operator-&gt;"
             },
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a0ae9ecaaf072f722d47d2a013f9fb677",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1acbdfa5e7bb9c35f8387ecf72c766cadb",
               "prot": "public",
               "static": "no",
               "const": "no",
               "explicit": "no",
               "inline": "yes",
+              "noexcept": "yes",
               "virtual": "non-virtual",
               "type_html": "FOLLY_ERASE <code>value_type</code> *",
-              "definition_html": "FOLLY_ERASE value_type* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+              "definition_html": "FOLLY_ERASE value_type * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
               "argsstring_html": "() noexcept",
               "name_html": "operator-&gt;",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator-&gt;",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2325",
-                "column": "1",
+                "line": "2391",
+                "column": "26",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2325",
-                "bodyend": "2325"
+                "bodystart": "2391",
+                "bodyend": "2391"
               },
               "definition": {
                 "simple_html": "FOLLY_ERASE value_type* operator-&gt;()",
                 "simple_raw": "FOLLY_ERASE value_type* operator->()",
                 "detailed_html": "inline FOLLY_ERASE value_type* operator-&gt;() noexcept",
                 "detailed_raw": "inline FOLLY_ERASE value_type* operator->() noexcept",
-                "original_definition_html": "FOLLY_ERASE value_type* apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
+                "original_definition_html": "FOLLY_ERASE value_type * apache::thrift::terse_field_ref&lt; T &gt;::operator-&gt;",
                 "original_argsstring_html": "() noexcept"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/operator.arrow",
@@ -1304,7 +1406,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.arrow",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.arrow"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.arrow",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1328,6 +1436,7 @@
               "definition_html": "FOLLY_ERASE auto apache::thrift::terse_field_ref&lt; T &gt;::operator[]",
               "argsstring_html": "(const Index &amp;index) const -&gt; decltype(auto)",
               "name_html": "operator[]",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::operator[]",
               "param": [
                 {
                   "type_html": "const Index &amp;",
@@ -1336,11 +1445,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2328",
-                "column": "1",
+                "line": "2394",
+                "column": "20",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2328",
-                "bodyend": "2330"
+                "bodystart": "2394",
+                "bodyend": "2396"
               },
               "definition": {
                 "simple_html": "template &lt;typename Index&gt;\nFOLLY_ERASE auto operator[](const Index&amp; index) const -&gt; decltype(auto)",
@@ -1362,7 +1471,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.at",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.at"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/operator.at",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1370,7 +1485,7 @@
           "compoundname_html": "apache::thrift::terse_field_ref::emplace",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a14b72ca33180d8ab7d69173f32f38bfc",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a89b10413e7bca27f9a661ff030de27c1",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1385,9 +1500,10 @@
                 }
               ],
               "type_html": "FOLLY_ERASE <code>value_type</code> &amp;",
-              "definition_html": "FOLLY_ERASE value_type&amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+              "definition_html": "FOLLY_ERASE value_type &amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
               "argsstring_html": "(Args &amp;&amp;... args)",
               "name_html": "emplace",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::emplace",
               "param": [
                 {
                   "type_html": "Args &amp;&amp;...",
@@ -1396,18 +1512,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2333",
-                "column": "1",
+                "line": "2399",
+                "column": "26",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2333",
-                "bodyend": "2336"
+                "bodystart": "2399",
+                "bodyend": "2402"
               },
               "definition": {
                 "simple_html": "template &lt;typename... Args&gt;\nFOLLY_ERASE value_type&amp; emplace(Args&amp;&amp;... args)",
                 "simple_raw": "template <typename... Args>\nFOLLY_ERASE value_type& emplace(Args&&... args)",
                 "detailed_html": "template &lt;typename... Args&gt;\ninline FOLLY_ERASE value_type&amp; emplace(Args&amp;&amp;... args)",
                 "detailed_raw": "template <typename... Args>\ninline FOLLY_ERASE value_type& emplace(Args&&... args)",
-                "original_definition_html": "FOLLY_ERASE value_type&amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+                "original_definition_html": "FOLLY_ERASE value_type &amp; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
                 "original_argsstring_html": "(Args &amp;&amp;... args)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/emplace",
@@ -1416,7 +1532,7 @@
               "compoundname_html": "apache::thrift::terse_field_ref::emplace"
             },
             {
-              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a041d76b806d8f3262336f2c5207df9e3",
+              "refid": "classapache_1_1thrift_1_1terse__field__ref_1a69afe4d80931e93c9a53c8d8169d5564",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1433,10 +1549,11 @@
                   "defname_html": "Args"
                 }
               ],
-              "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; <code>value_type</code>, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;::<code>value</code>, <code>value_type</code> &amp; &gt;",
-              "definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;:: value, value_type&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+              "type_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; <code>value_type</code>, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;<code>::value</code>, <code>value_type</code> &amp; &gt;",
+              "definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; value_type, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;:: value, value_type &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
               "argsstring_html": "(std::initializer_list&lt; U &gt; ilist, Args &amp;&amp;... args)",
               "name_html": "emplace",
+              "qualifiedname_html": "apache::thrift::terse_field_ref::emplace",
               "param": [
                 {
                   "type_html": "std::initializer_list&lt; U &gt;",
@@ -1449,18 +1566,18 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "line": "2343",
-                "column": "1",
+                "line": "2409",
+                "column": "3",
                 "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-                "bodystart": "2343",
-                "bodyend": "2346"
+                "bodystart": "2409",
+                "bodyend": "2412"
               },
               "definition": {
                 "simple_html": "template &lt;class U, class... Args&gt;\nFOLLY_ERASE std::enable_if_t&lt;\n    std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;::\n        value,\n    value_type&amp;&gt;\nemplace(std::initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args)",
                 "simple_raw": "template <class U, class... Args>\nFOLLY_ERASE std::enable_if_t<\n    std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::\n        value,\n    value_type&>\nemplace(std::initializer_list<U> ilist, Args&&... args)",
                 "detailed_html": "template &lt;class U, class... Args&gt;\ninline FOLLY_ERASE std::enable_if_t&lt;\n    std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;::\n        value,\n    value_type&amp;&gt;\nemplace(std::initializer_list&lt;U&gt; ilist, Args&amp;&amp;... args)",
                 "detailed_raw": "template <class U, class... Args>\ninline FOLLY_ERASE std::enable_if_t<\n    std::is_constructible<value_type, std::initializer_list<U>, Args&&...>::\n        value,\n    value_type&>\nemplace(std::initializer_list<U> ilist, Args&&... args)",
-                "original_definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt;value_type, std::initializer_list&lt;U&gt;, Args&amp;&amp;...&gt;:: value, value_type&amp;&gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
+                "original_definition_html": "FOLLY_ERASE std::enable_if_t&lt; std::is_constructible&lt; value_type, std::initializer_list&lt; U &gt;, Args &amp;&amp;... &gt;:: value, value_type &amp; &gt; apache::thrift::terse_field_ref&lt; T &gt;::emplace",
                 "original_argsstring_html": "(std::initializer_list&lt; U &gt; ilist, Args &amp;&amp;... args)"
               },
               "filepath": "fns/class/apache/thrift/terse_field_ref/emplace",
@@ -1475,7 +1592,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/emplace",
-          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/emplace"
+          "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/emplace",
+          "parent_links": [
+            {
+              "text_html": "terse_field_ref",
+              "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+            }
+          ]
         }
       ]
     }

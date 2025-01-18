@@ -28,9 +28,7 @@
 #include <thrift/lib/cpp2/type/Tag.h>
 #include <thrift/lib/cpp2/type/detail/TypeInfo.h>
 
-namespace apache {
-namespace thrift {
-namespace type {
+namespace apache::thrift::type {
 class Ref;
 template <typename RefT>
 class DynList;
@@ -739,7 +737,7 @@ class BaseDyn : public Dyn,
   using BaseDerived<Derived>::derived;
   template <typename IdT>
   constexpr static bool is_index_type_v =
-      std::is_same<IdT, Ordinal>::value || std::is_integral<IdT>::value;
+      std::is_same_v<IdT, Ordinal> || std::is_integral_v<IdT>;
   template <typename IdT, typename R = ConstT>
   using if_not_index = std::enable_if_t<!is_index_type_v<IdT>, R>;
 
@@ -926,6 +924,4 @@ inline const TypeInfo& voidTypeInfo() {
 // An un-owning pointer to a thrift value.
 using Ptr = detail::Ptr;
 
-} // namespace type
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::type

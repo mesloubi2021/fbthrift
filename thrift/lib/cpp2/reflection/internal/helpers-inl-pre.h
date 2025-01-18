@@ -19,14 +19,12 @@
 
 #include <fatal/type/find.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 template <
     typename,
     typename T,
-    bool StructHasMemberForCriteria = !std::is_same<void, T>::value>
+    bool StructHasMemberForCriteria = !std::is_same_v<void, T>>
 struct check_struct_has_member_for_criteria {
   using type = T;
 
@@ -35,8 +33,6 @@ struct check_struct_has_member_for_criteria {
       "no struct member found for the given criteria");
 };
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail
 
 #endif // THRIFT_FATAL_HELPERS_INL_PRE_H_

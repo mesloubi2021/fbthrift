@@ -20,10 +20,9 @@
 #include <folly/portability/GTest.h>
 
 #include <thrift/compiler/generate/common.h>
+#include <thrift/compiler/generate/python/util.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 TEST(GenerateCommon, SplitNamespace) {
   const std::vector<std::string> namespaces{
@@ -82,6 +81,4 @@ TEST(GenerateCommon, StripCppCommentsAndNewlines) {
   EXPECT_THROW(strip_cpp_comments_and_newlines(unpaired), std::runtime_error);
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

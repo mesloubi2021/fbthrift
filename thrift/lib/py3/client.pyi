@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 import ipaddress
 import os
 from enum import Enum
@@ -78,6 +80,6 @@ def install_proxy_factory(
 ) -> None: ...
 
 # pyre-ignore[3] : it may return anything
-def get_proxy_factory() -> Optional[
-    Callable[[Type[Client]], Callable[[Client], Any]]
-]: ...
+def get_proxy_factory() -> (
+    Optional[Callable[[Type[Client]], Callable[[Client], Any]]]
+): ...

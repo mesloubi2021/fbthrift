@@ -41,9 +41,8 @@ using reflected_no_annotations = reflected_annotations<no_annotations>;
 
 } // namespace reflection_impl
 
-template <typename Module, typename Annotations, legacy_type_id_t LegacyTypeId>
+template <typename Annotations, legacy_type_id_t LegacyTypeId>
 struct type_common_metadata_impl {
-  using module = Module;
   using annotations = Annotations;
   using legacy_id = std::integral_constant<legacy_type_id_t, LegacyTypeId>;
 };
@@ -59,17 +58,9 @@ struct reflect_type_class_of_thrift_class_impl {
           type_class::unknown>>;
 };
 
-template <typename T>
-struct reflect_type_class_of_thrift_class_enum_impl {
-  using type = fatal::conditional<
-      is_reflectable_enum<T>::value,
-      type_class::enumeration,
-      reflect_type_class_of_thrift_class<T>>;
-};
-
 template <typename T, bool IsTry>
 struct reflect_module_tag_selector<type_class::enumeration, T, IsTry> {
-  using type = typename fatal::enum_traits<T>::metadata::module;
+  static_assert(folly::always_false<T>);
 };
 
 template <typename T, bool IsTry>

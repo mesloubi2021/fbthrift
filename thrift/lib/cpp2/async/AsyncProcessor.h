@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <exception>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -26,8 +27,8 @@
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/Unit.h>
+#include <folly/concurrency/memory/PrimaryPtr.h>
 #include <folly/container/F14Map.h>
-#include <folly/experimental/PrimaryPtr.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/lang/Badge.h>
@@ -42,6 +43,7 @@
 #include <thrift/lib/cpp2/SerializationSwitch.h>
 #include <thrift/lib/cpp2/Thrift.h>
 #include <thrift/lib/cpp2/TrustedServerException.h>
+#include <thrift/lib/cpp2/async/AsyncProcessorFactory.h>
 #include <thrift/lib/cpp2/async/Interaction.h>
 #include <thrift/lib/cpp2/async/ReplyInfo.h>
 #include <thrift/lib/cpp2/async/ResponseChannel.h>
@@ -57,17 +59,16 @@
 #include <thrift/lib/cpp2/server/RequestPileInterface.h>
 #include <thrift/lib/cpp2/server/ResourcePoolHandle.h>
 #include <thrift/lib/cpp2/util/Checksum.h>
+#include <thrift/lib/cpp2/util/IntrusiveSharedPtr.h>
+#include <thrift/lib/cpp2/util/TypeErasedValue.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 #include <thrift/lib/thrift/gen-cpp2/metadata_types.h>
 
-namespace folly {
-namespace coro {
+namespace folly::coro {
 class CancellableAsyncScope;
 }
-} // namespace folly
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class ThriftServer;
 class ThriftServerStopController;
@@ -77,252 +78,8 @@ template <typename T>
 struct HandlerCallbackHelper;
 }
 
-class AsyncProcessor;
-class ServiceHandlerBase;
 class ServerRequest;
 class IResourcePoolAcceptor;
-
-// This contains information about a request that is required in the thrift
-// server prior to the AsyncProcessor::executeRequest interface.
-struct ServiceRequestInfo {
-  bool isSync; // True if this has thread='eb'
-  RpcKind rpcKind; // Type of this request
-  // The qualified function name is currently an input to TProcessorEventHandler
-  // callbacks. We will refactor TProcessorEventHandler to remove the
-  // requirement to pass this as a single string. T112104402
-  const char* functionName_deprecated; // Qualified function name (includes
-                                       // service name)
-  std::optional<std::string_view>
-      interactionName; // Interaction name if part of an interaction
-  concurrency::PRIORITY priority; // Method priority set in the IDL
-  std::optional<std::string_view>
-      createdInteraction; // The name of the interaction created by the RPC
-};
-
-using ServiceRequestInfoMap =
-    folly::F14ValueMap<std::string, ServiceRequestInfo>;
-
-// The base class for generated code that contains information about a service.
-// Each service generates a subclass of this.
-class ServiceInfoHolder {
- public:
-  virtual ~ServiceInfoHolder() = default;
-
-  // This function is generated from the thrift IDL.
-  virtual const ServiceRequestInfoMap& requestInfoMap() const = 0;
-};
-
-/**
- * Descriptor of a Thrift service - its methods and how they should be handled.
- */
-class AsyncProcessorFactory {
- public:
-#if defined(THRIFT_SCHEMA_AVAILABLE)
-  /**
-   * Reflects on the current service's methods, associated structs etc. at
-   * runtime. This is useful to, for example, a tool that can send requests to a
-   * service without knowing its schemata ahead of time.
-   *
-   * This is analogous to GraphQL introspection
-   * (https://graphql.org/learn/introspection/) and can be used to build a tool
-   * like GraphiQL.
-   */
-  virtual std::optional<std::vector<schema::SchemaV1>> getServiceMetadataV1() {
-    return {};
-  }
-#endif
-  /**
-   * Creates a per-connection processor that will handle requests for this
-   * service. The returned AsyncProcessor has an implicit contract with the
-   * result of createMethodMetadata() - they are tightly coupled. Typically,
-   * both will need to be overridden.
-   */
-  virtual std::unique_ptr<AsyncProcessor> getProcessor() = 0;
-  /**
-   * Returns the known list of user-implemented service handlers. For generated
-   * services, the AsyncProcessorFactory also serves as a ServiceHandlerBase.
-   * However, custom implementations may wrap one or more other
-   * AsyncProcessorFactory's, in which case, they MUST return their combined
-   * result.
-   */
-  virtual std::vector<ServiceHandlerBase*> getServiceHandlers() = 0;
-
-  struct WildcardMethodMetadata;
-
-  struct MethodMetadata {
-    enum class ExecutorType { UNKNOWN, EVB, ANY };
-
-    enum class InteractionType { UNKNOWN, NONE, INTERACTION_V1 };
-
-    MethodMetadata() = default;
-
-   private:
-    explicit MethodMetadata(ExecutorType executor) : executorType(executor) {}
-
-    friend struct WildcardMethodMetadata;
-
-   public:
-    MethodMetadata(
-        ExecutorType executor,
-        InteractionType interaction,
-        RpcKind kind,
-        concurrency::PRIORITY prio,
-        const std::optional<std::string_view> interactName,
-        bool createsInteract)
-        : executorType(executor),
-          interactionType(interaction),
-          rpcKind(kind),
-          priority(prio),
-          interactionName(interactName),
-          createsInteraction(createsInteract) {}
-
-   protected:
-    MethodMetadata(const MethodMetadata& other)
-        : executorType(other.executorType),
-          interactionType(other.interactionType),
-          rpcKind(other.rpcKind),
-          priority(other.priority),
-          interactionName(other.interactionName),
-          createsInteraction(other.createsInteraction) {}
-
-   public:
-    virtual ~MethodMetadata() = default;
-
-    bool isWildcard() const {
-      if (auto status = isWildcard_.load(); status != WildcardStatus::UNKNOWN) {
-        return status == WildcardStatus::YES;
-      }
-      auto status = dynamic_cast<const WildcardMethodMetadata*>(this)
-          ? WildcardStatus::YES
-          : WildcardStatus::NO;
-      auto expected = WildcardStatus::UNKNOWN;
-      isWildcard_.compare_exchange_strong(expected, status);
-      return status == WildcardStatus::YES;
-    }
-
-    const ExecutorType executorType{ExecutorType::UNKNOWN};
-    const InteractionType interactionType{InteractionType::UNKNOWN};
-    const std::optional<RpcKind> rpcKind{};
-    const std::optional<concurrency::PRIORITY> priority{};
-    const std::optional<std::string_view> interactionName;
-    const bool createsInteraction{false};
-
-   private:
-    enum class WildcardStatus : std::uint8_t { UNKNOWN, NO, YES };
-    mutable folly::relaxed_atomic<WildcardStatus> isWildcard_{
-        WildcardStatus::UNKNOWN};
-  };
-
-  /**
-   * The concrete metadata type that will be passed if createMethodMetadata
-   * returns WildcardMethodMetadataMap and the current method is not in its
-   * knownMethods. This will carry all the information shared by wildcard
-   * methods.
-   */
-  struct WildcardMethodMetadata final : public MethodMetadata {
-    explicit WildcardMethodMetadata(ExecutorType executorType)
-        : MethodMetadata(executorType) {}
-    WildcardMethodMetadata() : WildcardMethodMetadata(ExecutorType::UNKNOWN) {}
-    WildcardMethodMetadata(const WildcardMethodMetadata&) = delete;
-    WildcardMethodMetadata& operator=(const WildcardMethodMetadata&) = delete;
-  };
-
-  /**
-   * A map of method names to some loosely typed metadata that will be
-   * passed to AsyncProcessor::processSerializedRequest. The concrete type of
-   * the entries in the map is a contract between the AsyncProcessorFactory and
-   * the AsyncProcessor returned by getProcessor.
-   */
-  using MethodMetadataMap =
-      folly::F14FastMap<std::string, std::shared_ptr<const MethodMetadata>>;
-  /**
-   * A marker struct indicating that the AsyncProcessor supports any method, or
-   * a list of methods that is not enumerable. This applies to AsyncProcessor
-   * implementations such as proxies to external services.
-   * The implementation may optionally enumerate a subset of known methods.
-   */
-  struct WildcardMethodMetadataMap {
-    /**
-     * Shared metadata that will be used for all methods
-     * not present in knownMethods.
-     */
-    std::shared_ptr<const WildcardMethodMetadata> wildcardMetadata{};
-    MethodMetadataMap knownMethods;
-  };
-
-  using CreateMethodMetadataResult =
-      std::variant<MethodMetadataMap, WildcardMethodMetadataMap>;
-  /**
-   * This function enumerates the list of methods supported by the
-   * AsyncProcessor returned by getProcessor(), if possible. The return value
-   * represents one of the following states:
-   *   1. This API is supported and there is a static list of known methods.
-   *      This applies to all generated AsyncProcessors.
-   *   2. This API is supported but the complete set of methods is not known or
-   *      is not enumerable (e.g. all method names supported). This applies, for
-   *      example, to AsyncProcessors that proxy to external services.
-   *
-   * If returning (1), Thrift server will lookup the method metadata in the map.
-   * If the method name is not found, a not-found error will be sent and
-   * getProcessor will not be called. Any metadata passed to the processor will
-   * always be a reference from the map.
-   *
-   * If returning (2), Thrift server will lookup the method metadata in the map.
-   * If the method name is not found, Thrift will pass a WildcardMethodMetadata
-   * object instead (kWildcardMethodMetadata). Any metadata passed to the
-   * processor will always be a reference from the map (or be
-   * kWildcardMethodMetadata).
-   */
-  virtual CreateMethodMetadataResult createMethodMetadata() {
-    // For generated APFs, this will lead to fallback to old logic
-    // For custom APFs, we shouldn't use this default but owner shoul
-    // override this function to provide dedicated executorType of their
-    // service
-    WildcardMethodMetadataMap wildcardMap;
-    wildcardMap.wildcardMetadata = std::make_shared<WildcardMethodMetadata>();
-    wildcardMap.knownMethods = {};
-
-    return wildcardMap;
-  }
-
-  /**
-   * Override to return a pre-initialized RequestContext.
-   * Its content will be copied in the RequestContext initialized at
-   * the beginning of each thrift request processing.
-   *
-   * The method metadata (per createMethodMetadata's contract) is also passed
-   * in. If createMethodMetadata is unimplemented or the method is not found,
-   * then this function will not be called.
-   */
-  virtual std::shared_ptr<folly::RequestContext> getBaseContextForRequest(
-      const MethodMetadata&) {
-    return nullptr;
-  }
-
-  virtual ~AsyncProcessorFactory() = default;
-};
-
-// Returned by resource pool components when a request is rejected.
-class ServerRequestRejection {
- public:
-  ServerRequestRejection(TApplicationException&& exception)
-      : impl_(std::move(exception)) {}
-
-  const TApplicationException& applicationException() const& { return impl_; }
-
-  TApplicationException applicationException() && { return std::move(impl_); }
-
- private:
-  TApplicationException impl_;
-};
-
-class AsyncProcessor;
-
-// Returned to choose a resource pool
-using SelectPoolResult = std::variant<
-    std::monostate, // No opinion (use a reasonable default)
-    std::reference_wrapper<const ResourcePoolHandle>, // Use this ResourcePool
-    ServerRequestRejection>; // Reject the request with this reason
 
 /**
  * A class that is created once per-connection and handles incoming requests.
@@ -334,6 +91,9 @@ using SelectPoolResult = std::variant<
  * ThreadManager (tm) or executing inline (eb).
  */
 class AsyncProcessor : public TProcessorBase {
+ protected:
+  using TProcessorBase::TProcessorBase;
+
  public:
   ~AsyncProcessor() override = default;
 
@@ -373,7 +133,7 @@ class AsyncProcessor : public TProcessorBase {
   virtual void destroyAllInteractions(
       Cpp2ConnContext& conn, folly::EventBase&) noexcept;
 
-  virtual void processInteraction(ServerRequest&&) {}
+  virtual void processInteraction(ServerRequest&&) = 0;
 
   // This is the main interface we are migrating to. Eventually it should
   // replace all the processSerialized... methods.
@@ -384,6 +144,24 @@ class AsyncProcessor : public TProcessorBase {
   virtual void executeRequest(
       ServerRequest&& request,
       const AsyncProcessorFactory::MethodMetadata& methodMetadata);
+
+  /**
+   * TProcessorEventHandler instances can come from 3 places:
+   *   1. ServerModules added to ThriftServer
+   *   2. Globally-registered via TProcessorBase::addProcessorEventHandler
+   *   3. AsyncProcessor::addEventHandler calls (typically in services that
+   *      override getProcessor in their handler)
+   *
+   * This function combines all of these sources together such that
+   * getEventHandlers() returns the united set, as if by calling
+   * addEventHandler.
+   *
+   * This function is thread-safe. However, all calls MUST pass in the same
+   * server object. This is reasonable because an AsyncProcessor cannot be used
+   * across ThriftServer instances.
+   */
+  void coalesceWithServerScopedLegacyEventHandlers(
+      const apache::thrift::server::ServerConfigs& server);
 };
 
 namespace detail {
@@ -420,7 +198,7 @@ class ServerRequest {
         serializedRequest_(std::move(serializedRequest)),
         ctx_(ctx),
         protocol_(protocol),
-        follyRequestContext_(follyRequestContext),
+        follyRequestContext_(std::move(follyRequestContext)),
         asyncProcessor_(asyncProcessor),
         methodMetadata_(methodMetadata) {}
 
@@ -464,6 +242,8 @@ class ServerRequest {
   const ResponseChannelRequest::UniquePtr& request() const { return request_; }
 
   ResponseChannelRequest::UniquePtr& request() { return request_; }
+
+  const ServerRequestData& requestData() const { return requestData_; }
 
   ServerRequestData& requestData() { return requestData_; }
 
@@ -530,7 +310,7 @@ class ServerRequest {
     return sr.resourcePool_ ? sr.resourcePool_ : nullptr;
   }
 
-  static InternalPriority internalPriority(ServerRequest& sr) {
+  static InternalPriority internalPriority(const ServerRequest& sr) {
     return sr.priority_;
   }
 
@@ -734,7 +514,11 @@ class GeneratedAsyncProcessorBase : public AsyncProcessor {
   bool createInteraction(ServerRequest& req);
 
  protected:
-  virtual std::unique_ptr<Tile> createInteractionImpl(const std::string& name);
+  virtual std::unique_ptr<Tile> createInteractionImpl(
+      const std::string& name,
+      // This is only used by Rust, since Rust implementations of interaction is
+      // not fully compatible with standard interaction contract.
+      int16_t protocol);
 
  public:
   void terminateInteraction(
@@ -955,7 +739,7 @@ class ServiceHandlerBase {
  * the same object for both.
  */
 class ServerInterface : public virtual AsyncProcessorFactory,
-                        public ServiceHandlerBase {
+                        public virtual ServiceHandlerBase {
  public:
   ServerInterface() = default;
   ServerInterface(const ServerInterface&) = delete;
@@ -1071,7 +855,7 @@ class ServerInterface : public virtual AsyncProcessorFactory,
         InteractionType interaction,
         RpcKind rpcKind,
         concurrency::PRIORITY priority,
-        const std::optional<std::string_view> interactionName,
+        const std::optional<std::string>& interactionName,
         const bool createsInteraction)
         : MethodMetadata(
               executor,
@@ -1140,6 +924,24 @@ class ServerInterface : public virtual AsyncProcessorFactory,
   void setNameOverride(std::string name) { nameOverride_ = std::move(name); }
 };
 
+template <class T>
+class HandlerCallback;
+
+class HandlerCallbackBase;
+
+namespace detail {
+// These functions allow calling the function within generated code since
+// the corresponding functions are protected in HandlerCallbackBase
+
+#if FOLLY_HAS_COROUTINES
+bool shouldProcessServiceInterceptorsOnRequest(HandlerCallbackBase&) noexcept;
+
+folly::coro::Task<void> processServiceInterceptorsOnRequest(
+    HandlerCallbackBase&,
+    detail::ServiceInterceptorOnRequestArguments arguments);
+#endif // FOLLY_HAS_COROUTINES
+} // namespace detail
+
 /**
  * HandlerCallback class for async callbacks.
  *
@@ -1176,12 +978,39 @@ class HandlerCallbackBase {
     }
   }
 
+  util::BasicIntrusiveSharedPtrControlBlock intrusivePtrControlBlock_;
+
+ public:
+  struct IntrusiveSharedPtrAccess {
+    static void acquireRef(HandlerCallbackBase& callback) noexcept {
+      callback.intrusivePtrControlBlock_.acquireRef();
+    }
+    static util::BasicIntrusiveSharedPtrControlBlock::RefCount releaseRef(
+        HandlerCallbackBase& callback) noexcept {
+      return callback.intrusivePtrControlBlock_.releaseRef();
+    }
+  };
+
+  using Ptr =
+      util::IntrusiveSharedPtr<HandlerCallbackBase, IntrusiveSharedPtrAccess>;
+
+ private:
+  Ptr sharedFromThis() {
+    // Constructing from raw pointer is safe in this case because
+    // `this` is guaranteed to be alive while the current
+    // function is executing.
+    return Ptr(typename Ptr::UnsafelyFromRawPointer(), this);
+  }
+
  public:
   HandlerCallbackBase() : eb_(nullptr), reqCtx_(nullptr), protoSeqId_(0) {}
 
   HandlerCallbackBase(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       exnw_ptr ewp,
       folly::EventBase* eb,
       concurrency::ThreadManager* tm,
@@ -1190,6 +1019,9 @@ class HandlerCallbackBase {
       : req_(std::move(req)),
         ctx_(std::move(ctx)),
         interaction_(std::move(interaction)),
+        serviceName_(serviceName),
+        definingServiceName_(definingServiceName),
+        methodName_(methodName),
         ewp_(ewp),
         eb_(eb),
         executor_(
@@ -1204,6 +1036,9 @@ class HandlerCallbackBase {
   HandlerCallbackBase(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       exnw_ptr ewp,
       folly::EventBase* eb,
       folly::Executor::KeepAlive<> executor,
@@ -1215,6 +1050,9 @@ class HandlerCallbackBase {
       : req_(std::move(req)),
         ctx_(std::move(ctx)),
         interaction_(std::move(interaction)),
+        serviceName_(serviceName),
+        definingServiceName_(definingServiceName),
+        methodName_(methodName),
         ewp_(ewp),
         eb_(eb),
         executor_(std::move(executor)),
@@ -1231,9 +1069,46 @@ class HandlerCallbackBase {
       folly::EventBase* eb,
       TilePtr interaction = {});
 
-  void exception(std::exception_ptr ex) { doException(ex); }
+  void exception(std::exception_ptr ex) {
+    class ExceptionHandler {
+     public:
+      explicit ExceptionHandler(std::exception_ptr&& ex) : ex_(std::move(ex)) {}
 
-  void exception(folly::exception_wrapper ew) { doExceptionWrapped(ew); }
+      folly::exception_wrapper exception() && {
+        return folly::exception_wrapper(std::move(ex_));
+      }
+
+      static void handle(
+          HandlerCallbackBase& callback, folly::exception_wrapper&& ew) {
+        callback.doException(ew.to_exception_ptr());
+      }
+
+     private:
+      std::exception_ptr ex_;
+    };
+    handleExceptionAndExecuteServiceInterceptors(
+        ExceptionHandler(std::move(ex)));
+  }
+
+  void exception(folly::exception_wrapper ew) {
+    class ExceptionHandler {
+     public:
+      explicit ExceptionHandler(folly::exception_wrapper&& ew)
+          : ew_(std::move(ew)) {}
+
+      folly::exception_wrapper exception() && { return std::move(ew_); }
+
+      static void handle(
+          HandlerCallbackBase& callback, folly::exception_wrapper&& ew) {
+        callback.doExceptionWrapped(std::move(ew));
+      }
+
+     private:
+      folly::exception_wrapper ew_;
+    };
+    handleExceptionAndExecuteServiceInterceptors(
+        ExceptionHandler(std::move(ew)));
+  }
 
   // Warning: just like "throw ex", this captures the STATIC type of ex, not
   // the dynamic type.  If you need the dynamic type, then either you should
@@ -1287,6 +1162,54 @@ class HandlerCallbackBase {
 
   virtual ResponsePayload transform(ResponsePayload&& response);
 
+#if FOLLY_HAS_COROUTINES
+  template <class T>
+  void startOnExecutor(folly::coro::Task<T>&& task) {
+    folly::Executor::KeepAlive<> executor =
+        executor_ ? executor_ : folly::getKeepAliveToken(eb_);
+    if (executor.get() == eb_ && eb_->isInEventBaseThread()) {
+      // Avoid rescheduling in the common case where result() is called inline
+      // on the EB thread where request execution began
+      std::move(task).scheduleOn(std::move(executor)).startInlineUnsafe();
+    } else {
+      std::move(task).scheduleOn(std::move(executor)).start();
+    }
+  }
+
+  template <class ExceptionHandler>
+  static folly::coro::Task<void>
+  doInvokeServiceInterceptorsOnResponseWithException(
+      Ptr callback, ExceptionHandler handler) {
+    folly::exception_wrapper ew = std::move(handler).exception();
+    folly::Try<void> onResponseResult = co_await folly::coro::co_awaitTry(
+        callback->processServiceInterceptorsOnResponse(ew));
+    // When both user code and ServiceInterceptor::onResponse have exceptions,
+    // the ServiceInterceptor wins. This is because
+    // ServiceInterceptor::onResponse has access to the user-thrown exception
+    // and can choose to either swallow it or not.
+    if (onResponseResult.hasException()) {
+      ExceptionHandler::handle(
+          *callback, std::move(onResponseResult).exception());
+    } else {
+      ExceptionHandler::handle(*callback, std::move(ew));
+    }
+  }
+#endif // FOLLY_HAS_COROUTINES
+
+  template <class ExceptionHandler>
+  void handleExceptionAndExecuteServiceInterceptors(ExceptionHandler handler) {
+#if FOLLY_HAS_COROUTINES
+    if (!shouldProcessServiceInterceptorsOnResponse()) {
+      ExceptionHandler::handle(*this, std::move(handler).exception());
+      return;
+    }
+    startOnExecutor(doInvokeServiceInterceptorsOnResponseWithException(
+        sharedFromThis(), std::move(handler)));
+#else
+    ExceptionHandler::handle(*this, std::move(handler).exception());
+#endif // FOLLY_HAS_COROUTINES
+  }
+
   // Can be called from IO or TM thread
   virtual void doException(std::exception_ptr ex) {
     doExceptionWrapped(folly::exception_wrapper(ex));
@@ -1306,12 +1229,28 @@ class HandlerCallbackBase {
   bool fulfillTilePromise(std::unique_ptr<Tile> ptr);
   void breakTilePromise();
 
+#if FOLLY_HAS_COROUTINES
+  bool shouldProcessServiceInterceptorsOnRequest() const noexcept;
+  friend bool detail::shouldProcessServiceInterceptorsOnRequest(
+      HandlerCallbackBase&) noexcept;
+
+  bool shouldProcessServiceInterceptorsOnResponse() const noexcept;
+
+  folly::coro::Task<void> processServiceInterceptorsOnRequest(
+      detail::ServiceInterceptorOnRequestArguments arguments);
+  folly::coro::Task<void> processServiceInterceptorsOnResponse(
+      detail::ServiceInterceptorOnResponseResult resultOrActiveException);
+
+  friend folly::coro::Task<void> detail::processServiceInterceptorsOnRequest(
+      HandlerCallbackBase&,
+      detail::ServiceInterceptorOnRequestArguments arguments);
+#endif // FOLLY_HAS_COROUTINES
+
 #if !FOLLY_HAS_COROUTINES
   [[noreturn]]
 #endif
-  void
-  sendReply(
-      FOLLY_MAYBE_UNUSED std::pair<
+  void sendReply(
+      [[maybe_unused]] std::pair<
           apache::thrift::SerializedResponse,
           apache::thrift::detail::SinkConsumerImpl>&& responseAndSinkConsumer);
 
@@ -1319,6 +1258,12 @@ class HandlerCallbackBase {
   ResponseChannelRequest::UniquePtr req_;
   ContextStack::UniquePtr ctx_;
   TilePtr interaction_;
+  // The "leaf" or most derived service name
+  const char* const serviceName_ = "";
+  // The service name where the incoming method name is defined (could be
+  // different if inherited service)
+  const char* const definingServiceName_ = "";
+  const char* const methodName_ = "";
 
   // May be null in a oneway call
   exnw_ptr ewp_;
@@ -1335,14 +1280,81 @@ class HandlerCallbackBase {
   ServerRequestData requestData_;
 };
 
+class HandlerCallbackOneWay : public HandlerCallbackBase {
+ public:
+  using Ptr =
+      util::IntrusiveSharedPtr<HandlerCallbackOneWay, IntrusiveSharedPtrAccess>;
+  using HandlerCallbackBase::HandlerCallbackBase;
+
+ private:
+#if FOLLY_HAS_COROUTINES
+  static folly::coro::Task<void> doInvokeServiceInterceptorsOnResponse(
+      Ptr callback);
+#endif // FOLLY_HAS_COROUTINES
+
+  Ptr sharedFromThis() noexcept {
+    // Constructing from raw pointer is safe in this case because
+    // `this` is guaranteed to be alive while the current
+    // function is executing.
+    return Ptr(typename Ptr::UnsafelyFromRawPointer(), this);
+  }
+
+ public:
+  void done() noexcept;
+  void complete(folly::Try<folly::Unit>&& r) noexcept;
+
+  class CompletionGuard {
+   public:
+    explicit CompletionGuard(Ptr&& callback) noexcept
+        : callback_(std::move(callback)) {}
+    CompletionGuard(CompletionGuard&& other) noexcept
+        : callback_(other.release()) {}
+    CompletionGuard& operator=(CompletionGuard&& other) noexcept {
+      callback_ = other.release();
+      return *this;
+    }
+
+    ~CompletionGuard() noexcept {
+      if (callback_ == nullptr) {
+        return;
+      }
+      if (auto ex = folly::current_exception()) {
+        callback_->exception(std::move(ex));
+      } else {
+        callback_->done();
+      }
+    }
+
+    Ptr release() noexcept { return std::exchange(callback_, nullptr); }
+
+   private:
+    Ptr callback_;
+  };
+};
+
+template <class T>
+using HandlerCallbackPtr = util::IntrusiveSharedPtr<
+    HandlerCallback<T>,
+    HandlerCallbackBase::IntrusiveSharedPtrAccess>;
+
 template <typename T>
 class HandlerCallback : public HandlerCallbackBase {
   using Helper = apache::thrift::detail::HandlerCallbackHelper<T>;
+  using InnerType = typename Helper::InnerType;
   using InputType = typename Helper::InputType;
   using cob_ptr = typename Helper::CobPtr;
 
  public:
+  using Ptr = HandlerCallbackPtr<T>;
   using ResultType = std::decay_t<typename Helper::InputType>;
+
+ private:
+  Ptr sharedFromThis() {
+    // Constructing from raw pointer is safe in this case because
+    // `this` is guaranteed to be alive while the current
+    // function is executing.
+    return Ptr(typename Ptr::UnsafelyFromRawPointer(), this);
+  }
 
  public:
   HandlerCallback() : cp_(nullptr) {}
@@ -1350,6 +1362,9 @@ class HandlerCallback : public HandlerCallbackBase {
   HandlerCallback(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       cob_ptr cp,
       exnw_ptr ewp,
       int32_t protoSeqId,
@@ -1361,6 +1376,9 @@ class HandlerCallback : public HandlerCallbackBase {
   HandlerCallback(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       cob_ptr cp,
       exnw_ptr ewp,
       int32_t protoSeqId,
@@ -1372,7 +1390,37 @@ class HandlerCallback : public HandlerCallbackBase {
       ServerRequestData requestData,
       TilePtr&& interaction = {});
 
-  void result(InputType r) { doResult(std::forward<InputType>(r)); }
+#if FOLLY_HAS_COROUTINES
+  static folly::coro::Task<void> doInvokeServiceInterceptorsOnResponse(
+      Ptr callback, std::decay_t<InputType> result) {
+    folly::Try<void> onResponseResult = co_await folly::coro::co_awaitTry(
+        callback->processServiceInterceptorsOnResponse(
+            apache::thrift::util::TypeErasedRef::of<InnerType>(result)));
+    if (onResponseResult.hasException()) {
+      callback->doException(onResponseResult.exception().to_exception_ptr());
+    } else {
+      callback->doResult(std::move(result));
+    }
+  }
+#endif
+
+  void result(InnerType r) {
+#if FOLLY_HAS_COROUTINES
+    if (!shouldProcessServiceInterceptorsOnResponse()) {
+      // Some service code (especially unit tests) assume that doResult() is
+      // called synchronously within a result() call. This check exists simply
+      // for backwards compatibility with those services. As an added bonus, we
+      // get to avoid allocating a coroutine frame + Future core in the case
+      // where they will be unused.
+      doResult(std::forward<InputType>(r));
+    } else {
+      startOnExecutor(doInvokeServiceInterceptorsOnResponse(
+          sharedFromThis(), std::decay_t<InputType>(std::move(r))));
+    }
+#else
+    doResult(std::forward<InputType>(r));
+#endif // FOLLY_HAS_COROUTINES
+  }
   [[deprecated("Pass the inner value directly to result()")]] void result(
       std::unique_ptr<ResultType> r);
 
@@ -1389,13 +1437,26 @@ class HandlerCallback<void> : public HandlerCallbackBase {
   using cob_ptr = SerializedResponse (*)(ContextStack*);
 
  public:
+  using Ptr = HandlerCallbackPtr<void>;
   using ResultType = void;
 
+ private:
+  Ptr sharedFromThis() {
+    // Constructing from raw pointer is safe in this case because
+    // `this` is guaranteed to be alive while the current
+    // function is executing.
+    return Ptr(typename Ptr::UnsafelyFromRawPointer(), this);
+  }
+
+ public:
   HandlerCallback() : cp_(nullptr) {}
 
   HandlerCallback(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       cob_ptr cp,
       exnw_ptr ewp,
       int32_t protoSeqId,
@@ -1407,6 +1468,9 @@ class HandlerCallback<void> : public HandlerCallbackBase {
   HandlerCallback(
       ResponseChannelRequest::UniquePtr req,
       ContextStack::UniquePtr ctx,
+      const char* serviceName,
+      const char* definingServiceName,
+      const char* methodName,
       cob_ptr cp,
       exnw_ptr ewp,
       int32_t protoSeqId,
@@ -1418,7 +1482,35 @@ class HandlerCallback<void> : public HandlerCallbackBase {
       ServerRequestData requestData,
       TilePtr&& interaction = {});
 
-  void done() { doDone(); }
+#if FOLLY_HAS_COROUTINES
+  folly::coro::Task<void> doInvokeServiceInterceptorsOnResponse(Ptr callback) {
+    folly::Try<void> onResponseResult = co_await folly::coro::co_awaitTry(
+        callback->processServiceInterceptorsOnResponse(
+            apache::thrift::util::TypeErasedRef::of<folly::Unit>(folly::unit)));
+    if (onResponseResult.hasException()) {
+      callback->doException(onResponseResult.exception().to_exception_ptr());
+    } else {
+      callback->doDone();
+    }
+  }
+#endif // FOLLY_HAS_COROUTINES
+
+  void done() {
+#if FOLLY_HAS_COROUTINES
+    if (!shouldProcessServiceInterceptorsOnResponse()) {
+      // Some service code (especially unit tests) assume that doResult() is
+      // called synchronously within a result() call. This check exists simply
+      // for backwards compatibility with those services. As an added bonus, we
+      // get to avoid allocating a coroutine frame + Future core in the case
+      // where they will be unused.
+      doDone();
+    } else {
+      startOnExecutor(doInvokeServiceInterceptorsOnResponse(sharedFromThis()));
+    }
+#else
+    doDone();
+#endif // FOLLY_HAS_COROUTINES
+  }
 
   void complete(folly::Try<folly::Unit>&& r);
 
@@ -1442,6 +1534,8 @@ template <typename InteractionIf, typename Response>
 class HandlerCallback<TileAndResponse<InteractionIf, Response>> final
     : public HandlerCallback<Response> {
  public:
+  using Ptr = HandlerCallbackPtr<TileAndResponse<InteractionIf, Response>>;
+
   void result(TileAndResponse<InteractionIf, Response>&& r) {
     if (this->fulfillTilePromise(std::move(r.tile))) {
       if constexpr (!std::is_void_v<Response>) {
@@ -1498,7 +1592,7 @@ void GeneratedAsyncProcessorBase::deserializeRequest(
     throw TrustedServerException::requestParsingError(ex.what());
   } catch (...) {
     throw TrustedServerException::requestParsingError(
-        folly::exceptionStr(std::current_exception()).c_str());
+        folly::exceptionStr(folly::current_exception()).c_str());
   }
   if (c) {
     c->postRead(nullptr, bytes);
@@ -1517,7 +1611,7 @@ void GeneratedAsyncProcessorBase::simpleDeserializeRequest(
     throw TrustedServerException::requestParsingError(ex.what());
   } catch (...) {
     throw TrustedServerException::requestParsingError(
-        folly::exceptionStr(std::current_exception()).c_str());
+        folly::exceptionStr(folly::current_exception()).c_str());
   }
 }
 
@@ -1724,6 +1818,9 @@ template <typename T>
 HandlerCallback<T>::HandlerCallback(
     ResponseChannelRequest::UniquePtr req,
     ContextStack::UniquePtr ctx,
+    const char* serviceName,
+    const char* definingServiceName,
+    const char* methodName,
     cob_ptr cp,
     exnw_ptr ewp,
     int32_t protoSeqId,
@@ -1734,6 +1831,9 @@ HandlerCallback<T>::HandlerCallback(
     : HandlerCallbackBase(
           std::move(req),
           std::move(ctx),
+          serviceName,
+          definingServiceName,
+          methodName,
           ewp,
           eb,
           tm,
@@ -1747,6 +1847,9 @@ template <typename T>
 HandlerCallback<T>::HandlerCallback(
     ResponseChannelRequest::UniquePtr req,
     ContextStack::UniquePtr ctx,
+    const char* serviceName,
+    const char* definingServiceName,
+    const char* methodName,
     cob_ptr cp,
     exnw_ptr ewp,
     int32_t protoSeqId,
@@ -1760,6 +1863,9 @@ HandlerCallback<T>::HandlerCallback(
     : HandlerCallbackBase(
           std::move(req),
           std::move(ctx),
+          serviceName,
+          definingServiceName,
+          methodName,
           ewp,
           eb,
           std::move(executor),
@@ -1774,7 +1880,7 @@ HandlerCallback<T>::HandlerCallback(
 
 template <typename T>
 void HandlerCallback<T>::result(std::unique_ptr<ResultType> r) {
-  r ? doResult(std::move(*r))
+  r ? result(std::move(*r))
     : exception(TApplicationException(
           TApplicationException::MISSING_RESULT,
           "nullptr yielded from handler"));
@@ -1817,7 +1923,8 @@ struct inner_type<std::unique_ptr<S>> {
 
 template <typename T>
 struct HandlerCallbackHelper {
-  using InputType = const typename apache::thrift::detail::inner_type<T>::type&;
+  using InnerType = typename apache::thrift::detail::inner_type<T>::type;
+  using InputType = const InnerType&;
   using CobPtr =
       apache::thrift::SerializedResponse (*)(ContextStack*, InputType);
   static apache::thrift::SerializedResponse call(
@@ -1828,6 +1935,7 @@ struct HandlerCallbackHelper {
 
 template <typename StreamInputType>
 struct HandlerCallbackHelperServerStream {
+  using InnerType = StreamInputType&&;
   using InputType = StreamInputType&&;
   using CobPtr = ResponseAndServerStreamFactory (*)(
       ContextStack*, folly::Executor::KeepAlive<>, InputType);
@@ -1848,6 +1956,7 @@ struct HandlerCallbackHelper<ServerStream<StreamItem>>
 
 template <typename SinkInputType>
 struct HandlerCallbackHelperSink {
+  using InnerType = SinkInputType&&;
   using InputType = SinkInputType&&;
   using CobPtr =
       std::pair<apache::thrift::SerializedResponse, SinkConsumerImpl> (*)(
@@ -1886,5 +1995,4 @@ void RequestTask<ChildType>::run() {
   (childClass_->*executeFunc_)(std::move(req_));
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

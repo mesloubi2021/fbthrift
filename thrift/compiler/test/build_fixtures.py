@@ -13,17 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import argparse
 import asyncio
 import multiprocessing
 import os
-import re
-import shlex
 import shutil
 import subprocess
 import sys
+import typing
+from pathlib import Path
+from typing import Optional
 
-import pkg_resources
+from thrift.compiler.test import fixture_utils
 
 """
 * Invoke from the `/fbsource/fbcode/` directory using `buck run`:
@@ -36,19 +39,10 @@ will build all fixtures under `thrift/compiler/test/fixtures`. Or
 
 will only build selected fixtures under `thrift/compiler/test/fixtures`.
 
-* Invoke directly (if buck is not available):
-
-    thrift/compiler/test/build_fixtures.py \
-            --thrift-bin [$THRIFTBIN]      \
-            --fixture-root [$FIXTUREROOT]  \
-            --fixture-names [$FIXTURENAMES]
-
-$THRIFTBIN is the absolute or relative path to thrift compiler executable.
-$FIXTUREROOT/thrift/compiler/test/fixtures is the fixture dir (defaults
-to the current working directory) and $FIXTURENAMES is a list of
-fixture names to build specifically (default is to build all fixtures).
+$FIXTURENAMES is a space-separated list of fixture names to build specifically
+(default is to build all fixtures).
 """
-FIXTURE_ROOT = "."
+DEFAULT_FIXTURE_ROOT = "."
 
 
 def parsed_args():
@@ -65,13 +59,15 @@ def parsed_args():
     )
     parser.add_argument(
         "--fixture-root",
-        dest="fixture_root",
+        dest="repo_root_dir",
         help=(
-            "$FIXTUREROOT/thrift/compiler/test/fixtures is where the"
-            " fixtures are located, defaults to the current working dir"
+            "Path to the root of the 'repository' that contains all files "
+            "related to thrift fixtures, i.e. "
+            "$FIXTUREROOT/thrift/compiler/test/fixtures is where the "
+            "fixtures are located. Defaults to the current working dir."
         ),
         type=str,
-        default=FIXTURE_ROOT,
+        default=DEFAULT_FIXTURE_ROOT,
     )
     parser.add_argument(
         "--fixture-names",
@@ -84,64 +80,28 @@ def parsed_args():
     return parser.parse_args()
 
 
-def ascend_find_exe(path, target):
-    if not os.path.isdir(path):
-        path = os.path.dirname(path)
-    while True:
-        test = os.path.join(path, target)
-        if os.access(test, os.X_OK):
-            return test
-        parent = os.path.dirname(path)
-        if os.path.samefile(parent, path):
-            return None
-        path = parent
-
-
-def read_lines(path):
-    with open(path, "r") as f:
-        return f.readlines()
-
-
-args = parsed_args()
-fixture_root = args.fixture_root
-exe = os.path.join(os.getcwd(), sys.argv[0])
-thrift = args.thrift_bin
-if args.thrift_bin is None:
-    thrift = pkg_resources.resource_filename(__name__, "thrift")
-else:
-    thrift = ascend_find_exe(exe, args.thrift_bin)
-if thrift is None:
-    tb = args.thrift_bin
-    sys.stderr.write("error: cannot find the Thrift compiler ({})\n".format(tb))
-    sys.exit(1)
-
-fixture_dir = os.path.join(fixture_root, "thrift/compiler/test/fixtures")
-fixture_names = (
-    args.fixture_names
-    if args.fixture_names is not None
-    else sorted(
-        f
-        for f in os.listdir(fixture_dir)
-        if os.path.isfile(os.path.join(fixture_dir, f, "cmd"))
-    )
-)
-
+# Will be set to true if any fixture-generating subprocess fails.
 has_errors = False
 
-# Semaphore to limit the number of concurrent fixture builds.
-# Otherwise, a swarm of compiler processes results in too much
-# CPU contention, consistenly killing people's devservers.
-sem = asyncio.Semaphore(value=multiprocessing.cpu_count())
 
+async def _run_subprocess(sem: asyncio.Semaphore, cmd: list[str], *, cwd: Path) -> None:
+    """Runs a subprocess for the given `cmd`.
 
-async def run_subprocess(cmd, *, cwd):
+    If the subprocess fails (i.e., returns a non-0 code), sets the global
+    variable `has_errors` to `True`.
+
+    Args:
+        sem: Semaphore to limit the number of concurrent subprocesses
+        cmd: Commands to run.
+        cwd: Current working directory.
+    """
     async with sem:
         p = await asyncio.create_subprocess_exec(
             *cmd,
             cwd=cwd,
             close_fds=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
         out, err = await p.communicate()
         sys.stdout.write(out.decode(sys.stdout.encoding))
@@ -151,60 +111,126 @@ async def run_subprocess(cmd, *, cwd):
             sys.stderr.write(err.decode(sys.stderr.encoding))
 
 
-async def main():
-    processes = []
+def _add_processes_for_fixture(
+    fixture_name: str,
+    repo_root_dir_abspath: Path,
+    fixtures_root_dir_abspath: Path,
+    thrift_bin_path: Path,
+    thrift2ast_bin_path: Optional[Path],
+    subprocess_semaphore,
+    processes: list,
+) -> None:
+    """
+    Handles the generation of the given fixture, adding any pending coroutine
+    to the given `processes` list.
 
-    msg_format = "Building fixture {{0:>{w}}}/{{1}}: {{2}}".format(
+
+    Args:
+        fixture_name: Name of the fixture, which must correspond to the name
+          of a directory directly under `fixtures_root_dir_abspath`.
+
+        repo_root_dir_abspath: Absolute path of the root of the 'repository',
+          i.e. the directory that contains the `thrift/compiler/...` file
+          hierarchy.
+
+        fixtures_root_dir_abspath: Absolute path of the parent directory of all
+          fixtures. The given `fixture_name` must be a directory immediately
+          under this directory.
+    """
+    fixture_dir_abspath = fixtures_root_dir_abspath / fixture_name
+
+    # The root directory for all the output(s) generated for this fixture.
+    # Each unique command for this fixture (from `cmd`) will generate output
+    # either in a dedicated sub-directory of this directory (if
+    # `output_dedicated_folder` is True) or directly in this directory (otherwise).
+    fixture_output_root_dir_abspath = fixture_dir_abspath / "out"
+    shutil.rmtree(fixture_output_root_dir_abspath, ignore_errors=True)
+    os.mkdir(fixture_output_root_dir_abspath)
+
+    for fixture_cmd in fixture_utils.parse_fixture_cmds(
+        repo_root_dir_abspath,
+        fixture_name,
+        fixture_dir_abspath,
+        fixture_output_root_dir_abspath,
+        thrift_bin_path,
+        thrift2ast_bin_path,
+    ):
+        os.mkdir(fixture_output_root_dir_abspath / fixture_cmd.unique_name)
+        processes.append(
+            _run_subprocess(
+                subprocess_semaphore,
+                fixture_cmd.build_command_args,
+                cwd=repo_root_dir_abspath,
+            )
+        )
+
+
+async def _get_fixture_names(args, fixtures_root_dir_path: Path) -> list[str]:
+    if args.fixture_names is not None:
+        return args.fixture_names
+
+    return fixture_utils.get_all_fixture_names(fixtures_root_dir_path)
+
+
+async def main() -> int:
+    args = parsed_args()
+
+    thrift_bin_path: typing.Optional[Path] = fixture_utils.get_thrift_binary_path(
+        args.thrift_bin
+    )
+
+    if thrift_bin_path is None:
+        sys.stderr.write(
+            "error: cannot find the Thrift compiler ({})\n".format(args.thrift_bin)
+        )
+        return 1
+
+    thrift2ast_bin_path: typing.Optional[Path] = (
+        fixture_utils.get_thrift2ast_binary_path()
+    )
+
+    repo_root_dir_abspath = Path(args.repo_root_dir).resolve(strict=True)
+    assert repo_root_dir_abspath.is_dir()
+
+    # Directory that contains all fixture directories (one fixture per sub-dir).
+    fixtures_root_dir_abspath = repo_root_dir_abspath / "thrift/compiler/test/fixtures"
+
+    fixture_names = await _get_fixture_names(args, fixtures_root_dir_abspath)
+
+    # Semaphore to limit the number of concurrent fixture builds.
+    # Otherwise, a swarm of compiler processes results in too much
+    # CPU contention, consistenly killing people's devservers.
+    subprocess_semaphore = asyncio.Semaphore(value=multiprocessing.cpu_count())
+
+    build_progress_msg_format = "Building fixture {{0:>{w}}}/{{1}}: {{2}}".format(
         w=len(str(len(fixture_names)))
     )
-    for name, index in zip(fixture_names, range(len(fixture_names))):
-        msg = msg_format.format(index + 1, len(fixture_names), name)
+
+    processes = []
+    for index, fixture_name in enumerate(fixture_names):
+        # eg: 'Building fixture   1/117: adapter'
+        msg = build_progress_msg_format.format(
+            index + 1, len(fixture_names), fixture_name
+        )
         print(msg, file=sys.stderr)
-        fixture_src = os.path.join(fixture_dir, name)
-        for fn in set(os.listdir(fixture_src)) - {"cmd", "src"}:
-            if fn.startswith("."):
-                continue
-            shutil.rmtree(os.path.join(fixture_src, fn))
-        cmds = read_lines(os.path.join(fixture_src, "cmd"))
-        for cmd in cmds:
-            if re.match(r"^\s*#", cmd):
-                continue
-            args = shlex.split(cmd.strip())
-            args[1] = os.path.relpath(os.path.join(fixture_src, args[1]), fixture_root)
-            base_args = [
-                thrift,
-                "-r",
-                "-I",
-                os.path.abspath(fixture_src),
-                "-I",
-                os.path.abspath(fixture_root),
-                "-o",
-                os.path.abspath(fixture_src),
-                "--gen",
-            ]
-            if "mstch_cpp" in args[0]:
-                path = os.path.join("thrift/compiler/test/fixtures", name)
-                extra = "include_prefix=" + path
-                join = "," if ":" in args[0] else ":"
-                args[0] = args[0] + join + extra
-            if (
-                "cpp2" in args[0]
-                or "schema" in args[0]
-                or "mstch_java" in args[0]
-                or "mstch_python" in args[0]
-            ):
-                # TODO: (yuhanhao) T41937765 When use generators that use
-                # `mstch_objects` in recursive mode, if included thrift file
-                # contains const structs or const union, generater will attempt to
-                # de-reference a nullptr in `mstch_const_value::const_struct()`.
-                # This is a hack before this is resolved.
-                base_args.remove("-r")
-            xargs = base_args + args
-            processes.append(run_subprocess(xargs, cwd=fixture_root))
+
+        _add_processes_for_fixture(
+            fixture_name,
+            repo_root_dir_abspath,
+            fixtures_root_dir_abspath,
+            thrift_bin_path,
+            thrift2ast_bin_path,
+            subprocess_semaphore,
+            processes,
+        )
 
     await asyncio.gather(*processes)
+    return int(has_errors)
 
 
-asyncio.run(main())
+def invoke_main() -> None:
+    sys.exit(asyncio.run(main()))
 
-sys.exit(int(has_errors))
+
+if __name__ == "__main__":
+    invoke_main()  # pragma: no cover

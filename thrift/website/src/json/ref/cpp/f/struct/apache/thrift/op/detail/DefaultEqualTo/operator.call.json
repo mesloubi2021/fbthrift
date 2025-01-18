@@ -7,14 +7,16 @@
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1DefaultEqualTo_1ac07dfd66e54859aa08c33c7411dc9525",
       "prot": "public",
       "static": "no",
+      "constexpr": "yes",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
       "virtual": "non-virtual",
-      "type_html": "constexpr bool",
-      "definition_html": "constexpr bool apache::thrift::op::detail::DefaultEqualTo&lt; LTag, RTag, CompareWith, L, R &gt;::operator()",
+      "type_html": "bool",
+      "definition_html": "bool apache::thrift::op::detail::DefaultEqualTo&lt; LTag, RTag, CompareWith, L, R &gt;::operator()",
       "argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::DefaultEqualTo::operator()",
       "param": [
         {
           "type_html": "const L &amp;",
@@ -27,18 +29,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "242",
-        "column": "1",
+        "line": "247",
+        "column": "18",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "242",
-        "bodyend": "244"
+        "bodystart": "247",
+        "bodyend": "249"
       },
       "definition": {
-        "simple_html": "constexpr bool operator()(const L&amp; lhs, const R&amp; rhs) const",
-        "simple_raw": "constexpr bool operator()(const L& lhs, const R& rhs) const",
-        "detailed_html": "inline constexpr bool operator()(const L&amp; lhs, const R&amp; rhs) const",
-        "detailed_raw": "inline constexpr bool operator()(const L& lhs, const R& rhs) const",
-        "original_definition_html": "constexpr bool apache::thrift::op::detail::DefaultEqualTo&lt; LTag, RTag, CompareWith, L, R &gt;::operator()",
+        "simple_html": "bool operator()(const L&amp; lhs, const R&amp; rhs) const",
+        "simple_raw": "bool operator()(const L& lhs, const R& rhs) const",
+        "detailed_html": "inline bool operator()(const L&amp; lhs, const R&amp; rhs) const",
+        "detailed_raw": "inline bool operator()(const L& lhs, const R& rhs) const",
+        "original_definition_html": "bool apache::thrift::op::detail::DefaultEqualTo&lt; LTag, RTag, CompareWith, L, R &gt;::operator()",
         "original_argsstring_html": "(const L &amp;lhs, const R &amp;rhs) const"
       },
       "filepath": "fns/struct/apache/thrift/op/detail/DefaultEqualTo/operator.call",
@@ -53,5 +55,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultEqualTo/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultEqualTo/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/DefaultEqualTo/operator.call",
+  "parent_links": [
+    {
+      "text_html": "DefaultEqualTo",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/DefaultEqualTo"
+    }
+  ]
 }

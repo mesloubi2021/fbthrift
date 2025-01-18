@@ -29,10 +29,7 @@
 #include <thrift/lib/cpp2/transport/rocket/server/RocketStreamClientCallback.h>
 #include <thrift/lib/cpp2/transport/rocket/server/ThriftRocketServerHandler.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
-namespace test {
+namespace apache::thrift::rocket::test {
 
 class FakeTransport final : public folly::AsyncTransport {
  public:
@@ -98,6 +95,23 @@ class FakeProcessor final : public apache::thrift::AsyncProcessor {
             "place holder"),
         "1" /* doesnt matter */);
   }
+
+  void processInteraction(apache::thrift::ServerRequest&&) override {
+    LOG(FATAL)
+        << "This AsyncProcessor doesn't support Thrift interactions. "
+        << "Please implement processInteraction to support interactions.";
+  }
+
+  void executeRequest(
+      ServerRequest&& req,
+      const AsyncProcessorFactory::MethodMetadata&) override {
+    req.request()->sendErrorWrapped(
+        folly::make_exception_wrapper<apache::thrift::TApplicationException>(
+            apache::thrift::TApplicationException::TApplicationExceptionType::
+                INTERNAL_ERROR,
+            "place holder"),
+        "1" /* doesnt matter */);
+  }
 };
 
 class FakeProcessorFactory final
@@ -105,6 +119,14 @@ class FakeProcessorFactory final
  public:
   std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override {
     return std::make_unique<FakeProcessor>();
+  }
+
+  CreateMethodMetadataResult createMethodMetadata() override {
+    WildcardMethodMetadataMap wildcardMap;
+    wildcardMap.wildcardMetadata = std::make_shared<WildcardMethodMetadata>(
+        MethodMetadata::ExecutorType::ANY);
+    wildcardMap.knownMethods = {};
+    return wildcardMap;
   }
 
   std::vector<apache::thrift::ServiceHandlerBase*> getServiceHandlers()
@@ -122,16 +144,18 @@ void testServerOneInput(const uint8_t* Data, size_t Size) {
   server.setInterface(std::make_shared<FakeProcessorFactory>());
   auto worker = apache::thrift::Cpp2Worker::create(&server, &evb);
   std::vector<std::unique_ptr<apache::thrift::rocket::SetupFrameHandler>> v;
+  std::vector<std::unique_ptr<apache::thrift::rocket::SetupFrameInterceptor>> i;
   folly::SocketAddress address;
   MemoryTracker memoryTracker;
+  NoopStreamMetricCallback streamMetricCallback;
 
   auto connection = new apache::thrift::rocket::RocketServerConnection(
       std::move(sock),
       std::make_unique<apache::thrift::rocket::ThriftRocketServerHandler>(
-          worker, address, sockPtr, v),
+          worker, address, sockPtr, v, i),
       memoryTracker, // (ingress)
-      memoryTracker // (egress)
-  );
+      memoryTracker, // (egress)
+      streamMetricCallback);
 
   folly::DelayedDestruction::DestructorGuard dg(connection);
   apache::thrift::rocket::Parser<apache::thrift::rocket::RocketServerConnection>
@@ -178,7 +202,4 @@ void testClientOneInput(const uint8_t* Data, size_t Size) {
   callback.waitUntilDone(&evb);
 }
 
-} // namespace test
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket::test

@@ -35,7 +35,7 @@ void ThreadManagerLoggingWrapper::recordStackTrace(std::string funcName) const {
           actions.executorToThreadManagerUnexpectedFunctionName =
               std::move(funcName);
           // let's reused the old event instead of creating a new one
-          if (auto server = dynamic_cast<const ThriftServer*>(server_)) {
+          if (auto server = server_) {
             THRIFT_SERVER_EVENT(executor_thread_manager_unexpected_calls)
                 .log(*server);
           }
@@ -43,4 +43,11 @@ void ThreadManagerLoggingWrapper::recordStackTrace(std::string funcName) const {
   }
 }
 
+void ThreadManagerLoggingWrapper::checkResourcePoolsEnabled() const {
+  if (priorityThreadManager_ == nullptr && resourcePoolsEnabled_) {
+    LOG(FATAL)
+        << "This deprecated ThreadManager method, which is dependent on PriorityThreadManager, is not supported after migration to Resource Pools. "
+        << "Please migrate to ResourcePools API";
+  }
+}
 } // namespace apache::thrift

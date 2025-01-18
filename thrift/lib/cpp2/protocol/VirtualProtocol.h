@@ -28,8 +28,7 @@
 #include <thrift/lib/cpp/protocol/TProtocol.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class VirtualReaderBase {
  public:
@@ -76,7 +75,7 @@ class VirtualReaderBase {
   virtual void readBinary(folly::IOBuf& str) = 0;
   virtual size_t fixedSizeInContainer(TType) const = 0;
   virtual void skipBytes(size_t bytes) = 0;
-  virtual void skip(TType type) = 0;
+  virtual void skip(TType type, int depth = 0) = 0;
   virtual const folly::io::Cursor& getCursor() const = 0;
   virtual size_t getCursorPosition() const = 0;
   virtual bool peekMap() { return false; }
@@ -93,9 +92,8 @@ class VirtualReader : public VirtualReaderBase {
 
   template <
       typename... Args,
-      typename std::enable_if<
-          std::is_constructible<ProtocolT, Args...>::value,
-          bool>::type = false>
+      std::enable_if_t<std::is_constructible_v<ProtocolT, Args...>, bool> =
+          false>
   explicit VirtualReader(Args&&... args)
       : protocol_(std::forward<Args>(args)...) {}
   ~VirtualReader() override {}
@@ -106,15 +104,15 @@ class VirtualReader : public VirtualReaderBase {
 
   bool kUsesFieldNames() const override { return protocol_.kUsesFieldNames(); }
 
-  virtual bool kOmitsContainerSizes() const override {
+  bool kOmitsContainerSizes() const override {
     return protocol_.kOmitsContainerSizes();
   }
 
-  virtual bool kOmitsStringSizes() const override {
+  bool kOmitsStringSizes() const override {
     return protocol_.kOmitsStringSizes();
   }
 
-  virtual bool kHasDeferredRead() const override {
+  bool kHasDeferredRead() const override {
     return protocol_.kHasDeferredRead();
   }
 
@@ -163,8 +161,7 @@ class VirtualReader : public VirtualReaderBase {
   void readString(folly::fbstring& str) override { protocol_.readString(str); }
   void readBinary(std::string& str) override { protocol_.readBinary(str); }
   void readBinary(folly::fbstring& str) override { protocol_.readBinary(str); }
-  virtual void readBinary(
-      apache::thrift::detail::SkipNoopString& str) override {
+  void readBinary(apache::thrift::detail::SkipNoopString& str) override {
     protocol_.readBinary(str);
   }
   void readBinary(std::unique_ptr<folly::IOBuf>& str) override {
@@ -175,7 +172,7 @@ class VirtualReader : public VirtualReaderBase {
     return protocol_.fixedSizeInContainer(type);
   }
   void skipBytes(size_t bytes) override { protocol_.skipBytes(bytes); }
-  void skip(TType type) override { protocol_.skip(type); }
+  void skip(TType type, int depth = 0) override { protocol_.skip(type, depth); }
   const folly::io::Cursor& getCursor() const override {
     return protocol_.getCursor();
   }
@@ -187,7 +184,6 @@ class VirtualReader : public VirtualReaderBase {
   ProtocolT protocol_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif

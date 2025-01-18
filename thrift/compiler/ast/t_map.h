@@ -18,9 +18,7 @@
 
 #include <thrift/compiler/ast/t_container.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * A map is a lightweight container type that just wraps another two data
@@ -33,12 +31,16 @@ class t_map final : public t_container {
 
   const t_type_ref& key_type() const { return key_type_; }
   const t_type_ref& val_type() const { return val_type_; }
+  t_type_ref& key_type() { return key_type_; }
+  t_type_ref& val_type() { return val_type_; }
 
   type container_type() const override { return type::t_map; }
   std::string get_full_name() const override {
     return "map<" + key_type_->get_full_name() + ", " +
         val_type_->get_full_name() + ">";
   }
+
+  ~t_map() override;
 
  private:
   t_type_ref key_type_;
@@ -55,6 +57,4 @@ class t_map final : public t_container {
   const t_type* get_val_type() const { return val_type().get_type(); }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

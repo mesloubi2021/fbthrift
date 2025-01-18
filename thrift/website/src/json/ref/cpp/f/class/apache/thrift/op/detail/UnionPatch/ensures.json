@@ -7,6 +7,7 @@
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1BaseEnsurePatch_1af91b6b06b099c4ccdb10cf5a5ec7e234",
       "prot": "public",
       "static": "no",
+      "constexpr": "yes",
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
@@ -16,24 +17,25 @@
           "type_html": "typename Id"
         }
       ],
-      "type_html": "constexpr bool",
-      "definition_html": "constexpr bool apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::ensures",
+      "type_html": "bool",
+      "definition_html": "bool apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::ensures",
       "argsstring_html": "() const",
       "name_html": "ensures",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::ensures",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "138",
-        "column": "1",
+        "line": "181",
+        "column": "18",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "138",
-        "bodyend": "140"
+        "bodystart": "181",
+        "bodyend": "183"
       },
       "definition": {
-        "simple_html": "template &lt;typename Id&gt;\nconstexpr bool ensures() const",
-        "simple_raw": "template <typename Id>\nconstexpr bool ensures() const",
-        "detailed_html": "template &lt;typename Id&gt;\ninline constexpr bool ensures() const",
-        "detailed_raw": "template <typename Id>\ninline constexpr bool ensures() const",
-        "original_definition_html": "constexpr bool apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::ensures",
+        "simple_html": "template &lt;typename Id&gt;\nbool ensures() const",
+        "simple_raw": "template <typename Id>\nbool ensures() const",
+        "detailed_html": "template &lt;typename Id&gt;\ninline bool ensures() const",
+        "detailed_raw": "template <typename Id>\ninline bool ensures() const",
+        "original_definition_html": "bool apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::ensures",
         "original_argsstring_html": "() const"
       },
       "description": {
@@ -51,5 +53,11 @@
   "brief_html": "<p>Returns if the patch ensures the given field is set (explicitly or implicitly). </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/ensures",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/ensures"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/ensures",
+  "parent_links": [
+    {
+      "text_html": "UnionPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/UnionPatch"
+    }
+  ]
 }

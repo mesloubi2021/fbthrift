@@ -28,8 +28,7 @@
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 #define THRIFT_LOGGING_EVENT(KEY, FETCH_FUNC)                      \
   ([]() -> auto& {                                                 \
@@ -46,6 +45,9 @@ namespace thrift {
 
 #define THRIFT_APPLICATION_EVENT(NAME) \
   THRIFT_LOGGING_EVENT(#NAME, getApplicationEventHandler)
+
+#define THRIFT_REQUEST_EVENT(NAME) \
+  THRIFT_LOGGING_EVENT(#NAME, getRequestEventHandler)
 
 class ThriftServer;
 class Cpp2Worker;
@@ -84,16 +86,20 @@ class LoggingEventHandler {
 class ServerEventHandler : public LoggingEventHandler {
  public:
   virtual void log(const ThriftServer&, DynamicFieldsCallback = {}) {}
-  virtual ~ServerEventHandler() override {}
+  ~ServerEventHandler() override {}
 };
 
 using ConnectionLoggingContext = Cpp2ConnContext;
 class ConnectionEventHandler : public LoggingEventHandler {
  public:
-  virtual ~ConnectionEventHandler() override {}
+  ~ConnectionEventHandler() override {}
 
   virtual void log(
       const ConnectionLoggingContext&, DynamicFieldsCallback = {}) {}
+  virtual void log(
+      const ThriftServer& /* server */,
+      const folly::SocketAddress& /* clientAddr */,
+      DynamicFieldsCallback = {}) {}
 
   virtual void logSampled(
       const ConnectionLoggingContext&,
@@ -112,7 +118,7 @@ class ConnectionEventHandler : public LoggingEventHandler {
 class ApplicationEventHandler : public LoggingEventHandler {
  public:
   virtual void log(DynamicFieldsCallback = {}) {}
-  virtual ~ApplicationEventHandler() override {}
+  ~ApplicationEventHandler() override {}
 };
 
 class ServerTrackerHandler {
@@ -129,17 +135,56 @@ struct RequestLoggingContext {
   // for thrift internal exception, e.g. OVERLOAD, QUEUE_TIMEOUT,
   // UNKNOWN_METHOD.
   std::optional<ResponseRpcError> responseRpcError;
+  std::string routingTarget;
   std::string methodName;
   std::string clientId;
   // request id passed from the client
   std::string requestId;
+  uint32_t requestAttemptId;
+
+  // timeout settings
+  // final timeout values that are used by thrift server
+  std::chrono::milliseconds finalQueueTimeoutMs;
+  std::chrono::milliseconds finalTaskTimeoutMs;
+
+  // queue timout from thrift server
+  std::chrono::milliseconds serverQueueTimeoutMs;
+  // task timeout from thrift server
+  std::chrono::milliseconds serverTaskTimeoutMs;
+
+  // queue timeout passed from client
+  std::chrono::milliseconds clientQueueTimeoutMs;
+  // client timeout passed from client
+  std::chrono::milliseconds clientTimeoutMs;
+
+  // queue timeout pecentage from thrift server, it's used to derive the final
+  // queue timeout based on client timeout
+  uint32_t serverQueueTimeoutPct;
+
+  // by default server uses client timeout to set task timeout
+  // but server can opt-out to use the task timeout set from thrift server
+  bool serverUseClientTimeout;
+
+  bool requestStartedProcessing;
+
+  uint8_t cpuConcurrencyControllerMode;
 };
 
 class RequestEventHandler : public LoggingEventHandler {
  public:
   virtual void log(const RequestLoggingContext&) {}
   virtual void logSampled(SamplingRate, const RequestLoggingContext&) {}
-  virtual ~RequestEventHandler() override {}
+
+  /**
+   * Determines whether to log a request and returns the sampling rate used for
+   * logging.
+   *
+   * If the request should be logged, returns the sampling rate used; otherwise
+   * returns 0.
+   */
+  virtual SamplingRate shouldLog() { return 0; }
+
+  ~RequestEventHandler() override {}
 };
 
 class LoggingEventRegistry {
@@ -158,13 +203,20 @@ class LoggingEventRegistry {
   virtual ~LoggingEventRegistry() {}
 };
 
+enum class CertIPResult {
+  SKIPPED,
+  MATCHED_ENFORCED,
+  MATCHED_UNENFORCED,
+  MISMATCHED
+};
+
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_DECLARE(
     std::unique_ptr<apache::thrift::LoggingEventRegistry>,
     makeLoggingEventRegistry);
 
 THRIFT_PLUGGABLE_FUNC_DECLARE(
-    bool,
+    CertIPResult,
     isCertIPMismatch,
     const ConnectionLoggingContext& ctx,
     const folly::AsyncTransportCertificate* cert);
@@ -172,7 +224,4 @@ THRIFT_PLUGGABLE_FUNC_DECLARE(
 
 const LoggingEventRegistry& getLoggingEventRegistry();
 
-void useMockLoggingEventRegistry();
-
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -24,54 +24,68 @@
 #include <thrift/lib/cpp2/protocol/ProtocolReaderStructReadState.h>
 #include <thrift/lib/cpp2/protocol/ProtocolReaderWireTypeInfo.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 constexpr TypeInfo kStopType = {
     protocol::TType::T_STOP, nullptr, nullptr, nullptr};
 constexpr FieldInfo kStopMarker = {
     0, FieldQualifier::Unqualified, nullptr, 0, 0, &kStopType};
 
-template <class Protocol_>
+template <class TProtocol>
 void skip(
-    Protocol_* iprot, ProtocolReaderStructReadState<Protocol_>& readState) {
+    TProtocol* iprot, ProtocolReaderStructReadState<TProtocol>& readState) {
   readState.skip(iprot);
   readState.readFieldEnd(iprot);
   readState.readFieldBeginNoInline(iprot);
 }
 
-inline const void* getMember(const FieldInfo& fieldInfo, const void* object) {
-  return static_cast<const char*>(object) + fieldInfo.memberOffset;
+void* getFieldValuesBasePtr(const StructInfo& structInfo, void* targetObject);
+
+const void* getFieldValuesBasePtr(
+    const StructInfo& structInfo, const void* targetObject);
+
+/**
+ * Returns a pointer to the memory holding the value of the field corresponding
+ * to `fieldInfo`, in the given target `object`.
+ */
+inline const void* getFieldValuePtr(
+    const FieldInfo& fieldInfo, const void* fieldValuesBasePtr) {
+  return static_cast<const char*>(fieldValuesBasePtr) + fieldInfo.memberOffset;
 }
 
-inline void* getMember(const FieldInfo& fieldInfo, void* object) {
-  return static_cast<char*>(object) + fieldInfo.memberOffset;
+/**
+ * Returns a pointer to the memory holding the value of the field corresponding
+ * to `fieldInfo`, in the given target `object`.
+ */
+inline void* getFieldValuePtr(
+    const FieldInfo& fieldInfo, void* fieldValuesBasePtr) {
+  return static_cast<char*>(fieldValuesBasePtr) + fieldInfo.memberOffset;
 }
 
 inline OptionalThriftValue getValue(
-    const TypeInfo& typeInfo, const void* object) {
-  if (typeInfo.get) {
-    return typeInfo.get(object, typeInfo);
+    const TypeInfo& typeInfo, const void* valuePtr) {
+  if (typeInfo.get != nullptr) {
+    return typeInfo.get(valuePtr, typeInfo);
   }
-  return object ? folly::make_optional<ThriftValue>(object) : folly::none;
+  return valuePtr != nullptr ? folly::make_optional<ThriftValue>(valuePtr)
+                             : folly::none;
 }
 
-FOLLY_ERASE void* invokeSet(VoidFuncPtr set, void* object) {
-  return reinterpret_cast<void* (*)(void*)>(set)(object);
+FOLLY_ERASE void* invokeSet(VoidFuncPtr set, void* outValuePtr) {
+  return reinterpret_cast<void* (*)(void*)>(set)(outValuePtr);
 }
 
-FOLLY_ERASE void* invokeStructSet(const TypeInfo& info, void* object) {
+FOLLY_ERASE void* invokeStructSet(const TypeInfo& info, void* outValuePtr) {
   return reinterpret_cast<void* (*)(void*, const TypeInfo&)>(info.set)(
-      object, info);
+      outValuePtr, info);
 }
 
-template <class Protocol_>
+template <class TProtocol>
 const FieldInfo* findFieldInfo(
-    Protocol_* iprot,
-    ProtocolReaderStructReadState<Protocol_>& readState,
+    TProtocol* iprot,
+    ProtocolReaderStructReadState<TProtocol>& readState,
     const StructInfo& structInfo) {
-  auto* end = structInfo.fieldInfos + structInfo.numFields;
+  const FieldInfo* const end = structInfo.fieldInfos + structInfo.numFields;
   if (iprot->kUsesFieldNames()) {
     const FieldInfo* found =
         std::find_if(structInfo.fieldInfos, end, [&](const FieldInfo& val) {
@@ -99,17 +113,26 @@ const FieldInfo* findFieldInfo(
 }
 
 // Returns active field id for a Thrift union object.
-int getActiveId(const void* object, const StructInfo& info);
+int getActiveId(const void* unionObject, const StructInfo& info);
 
 // Sets the active field id for a Thrift union object.
 void setActiveId(void* object, const StructInfo& info, int value);
 
-// Checks whether if a field value is safe to retrieve. For an optional field,
-// a field is nullable, so it is safe to get the field value if it is
-// explicitly set. An unqualified and terse fields are always safe to retrive
-// their values.
-bool hasFieldValue(
-    const void* object, const FieldInfo& info, const StructInfo& structInfo);
+/**
+ * Checks if a field value is safe to retrieve.
+ *
+ * Optional fields are nullable, so it is only safe to retrieve their value if
+ * they are explicitly set.
+ *
+ * All other fields (unqualified, terse) are always safe to retrieve.
+ *
+ * This should not be called for unions (i.e., `structInfo.unionExt` should be
+ * `nullptr`)
+ */
+bool structFieldHasValue(
+    const void* targetObject,
+    const FieldInfo& fieldInfo,
+    const StructInfo& structInfo);
 
 // A helper function to set a field to its intrinsic default value.
 void setToIntrinsicDefault(void* value, const FieldInfo& info);
@@ -117,128 +140,137 @@ void setToIntrinsicDefault(void* value, const FieldInfo& info);
 void clearTerseField(void* value, const FieldInfo& info);
 
 // For an unqualified and optional field, the semantic is identical to
-// `hasFieldValue`. An unqualified field is not emptiable, and an optional field
-// is empty if it is not explicitly set. For a terse field, compare the value
-// with the intrinsic default to check whether a field is empty or not.
+// `structFieldHasValue`. An unqualified field is not emptiable, and an optional
+// field is empty if it is not explicitly set. For a terse field, compare the
+// value with the intrinsic default to check whether a field is empty or not.
 bool isFieldNotEmpty(
     const void* object,
     const ThriftValue& value,
     const FieldInfo& info,
     const StructInfo& structInfo);
 
-// A terse field skips serialization if it is equal to the intrinsic default.
-// Note, for a struct terse field, serialization is skipped if it is empty. If
-// it has an unqualified field, it is not eligible to be empty. A struct is
-// empty, if optional fields are not explicitly and terse fields are equal to
-// the intrinsic default.
+/**
+ * A terse field skips serialization if it is equal to the intrinsic default.
+ * Note, for a struct terse field, serialization is skipped if it is empty. If
+ * it has an unqualified field, it is not eligible to be empty. A struct is
+ * empty, if optional fields are not explicitly and terse fields are equal to
+ * the intrinsic default.
+ *
+ * Cannot be called for Thrift unions.
+ */
 bool isTerseFieldSet(const ThriftValue& value, const FieldInfo& info);
 
+/**
+ * This should not be called for unions (i.e., `structInfo.unionExt` should be
+ * `nullptr`)
+ */
 void markFieldAsSet(
-    void* object, const FieldInfo& info, const StructInfo& structInfo);
+    void* object, const FieldInfo& fieldInfo, const StructInfo& structInfo);
 
-template <class Protocol_>
-void read(
-    Protocol_* iprot,
+template <class TProtocol>
+void readThriftValue(
+    TProtocol* iprot,
     const TypeInfo& typeInfo,
-    ProtocolReaderStructReadState<Protocol_>& readState,
-    void* object) {
-  using WireTypeInfo = ProtocolReaderWireTypeInfo<Protocol_>;
+    ProtocolReaderStructReadState<TProtocol>& readState,
+    void* outValuePtr) {
+  using WireTypeInfo = ProtocolReaderWireTypeInfo<TProtocol>;
   using WireType = typename WireTypeInfo::WireType;
   switch (typeInfo.type) {
     case protocol::TType::T_STRUCT:
       readState.beforeSubobject(iprot);
-      read<Protocol_>(
+      read<TProtocol>(
           iprot,
           *static_cast<const StructInfo*>(typeInfo.typeExt),
-          typeInfo.set ? invokeStructSet(typeInfo, object) : object);
+          typeInfo.set ? invokeStructSet(typeInfo, outValuePtr) : outValuePtr);
       readState.afterSubobject(iprot);
       break;
     case protocol::TType::T_I64: {
       std::int64_t temp;
       iprot->readI64(temp);
       reinterpret_cast<void (*)(void*, std::int64_t)>(typeInfo.set)(
-          object, temp);
+          outValuePtr, temp);
       break;
     }
     case protocol::TType::T_I32: {
       std::int32_t temp;
       iprot->readI32(temp);
       reinterpret_cast<void (*)(void*, std::int32_t)>(typeInfo.set)(
-          object, temp);
+          outValuePtr, temp);
       break;
     }
     case protocol::TType::T_I16: {
       std::int16_t temp;
       iprot->readI16(temp);
       reinterpret_cast<void (*)(void*, std::int16_t)>(typeInfo.set)(
-          object, temp);
+          outValuePtr, temp);
       break;
     }
     case protocol::TType::T_BYTE: {
       std::int8_t temp;
       iprot->readByte(temp);
       reinterpret_cast<void (*)(void*, std::int8_t)>(typeInfo.set)(
-          object, temp);
+          outValuePtr, temp);
       break;
     }
     case protocol::TType::T_BOOL: {
       bool temp;
       iprot->readBool(temp);
-      reinterpret_cast<void (*)(void*, bool)>(typeInfo.set)(object, temp);
+      reinterpret_cast<void (*)(void*, bool)>(typeInfo.set)(outValuePtr, temp);
       break;
     }
     case protocol::TType::T_DOUBLE: {
       double temp;
       iprot->readDouble(temp);
-      reinterpret_cast<void (*)(void*, double)>(typeInfo.set)(object, temp);
+      reinterpret_cast<void (*)(void*, double)>(typeInfo.set)(
+          outValuePtr, temp);
       break;
     }
     case protocol::TType::T_FLOAT: {
       float temp;
       iprot->readFloat(temp);
-      reinterpret_cast<void (*)(void*, float)>(typeInfo.set)(object, temp);
+      reinterpret_cast<void (*)(void*, float)>(typeInfo.set)(outValuePtr, temp);
       break;
     }
     case protocol::TType::T_STRING: {
       switch (*static_cast<const StringFieldType*>(typeInfo.typeExt)) {
         case StringFieldType::String:
-          iprot->readString(*static_cast<std::string*>(object));
+          iprot->readString(*static_cast<std::string*>(outValuePtr));
           break;
         case StringFieldType::StringView: {
           std::string temp;
           iprot->readString(temp);
           reinterpret_cast<void (*)(void*, const std::string&)>(typeInfo.set)(
-              object, temp);
+              outValuePtr, temp);
           break;
         }
         case StringFieldType::Binary:
-          iprot->readBinary(*static_cast<std::string*>(object));
+          iprot->readBinary(*static_cast<std::string*>(outValuePtr));
           break;
         case StringFieldType::BinaryStringView: {
           std::string temp;
           iprot->readBinary(temp);
           reinterpret_cast<void (*)(void*, const std::string&)>(typeInfo.set)(
-              object, temp);
+              outValuePtr, temp);
           break;
         }
         case StringFieldType::IOBufObj: {
-          const OptionalThriftValue value = getValue(typeInfo, object);
+          const OptionalThriftValue value = getValue(typeInfo, outValuePtr);
           if (value.hasValue()) {
             iprot->readBinary(*value.value().iobuf);
           } else {
             folly::IOBuf temp;
             iprot->readBinary(temp);
             reinterpret_cast<void (*)(void*, const folly::IOBuf&)>(
-                typeInfo.set)(object, temp);
+                typeInfo.set)(outValuePtr, temp);
           }
           break;
         }
         case StringFieldType::IOBuf:
-          iprot->readBinary(*static_cast<folly::IOBuf*>(object));
+          iprot->readBinary(*static_cast<folly::IOBuf*>(outValuePtr));
           break;
         case StringFieldType::IOBufPtr:
           iprot->readBinary(
-              *static_cast<std::unique_ptr<folly::IOBuf>*>(object));
+              *static_cast<std::unique_ptr<folly::IOBuf>*>(outValuePtr));
           break;
       }
       break;
@@ -246,7 +278,7 @@ void read(
     case protocol::TType::T_MAP: {
       readState.beforeSubobject(iprot);
       // Initialize the container to clear out current values.
-      auto* actualObject = invokeSet(typeInfo.set, object);
+      auto* actualObject = invokeSet(typeInfo.set, outValuePtr);
       const MapFieldExt& ext =
           *static_cast<const MapFieldExt*>(typeInfo.typeExt);
       std::uint32_t size = ~0;
@@ -256,8 +288,8 @@ void read(
       struct Context {
         const TypeInfo* keyInfo;
         const TypeInfo* valInfo;
-        Protocol_* iprot;
-        ProtocolReaderStructReadState<Protocol_>& readState;
+        TProtocol* iprot;
+        ProtocolReaderStructReadState<TProtocol>& readState;
       };
       const Context context = {
           ext.keyInfo,
@@ -267,7 +299,7 @@ void read(
       };
       const auto keyReader = [](const void* context, void* key) {
         const auto& typedContext = *static_cast<const Context*>(context);
-        read(
+        readThriftValue(
             typedContext.iprot,
             *typedContext.keyInfo,
             typedContext.readState,
@@ -275,7 +307,7 @@ void read(
       };
       const auto valueReader = [](const void* context, void* val) {
         const auto& typedContext = *static_cast<const Context*>(context);
-        read(
+        readThriftValue(
             typedContext.iprot,
             *typedContext.valInfo,
             typedContext.readState,
@@ -305,7 +337,7 @@ void read(
     case protocol::TType::T_SET: {
       readState.beforeSubobject(iprot);
       // Initialize the container to clear out current values.
-      auto* actualObject = invokeSet(typeInfo.set, object);
+      auto* actualObject = invokeSet(typeInfo.set, outValuePtr);
       const SetFieldExt& ext =
           *static_cast<const SetFieldExt*>(typeInfo.typeExt);
       std::uint32_t size = ~0;
@@ -313,8 +345,8 @@ void read(
       iprot->readSetBegin(reportedType, size);
       struct Context {
         const TypeInfo* valInfo;
-        Protocol_* iprot;
-        ProtocolReaderStructReadState<Protocol_>& readState;
+        TProtocol* iprot;
+        ProtocolReaderStructReadState<TProtocol>& readState;
       };
       const Context context = {
           ext.valInfo,
@@ -323,7 +355,7 @@ void read(
       };
       const auto reader = [](const void* context, void* value) {
         const auto& typedContext = *static_cast<const Context*>(context);
-        read(
+        readThriftValue(
             typedContext.iprot,
             *typedContext.valInfo,
             typedContext.readState,
@@ -350,7 +382,7 @@ void read(
     case protocol::TType::T_LIST: {
       readState.beforeSubobject(iprot);
       // Initialize the container to clear out current values.
-      auto* actualObject = invokeSet(typeInfo.set, object);
+      auto* actualObject = invokeSet(typeInfo.set, outValuePtr);
       const ListFieldExt& ext =
           *static_cast<const ListFieldExt*>(typeInfo.typeExt);
       std::uint32_t size = ~0;
@@ -359,8 +391,8 @@ void read(
       iprot->readListBegin(reportedType, size);
       struct Context {
         const TypeInfo* valInfo;
-        Protocol_* iprot;
-        ProtocolReaderStructReadState<Protocol_>& readState;
+        TProtocol* iprot;
+        ProtocolReaderStructReadState<TProtocol>& readState;
       };
       const Context context = {
           ext.valInfo,
@@ -369,7 +401,7 @@ void read(
       };
       const auto reader = [](const void* context, void* value) {
         const auto& typedContext = *static_cast<const Context*>(context);
-        read(
+        readThriftValue(
             typedContext.iprot,
             *typedContext.valInfo,
             typedContext.readState,
@@ -403,8 +435,9 @@ void read(
   }
 }
 
-template <class Protocol_>
-size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
+template <class TProtocol>
+size_t writeThriftValue(
+    TProtocol* iprot, const TypeInfo& typeInfo, ThriftValue value) {
   switch (typeInfo.type) {
     case protocol::TType::T_STRUCT:
       return write(
@@ -448,7 +481,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
         case StringFieldType::IOBufPtr:
           return iprot->writeBinary(
               *static_cast<const std::unique_ptr<folly::IOBuf>*>(value.object));
-      };
+      }
     }
       // For container types, when recursively writing with lambdas we
       // intentionally skip checking OptionalThriftValue.hasValue and treat it
@@ -461,7 +494,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
       struct Context {
         const TypeInfo* keyInfo;
         const TypeInfo* valInfo;
-        Protocol_* iprot;
+        TProtocol* iprot;
       };
       const Context context = {
           ext.keyInfo,
@@ -476,10 +509,12 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
             const auto& typedContext = *static_cast<const Context*>(context);
             const TypeInfo& keyInfo = *typedContext.keyInfo;
             const TypeInfo& valInfo = *typedContext.valInfo;
-            return write(typedContext.iprot, keyInfo, *getValue(keyInfo, key)) +
-                write(typedContext.iprot,
-                      *typedContext.valInfo,
-                      *getValue(valInfo, val));
+            return writeThriftValue(
+                       typedContext.iprot, keyInfo, *getValue(keyInfo, key)) +
+                writeThriftValue(
+                       typedContext.iprot,
+                       *typedContext.valInfo,
+                       *getValue(valInfo, val));
           });
       written += iprot->writeMapEnd();
       return written;
@@ -491,7 +526,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
 
       struct Context {
         const TypeInfo* valInfo;
-        Protocol_* iprot;
+        TProtocol* iprot;
       };
       const Context context = {
           ext.valInfo,
@@ -504,7 +539,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
           [](const void* context, const void* value) {
             const auto& typedContext = *static_cast<const Context*>(context);
             const TypeInfo& valInfo = *typedContext.valInfo;
-            return write(
+            return writeThriftValue(
                 typedContext.iprot, valInfo, *getValue(valInfo, value));
           });
       written += iprot->writeSetEnd();
@@ -517,7 +552,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
 
       struct Context {
         const TypeInfo* valInfo;
-        Protocol_* iprot;
+        TProtocol* iprot;
       };
       const Context context = {
           ext.valInfo,
@@ -527,7 +562,7 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
           &context, value.object, [](const void* context, const void* value) {
             const auto& typedContext = *static_cast<const Context*>(context);
             const TypeInfo& valInfo = *typedContext.valInfo;
-            return write(
+            return writeThriftValue(
                 typedContext.iprot, valInfo, *getValue(valInfo, value));
           });
       written += iprot->writeListEnd();
@@ -545,61 +580,79 @@ size_t write(Protocol_* iprot, const TypeInfo& typeInfo, ThriftValue value) {
   return 0;
 }
 
-template <class Protocol_>
+template <class TProtocol>
 size_t writeField(
-    Protocol_* iprot, const FieldInfo& fieldInfo, const ThriftValue& value) {
-  size_t written = iprot->writeFieldBegin(
+    TProtocol& iprot, const FieldInfo& fieldInfo, const ThriftValue& value) {
+  size_t written = iprot.writeFieldBegin(
       fieldInfo.name, fieldInfo.typeInfo->type, fieldInfo.id);
-  written += write(iprot, *fieldInfo.typeInfo, value);
-  written += iprot->writeFieldEnd();
+  written += writeThriftValue(&iprot, *fieldInfo.typeInfo, value);
+  written += iprot.writeFieldEnd();
   return written;
 }
 
-template <class Protocol_>
-void read(Protocol_* iprot, const StructInfo& structInfo, void* object) {
-  DCHECK(object);
-  ProtocolReaderStructReadState<Protocol_> readState;
+template <class TProtocol>
+void readThriftUnion(
+    TProtocol* iprot, const StructInfo& structInfo, void* unionObject) {
+  DCHECK(structInfo.unionExt != nullptr);
+  const UnionExt& unionExt = *structInfo.unionExt;
+  ProtocolReaderStructReadState<TProtocol> readState;
   readState.readStructBegin(iprot);
-
-  if (UNLIKELY(structInfo.unionExt != nullptr)) {
-    readState.fieldId = 0;
-    readState.readFieldBegin(iprot);
-    if (readState.atStop()) {
-      structInfo.unionExt->clear(object);
-      readState.readStructEnd(iprot);
-      return;
-    }
-    if (const auto* fieldInfo = findFieldInfo(iprot, readState, structInfo)) {
-      if (getActiveId(object, structInfo) != 0) {
-        structInfo.unionExt->clear(object);
-      }
-      void* value = getMember(*fieldInfo, object);
-      if (structInfo.unionExt->initMember[0] != nullptr) {
-        structInfo.unionExt->initMember[fieldInfo - structInfo.fieldInfos](
-            value);
-      }
-      read(iprot, *fieldInfo->typeInfo, readState, value);
-      setActiveId(object, structInfo, fieldInfo->id);
-    } else {
-      skip(iprot, readState);
-    }
-    readState.readFieldEnd(iprot);
-    readState.readFieldBegin(iprot);
-    if (UNLIKELY(!readState.atStop())) {
-      TProtocolException::throwUnionMissingStop();
-    }
+  readState.fieldId = 0;
+  readState.readFieldBegin(iprot);
+  if (readState.atStop()) {
+    unionExt.clear(unionObject);
     readState.readStructEnd(iprot);
     return;
   }
 
+  void* const fieldValuesBasePtr =
+      getFieldValuesBasePtr(structInfo, unionObject);
+  if (const FieldInfo* fieldInfo =
+          findFieldInfo(iprot, readState, structInfo)) {
+    if (getActiveId(unionObject, structInfo) != 0) {
+      unionExt.clear(unionObject);
+    }
+    void* fieldValuePtr = getFieldValuePtr(*fieldInfo, fieldValuesBasePtr);
+    if (unionExt.initMember[0] != nullptr) {
+      unionExt.initMember[fieldInfo - structInfo.fieldInfos](fieldValuePtr);
+    }
+    readThriftValue(iprot, *fieldInfo->typeInfo, readState, fieldValuePtr);
+    setActiveId(unionObject, structInfo, fieldInfo->id);
+    readState.readFieldEnd(iprot);
+    readState.readFieldBegin(iprot);
+  } else {
+    skip(iprot, readState);
+  }
+  if (UNLIKELY(!readState.atStop())) {
+    TProtocolException::throwUnionMissingStop();
+  }
+  readState.readStructEnd(iprot);
+  return;
+}
+
+template <class TProtocol>
+void read(TProtocol* iprot, const StructInfo& structInfo, void* targetObject) {
+  DCHECK(targetObject);
+
+  if (UNLIKELY(structInfo.unionExt != nullptr)) {
+    readThriftUnion(iprot, structInfo, targetObject);
+    return;
+  }
+
+  void* const fieldValuesBasePtr =
+      getFieldValuesBasePtr(structInfo, targetObject);
+
   // Clear terse fields to intrinsic default values before deserialization.
   for (std::int16_t i = 0; i < structInfo.numFields; i++) {
     const auto& fieldInfo = structInfo.fieldInfos[i];
-    clearTerseField(getMember(fieldInfo, object), fieldInfo);
+    clearTerseField(getFieldValuePtr(fieldInfo, fieldValuesBasePtr), fieldInfo);
   }
 
   // Define out of loop to call advanceToNextField after the loop ends.
   FieldID prevFieldId = 0;
+
+  ProtocolReaderStructReadState<TProtocol> readState;
+  readState.readStructBegin(iprot);
 
   // The index of the expected field in the struct layout.
   std::int16_t index = 0;
@@ -642,58 +695,94 @@ void read(Protocol_* iprot, const StructInfo& structInfo, void* object) {
     }
     // Id and type are what we expect, try read.
     prevFieldId = fieldInfo->id;
-    read(iprot, *fieldInfo->typeInfo, readState, getMember(*fieldInfo, object));
-    markFieldAsSet(object, *fieldInfo, structInfo);
+    readThriftValue(
+        iprot,
+        *fieldInfo->typeInfo,
+        readState,
+        getFieldValuePtr(*fieldInfo, fieldValuesBasePtr));
+    markFieldAsSet(targetObject, *fieldInfo, structInfo);
   }
 }
 
-template <class Protocol_>
-size_t write(
-    Protocol_* iprot, const StructInfo& structInfo, const void* object) {
-  DCHECK(object);
-  size_t written = iprot->writeStructBegin(structInfo.name);
-  if (UNLIKELY(structInfo.unionExt != nullptr)) {
-    const FieldInfo* end = structInfo.fieldInfos + structInfo.numFields;
-    int activeId = getActiveId(object, structInfo);
-    const FieldInfo* found = std::lower_bound(
-        structInfo.fieldInfos,
-        end,
-        activeId,
-        [](const FieldInfo& lhs, FieldID rhs) { return lhs.id < rhs; });
-    if (found < end && found->id == activeId) {
-      const OptionalThriftValue value =
-          getValue(*found->typeInfo, getMember(*found, object));
-      if (value.hasValue()) {
-        written += writeField(iprot, *found, value.value());
-      } else if (found->typeInfo->type == protocol::TType::T_STRUCT) {
-        written += iprot->writeFieldBegin(
-            found->name, found->typeInfo->type, found->id);
-        written += iprot->writeStructBegin(found->name);
-        written += iprot->writeStructEnd();
-        written += iprot->writeFieldStop();
-        written += iprot->writeFieldEnd();
-      }
-    }
-  } else {
-    for (std::int16_t index = 0; index < structInfo.numFields; index++) {
-      const auto& fieldInfo = structInfo.fieldInfos[index];
-      if (hasFieldValue(object, fieldInfo, structInfo)) {
-        if (OptionalThriftValue value =
-                getValue(*fieldInfo.typeInfo, getMember(fieldInfo, object))) {
-          if (fieldInfo.qualifier == FieldQualifier::Terse &&
-              !isTerseFieldSet(value.value(), fieldInfo)) {
-            continue;
-          }
-          written += writeField(iprot, fieldInfo, value.value());
-        }
-      }
+template <class TProtocol>
+size_t writeUnion(
+    TProtocol& iprot, const StructInfo& structInfo, const void* unionObject) {
+  size_t written = iprot.writeStructBegin(structInfo.name);
+
+  const int activeFieldId = getActiveId(unionObject, structInfo);
+  const FieldInfo* const fieldInfosEnd =
+      structInfo.fieldInfos + structInfo.numFields;
+  const FieldInfo* foundFieldInfo = std::lower_bound(
+      structInfo.fieldInfos,
+      fieldInfosEnd,
+      activeFieldId,
+      [](const FieldInfo& fieldInfo, FieldID fieldId) {
+        return fieldInfo.id < fieldId;
+      });
+
+  if (foundFieldInfo != fieldInfosEnd && foundFieldInfo->id == activeFieldId) {
+    const void* const fieldValuesBasePtr =
+        getFieldValuesBasePtr(structInfo, unionObject);
+    const void* const fieldValuePtr =
+        getFieldValuePtr(*foundFieldInfo, fieldValuesBasePtr);
+    const OptionalThriftValue value =
+        getValue(*foundFieldInfo->typeInfo, fieldValuePtr);
+    if (value.hasValue()) {
+      written += writeField(iprot, *foundFieldInfo, value.value());
+    } else if (foundFieldInfo->typeInfo->type == protocol::TType::T_STRUCT) {
+      // DO_BEFORE(aristidis,20240730): Follow-up to figure out if this branch
+      // is required. Document or remove.
+      written += iprot.writeFieldBegin(
+          foundFieldInfo->name,
+          foundFieldInfo->typeInfo->type,
+          foundFieldInfo->id);
+      written += iprot.writeStructBegin(foundFieldInfo->name);
+      written += iprot.writeFieldStop();
+      written += iprot.writeStructEnd();
+      written += iprot.writeFieldEnd();
     }
   }
+  written += iprot.writeFieldStop();
+  written += iprot.writeStructEnd();
+  return written;
+}
 
+template <class TProtocol>
+size_t write(
+    TProtocol* iprot, const StructInfo& structInfo, const void* targetObject) {
+  DCHECK(targetObject);
+  if (UNLIKELY(structInfo.unionExt != nullptr)) {
+    return writeUnion(*iprot, structInfo, targetObject);
+  }
+
+  const void* const fieldValuesBasePtr =
+      getFieldValuesBasePtr(structInfo, targetObject);
+
+  size_t written = iprot->writeStructBegin(structInfo.name);
+  for (std::int16_t index = 0; index < structInfo.numFields; index++) {
+    const FieldInfo& fieldInfo = structInfo.fieldInfos[index];
+    if (!structFieldHasValue(targetObject, fieldInfo, structInfo)) {
+      continue;
+    }
+
+    const void* fieldValuePtr = getFieldValuePtr(fieldInfo, fieldValuesBasePtr);
+    OptionalThriftValue optionalValue =
+        getValue(*fieldInfo.typeInfo, fieldValuePtr);
+    if (!optionalValue) {
+      // DO_BEFORE(aristidis,20240920): Check when this is valid. Document.
+      continue;
+    }
+
+    if (fieldInfo.qualifier == FieldQualifier::Terse &&
+        !isTerseFieldSet(optionalValue.value(), fieldInfo)) {
+      continue;
+    }
+
+    written += writeField(*iprot, fieldInfo, optionalValue.value());
+  }
   written += iprot->writeFieldStop();
   written += iprot->writeStructEnd();
   return written;
 }
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+
+} // namespace apache::thrift::detail

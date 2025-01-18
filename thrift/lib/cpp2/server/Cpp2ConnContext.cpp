@@ -38,8 +38,7 @@ uid_t errnoToUid(int no) {
 
 } // namespace
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 Cpp2ConnContext::PeerCred Cpp2ConnContext::PeerCred::queryFromSocket(
     folly::NetworkSocket socket) {
@@ -132,12 +131,12 @@ ClientMetadataRef::getFields() const {
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_REGISTER(
     ConnectionInternalFieldsT, createPerConnectionInternalFields) {
-  return ConnectionInternalFieldsT::makeEmpty();
+  return ConnectionInternalFieldsT();
 }
 
 THRIFT_PLUGGABLE_FUNC_REGISTER(
     RequestInternalFieldsT, createPerRequestInternalFields) {
-  return RequestInternalFieldsT::makeEmpty();
+  return RequestInternalFieldsT();
 }
 
 THRIFT_PLUGGABLE_FUNC_REGISTER(
@@ -146,5 +145,4 @@ THRIFT_PLUGGABLE_FUNC_REGISTER(
 }
 } // namespace detail
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

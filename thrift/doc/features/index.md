@@ -24,9 +24,9 @@ feature in different languages.
 | [Serialization](/features/serialization/index.md) | <Supported/> | <Supported/> | <Supported/> | <Supported/> |
 | [Universal names](/features/universal-name.md) | <Supported/> | <Supported/> | <Supported/> | <Supported/> |
 | [Streaming](/fb/features/streaming/index.md) | <Supported/> | <Partial>Client[^1]</Partial> | <Partial>Client[^1]</Partial> | <Supported/> |
-| [Interactions](/fb/features/interactions.md) | <Supported/> | <Partial>Client[^1]</Partial> | <Partial>Client[^1]</Partial> | <Partial>Client[^1]</Partial> |
-| [Adapters](/features/adapters.md) | <Supported/> | <InProgress/> | <Supported/> | <Supported/> |
-| [Dynamic values (Any)](/features/any.md) | <InProgress/> | <Unsupported/> | <Unsupported/> | <Unsupported/> |
+| [Interactions](/fb/features/interactions/index.md) | <Supported/> | <Partial>Client[^1]</Partial> | <Partial>Client[^1]</Partial> | <Partial>Client[^1]</Partial> |
+| [Adapters](/features/adapters.md) | <Supported/> | <Supported/> | <Supported/> | <Supported/> |
+| [Dynamic values (Any)](/features/any.md) | <Supported/> | <Supported/> | <Supported/> | <Supported/> |
 | [Terse write](/features/terse-write.md) | <Supported/> | <Supported/> | <Supported/> | <Supported/> |
 
 [^1]: You can write Thrift clients but not servers using this feature. These
@@ -36,7 +36,7 @@ Experimental features:
 
 | Thrift feature | C++ | Hack | Java | Python |
 | :------------- | :-: | :--: | :--: | :----: |
-| [Patch](/features/patch.md) | <InProgress/> | <Unsupported/> | <Unsupported/> | <Unsupported/> |
+| [Patch](/fb/features/patch.md) | <InProgress/> | <Unsupported/> | <Unsupported/> | <Unsupported/> |
 | [Deterministic Hashing](/fb/languages/cpp/hash.md) | <Supported/> | <Unsupported/> | <Unsupported/> | <Unsupported/> |
 
 The level of support of a feature in a given language is defined as follows:

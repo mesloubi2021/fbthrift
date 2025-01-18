@@ -26,11 +26,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "line": "467",
+    "line": "525",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "bodystart": "467",
-    "bodyend": "467"
+    "bodystart": "525",
+    "bodyend": "525"
   },
   "namespacednames_html": [
     "apache",
@@ -70,6 +70,7 @@
               "definition_html": "bool apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::operator()",
               "argsstring_html": "(const T &amp;lhs, const T &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::operator()",
               "param": [
                 {
                   "type_html": "const T &amp;",
@@ -82,11 +83,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "430",
-                "column": "1",
+                "line": "488",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "430",
-                "bodyend": "443"
+                "bodystart": "488",
+                "bodyend": "501"
               },
               "definition": {
                 "simple_html": "bool operator()(const T&amp; lhs, const T&amp; rhs) const",
@@ -108,7 +109,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/operator.call",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/operator.call"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/operator.call",
+          "parent_links": [
+            {
+              "text_html": "IdenticalTo&lt; type::set&lt; KTag &gt; &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -127,6 +134,7 @@
               "definition_html": "static auto apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::createHashMap",
               "argsstring_html": "(const T &amp;set)",
               "name_html": "createHashMap",
+              "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::createHashMap",
               "param": [
                 {
                   "type_html": "const T &amp;",
@@ -135,11 +143,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "447",
-                "column": "1",
+                "line": "505",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "447",
-                "bodyend": "453"
+                "bodystart": "505",
+                "bodyend": "511"
               },
               "definition": {
                 "simple_html": "static auto createHashMap(const T&amp; set)",
@@ -161,7 +169,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/createHashMap",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/createHashMap"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/createHashMap",
+          "parent_links": [
+            {
+              "text_html": "IdenticalTo&lt; type::set&lt; KTag &gt; &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -188,6 +202,7 @@
               "definition_html": "static bool apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::inRange",
               "argsstring_html": "(const K &amp;key, const R &amp;range)",
               "name_html": "inRange",
+              "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::inRange",
               "param": [
                 {
                   "type_html": "const K &amp;",
@@ -200,11 +215,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "457",
-                "column": "1",
+                "line": "515",
+                "column": "15",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "457",
-                "bodyend": "464"
+                "bodystart": "515",
+                "bodyend": "522"
               },
               "definition": {
                 "simple_html": "template &lt;typename K, typename R&gt;\nstatic bool inRange(const K&amp; key, const R&amp; range)",
@@ -226,7 +241,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/inRange",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/inRange"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4/inRange",
+          "parent_links": [
+            {
+              "text_html": "IdenticalTo&lt; type::set&lt; KTag &gt; &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1set_3_01KTag_01_4_01_4"
+            }
+          ]
         }
       ]
     }

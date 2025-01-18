@@ -22,8 +22,7 @@
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 struct SerializedRequest {
   explicit SerializedRequest(std::unique_ptr<folly::IOBuf> buffer_)
@@ -36,8 +35,11 @@ class SerializedCompressedRequest {
  public:
   explicit SerializedCompressedRequest(
       std::unique_ptr<folly::IOBuf> buffer,
-      CompressionAlgorithm compression = CompressionAlgorithm::NONE)
-      : buffer_(std::move(buffer)), compression_(compression) {}
+      CompressionAlgorithm compression = CompressionAlgorithm::NONE,
+      ChecksumAlgorithm checksum = ChecksumAlgorithm::NONE)
+      : buffer_(std::move(buffer)),
+        compression_(compression),
+        checksum_(checksum) {}
 
   explicit SerializedCompressedRequest(SerializedRequest&& request)
       : buffer_(std::move(request.buffer)),
@@ -49,11 +51,14 @@ class SerializedCompressedRequest {
 
   CompressionAlgorithm getCompressionAlgorithm() const { return compression_; }
 
+  ChecksumAlgorithm getChecksumAlgorithm() const { return checksum_; }
+
   const folly::IOBuf* compressedBuffer() const { return buffer_.get(); }
 
  private:
   std::unique_ptr<folly::IOBuf> buffer_;
   CompressionAlgorithm compression_;
+  ChecksumAlgorithm checksum_;
 };
 
 struct LegacySerializedRequest {
@@ -181,5 +186,4 @@ inline SerializedResponse::SerializedResponse(
   buffer = std::move(payload).buffer();
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

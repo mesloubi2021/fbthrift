@@ -18,26 +18,34 @@
 
 #include <chrono>
 #include <cstdint>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 
 #include <folly/Conv.h>
+#include <folly/FBString.h>
+#include <folly/container/F14Map.h>
+#include <folly/container/F14Set.h>
+#include <folly/container/FBVector.h>
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
 #include <thrift/lib/cpp/Field.h>
 #include <thrift/lib/cpp2/Adapt.h>
 #include <thrift/lib/cpp2/Thrift.h>
 #include <thrift/lib/cpp2/op/Encode.h>
+#include <thrift/lib/cpp2/type/detail/Wrap.h>
 
 namespace apache::thrift::test {
 
 namespace basic {
+class MyStruct;
 enum class AdaptedEnum {
   Zero = 0,
   One,
   Two,
 };
-}
+} // namespace basic
 
 template <typename T>
 struct Wrapper {
@@ -177,22 +185,6 @@ struct CustomProtocolAdapter {
 
   static folly::IOBuf toThrift(const Num& num) {
     return folly::IOBuf::wrapBufferAsValue(&num.val, sizeof(int64_t));
-  }
-};
-
-// TODO(afuller): Move this to a shared location.
-template <typename AdaptedT>
-struct IndirectionAdapter {
-  template <typename ThriftT>
-  FOLLY_ERASE static constexpr AdaptedT fromThrift(ThriftT&& value) {
-    AdaptedT adapted;
-    toThrift(adapted) = std::forward<ThriftT>(value);
-    return adapted;
-  }
-  FOLLY_ERASE static constexpr decltype(auto)
-  toThrift(AdaptedT& adapted) noexcept(
-      noexcept(::apache::thrift::apply_indirection(adapted))) {
-    return ::apache::thrift::apply_indirection(adapted);
   }
 };
 
@@ -561,6 +553,78 @@ struct I32ToStringAdapter {
   }
   static int32_t toThrift(const std::string& val) {
     return folly::to<int32_t>(val);
+  }
+};
+
+template <class T>
+struct WrappedMyStruct : type::detail::Wrap<T> {
+  // Limit the type to MyStruct, which is defined as
+  //
+  //   class MyStruct { 1: i64 field1; }
+  static_assert(std::is_same_v<T, basic::MyStruct>);
+
+  template <class Protocol>
+  uint32_t encode(Protocol& prot) const {
+    encodeCount++;
+
+    T t;
+    t.field1() = 10;
+    return op::encode<type::struct_t<T>>(prot, t);
+  }
+
+  template <class Protocol>
+  void decode(Protocol& prot) {
+    decodeCount++;
+
+    T t;
+    op::decode<type::struct_t<T>>(prot, t);
+    type::detail::Wrap<T>::toThrift().field1() = 20;
+  }
+
+  mutable size_t encodeCount = 0, decodeCount = 0;
+};
+
+struct FBStringAdapter {
+  static folly::fbstring fromThrift(std::string value) { return value; }
+
+  static std::string toThrift(folly::fbstring value) {
+    return value.toStdString();
+  }
+};
+
+struct FBVectorAdapter {
+  template <typename T>
+  static folly::fbvector<T> fromThrift(std::vector<T> value) {
+    return {value.begin(), value.end()};
+  }
+
+  template <typename T>
+  static std::vector<T> toThrift(folly::fbvector<T> value) {
+    return {value.begin(), value.end()};
+  }
+};
+
+struct F14FastSetAdapter {
+  template <typename T>
+  static folly::F14FastSet<T> fromThrift(std::set<T> value) {
+    return {value.begin(), value.end()};
+  }
+
+  template <typename T>
+  static std::set<T> toThrift(folly::F14FastSet<T> value) {
+    return {value.begin(), value.end()};
+  }
+};
+
+struct F14FastMapAdapter {
+  template <typename K, typename V>
+  static folly::F14FastMap<K, V> fromThrift(std::map<K, V> value) {
+    return {value.begin(), value.end()};
+  }
+
+  template <typename K, typename V>
+  static std::map<K, V> toThrift(folly::F14FastMap<K, V> value) {
+    return {value.begin(), value.end()};
   }
 };
 

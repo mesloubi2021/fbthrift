@@ -23,6 +23,7 @@
       "definition_html": "static bool apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::inRange",
       "argsstring_html": "(const K &amp;key, const R &amp;range)",
       "name_html": "inRange",
+      "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::inRange",
       "param": [
         {
           "type_html": "const K &amp;",
@@ -35,11 +36,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "457",
-        "column": "1",
+        "line": "515",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "457",
-        "bodyend": "464"
+        "bodystart": "515",
+        "bodyend": "522"
       },
       "definition": {
         "simple_html": "template &lt;typename K, typename R&gt;\nstatic bool inRange(const K&amp; key, const R&amp; range)",
@@ -61,5 +62,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1cpp__type_3_01T_00_01type_1_1set_3_01KTag_01_4_01_4_01_4/inRange",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1cpp__type_3_01T_00_01type_1_1set_3_01KTag_01_4_01_4_01_4/inRange"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1cpp__type_3_01T_00_01type_1_1set_3_01KTag_01_4_01_4_01_4/inRange",
+  "parent_links": [
+    {
+      "text_html": "IdenticalTo&lt; type::cpp_type&lt; T, type::set&lt; KTag &gt; &gt; &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1IdenticalTo_3_01type_1_1cpp__type_3_01T_00_01type_1_1set_3_01KTag_01_4_01_4_01_4"
+    }
+  ]
 }

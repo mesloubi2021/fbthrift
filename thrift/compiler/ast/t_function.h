@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include <thrift/compiler/ast/t_named.h>
 #include <thrift/compiler/ast/t_paramlist.h>
@@ -27,9 +26,7 @@
 #include <thrift/compiler/ast/t_throws.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_interaction;
 
@@ -52,6 +49,7 @@ class t_function final : public t_named {
       std::unique_ptr<t_paramlist> params = {},
       std::unique_ptr<t_node> sink_or_stream = {},
       t_type_ref interaction = {});
+  ~t_function() override;
 
   // Returns the function qualifier.
   t_function_qualifier qualifier() const { return qualifier_; }
@@ -60,6 +58,7 @@ class t_function final : public t_named {
   // Returns an interaction created by this function or null if there is none.
   // It is represented as a type for legacy reasons.
   const t_type_ref& interaction() const { return interaction_; }
+  t_type_ref& interaction() { return interaction_; }
 
   // Returns the function's return type. The return type can be omitted if
   // there is a stream or interaction in the return clause of a function
@@ -95,8 +94,6 @@ class t_function final : public t_named {
     return is_interaction_constructor_;
   }
   void set_is_interaction_constructor() { is_interaction_constructor_ = true; }
-  bool is_interaction_member() const { return is_interaction_member_; }
-  void set_is_interaction_member() { is_interaction_member_ = true; }
 
  private:
   t_type_ref return_type_;
@@ -107,9 +104,6 @@ class t_function final : public t_named {
   t_type_ref interaction_;
   bool has_return_type_ = false;
   bool is_interaction_constructor_ = false;
-  bool is_interaction_member_ = false;
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

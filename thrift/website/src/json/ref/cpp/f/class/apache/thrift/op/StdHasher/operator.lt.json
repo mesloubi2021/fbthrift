@@ -15,6 +15,7 @@
       "definition_html": "bool apache::thrift::op::StdHasher::operator&lt;",
       "argsstring_html": "(const StdHasher &amp;other) const",
       "name_html": "operator&lt;",
+      "qualifiedname_html": "apache::thrift::op::StdHasher::operator&lt;",
       "param": [
         {
           "type_html": "const <code>StdHasher</code> &amp;",
@@ -23,11 +24,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/StdHasher.h",
-        "line": "56",
-        "column": "1",
+        "line": "55",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/StdHasher.h",
-        "bodystart": "56",
-        "bodyend": "58"
+        "bodystart": "55",
+        "bodyend": "57"
       },
       "definition": {
         "simple_html": "bool operator&lt;(const StdHasher&amp; other) const",
@@ -49,5 +50,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/StdHasher/operator.lt",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/StdHasher/operator.lt"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/StdHasher/operator.lt",
+  "parent_links": [
+    {
+      "text_html": "StdHasher",
+      "href": "/ref/cpp/class/apache/thrift/op/StdHasher"
+    }
+  ]
 }

@@ -30,19 +30,21 @@ use fbthrift::Serialize;
 use fbthrift::ThriftEnum;
 use indexmap::IndexMap;
 use indexmap::IndexSet;
-use interface::NonstandardCollectionTypes;
 use interface::TestBytesShared;
 use interface::TestEnum;
 use interface::TestEnumEmpty;
 use interface::TestSkipV1;
 use interface::TestSkipV2;
+use interface::TypedefNondefaultTypes_1;
+use interface::TypedefNondefaultTypes_2;
+use interface::TypedefNondefaultTypes_3;
 use interface::WrapBinary;
 use interface::WrapString;
 use smallvec::SmallVec;
 
 #[test]
-fn test_nonstandard_collection_types() {
-    assert_round_trip(NonstandardCollectionTypes {
+fn test_typedef_nondefault_types_1() {
+    assert_round_trip(TypedefNondefaultTypes_1 {
         defaultset: make_btreeset(),
         btreeset: make_btreeset(),
         hashset: make_hashset(),
@@ -57,6 +59,36 @@ fn test_nonstandard_collection_types() {
         indexmap_c: IndexMap::new(),
         bin_smallvec: SmallVec::from(&b"smallvec"[..]),
         bin_bytes: Bytes::from(&b"bytes"[..]),
+        ..Default::default()
+    });
+}
+
+#[test]
+fn test_typedef_non_default_types_2() {
+    assert_round_trip(TypedefNondefaultTypes_2 {
+        defaultset: make_btreeset(),
+        btreeset: make_btreeset(),
+        hashset: make_hashset(),
+        indexset_a: make_indexset(),
+        indexset_b: make_indexset(),
+        indexset_c: IndexSet::new(),
+        defaultmap: make_btreemap(),
+        btreemap: make_btreemap(),
+        hashmap: make_hashmap(),
+        indexmap_a: make_indexmap(),
+        indexmap_b: make_indexmap(),
+        indexmap_c: IndexMap::new(),
+        bin_smallvec: SmallVec::from(&b"smallvec"[..]),
+        bin_bytes: Bytes::from(&b"bytes"[..]),
+        ..Default::default()
+    });
+}
+
+#[test]
+fn test_typedef_non_default_types_3() {
+    assert_round_trip(TypedefNondefaultTypes_3 {
+        bytes: SmallVec::from(&b"smallvec"[..]),
+        dict: make_indexmap(),
         ..Default::default()
     });
 }
@@ -137,6 +169,12 @@ fn test_enumerate_fn_enum() {
     assert_eq!(TestEnum::enumerate(), expected);
     let expected_empty: &'static [(TestEnumEmpty, &str)] = &[];
     assert_eq!(TestEnumEmpty::enumerate(), expected_empty);
+}
+
+#[test]
+fn test_enum_display() {
+    assert_eq!(format!("{:}", TestEnum::FOO), "FOO");
+    assert_eq!(format!("{:10}:", TestEnum::FOO), "FOO       :");
 }
 
 #[test]

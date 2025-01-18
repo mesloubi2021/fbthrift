@@ -26,6 +26,7 @@ file exposes Python wrappers of the services client to the end user.
 
 }}
 {{> common/auto_generated_py}}
+{{^program:auto_migrate?}}
 cimport thrift.py3.client
 
 {{#program:includeNamespaces}}
@@ -41,9 +42,10 @@ cdef class {{service:name}}{{#service:extends}}({{#service:externalProgram?}}{{!
   }}){{/service:extends}}{{^service:extends?}}(thrift.py3.client.Client){{/service:extends?}}:
     pass
 
-{{#service:interactions}}
+{{#service:supportedInteractions}}
 cdef class {{service:parent_service_name}}_{{service:name}}(thrift.py3.client.Client):
     pass
 
-{{/service:interactions}}
+{{/service:supportedInteractions}}
 {{/program:services}}
+{{/program:auto_migrate?}}

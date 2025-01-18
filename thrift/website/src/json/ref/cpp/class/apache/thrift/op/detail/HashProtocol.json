@@ -11,9 +11,7 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "Accumulator",
-      "defname_html": "Accumulator"
+      "type_html": "typename Accumulator"
     }
   ],
   "functions": [
@@ -29,6 +27,7 @@
       "definition_html": "apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::HashProtocol",
       "argsstring_html": "(Accumulator &amp;accumulator)",
       "name_html": "HashProtocol",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::HashProtocol",
       "param": [
         {
           "type_html": "Accumulator &amp;",
@@ -38,7 +37,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "118",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "118",
         "bodyend": "118"
@@ -66,6 +65,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeStructBegin",
       "argsstring_html": "(const char *)",
       "name_html": "writeStructBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeStructBegin",
       "param": [
         {
           "type_html": "const char *"
@@ -74,7 +74,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "122",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "122",
         "bodyend": "122"
@@ -102,10 +102,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeStructEnd",
       "argsstring_html": "()",
       "name_html": "writeStructEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeStructEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "123",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "123",
         "bodyend": "123"
@@ -133,6 +134,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldBegin",
       "argsstring_html": "(const char *, protocol::TType, int16_t id)",
       "name_html": "writeFieldBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldBegin",
       "param": [
         {
           "type_html": "const char *"
@@ -148,7 +150,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "124",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "124",
         "bodyend": "126"
@@ -176,10 +178,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldEnd",
       "argsstring_html": "()",
       "name_html": "writeFieldEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "127",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "127",
         "bodyend": "127"
@@ -207,10 +210,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldStop",
       "argsstring_html": "()",
       "name_html": "writeFieldStop",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldStop",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "128",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "128",
         "bodyend": "128"
@@ -238,6 +242,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapBegin",
       "argsstring_html": "(protocol::TType, protocol::TType, uint32_t size)",
       "name_html": "writeMapBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapBegin",
       "param": [
         {
           "type_html": "protocol::TType"
@@ -253,7 +258,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "129",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "129",
         "bodyend": "131"
@@ -270,7 +275,7 @@
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/HashProtocol/writeMapBegin"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1aeecc7ecbe4c52969db67501eca08c14d",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1ab86a9033d55bc2c9f8d17d532ee31e3f",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -279,29 +284,35 @@
       "virtual": "non-virtual",
       "type_html": "uint32_t",
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueBegin",
-      "argsstring_html": "()",
+      "argsstring_html": "(bool)",
       "name_html": "writeMapValueBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueBegin",
+      "param": [
+        {
+          "type_html": "bool"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "132",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "132",
         "bodyend": "132"
       },
       "definition": {
-        "simple_html": "uint32_t writeMapValueBegin()",
-        "simple_raw": "uint32_t writeMapValueBegin()",
-        "detailed_html": "inline uint32_t writeMapValueBegin()",
-        "detailed_raw": "inline uint32_t writeMapValueBegin()",
+        "simple_html": "uint32_t writeMapValueBegin(bool)",
+        "simple_raw": "uint32_t writeMapValueBegin(bool)",
+        "detailed_html": "inline uint32_t writeMapValueBegin(bool)",
+        "detailed_raw": "inline uint32_t writeMapValueBegin(bool)",
         "original_definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueBegin",
-        "original_argsstring_html": "()"
+        "original_argsstring_html": "(bool)"
       },
       "filepath": "fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin",
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin"
     },
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1a7ecad15f094c382894e87604d8532c82",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1a269d2286457183d8ffa1182d3080f507",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -310,23 +321,29 @@
       "virtual": "non-virtual",
       "type_html": "uint32_t",
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueEnd",
-      "argsstring_html": "()",
+      "argsstring_html": "(bool)",
       "name_html": "writeMapValueEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueEnd",
+      "param": [
+        {
+          "type_html": "bool"
+        }
+      ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "133",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "133",
         "bodyend": "133"
       },
       "definition": {
-        "simple_html": "uint32_t writeMapValueEnd()",
-        "simple_raw": "uint32_t writeMapValueEnd()",
-        "detailed_html": "inline uint32_t writeMapValueEnd()",
-        "detailed_raw": "inline uint32_t writeMapValueEnd()",
+        "simple_html": "uint32_t writeMapValueEnd(bool)",
+        "simple_raw": "uint32_t writeMapValueEnd(bool)",
+        "detailed_html": "inline uint32_t writeMapValueEnd(bool)",
+        "detailed_raw": "inline uint32_t writeMapValueEnd(bool)",
         "original_definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueEnd",
-        "original_argsstring_html": "()"
+        "original_argsstring_html": "(bool)"
       },
       "filepath": "fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd",
       "href": "/ref/cpp/fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd"
@@ -343,10 +360,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapEnd",
       "argsstring_html": "()",
       "name_html": "writeMapEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "134",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "134",
         "bodyend": "134"
@@ -374,6 +392,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeListBegin",
       "argsstring_html": "(protocol::TType, uint32_t size)",
       "name_html": "writeListBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeListBegin",
       "param": [
         {
           "type_html": "protocol::TType"
@@ -386,7 +405,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "135",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "135",
         "bodyend": "137"
@@ -414,10 +433,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeListEnd",
       "argsstring_html": "()",
       "name_html": "writeListEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeListEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "138",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "138",
         "bodyend": "138"
@@ -445,6 +465,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeSetBegin",
       "argsstring_html": "(protocol::TType, uint32_t size)",
       "name_html": "writeSetBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeSetBegin",
       "param": [
         {
           "type_html": "protocol::TType"
@@ -457,7 +478,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "139",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "139",
         "bodyend": "141"
@@ -485,10 +506,11 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeSetEnd",
       "argsstring_html": "()",
       "name_html": "writeSetEnd",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeSetEnd",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "142",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "142",
         "bodyend": "142"
@@ -516,6 +538,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBool",
       "argsstring_html": "(bool val)",
       "name_html": "writeBool",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBool",
       "param": [
         {
           "type_html": "bool",
@@ -525,7 +548,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "143",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "143",
         "bodyend": "143"
@@ -553,6 +576,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeByte",
       "argsstring_html": "(int8_t val)",
       "name_html": "writeByte",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeByte",
       "param": [
         {
           "type_html": "int8_t",
@@ -562,7 +586,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "144",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "144",
         "bodyend": "144"
@@ -590,6 +614,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI16",
       "argsstring_html": "(int16_t val)",
       "name_html": "writeI16",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI16",
       "param": [
         {
           "type_html": "int16_t",
@@ -599,7 +624,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "145",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "145",
         "bodyend": "145"
@@ -627,6 +652,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI32",
       "argsstring_html": "(int32_t val)",
       "name_html": "writeI32",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI32",
       "param": [
         {
           "type_html": "int32_t",
@@ -636,7 +662,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "146",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "146",
         "bodyend": "146"
@@ -664,6 +690,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI64",
       "argsstring_html": "(int64_t val)",
       "name_html": "writeI64",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI64",
       "param": [
         {
           "type_html": "int64_t",
@@ -673,7 +700,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "147",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "147",
         "bodyend": "147"
@@ -701,6 +728,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeDouble",
       "argsstring_html": "(double val)",
       "name_html": "writeDouble",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeDouble",
       "param": [
         {
           "type_html": "double",
@@ -710,7 +738,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "148",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "148",
         "bodyend": "148"
@@ -738,6 +766,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFloat",
       "argsstring_html": "(float val)",
       "name_html": "writeFloat",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFloat",
       "param": [
         {
           "type_html": "float",
@@ -747,7 +776,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "149",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "149",
         "bodyend": "149"
@@ -775,6 +804,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeString",
       "argsstring_html": "(folly::StringPiece val)",
       "name_html": "writeString",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeString",
       "param": [
         {
           "type_html": "folly::StringPiece",
@@ -784,7 +814,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "150",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "150",
         "bodyend": "150"
@@ -812,6 +842,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(folly::StringPiece val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "folly::StringPiece",
@@ -821,7 +852,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "151",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "151",
         "bodyend": "151"
@@ -849,6 +880,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(folly::ByteRange val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "folly::ByteRange",
@@ -858,7 +890,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "152",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "152",
         "bodyend": "152"
@@ -886,6 +918,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(const std::unique_ptr&lt; folly::IOBuf &gt; &amp;val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "const std::unique_ptr&lt; folly::IOBuf &gt; &amp;",
@@ -895,7 +928,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "153",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "153",
         "bodyend": "155"
@@ -923,6 +956,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
       "argsstring_html": "(const folly::IOBuf &amp;val)",
       "name_html": "writeBinary",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
       "param": [
         {
           "type_html": "const folly::IOBuf &amp;",
@@ -932,7 +966,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "156",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "156",
         "bodyend": "158"
@@ -952,27 +986,29 @@
       "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1abe56abbe2ef758c7eaee945d4816a495",
       "prot": "public",
       "static": "yes",
+      "constexpr": "yes",
       "const": "no",
       "explicit": "no",
       "inline": "yes",
       "virtual": "non-virtual",
-      "type_html": "constexpr bool",
+      "type_html": "bool",
       "definition_html": "static constexpr bool apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::kSortKeys",
       "argsstring_html": "()",
       "name_html": "kSortKeys",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::kSortKeys",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "120",
-        "column": "1",
+        "column": "25",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "120",
         "bodyend": "120"
       },
       "definition": {
-        "simple_html": "static constexpr bool kSortKeys()",
-        "simple_raw": "static constexpr bool kSortKeys()",
-        "detailed_html": "inline static constexpr bool kSortKeys()",
-        "detailed_raw": "inline static constexpr bool kSortKeys()",
+        "simple_html": "static bool kSortKeys()",
+        "simple_raw": "static bool kSortKeys()",
+        "detailed_html": "inline static bool kSortKeys()",
+        "detailed_raw": "inline static bool kSortKeys()",
         "original_definition_html": "static constexpr bool apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::kSortKeys",
         "original_argsstring_html": "()"
       },
@@ -1007,10 +1043,11 @@
       "definition_html": "Accumulator&amp; apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::acc_",
       "argsstring_html": "",
       "name_html": "acc_",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::acc_",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "161",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "161",
         "bodyend": "-1"
@@ -1021,7 +1058,7 @@
   "declaration_raw": "template < typename Accumulator >\nclass HashProtocol;",
   "declaration_html": "template &lt; typename Accumulator &gt;\nclass HashProtocol;",
   "description": {
-    "detailed_html": "<p>A deterministic one-way/write-only custom protocol that guarantees the accumulated results to be stable and consistent across different languages and implementations. Protocol wraps an accumulator and allows users to provide custom implementations for it.</p><p>Names: To enable better development experience we do not include struct names, field names and paths into the hash computation, but we do include field id. This way refactoring to rename or move a struct around will not change the computed hash values. One thing to note here if the hashes are used for signatures or keyed mac computations you might want to use a different key per struct to avoid collisions in case struct layouts match.</p><p>Ordering: Fields, Maps and Sets are treated as unordered collections. Lists, Prefixes and Map Values are treated as ordered collections. Re-arranging fields in a struct will not change the hash if you preserve field ids. The specifics of order handling is delegated to Accumulator implementation.</p><p>Prefixing: To have a better collision protection all fields are prefixed with a type tag that goes into the hash computation. All dynamic sized (non-scalar) types also get a size prefix. </p>"
+    "detailed_html": "<p>A deterministic one-way/write-only custom protocol that guarantees the accumulated results to be stable and consistent across different languages and implementations. Protocol wraps an accumulator and allows users to provide custom implementations for it.</p>\n<p>Names: To enable better development experience we do not include struct names, field names and paths into the hash computation, but we do include field id. This way refactoring to rename or move a struct around will not change the computed hash values. One thing to note here if the hashes are used for signatures or keyed mac computations you might want to use a different key per struct to avoid collisions in case struct layouts match.</p>\n<p>Ordering: Fields, Maps and Sets are treated as unordered collections. Lists, Prefixes and Map Values are treated as ordered collections. Re-arranging fields in a struct will not change the hash if you preserve field ids. The specifics of order handling is delegated to Accumulator implementation.</p>\n<p>Prefixing: To have a better collision protection all fields are prefixed with a type tag that goes into the hash computation. All dynamic sized (non-scalar) types also get a size prefix. </p>"
   },
   "filepath": "class/apache/thrift/op/detail/HashProtocol",
   "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol",
@@ -1046,6 +1083,7 @@
               "definition_html": "apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::HashProtocol",
               "argsstring_html": "(Accumulator &amp;accumulator)",
               "name_html": "HashProtocol",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::HashProtocol",
               "param": [
                 {
                   "type_html": "Accumulator &amp;",
@@ -1055,7 +1093,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "118",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "118",
                 "bodyend": "118"
@@ -1081,7 +1119,13 @@
           "brief_html": "Constructs the HashProtocol.",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1100,6 +1144,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeStructBegin",
               "argsstring_html": "(const char *)",
               "name_html": "writeStructBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeStructBegin",
               "param": [
                 {
                   "type_html": "const char *"
@@ -1108,7 +1153,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "122",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "122",
                 "bodyend": "122"
@@ -1133,7 +1178,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1152,10 +1203,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeStructEnd",
               "argsstring_html": "()",
               "name_html": "writeStructEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeStructEnd",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "123",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "123",
                 "bodyend": "123"
@@ -1180,7 +1232,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeStructEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1199,6 +1257,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldBegin",
               "argsstring_html": "(const char *, protocol::TType, int16_t id)",
               "name_html": "writeFieldBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldBegin",
               "param": [
                 {
                   "type_html": "const char *"
@@ -1214,7 +1273,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "124",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "124",
                 "bodyend": "126"
@@ -1239,7 +1298,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1258,10 +1323,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldEnd",
               "argsstring_html": "()",
               "name_html": "writeFieldEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldEnd",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "127",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "127",
                 "bodyend": "127"
@@ -1286,7 +1352,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1305,10 +1377,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFieldStop",
               "argsstring_html": "()",
               "name_html": "writeFieldStop",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFieldStop",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "128",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "128",
                 "bodyend": "128"
@@ -1333,7 +1406,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldStop",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldStop"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFieldStop",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1352,6 +1431,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapBegin",
               "argsstring_html": "(protocol::TType, protocol::TType, uint32_t size)",
               "name_html": "writeMapBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapBegin",
               "param": [
                 {
                   "type_html": "protocol::TType"
@@ -1367,7 +1447,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "129",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "129",
                 "bodyend": "131"
@@ -1392,7 +1472,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1400,7 +1486,7 @@
           "compoundname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueBegin",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1aeecc7ecbe4c52969db67501eca08c14d",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1ab86a9033d55bc2c9f8d17d532ee31e3f",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1409,23 +1495,29 @@
               "virtual": "non-virtual",
               "type_html": "uint32_t",
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueBegin",
-              "argsstring_html": "()",
+              "argsstring_html": "(bool)",
               "name_html": "writeMapValueBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueBegin",
+              "param": [
+                {
+                  "type_html": "bool"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "132",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "132",
                 "bodyend": "132"
               },
               "definition": {
-                "simple_html": "uint32_t writeMapValueBegin()",
-                "simple_raw": "uint32_t writeMapValueBegin()",
-                "detailed_html": "inline uint32_t writeMapValueBegin()",
-                "detailed_raw": "inline uint32_t writeMapValueBegin()",
+                "simple_html": "uint32_t writeMapValueBegin(bool)",
+                "simple_raw": "uint32_t writeMapValueBegin(bool)",
+                "detailed_html": "inline uint32_t writeMapValueBegin(bool)",
+                "detailed_raw": "inline uint32_t writeMapValueBegin(bool)",
                 "original_definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueBegin",
-                "original_argsstring_html": "()"
+                "original_argsstring_html": "(bool)"
               },
               "filepath": "fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin",
               "href": "/ref/cpp/fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin",
@@ -1439,7 +1531,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1447,7 +1545,7 @@
           "compoundname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueEnd",
           "functions": [
             {
-              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1a7ecad15f094c382894e87604d8532c82",
+              "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1a269d2286457183d8ffa1182d3080f507",
               "prot": "public",
               "static": "no",
               "const": "no",
@@ -1456,23 +1554,29 @@
               "virtual": "non-virtual",
               "type_html": "uint32_t",
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueEnd",
-              "argsstring_html": "()",
+              "argsstring_html": "(bool)",
               "name_html": "writeMapValueEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapValueEnd",
+              "param": [
+                {
+                  "type_html": "bool"
+                }
+              ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "133",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "133",
                 "bodyend": "133"
               },
               "definition": {
-                "simple_html": "uint32_t writeMapValueEnd()",
-                "simple_raw": "uint32_t writeMapValueEnd()",
-                "detailed_html": "inline uint32_t writeMapValueEnd()",
-                "detailed_raw": "inline uint32_t writeMapValueEnd()",
+                "simple_html": "uint32_t writeMapValueEnd(bool)",
+                "simple_raw": "uint32_t writeMapValueEnd(bool)",
+                "detailed_html": "inline uint32_t writeMapValueEnd(bool)",
+                "detailed_raw": "inline uint32_t writeMapValueEnd(bool)",
                 "original_definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapValueEnd",
-                "original_argsstring_html": "()"
+                "original_argsstring_html": "(bool)"
               },
               "filepath": "fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd",
               "href": "/ref/cpp/fns/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd",
@@ -1486,7 +1590,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapValueEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1505,10 +1615,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeMapEnd",
               "argsstring_html": "()",
               "name_html": "writeMapEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeMapEnd",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "134",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "134",
                 "bodyend": "134"
@@ -1533,7 +1644,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeMapEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1552,6 +1669,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeListBegin",
               "argsstring_html": "(protocol::TType, uint32_t size)",
               "name_html": "writeListBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeListBegin",
               "param": [
                 {
                   "type_html": "protocol::TType"
@@ -1564,7 +1682,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "135",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "135",
                 "bodyend": "137"
@@ -1589,7 +1707,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1608,10 +1732,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeListEnd",
               "argsstring_html": "()",
               "name_html": "writeListEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeListEnd",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "138",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "138",
                 "bodyend": "138"
@@ -1636,7 +1761,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeListEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1655,6 +1786,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeSetBegin",
               "argsstring_html": "(protocol::TType, uint32_t size)",
               "name_html": "writeSetBegin",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeSetBegin",
               "param": [
                 {
                   "type_html": "protocol::TType"
@@ -1667,7 +1799,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "139",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "139",
                 "bodyend": "141"
@@ -1692,7 +1824,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1711,10 +1849,11 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeSetEnd",
               "argsstring_html": "()",
               "name_html": "writeSetEnd",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeSetEnd",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "142",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "142",
                 "bodyend": "142"
@@ -1739,7 +1878,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetEnd",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetEnd"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetEnd",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1758,6 +1903,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBool",
               "argsstring_html": "(bool val)",
               "name_html": "writeBool",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBool",
               "param": [
                 {
                   "type_html": "bool",
@@ -1767,7 +1913,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "143",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "143",
                 "bodyend": "143"
@@ -1792,7 +1938,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBool",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBool"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBool",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1811,6 +1963,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeByte",
               "argsstring_html": "(int8_t val)",
               "name_html": "writeByte",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeByte",
               "param": [
                 {
                   "type_html": "int8_t",
@@ -1820,7 +1973,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "144",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "144",
                 "bodyend": "144"
@@ -1845,7 +1998,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeByte",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeByte"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeByte",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1864,6 +2023,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI16",
               "argsstring_html": "(int16_t val)",
               "name_html": "writeI16",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI16",
               "param": [
                 {
                   "type_html": "int16_t",
@@ -1873,7 +2033,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "145",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "145",
                 "bodyend": "145"
@@ -1898,7 +2058,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI16",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI16"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI16",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1917,6 +2083,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI32",
               "argsstring_html": "(int32_t val)",
               "name_html": "writeI32",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI32",
               "param": [
                 {
                   "type_html": "int32_t",
@@ -1926,7 +2093,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "146",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "146",
                 "bodyend": "146"
@@ -1951,7 +2118,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI32",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI32"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI32",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -1970,6 +2143,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI64",
               "argsstring_html": "(int64_t val)",
               "name_html": "writeI64",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI64",
               "param": [
                 {
                   "type_html": "int64_t",
@@ -1979,7 +2153,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "147",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "147",
                 "bodyend": "147"
@@ -2004,7 +2178,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2023,6 +2203,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeDouble",
               "argsstring_html": "(double val)",
               "name_html": "writeDouble",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeDouble",
               "param": [
                 {
                   "type_html": "double",
@@ -2032,7 +2213,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "148",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "148",
                 "bodyend": "148"
@@ -2057,7 +2238,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeDouble",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeDouble"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeDouble",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2076,6 +2263,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeFloat",
               "argsstring_html": "(float val)",
               "name_html": "writeFloat",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeFloat",
               "param": [
                 {
                   "type_html": "float",
@@ -2085,7 +2273,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "149",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "149",
                 "bodyend": "149"
@@ -2110,7 +2298,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFloat",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFloat"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeFloat",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2129,6 +2323,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeString",
               "argsstring_html": "(folly::StringPiece val)",
               "name_html": "writeString",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeString",
               "param": [
                 {
                   "type_html": "folly::StringPiece",
@@ -2138,7 +2333,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "150",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "150",
                 "bodyend": "150"
@@ -2163,7 +2358,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeString",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeString"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeString",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2182,6 +2383,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
               "argsstring_html": "(folly::StringPiece val)",
               "name_html": "writeBinary",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
               "param": [
                 {
                   "type_html": "folly::StringPiece",
@@ -2191,7 +2393,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "151",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "151",
                 "bodyend": "151"
@@ -2221,6 +2423,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
               "argsstring_html": "(folly::ByteRange val)",
               "name_html": "writeBinary",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
               "param": [
                 {
                   "type_html": "folly::ByteRange",
@@ -2230,7 +2433,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "152",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "152",
                 "bodyend": "152"
@@ -2260,6 +2463,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
               "argsstring_html": "(const std::unique_ptr&lt; folly::IOBuf &gt; &amp;val)",
               "name_html": "writeBinary",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
               "param": [
                 {
                   "type_html": "const std::unique_ptr&lt; folly::IOBuf &gt; &amp;",
@@ -2269,7 +2473,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "153",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "153",
                 "bodyend": "155"
@@ -2299,6 +2503,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeBinary",
               "argsstring_html": "(const folly::IOBuf &amp;val)",
               "name_html": "writeBinary",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeBinary",
               "param": [
                 {
                   "type_html": "const folly::IOBuf &amp;",
@@ -2308,7 +2513,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "156",
-                "column": "1",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "156",
                 "bodyend": "158"
@@ -2333,7 +2538,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeBinary",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -2344,27 +2555,29 @@
               "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1HashProtocol_1abe56abbe2ef758c7eaee945d4816a495",
               "prot": "public",
               "static": "yes",
+              "constexpr": "yes",
               "const": "no",
               "explicit": "no",
               "inline": "yes",
               "virtual": "non-virtual",
-              "type_html": "constexpr bool",
+              "type_html": "bool",
               "definition_html": "static constexpr bool apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::kSortKeys",
               "argsstring_html": "()",
               "name_html": "kSortKeys",
+              "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::kSortKeys",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "line": "120",
-                "column": "1",
+                "column": "25",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
                 "bodystart": "120",
                 "bodyend": "120"
               },
               "definition": {
-                "simple_html": "static constexpr bool kSortKeys()",
-                "simple_raw": "static constexpr bool kSortKeys()",
-                "detailed_html": "inline static constexpr bool kSortKeys()",
-                "detailed_raw": "inline static constexpr bool kSortKeys()",
+                "simple_html": "static bool kSortKeys()",
+                "simple_raw": "static bool kSortKeys()",
+                "detailed_html": "inline static bool kSortKeys()",
+                "detailed_raw": "inline static bool kSortKeys()",
                 "original_definition_html": "static constexpr bool apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::kSortKeys",
                 "original_argsstring_html": "()"
               },
@@ -2380,7 +2593,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/kSortKeys",
-          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/kSortKeys"
+          "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/kSortKeys",
+          "parent_links": [
+            {
+              "text_html": "HashProtocol",
+              "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+            }
+          ]
         }
       ]
     }

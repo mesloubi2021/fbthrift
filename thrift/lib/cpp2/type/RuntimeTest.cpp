@@ -42,8 +42,9 @@ namespace {
 // Test the exact case of AlignedPtr used by RuntimeType.
 TEST(AlignedPtr, InfoPointer) {
   using info_pointer = detail::AlignedPtr<const detail::TypeInfo, 2>;
-  EXPECT_EQ(~info_pointer::kMask, 3); // Everything except the last 2 bits.
-  const auto* fullPtr = (const detail::TypeInfo*)(info_pointer::kMask);
+  EXPECT_EQ(
+      ~info_pointer::kPointerMask, 3); // Everything except the last 2 bits.
+  const auto* fullPtr = (const detail::TypeInfo*)(info_pointer::kPointerMask);
 
   info_pointer empty, full{fullPtr, 3};
   EXPECT_FALSE(empty.get<0>());
@@ -298,7 +299,7 @@ TEST(RuntimeTest, MapAdd) {
 TEST(RuntimeTest, Struct) {
   DecodedUri actual;
   auto ref = Ref::to(actual);
-  EXPECT_FALSE(ref.empty());
+  EXPECT_TRUE(ref.empty());
   EXPECT_EQ(ref.size(), 5);
   EXPECT_EQ(*actual.scheme(), "");
   EXPECT_EQ(ref[FieldId{1}], "");

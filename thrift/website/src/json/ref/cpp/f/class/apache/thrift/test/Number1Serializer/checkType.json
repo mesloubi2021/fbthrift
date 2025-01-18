@@ -15,6 +15,7 @@
       "definition_html": "void apache::thrift::op::Serializer::checkType",
       "argsstring_html": "(const type::Type &amp;actual, const type::Type &amp;expected)",
       "name_html": "checkType",
+      "qualifiedname_html": "apache::thrift::op::Serializer::checkType",
       "param": [
         {
           "type_html": "const type::Type &amp;",
@@ -28,7 +29,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Serializer.h",
         "line": "89",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Serializer.cpp",
         "bodystart": "33",
         "bodyend": "38"
@@ -53,5 +54,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/test/Number1Serializer/checkType",
-  "refid": "/ref/cpp/f/class/apache/thrift/test/Number1Serializer/checkType"
+  "refid": "/ref/cpp/f/class/apache/thrift/test/Number1Serializer/checkType",
+  "parent_links": [
+    {
+      "text_html": "Number1Serializer",
+      "href": "/ref/cpp/class/apache/thrift/test/Number1Serializer"
+    }
+  ]
 }

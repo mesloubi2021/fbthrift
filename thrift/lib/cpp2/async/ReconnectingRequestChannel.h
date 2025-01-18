@@ -34,8 +34,7 @@ class EventBase;
 class IOBuf;
 } // namespace folly
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace transport {
 class THeader;
@@ -117,7 +116,11 @@ class ReconnectingRequestChannel : public RequestChannel,
 
   uint16_t getProtocolId() override {
     if (!isChannelGood()) {
-      reconnectRequestChannel();
+      if (useRequestQueue_) {
+        reconnectRequestChannelWithCallback();
+      } else {
+        reconnectRequestChannel();
+      }
     }
     return impl_->getProtocolId();
   }
@@ -175,5 +178,4 @@ class ReconnectingRequestChannel : public RequestChannel,
   bool isCreatingChannel_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

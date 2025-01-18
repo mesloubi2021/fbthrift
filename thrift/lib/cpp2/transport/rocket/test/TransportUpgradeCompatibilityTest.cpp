@@ -24,8 +24,7 @@
 
 DECLARE_string(transport); // ConnectionManager depends on this flag.
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using namespace testutil::testservice;
 using namespace apache::thrift::transport;
@@ -36,7 +35,7 @@ class TransportUpgradeCompatibilityTest : public testing::TestWithParam<bool> {
     FLAGS_transport = "header";
 
     compatibilityTest_ = std::make_unique<TransportCompatibilityTest>();
-    compatibilityTest_->setTransportUpgrade(GetParam());
+    compatibilityTest_->setTransportUpgradeExpected(GetParam());
     compatibilityTest_->startServer();
   }
 
@@ -268,5 +267,4 @@ TEST_P(TransportUpgradeCompatibilityTest, ClientIdentityHook) {
   compatibilityTest_->TestClientIdentityHook();
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

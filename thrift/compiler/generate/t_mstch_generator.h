@@ -16,37 +16,49 @@
 
 #pragma once
 
+#include <filesystem>
 #include <memory>
-#include <stdexcept>
+#include <optional>
+#include <unordered_set>
 
-#include <boost/filesystem.hpp>
-#include <boost/optional.hpp>
-#include <thrift/compiler/detail/mustache/mstch.h>
+#include <thrift/compiler/whisker/diagnostic.h>
+#include <thrift/compiler/whisker/mstch_compat.h>
+#include <thrift/compiler/whisker/object.h>
+#include <thrift/compiler/whisker/render.h>
 
 #include <thrift/compiler/generate/mstch_objects.h>
-#include <thrift/compiler/generate/t_generator.h>
+#include <thrift/compiler/generate/t_whisker_generator.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
-class t_mstch_generator : public t_generator {
+class t_mstch_generator : public t_whisker_generator {
  public:
-  using t_generator::t_generator;
+  using t_whisker_generator::t_whisker_generator;
 
   void process_options(
       const std::map<std::string, std::string>& options) override {
     options_ = options;
     mstch_context_.options = options;
-    gen_template_map(template_prefix());
   }
 
-  virtual std::string template_prefix() const = 0;
-
-  // Return true to use <% and %> as delimiters instead of {{ and }}.
-  virtual bool convert_delimiter() const { return false; }
-
  protected:
+  struct whisker_options {
+    /**
+     * Whisker, by default, enforces that variables are defined when they are
+     * interpolated. mstch on the other hand silently interpolates the empty
+     * string. Our templates have come to rely on this behavior.
+     *
+     * This set specifies names for which Whisker should also silently
+     * interpolate empty string. This makes Whisker's rendering backwards
+     * compatible with existing Mustache templates.
+     */
+    std::unordered_set<std::string> allowed_undefined_variables;
+  };
+  /**
+   * Customization point for Whisker's rendering options.
+   */
+  virtual whisker_options render_options() const { return {}; }
+
   /**
    * If true, typedefs will be automatically resolved to their underlying type.
    */
@@ -58,14 +70,7 @@ class t_mstch_generator : public t_generator {
    */
   const std::string& get_template(const std::string& template_name);
 
-  /**
-   * Returns the map of (file_name, template_contents) for each template
-   * file for this generator
-   */
-  const std::map<std::string, std::string>& get_template_map() {
-    return template_map_;
-  }
-
+  using t_whisker_generator::render;
   /**
    * Render the mstch template with name `template_name` in the given context.
    */
@@ -77,7 +82,9 @@ class t_mstch_generator : public t_generator {
    * under the output directory.
    */
   void write_output(
-      const boost::filesystem::path& path, const std::string& data);
+      const std::filesystem::path& path, const std::string& data) {
+    write_to_file(path, data);
+  }
 
   /**
    * Render the mstch template with name `template_name` in the given context
@@ -87,7 +94,7 @@ class t_mstch_generator : public t_generator {
   void render_to_file(
       const mstch::map& context,
       const std::string& template_name,
-      const boost::filesystem::path& path);
+      const std::filesystem::path& path);
 
   /**
    * Render the mstch template with name `template_name` in the context of the
@@ -98,7 +105,7 @@ class t_mstch_generator : public t_generator {
   void render_to_file(
       const T& obj,
       const std::string& template_name,
-      const boost::filesystem::path& path) {
+      const std::filesystem::path& path) {
     render_to_file(dump(obj), template_name, path);
   }
 
@@ -107,7 +114,7 @@ class t_mstch_generator : public t_generator {
       const T& obj,
       const mstch::map& extra_context,
       const std::string& template_name,
-      const boost::filesystem::path& path) {
+      const std::filesystem::path& path) {
     mstch::map result = this->dump(obj);
     result.insert(extra_context.begin(), extra_context.end());
     this->render_to_file(result, template_name, path);
@@ -120,7 +127,7 @@ class t_mstch_generator : public t_generator {
   void render_to_file(
       const std::shared_ptr<mstch_base> context,
       const std::string& template_name,
-      const boost::filesystem::path& path) {
+      const std::filesystem::path& path) {
     write_output(path, render(template_name, context));
   }
 
@@ -196,14 +203,14 @@ class t_mstch_generator : public t_generator {
 
   void add_first_last(mstch::array& elems) {
     for (auto itr = elems.begin(); itr != elems.end(); ++itr) {
-      boost::get<mstch::map>(*itr).emplace("first?", itr == elems.begin());
-      boost::get<mstch::map>(*itr).emplace(
+      std::get<mstch::map>(*itr).emplace("first?", itr == elems.begin());
+      std::get<mstch::map>(*itr).emplace(
           "last?", std::next(itr) == elems.end());
     }
   }
 
   bool has_option(const std::string& option) const;
-  boost::optional<std::string> get_option(const std::string& option) const;
+  std::optional<std::string> get_option(const std::string& option) const;
   const std::map<std::string, std::string>& options() const { return options_; }
 
  private:
@@ -212,9 +219,8 @@ class t_mstch_generator : public t_generator {
    */
   std::map<std::string, std::string> options_;
 
-  std::map<std::string, std::string> template_map_;
-
-  void gen_template_map(const boost::filesystem::path& root);
+  whisker::map globals() const final;
+  strictness_options strictness() const final;
 
   /**
    * For every key in the map, prepends a prefix to that key for mstch.
@@ -237,6 +243,4 @@ class t_mstch_generator : public t_generator {
   const std::shared_ptr<mstch_base>& cached_program(const t_program* program);
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

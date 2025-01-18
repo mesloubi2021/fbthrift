@@ -21,6 +21,7 @@
       "definition_html": "void apache::thrift::op::detail::ListPatch&lt; Patch &gt;::append",
       "argsstring_html": "(C &amp;&amp;rhs)",
       "name_html": "append",
+      "qualifiedname_html": "apache::thrift::op::detail::ListPatch::append",
       "param": [
         {
           "type_html": "C &amp;&amp;",
@@ -30,7 +31,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
         "line": "83",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
         "bodystart": "83",
         "bodyend": "86"
@@ -58,5 +59,11 @@
   "brief_html": "<p>Appends a list. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/append",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/append"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/append",
+  "parent_links": [
+    {
+      "text_html": "ListPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/ListPatch"
+    }
+  ]
 }

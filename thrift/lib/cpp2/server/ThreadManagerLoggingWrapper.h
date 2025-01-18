@@ -21,7 +21,7 @@
 
 namespace apache::thrift {
 
-class BaseThriftServer;
+class ThriftServer;
 
 // This is a logging wrapper that wraps a ThreadManager
 // It logs the methods that are of interest to ResourcePool rollout
@@ -31,34 +31,44 @@ class ThreadManagerLoggingWrapper : public concurrency::PriorityThreadManager {
  public:
   ThreadManagerLoggingWrapper(
       std::shared_ptr<concurrency::ThreadManager> tm,
-      const BaseThriftServer* server,
-      bool shouldLog = true)
-      : tm_(std::move(tm)), server_(server), shouldLog_(shouldLog) {
+      const ThriftServer* server,
+      bool shouldLog = true,
+      bool resourcePoolsEnabled = false)
+      : tm_(std::move(tm)),
+        server_(server),
+        shouldLog_(shouldLog),
+        resourcePoolsEnabled_(resourcePoolsEnabled) {
     priorityThreadManager_ = dynamic_cast<PriorityThreadManager*>(tm_.get());
   }
 
   // From PriorityThreadManager
   void addWorker(PRIORITY priority, size_t value) override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     priorityThreadManager_->addWorker(priority, value);
   }
   void removeWorker(PRIORITY priority, size_t value) override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     priorityThreadManager_->removeWorker(priority, value);
   }
   size_t workerCount(PRIORITY priority) override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     return priorityThreadManager_->workerCount(priority);
   }
   size_t pendingTaskCount(PRIORITY priority) const override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     return priorityThreadManager_->pendingTaskCount(priority);
   }
   size_t idleWorkerCount(PRIORITY priority) const override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     return priorityThreadManager_->idleWorkerCount(priority);
   }
   folly::Codel* getCodel(PRIORITY priority) override {
+    checkResourcePoolsEnabled();
     CHECK(priorityThreadManager_);
     return priorityThreadManager_->getCodel(priority);
   }
@@ -193,13 +203,16 @@ class ThreadManagerLoggingWrapper : public concurrency::PriorityThreadManager {
 
  private:
   std::shared_ptr<concurrency::ThreadManager> tm_;
-  const BaseThriftServer* server_;
+  const ThriftServer* server_;
   bool shouldLog_;
   // logging should only be done once if any as
   // it's quite expensive
   static folly::once_flag recordFlag_;
   // If the wrapped object is a PriorityThreadManager this will be non-null.
   concurrency::PriorityThreadManager* priorityThreadManager_{nullptr};
+
+  bool resourcePoolsEnabled_{false};
+  void checkResourcePoolsEnabled() const;
 
   void recordStackTrace(std::string) const;
 };

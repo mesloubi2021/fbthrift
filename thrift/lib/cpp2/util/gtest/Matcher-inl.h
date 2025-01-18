@@ -21,19 +21,15 @@
 #include <type_traits>
 #include <utility>
 
-#include <fatal/type/enum.h>
-#include <fatal/type/variant_traits.h>
-#include <folly/Overload.h>
 #include <folly/Traits.h>
 #include <folly/lang/Pretty.h>
 #include <folly/portability/GMock.h>
 
 #include <thrift/lib/cpp2/FieldRef.h>
 #include <thrift/lib/cpp2/Thrift.h>
+#include <thrift/lib/cpp2/op/Get.h>
 
-namespace apache::thrift {
-
-namespace test::detail {
+namespace apache::thrift::test::detail {
 
 template <typename FieldTag>
 std::string_view getFieldName() {
@@ -59,8 +55,7 @@ class ThriftFieldMatcher {
   template <
       typename ThriftStruct,
       typename = std::enable_if_t<
-          is_thrift_exception_v<folly::remove_cvref_t<ThriftStruct>> ||
-          is_thrift_struct_v<folly::remove_cvref_t<ThriftStruct>>>>
+          is_thrift_class_v<folly::remove_cvref_t<ThriftStruct>>>>
   operator testing::Matcher<ThriftStruct>() const {
     return testing::Matcher<ThriftStruct>(
         new Impl<const ThriftStruct&>(matcher_));
@@ -83,7 +78,7 @@ class ThriftFieldMatcher {
     using FieldRef = decltype(Accessor{}(std::declval<ConstRefThriftStruct>()));
     using FieldReferenceType = typename FieldRef::reference_type;
     inline static constexpr bool IsOptionalFieldRef =
-        std::is_same_v<optional_field_ref<FieldReferenceType>, FieldRef>;
+        ::apache::thrift::detail::is_optional_or_union_field_ref_v<FieldRef>;
     // See above on why we do this switch
     using MatchedType =
         std::conditional_t<IsOptionalFieldRef, FieldRef, FieldReferenceType>;
@@ -133,25 +128,18 @@ class IsThriftUnionWithMatcher {
       typename = std::enable_if_t<
           is_thrift_union_v<folly::remove_cvref_t<ThriftUnion>>>>
   operator testing::Matcher<ThriftUnion>() const {
-    static_assert(
-        SupportsReflection<folly::remove_cvref_t<ThriftUnion>>,
-        "Include the _fatal_types.h header for the Thrift file defining this union");
     return testing::Matcher<ThriftUnion>(
         new Impl<const ThriftUnion&>(matcher_));
   }
 
  private:
-  // Needed in order to provide a good error message in the static assert
-  template <typename T>
-  constexpr static inline bool SupportsReflection =
-      fatal::has_variant_traits<T>::value;
-
   using Accessor = access_field_fn<FieldTag>;
 
   template <typename ThriftUnion>
   class Impl : public testing::MatcherInterface<ThriftUnion> {
    private:
-    using ConstRefThriftUnion = const folly::remove_cvref_t<ThriftUnion>&;
+    using ThriftUnionType = folly::remove_cvref_t<ThriftUnion>;
+    using ConstRefThriftUnion = const ThriftUnionType&;
     using FieldRef = decltype(Accessor{}(std::declval<ConstRefThriftUnion>()));
     // Unions do not support optional fields, so this is always a concrete
     // value (no optional_ref)
@@ -177,28 +165,26 @@ class IsThriftUnionWithMatcher {
     bool MatchAndExplain(
         ThriftUnion obj,
         testing::MatchResultListener* listener) const override {
-      std::optional<bool> matches;
-      using descriptors = typename fatal::variant_traits<
-          folly::remove_cvref_t<ThriftUnion>>::descriptors;
-      fatal::scalar_search<descriptors, fatal::get_type::id>(
-          obj.getType(), [&](auto indexed) {
-            using descriptor = decltype(fatal::tag_type(indexed));
-            using tag = typename descriptor::metadata::tag;
-            auto active = fatal::enum_to_string(obj.getType(), "unknown");
-            if constexpr (std::is_same_v<FieldTag, tag>) {
+      return op::invoke_by_field_id<ThriftUnionType>(
+          static_cast<apache::thrift::FieldId>(obj.getType()),
+          [&]<class Id>(Id) {
+            const auto active = op::get_name_v<ThriftUnionType, Id>;
+            if constexpr (std::is_same_v<
+                              FieldTag,
+                              op::get_ident<ThriftUnionType, Id>>) {
               *listener << "whose active member `" << active << "` ";
-              matches = concrete_matcher_.MatchAndExplain(
-                  descriptor::get(std::as_const(obj)), listener);
+
+              return concrete_matcher_.MatchAndExplain(
+                  *op::get<Id>(obj), listener);
             } else {
               *listener << "whose active member is `" << active << "`";
-              matches = false;
+              return false;
             }
+          },
+          [&] {
+            *listener << "which is unset";
+            return false;
           });
-      if (matches) {
-        return *matches;
-      }
-      *listener << "which is unset";
-      return false;
     }
 
    private:
@@ -208,5 +194,4 @@ class IsThriftUnionWithMatcher {
   const InnerMatcher matcher_;
 };
 
-} // namespace test::detail
-} // namespace apache::thrift
+} // namespace apache::thrift::test::detail

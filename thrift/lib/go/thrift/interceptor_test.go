@@ -19,27 +19,26 @@ package thrift
 import (
 	"context"
 	"testing"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
 )
 
 type exampleProcessor struct {
-	ProcessorContext
+	Processor
 	hit *bool
 }
 
-func (ep *exampleProcessor) GetProcessorFunctionContext(name string) (ProcessorFunctionContext, error) {
+func (ep *exampleProcessor) ProcessorFunctionMap() map[string]types.ProcessorFunction {
 	*ep.hit = true
-	return nil, nil // happens in "no such method" case
+	return nil // happens in "no such method" case
 }
 
 func TestInterceptorWrapperNilFunctionContext(t *testing.T) {
 	var hit bool
 	proc := &exampleProcessor{nil, &hit}
 
-	derivedProc := WrapInterceptorContext(emptyInterceptor, proc)
-	pFunc, err := derivedProc.GetProcessorFunctionContext("blah")
-	if err != nil {
-		t.Fatalf("empty processor function context should return nil error.")
-	}
+	derivedProc := WrapInterceptor(emptyInterceptor, proc)
+	pFunc := derivedProc.ProcessorFunctionMap()["blah"]
 	if hit != true {
 		t.Fatalf("interceptor should have called underlying processor function handler.")
 	}
@@ -48,6 +47,6 @@ func TestInterceptorWrapperNilFunctionContext(t *testing.T) {
 	}
 }
 
-func emptyInterceptor(ctx context.Context, methodName string, pfunc ProcessorFunctionContext, args Struct) (WritableStruct, ApplicationException) {
+func emptyInterceptor(ctx context.Context, methodName string, pfunc types.ProcessorFunction, args types.Struct) (types.WritableStruct, types.ApplicationException) {
 	return pfunc.RunContext(ctx, args)
 }

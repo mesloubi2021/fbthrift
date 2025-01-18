@@ -272,7 +272,7 @@ TEST(RoundRobinRequestPileTest, requestCount) {
   ScopedServerInterfaceThread runner(
       std::make_shared<BlockingCallTestService>());
 
-  auto& thriftServer = dynamic_cast<ThriftServer&>(runner.getThriftServer());
+  auto& thriftServer = runner.getThriftServer();
 
   // grab the resource pool
   // and set the number to 0
@@ -281,7 +281,7 @@ TEST(RoundRobinRequestPileTest, requestCount) {
   ConcurrencyControllerInterface& cc = *rp.concurrencyController();
   cc.setExecutionLimitRequests(0);
 
-  auto client = runner.newClient<TestServiceAsyncClient>();
+  auto client = runner.newClient<apache::thrift::Client<TestService>>();
 
   client->semifuture_echoInt(0);
 
@@ -293,6 +293,105 @@ TEST(RoundRobinRequestPileTest, requestCount) {
   EXPECT_EQ(rpSet.numQueued(), 1);
 
   cc.setExecutionLimitRequests(1);
+}
+
+TEST(RoundRobinRequestPileTest, GetDbgInfo) {
+  // Arrange
+  int priorities = 5;
+  RoundRobinRequestPile::Options opts;
+  opts.setNumPriorities(priorities);
+  for (int i = 0; i < priorities; i++) {
+    opts.setNumBucketsPerPriority(i, 10 * (i + 1));
+  }
+  opts.pileSelectionFunction = getScopeFunc();
+  RoundRobinRequestPile requestPile(opts);
+
+  // Act
+  auto result = requestPile.getDbgInfo();
+
+  // Assert
+  EXPECT_TRUE(
+      (*result.name()).find("RoundRobinRequestPile") != std::string::npos);
+  EXPECT_EQ(folly::copy(result.prioritiesCount().value()), priorities);
+  for (int i = 0; i < priorities; ++i) {
+    EXPECT_EQ((*result.bucketsPerPriority())[i], 10 * (i + 1));
+  }
+}
+
+TEST(RoundRobinRequestPileTest, getRequestCounts_multipleBuckets) {
+  int priorities = 5;
+  RoundRobinRequestPile::Options opts;
+  opts.setNumPriorities(priorities);
+  for (int i = 0; i < priorities; i++) {
+    opts.setNumBucketsPerPriority(i, i + 3);
+  }
+  opts.pileSelectionFunction = getScopeFunc();
+  RoundRobinRequestPile requestPile(opts);
+
+  vector<unique_ptr<THeader>> tHeaderStorage;
+  vector<unique_ptr<Cpp2RequestContext>> contextStorage;
+  auto getRequest = [&](int pri, int bucket) {
+    return getServerRequest(pri, bucket, tHeaderStorage, contextStorage);
+  };
+
+  requestPile.enqueue(getRequest(1, 0));
+  requestPile.enqueue(getRequest(2, 2));
+  requestPile.enqueue(getRequest(2, 2));
+  requestPile.enqueue(getRequest(4, 0));
+  requestPile.enqueue(getRequest(4, 2));
+  requestPile.enqueue(getRequest(4, 2));
+  requestPile.enqueue(getRequest(4, 6));
+
+  auto requestCountsByPriority = requestPile.getRequestCounts();
+  std::vector<std::vector<uint64_t>> expectedRequestCounts = {
+      {0, 0, 0},
+      {1, 0, 0, 0},
+      {0, 0, 2, 0, 0},
+      {0, 0, 0, 0, 0, 0},
+      {1, 0, 2, 0, 0, 0, 1}};
+
+  EXPECT_EQ(requestCountsByPriority, expectedRequestCounts);
+
+  auto check = [&requestPile](int priority, int bucket) {
+    checkResult(requestPile, priority, bucket);
+  };
+  check(1, 0);
+  check(2, 2);
+  check(2, 2);
+  check(4, 0);
+  check(4, 2);
+  check(4, 6);
+  check(4, 2);
+}
+
+TEST(RoundRobinRequestPileTest, getRequestCounts_singleBucket) {
+  RoundRobinRequestPile::Options opts;
+  opts.setNumPriorities(1);
+  opts.setNumBucketsPerPriority(0, 3);
+  opts.pileSelectionFunction = getScopeFunc();
+  RoundRobinRequestPile requestPile(opts);
+
+  vector<unique_ptr<THeader>> tHeaderStorage;
+  vector<unique_ptr<Cpp2RequestContext>> contextStorage;
+  auto getRequest = [&](int pri, int bucket) {
+    return getServerRequest(pri, bucket, tHeaderStorage, contextStorage);
+  };
+
+  requestPile.enqueue(getRequest(0, 1));
+  requestPile.enqueue(getRequest(0, 1));
+  requestPile.enqueue(getRequest(0, 2));
+
+  auto requestCountsByPriority = requestPile.getRequestCounts();
+  std::vector<std::vector<uint64_t>> expectedRequestCounts = {{0, 2, 1}};
+
+  EXPECT_EQ(requestCountsByPriority, expectedRequestCounts);
+
+  auto check = [&requestPile](int priority, int bucket) {
+    checkResult(requestPile, priority, bucket);
+  };
+  check(0, 1);
+  check(0, 2);
+  check(0, 1);
 }
 
 /*

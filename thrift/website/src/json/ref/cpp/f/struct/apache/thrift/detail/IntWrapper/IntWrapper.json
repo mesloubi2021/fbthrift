@@ -15,10 +15,11 @@
       "definition_html": "apache::thrift::detail::IntWrapper&lt; T &gt;::IntWrapper",
       "argsstring_html": "()=default",
       "name_html": "IntWrapper",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper::IntWrapper",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "66",
-        "column": "1"
+        "line": "59",
+        "column": "3"
       },
       "definition": {
         "simple_html": "IntWrapper()",
@@ -46,6 +47,7 @@
       "definition_html": "apache::thrift::detail::IntWrapper&lt; T &gt;::IntWrapper",
       "argsstring_html": "(T t)",
       "name_html": "IntWrapper",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper::IntWrapper",
       "param": [
         {
           "type_html": "T",
@@ -54,11 +56,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "67",
-        "column": "1",
+        "line": "60",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "67",
-        "bodyend": "67"
+        "bodystart": "60",
+        "bodyend": "60"
       },
       "definition": {
         "simple_html": "IntWrapper(T t)",
@@ -86,10 +88,11 @@
       "definition_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "argsstring_html": "()=default",
       "name_html": "IntWrapper",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "77",
-        "column": "1"
+        "line": "70",
+        "column": "3"
       },
       "definition": {
         "simple_html": "IntWrapper()",
@@ -111,11 +114,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "argsstring_html": "(const IntWrapper &amp;other) noexcept",
       "name_html": "IntWrapper",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "param": [
         {
           "type_html": "const <code>IntWrapper</code> &amp;",
@@ -124,11 +129,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "79",
-        "column": "1",
+        "line": "72",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "79",
-        "bodyend": "80"
+        "bodystart": "72",
+        "bodyend": "73"
       },
       "definition": {
         "simple_html": "IntWrapper(const IntWrapper&amp; other)",
@@ -150,11 +155,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "argsstring_html": "(IntWrapper &amp;&amp;other) noexcept",
       "name_html": "IntWrapper",
+      "qualifiedname_html": "apache::thrift::detail::IntWrapper&lt; std::atomic&lt; U &gt; &gt;::IntWrapper",
       "param": [
         {
           "type_html": "<code>IntWrapper</code> &amp;&amp;",
@@ -163,11 +170,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "81",
-        "column": "1",
+        "line": "74",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "81",
-        "bodyend": "82"
+        "bodystart": "74",
+        "bodyend": "75"
       },
       "definition": {
         "simple_html": "IntWrapper(IntWrapper&amp;&amp; other)",
@@ -189,5 +196,11 @@
   "brief_html": "Constructs the IntWrapper.",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/detail/IntWrapper/IntWrapper",
-  "refid": "/ref/cpp/f/struct/apache/thrift/detail/IntWrapper/IntWrapper"
+  "refid": "/ref/cpp/f/struct/apache/thrift/detail/IntWrapper/IntWrapper",
+  "parent_links": [
+    {
+      "text_html": "IntWrapper",
+      "href": "/ref/cpp/struct/apache/thrift/detail/IntWrapper"
+    }
+  ]
 }

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
@@ -25,16 +27,22 @@ from typing import Optional, Sequence
 from derived.thrift_clients import DerivedTestingService
 from derived.thrift_services import DerivedTestingServiceInterface
 from folly.iobuf import IOBuf
+
+from parameterized import parameterized_class
 from stack_args.thrift_clients import StackService
 from stack_args.thrift_services import StackServiceInterface
 from stack_args.thrift_types import simple
 from testing.thrift_clients import TestingService
 from testing.thrift_services import TestingServiceInterface
 from testing.thrift_types import Color, easy, SimpleError
+from thrift.lib.python.test.event_handlers.helper import ThrowHelper, ThrowHelperHandler
 from thrift.py3.server import get_context, SocketAddress
 from thrift.python.client import get_client
 from thrift.python.common import Priority, RpcOptions
 from thrift.python.exceptions import ApplicationError
+from thrift.python.flagged.test.enable_resource_pools_for_python_test import (
+    mock_enable_resource_pools_for_python,
+)
 from thrift.python.server import ServiceInterface, ThriftServer
 
 
@@ -101,7 +109,6 @@ class DerivedHandler(Handler, DerivedTestingServiceInterface):
         return color
 
 
-# pyre-fixme[13]: Attribute `serve_task` is never initialized.
 class TestServer:
     server: ThriftServer
     serve_task: asyncio.Task
@@ -113,6 +120,11 @@ class TestServer:
         handler: ServiceInterface = Handler(),  # noqa: B008
     ) -> None:
         self.server = ThriftServer(handler, ip=ip, path=path)
+        # pyre-fixme[4, 8]: The initialization below eliminates
+        #                   the pyre[13] error, but results in
+        #                   pyre[4] and pyre[8] errors.
+        #                   __aenter__ sets the required value.
+        self.serve_task = None
 
     async def __aenter__(self) -> SocketAddress:
         self.serve_task = asyncio.get_event_loop().create_task(self.server.serve())
@@ -124,13 +136,20 @@ class TestServer:
         await self.serve_task
 
 
+@parameterized_class(
+    ("enable_resource_pools_for_python"),
+    [(True,), (False,)],
+)
 class ClientServerTests(unittest.IsolatedAsyncioTestCase):
     """
     These are tests where a client and server talk to each other
     """
 
-    async def test_get_context(self) -> None:
+    def setUp(self) -> None:
+        # pyre-fixme[16]: `ClientServerTests` has no attribute `enable_resource_pools_for_python`
+        mock_enable_resource_pools_for_python(self.enable_resource_pools_for_python)
 
+    async def test_get_context(self) -> None:
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -159,7 +178,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
             await handler.getName()
 
     async def test_rpc_headers(self) -> None:
-
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -170,7 +188,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("from server", options.read_headers)
 
     async def test_server_localhost(self) -> None:
-
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -182,7 +199,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                     await client.takes_a_list([])
 
     async def test_no_client_aexit(self) -> None:
-
         async with TestServer() as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -240,7 +256,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                 )
 
     async def test_renamed_func(self) -> None:
-
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -333,7 +348,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                 )
 
     async def test_request_with_default_rpc_options(self) -> None:
-
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -344,7 +358,6 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(Priority(priority), Priority.N_PRIORITIES)
 
     async def test_request_with_specified_rpc_options(self) -> None:
-
         async with TestServer(ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port
@@ -356,6 +369,17 @@ class ClientServerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(timeout, 15.0)
                 priority = await client.getPriority(rpc_options=options)
                 self.assertEqual(Priority(priority), Priority.BEST_EFFORT)
+
+    async def test_client_event_handler_throw(self) -> None:
+        for handler in ThrowHelperHandler:
+            async with TestServer(ip="::1") as sa:
+                ip, port = sa.ip, sa.port
+                self.assertIsNotNone(ip)
+                self.assertIsNotNone(port)
+                async with get_client(TestingService, host=ip, port=port) as client:
+                    with ThrowHelper(handler):
+                        with self.assertRaisesRegex(ApplicationError, handler.value):
+                            await client.complex_action("1", "2", 3, "4")
 
 
 class StackHandler(StackServiceInterface):
@@ -388,13 +412,20 @@ class StackHandler(StackServiceInterface):
             raise Exception("WRONG")
 
 
+@parameterized_class(
+    ("enable_resource_pools_for_python"),
+    [(True,), (False,)],
+)
 class ClientStackServerTests(unittest.IsolatedAsyncioTestCase):
     """
     These are tests where a client and server(stack_arguments) talk to each other
     """
 
-    async def test_server_localhost(self) -> None:
+    def setUp(self) -> None:
+        # pyre-fixme[16]: `ClientServerTests` has no attribute `enable_resource_pools_for_python`
+        mock_enable_resource_pools_for_python(self.enable_resource_pools_for_python)
 
+    async def test_server_localhost(self) -> None:
         async with TestServer(handler=StackHandler(), ip="::1") as sa:
             ip, port = sa.ip, sa.port
             assert ip and port

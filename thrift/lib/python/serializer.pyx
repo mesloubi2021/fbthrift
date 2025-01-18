@@ -16,24 +16,29 @@ from cython.view cimport memoryview
 from folly.iobuf cimport IOBuf
 from thrift.python.exceptions cimport Error, GeneratedError
 from thrift.python.types cimport Struct, StructOrUnion, Union
+from thrift.python.protocol import Protocol
 
-import cython
+cdef extern from *:
+    """
+    #undef _serialize
+    """
 
-Buf = cython.fused_type(IOBuf, bytes, bytearray, memoryview)
 
-StructOrError = cython.fused_type(StructOrUnion, GeneratedError)
-
-def serialize_iobuf(StructOrError strct, Protocol protocol=Protocol.COMPACT):
+def serialize_iobuf(strct, cProtocol protocol=cProtocol.COMPACT):
+    if not isinstance(strct, (StructOrUnion, GeneratedError)):
+        raise TypeError("thrift-python serialization only supports thrift-python types")
     if isinstance(strct, StructOrUnion):
         return (<StructOrUnion>strct)._serialize(protocol)
     return (<GeneratedError>strct)._serialize(protocol)
 
-def serialize(StructOrError struct, Protocol protocol=Protocol.COMPACT):
+def serialize(struct, cProtocol protocol=cProtocol.COMPACT):
     return b''.join(serialize_iobuf(struct, protocol))
 
-def deserialize_with_length(klass, Buf buf, Protocol protocol=Protocol.COMPACT, *, fully_populate_cache=False):
+def deserialize_with_length(klass, buf, cProtocol protocol=cProtocol.COMPACT, *, fully_populate_cache=False):
     if not issubclass(klass, (StructOrUnion, GeneratedError)):
-        raise TypeError("Only Struct, Union, or Exception classes can be deserialized")
+        raise TypeError("thrift-python deserialization only supports thrift-python types")
+    if not isinstance(buf, (IOBuf, bytes, bytearray, memoryview)):
+        raise TypeError("buf must be IOBuf, bytes, bytearray, or memoryview")
     cdef IOBuf iobuf = buf if isinstance(buf, IOBuf) else IOBuf(buf)
     inst = klass.__new__(klass)
     cdef uint32_t length
@@ -50,5 +55,5 @@ def deserialize_with_length(klass, Buf buf, Protocol protocol=Protocol.COMPACT, 
         raise Error.__new__(Error, *e.args) from None
     return inst, length
 
-def deserialize(klass, Buf buf, Protocol protocol=Protocol.COMPACT, *, fully_populate_cache=False):
+def deserialize(klass, buf, cProtocol protocol=cProtocol.COMPACT, *, fully_populate_cache=False):
     return deserialize_with_length(klass, buf, protocol, fully_populate_cache=fully_populate_cache)[0]

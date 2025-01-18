@@ -30,7 +30,9 @@ def __get_thrift_uri__() -> _typing.Optional[str]:
 @staticmethod
 def __get_thrift_unstructured_annotations_DEPRECATED__() -> _typing.Mapping[str, str]:
     return {
-        {{#service:annotations}}{{> common/annotation}}{{/service:annotations}}
+        {{#service:annotations}}
+        {{> common/annotation}}
+        {{/service:annotations}}
     }
 
 {{^service:interaction?}}
@@ -77,7 +79,9 @@ class Async({{#service:extends}}{{!
         rpc_options: _typing.Optional[RpcOptions] = None,
     ) -> {{#function:return_type}}{{!
         }}{{#function:returns_tuple?}}_typing.Tuple[{{/function:returns_tuple?}}{{!
-        }}{{#function:creates_interaction?}}{{service:name}}_{{function:created_interaction}}.Async{{^type:void?}}, {{> types/pep484_return_type}}{{/type:void?}}{{/function:creates_interaction?}}{{!
+        }}{{#function:creates_interaction?}}{{service:name}}_{{function:created_interaction}}.Async{{!
+            }}{{#function:stream?}}, {{> types/pep484_return_type}}{{/function:stream?}}{{!
+            }}{{^type:void?}}, {{> types/pep484_return_type}}{{/type:void?}}{{/function:creates_interaction?}}{{!
         }}{{^function:creates_interaction?}}{{> types/pep484_return_type}}{{/function:creates_interaction?}}{{!
         }}{{#function:returns_tuple?}}]{{/function:returns_tuple?}}{{!
     }}{{/function:return_type}}:
@@ -102,7 +106,10 @@ class Async({{#service:extends}}{{!
             {{/service:interaction?}}
             uri_or_name={{#service:thrift_uri}}"{{service:thrift_uri}}"{{/service:thrift_uri}}{{!
                 }}{{^service:thrift_uri}}"{{service:name}}"{{/service:thrift_uri}},
-            rpc_options=rpc_options,
+            rpc_options=rpc_options,{{!
+}}{{#program:generate_mutable_types}}
+            is_mutable_types=True,{{!
+}}{{/program:generate_mutable_types}}
         )
         {{#function:stream?}}
         _fbthrift_resp, _fbthrift_stream = _fbthrift_resp
@@ -139,8 +146,17 @@ class Async({{#service:extends}}{{!
         self #{{service:parent_service_name}}
     ) -> {{service:parent_service_name}}_{{service:name}}.Async:
         return self._create_interaction("{{service:name}}", {{service:parent_service_name}}_{{service:name}}.Async)
-
+    async def async_create{{service:name}}(
+        self #{{service:parent_service_name}}
+    ) -> {{service:parent_service_name}}_{{service:name}}.Async:
+        return self.create{{service:name}}()
     {{/service:interactions}}
+
+{{#service:supported_functions}}
+# pyre-ignore[4]: Missing annotation.{{! Adding an annotation here would require way too much duplication }}
+{{function:name}} = Async.{{function:name}}
+{{/service:supported_functions}}
+
 class Sync({{#service:extends}}{{!
     }}{{> services/client_module_path}}.Sync{{!
 }}{{/service:extends}}{{^service:extends?}}{{!
@@ -182,7 +198,10 @@ class Sync({{#service:extends}}{{!
             {{> clients/client_return_type}},
             uri_or_name={{#service:thrift_uri}}"{{service:thrift_uri}}"{{/service:thrift_uri}}{{!
                 }}{{^service:thrift_uri}}"{{service:name}}"{{/service:thrift_uri}},
-            rpc_options=rpc_options,
+            rpc_options=rpc_options,{{!
+}}{{#program:generate_mutable_types}}
+            is_mutable_types=True,{{!
+}}{{/program:generate_mutable_types}}
         )
         {{#function:return_type}}{{^type:void?}}
         # shortcut to success path for non-void returns

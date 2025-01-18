@@ -4,45 +4,6 @@
   "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap",
   "functions": [
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapIdenticalTo_1a39f3f4c0f08e959d5e961207f71624b0",
-      "prot": "private",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "type_html": "auto",
-      "definition_html": "static auto apache::thrift::op::detail::MapIdenticalTo&lt; KTag, VTag, Tag, T &gt;::createHashMap",
-      "argsstring_html": "(const T &amp;map)",
-      "name_html": "createHashMap",
-      "param": [
-        {
-          "type_html": "const T &amp;",
-          "declname_html": "map"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "496",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "496",
-        "bodyend": "502"
-      },
-      "definition": {
-        "simple_html": "static auto createHashMap(const T&amp; map)",
-        "simple_raw": "static auto createHashMap(const T& map)",
-        "detailed_html": "private inline static auto createHashMap(const T&amp; map)",
-        "detailed_raw": "private inline static auto createHashMap(const T& map)",
-        "original_definition_html": "static auto apache::thrift::op::detail::MapIdenticalTo&lt; KTag, VTag, Tag, T &gt;::createHashMap",
-        "original_argsstring_html": "(const T &amp;map)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapIdenticalTo/createHashMap",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapIdenticalTo/createHashMap",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapIdenticalTo",
-      "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
-    },
-    {
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1SetIdenticalTo_1ae48c428e5ae3ed87465e7fdae466ec1a",
       "prot": "private",
       "static": "yes",
@@ -54,6 +15,7 @@
       "definition_html": "static auto apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::createHashMap",
       "argsstring_html": "(const T &amp;set)",
       "name_html": "createHashMap",
+      "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::createHashMap",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -62,11 +24,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "447",
-        "column": "1",
+        "line": "505",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "447",
-        "bodyend": "453"
+        "bodystart": "505",
+        "bodyend": "511"
       },
       "definition": {
         "simple_html": "static auto createHashMap(const T&amp; set)",
@@ -82,45 +44,6 @@
       "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
     },
     {
-      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapIdenticalTo_1a39f3f4c0f08e959d5e961207f71624b0",
-      "prot": "private",
-      "static": "yes",
-      "const": "no",
-      "explicit": "no",
-      "inline": "yes",
-      "virtual": "non-virtual",
-      "type_html": "auto",
-      "definition_html": "static auto apache::thrift::op::detail::MapIdenticalTo&lt; KTag, VTag, Tag, T &gt;::createHashMap",
-      "argsstring_html": "(const T &amp;map)",
-      "name_html": "createHashMap",
-      "param": [
-        {
-          "type_html": "const T &amp;",
-          "declname_html": "map"
-        }
-      ],
-      "location": {
-        "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "496",
-        "column": "1",
-        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "496",
-        "bodyend": "502"
-      },
-      "definition": {
-        "simple_html": "static auto createHashMap(const T&amp; map)",
-        "simple_raw": "static auto createHashMap(const T& map)",
-        "detailed_html": "private inline static auto createHashMap(const T&amp; map)",
-        "detailed_raw": "private inline static auto createHashMap(const T& map)",
-        "original_definition_html": "static auto apache::thrift::op::detail::MapIdenticalTo&lt; KTag, VTag, Tag, T &gt;::createHashMap",
-        "original_argsstring_html": "(const T &amp;map)"
-      },
-      "filepath": "fns/struct/apache/thrift/op/detail/MapIdenticalTo/createHashMap",
-      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapIdenticalTo/createHashMap",
-      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapIdenticalTo",
-      "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
-    },
-    {
       "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1SetIdenticalTo_1ae48c428e5ae3ed87465e7fdae466ec1a",
       "prot": "private",
       "static": "yes",
@@ -132,6 +55,7 @@
       "definition_html": "static auto apache::thrift::op::detail::SetIdenticalTo&lt; KTag, Tag, T &gt;::createHashMap",
       "argsstring_html": "(const T &amp;set)",
       "name_html": "createHashMap",
+      "qualifiedname_html": "apache::thrift::op::detail::SetIdenticalTo::createHashMap",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -140,11 +64,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "447",
-        "column": "1",
+        "line": "505",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "447",
-        "bodyend": "453"
+        "bodystart": "505",
+        "bodyend": "511"
       },
       "definition": {
         "simple_html": "static auto createHashMap(const T&amp; set)",
@@ -157,6 +81,86 @@
       "filepath": "fns/struct/apache/thrift/op/detail/SetIdenticalTo/createHashMap",
       "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/SetIdenticalTo/createHashMap",
       "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1SetIdenticalTo",
+      "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapEquality_1a71e34ca0ae6cb7406858cf02d201e2e4",
+      "prot": "private",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "type_html": "auto",
+      "definition_html": "static auto apache::thrift::op::detail::MapEquality&lt; KTag, VTag, Equality, Tag, T &gt;::createHashMap",
+      "argsstring_html": "(const T &amp;map)",
+      "name_html": "createHashMap",
+      "qualifiedname_html": "apache::thrift::op::detail::MapEquality::createHashMap",
+      "param": [
+        {
+          "type_html": "const T &amp;",
+          "declname_html": "map"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
+        "line": "556",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
+        "bodystart": "556",
+        "bodyend": "562"
+      },
+      "definition": {
+        "simple_html": "static auto createHashMap(const T&amp; map)",
+        "simple_raw": "static auto createHashMap(const T& map)",
+        "detailed_html": "private inline static auto createHashMap(const T&amp; map)",
+        "detailed_raw": "private inline static auto createHashMap(const T& map)",
+        "original_definition_html": "static auto apache::thrift::op::detail::MapEquality&lt; KTag, VTag, Equality, Tag, T &gt;::createHashMap",
+        "original_argsstring_html": "(const T &amp;map)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapEquality/createHashMap",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapEquality/createHashMap",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapEquality",
+      "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
+    },
+    {
+      "refid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapEquality_1a71e34ca0ae6cb7406858cf02d201e2e4",
+      "prot": "private",
+      "static": "yes",
+      "const": "no",
+      "explicit": "no",
+      "inline": "yes",
+      "virtual": "non-virtual",
+      "type_html": "auto",
+      "definition_html": "static auto apache::thrift::op::detail::MapEquality&lt; KTag, VTag, Equality, Tag, T &gt;::createHashMap",
+      "argsstring_html": "(const T &amp;map)",
+      "name_html": "createHashMap",
+      "qualifiedname_html": "apache::thrift::op::detail::MapEquality::createHashMap",
+      "param": [
+        {
+          "type_html": "const T &amp;",
+          "declname_html": "map"
+        }
+      ],
+      "location": {
+        "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
+        "line": "556",
+        "column": "15",
+        "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
+        "bodystart": "556",
+        "bodyend": "562"
+      },
+      "definition": {
+        "simple_html": "static auto createHashMap(const T&amp; map)",
+        "simple_raw": "static auto createHashMap(const T& map)",
+        "detailed_html": "private inline static auto createHashMap(const T&amp; map)",
+        "detailed_raw": "private inline static auto createHashMap(const T& map)",
+        "original_definition_html": "static auto apache::thrift::op::detail::MapEquality&lt; KTag, VTag, Equality, Tag, T &gt;::createHashMap",
+        "original_argsstring_html": "(const T &amp;map)"
+      },
+      "filepath": "fns/struct/apache/thrift/op/detail/MapEquality/createHashMap",
+      "href": "/ref/cpp/fns/struct/apache/thrift/op/detail/MapEquality/createHashMap",
+      "parentid": "structapache_1_1thrift_1_1op_1_1detail_1_1MapEquality",
       "compoundname_html": "apache::thrift::op::detail::IdenticalTo::createHashMap"
     }
   ],
@@ -166,5 +170,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/IdenticalTo/createHashMap",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/IdenticalTo/createHashMap"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/IdenticalTo/createHashMap",
+  "parent_links": [
+    {
+      "text_html": "IdenticalTo",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/IdenticalTo"
+    }
+  ]
 }

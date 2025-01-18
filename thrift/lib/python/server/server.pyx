@@ -30,12 +30,16 @@ from libcpp.utility cimport move as cmove
 from libcpp.vector cimport vector as cvector
 from folly.executor cimport get_executor
 from folly.iobuf cimport IOBuf, from_unique_ptr
-from thrift.py3.exceptions cimport cTApplicationException, cTApplicationExceptionType__UNKNOWN, ApplicationError
+from thrift.python.exceptions cimport (
+    ApplicationError,
+    cTApplicationException,
+    cTApplicationExceptionType__UNKNOWN,
+)
 from thrift.py3.server cimport Cpp2RequestContext, RequestContext, THRIFT_REQUEST_CONTEXT
 from libcpp.optional cimport optional
 from thrift.py3.stream cimport cServerStream, cResponseAndServerStream, createResponseAndServerStream, createAsyncIteratorFromPyIterator, ServerStream
 from thrift.python.types cimport ServiceInterface as cServiceInterface
-from thrift.python.serializer cimport Protocol
+from thrift.python.protocol cimport Protocol
 from folly cimport (
   cFollyPromise,
   cFollyUnit,
@@ -95,7 +99,7 @@ async def runGenerator(object generator, Promise_Optional_IOBuf promise):
     else:
         promise.complete(item)
 
-cdef void genNextValue(object generator, cFollyPromise[optional[unique_ptr[cIOBuf]]] cPromise):
+cdef void genNextValue(object generator, cFollyPromise[optional[unique_ptr[cIOBuf]]] cPromise) noexcept:
     cdef Promise_Optional_IOBuf __promise = Promise_Optional_IOBuf.create(cmove(cPromise))
     asyncio.get_event_loop().create_task(
         runGenerator(
@@ -301,50 +305,65 @@ cdef void combinedHandler(object func, string funcName, Cpp2RequestContext* ctx,
 
     THRIFT_REQUEST_CONTEXT.reset(__context_token)
 
-cdef public api void handleLifecycleCallback(object func, string funcName, cFollyPromise[cFollyUnit] cPromise):
+cdef api void handleLifecycleCallback(object func, string funcName, cFollyPromise[cFollyUnit] cPromise):
     cdef Promise_cFollyUnit __promise = Promise_cFollyUnit.create(cmove(cPromise))
     asyncio.get_event_loop().create_task(lifecycle_coro(func, funcName.decode('UTF-8'), __promise))
 
-cdef public api void handleServerCallback(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[unique_ptr[cIOBuf]] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
+cdef api void handleServerCallback(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[unique_ptr[cIOBuf]] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
     cdef Promise_IOBuf __promise = Promise_IOBuf.create(cmove(cPromise))
     combinedHandler(func, funcName, ctx, __promise, cmove(serializedRequest), prot, kind)
 
-cdef public api void handleServerStreamCallback(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[cResponseAndServerStream[unique_ptr[cIOBuf], unique_ptr[cIOBuf]]] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
+cdef api void handleServerStreamCallback(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[cResponseAndServerStream[unique_ptr[cIOBuf], unique_ptr[cIOBuf]]] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
     cdef Promise_Stream __promise = Promise_Stream.create(cmove(cPromise))
     combinedHandler(func, funcName, ctx, __promise, cmove(serializedRequest), prot, kind)
 
-cdef public api void handleServerCallbackOneway(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[cFollyUnit] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
+cdef api void handleServerCallbackOneway(object func, string funcName, Cpp2RequestContext* ctx, cFollyPromise[cFollyUnit] cPromise, SerializedRequest serializedRequest, Protocol prot, RpcKind kind):
     cdef Promise_cFollyUnit __promise = Promise_cFollyUnit.create(cmove(cPromise))
     combinedHandler(func, funcName, ctx, __promise, cmove(serializedRequest), prot, kind)
 
-cdef public api unique_ptr[cIOBuf] getSerializedPythonMetadata(object server):
+cdef api unique_ptr[cIOBuf] getSerializedPythonMetadata(object server):
     metadata = server.__get_metadata_service_response__()
     iobuf = serialize_iobuf(metadata, protocol=Protocol.BINARY)
     return cmove((<IOBuf>iobuf)._ours)
 
-# Cython is dumb
-ctypedef PyObject* PyObjPtr
-
 cdef class PythonAsyncProcessorFactory(AsyncProcessorFactory):
+    cdef cbool requireResourcePools(PythonAsyncProcessorFactory self):
+        return self.useResourcePools
+
     @staticmethod
-    cdef PythonAsyncProcessorFactory create(dict funcMap, list lifecycleFuncs, bytes serviceName, object server):
+    cdef PythonAsyncProcessorFactory create(cServiceInterface server):
         cdef cmap[string, pair[RpcKind, PyObjPtr]] funcs
         cdef cvector[PyObject*] lifecycle
+
+        cdef dict funcMap = server.getFunctionTable()
+        cdef list lifecycleFuncs = [server.onStartServing, server.onStopRequested]
 
         for name, (rpc_kind, func) in funcMap.items():
             funcs[<string>name] = pair[RpcKind, PyObjPtr](<RpcKind>rpc_kind, <PyObject*>func)
 
-        for func in lifecycleFuncs:
-            lifecycle.push_back(<PyObject*>func)
+        for lifecycle_func in lifecycleFuncs:
+            lifecycle.push_back(<PyObject*>lifecycle_func)
 
         cdef PythonAsyncProcessorFactory inst = PythonAsyncProcessorFactory.__new__(PythonAsyncProcessorFactory)
+        inst.funcMap = funcMap
+        inst.lifecycleFuncs = lifecycleFuncs
+        # To ensure that the decision to use resource pools stays
+        # consistent for the lifetime of the server and decoupled
+        # from changes to the Thrift Flag that drives that decision
+        # at construction, capture the value and use the captured value
+        # from this point forward.
+        inst.useResourcePools = cAreResourcePoolsEnabledForPython()
         inst._cpp_obj = static_pointer_cast[cAsyncProcessorFactory, cPythonAsyncProcessorFactory](
-            make_shared[cPythonAsyncProcessorFactory](<PyObject*>server, cmove(funcs), cmove(lifecycle), get_executor(), serviceName))
+            cCreatePythonAsyncProcessorFactory(
+                <PyObject*>server,
+                cmove(funcs),
+                cmove(lifecycle),
+                get_executor(),
+                <bytes>server.service_name(),
+                inst.useResourcePools))
         return inst
 
 cdef class ThriftServer(ThriftServer_py3):
-    def __init__(self, cServiceInterface server, int port=0, ip=None, path=None):
-        self.funcMap = server.getFunctionTable()
+    def __init__(self, cServiceInterface server, int port=0, ip=None, path=None, socket_fd=None):
         self.handler = server
-        self.lifecycle = [self.handler.onStartServing, self.handler.onStopRequested]
-        super().__init__(PythonAsyncProcessorFactory.create(self.funcMap, self.lifecycle, self.handler.service_name(), self.handler), port, ip, path)
+        super().__init__(PythonAsyncProcessorFactory.create(self.handler), port, ip, path, socket_fd)

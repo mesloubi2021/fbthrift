@@ -16,7 +16,6 @@
 
 namespace go thrift.test.go.if.thrifttest
 
-include "thrift/annotation/cpp.thrift"
 include "thrift/annotation/go.thrift"
 
 enum Numberz {
@@ -85,18 +84,23 @@ struct Xtruct4 {
   2: i32 int_thing = 42;
   3: list<i32> list_int32_thing = [5];
   4: Xtruct2 xtruct2;
+  5: optional i64 opt64;
 }
 
 struct Insanity {
   1: map<Numberz, UserId> userMap;
   2: list<Xtruct> xtructs;
-  @cpp.Type{template = "std::unordered_map"}
   3: map<string, string> str2str;
 }
 
 struct CrazyNesting {
   1: string string_field;
   2: optional set<Insanity> set_field;
+}
+
+struct CyclicStruct {
+  1: CyclicStruct self;
+  2: optional CyclicStruct optional_self;
 }
 
 exception Xception {
@@ -241,4 +245,26 @@ struct PreDefinition {
 
 struct PreDefStruct {
   1: string data;
+}
+
+struct StructWithManyFields {
+  843: i64 field01;
+  219: i64 field02;
+  467: i64 field03;
+  932: i64 field04;
+  191: i64 field05;
+  753: i64 field06;
+  316: i64 field07;
+  489: i64 field08;
+  270: i64 field09;
+  628: i64 field10;
+  351: i64 field11;
+  917: i64 field12;
+  142: i64 field13;
+  789: i64 field14;
+  654: i64 field15;
+  327: i64 field16;
+  569: i64 field17;
+  812: i64 field18;
+  945: i64 field19;
 }

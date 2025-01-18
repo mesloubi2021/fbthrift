@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::writeDouble",
       "argsstring_html": "(const double dub)",
       "name_html": "writeDouble",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::writeDouble",
       "param": [
         {
           "type_html": "const double",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "172",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "250",
         "bodyend": "264"
@@ -52,5 +53,11 @@
   "brief_html": "<p>Write a double to the wire as 8 bytes. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeDouble",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeDouble"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/writeDouble",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

@@ -34,7 +34,6 @@ const quic::TransportSettings& getQuicTransportSettings() {
     ts_.initCwndInMss = 100;
     ts_.maxCwndInMss = quic::kLargeMaxCwndInMss;
     ts_.maxRecvBatchSize = 64;
-    ts_.shouldRecvBatch = true;
     ts_.shouldUseRecvmmsgForBatchRecv = true;
     return ts_;
   })();
@@ -79,7 +78,8 @@ void ThriftQuicServer::startAdditionalServers() {
             alpn,
             wangle::SecureTransportType::TLS,
             wangle::TransportInfo());
-      });
+      },
+      getQuicTransportSettings());
   auto keepalives = ioThreadPool_->getAllEventBases();
   std::vector<folly::EventBase*> evbs(keepalives.size());
   std::transform(
@@ -95,13 +95,18 @@ void ThriftQuicServer::startAdditionalServers() {
 
   auto wangleConfig = getServerSocketConfig();
   auto fizzCertManager = std::shared_ptr<fizz::server::CertManager>(
-      wangle::FizzConfigUtil::createCertManager(wangleConfig, nullptr)
+      wangle::FizzConfigUtil::createCertManager(
+          wangleConfig->sslContextConfigs,
+          /* pwFactory = */ nullptr,
+          wangleConfig->strictSSL)
           .release());
-  auto fizzContext = wangle::FizzConfigUtil::createFizzContext(wangleConfig);
+  auto fizzContext = wangle::FizzConfigUtil::createFizzContext(
+      wangleConfig->sslContextConfigs,
+      wangleConfig->fizzConfig,
+      wangleConfig->strictSSL);
   fizzContext->setCertManager(fizzCertManager);
 
   quicServer_->setFizzContext(std::move(fizzContext));
-  quicServer_->setTransportSettings(getQuicTransportSettings());
   quicServer_->start(server_addr, evbs);
 }
 

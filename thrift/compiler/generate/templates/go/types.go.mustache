@@ -13,12 +13,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-}}{{!
-}}{{> common/header}}
+}}
+{{> common/header}}
 
 import (
     "fmt"
-    "strings"
+    "reflect"
 
     {{#program:thrift_imports}}
     {{program:go_package_alias}} "{{program:go_import_path}}"
@@ -29,7 +29,7 @@ import (
 {{> common/unused_imports_protection}}
 // (needed to ensure safety because of naive import list construction)
 var _ = fmt.Printf
-var _ = strings.Split
+var _ = reflect.Ptr
 var _ = thrift.ZERO
 
 {{! Typedefs }}
@@ -51,11 +51,21 @@ var _ = thrift.ZERO
 {{! Structs }}
 {{#program:structs?}}
 {{#program:structs}}
-
 {{> types/struct}}
 
 {{/program:structs}}
 {{/program:structs?}}
+
+{{! Req/resp srtucts }}
+{{#program:services?}}
+// Service req/resp structs (below)
+{{#program:services}}
+{{#service:req_resp_structs}}
+{{> types/struct}}
+
+{{/service:req_resp_structs}}
+{{/program:services}}
+{{/program:services?}}
 
 {{#program:structs?}}
 {{> common/registry}}

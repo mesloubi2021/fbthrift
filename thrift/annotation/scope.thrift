@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+// start
+
 /**
  * Annotations that indicate which IDL definition a structured annotation can
- * be place on.
+ * be placed on.
  *
  * For example:
  *   include "thrift/annotation/scope.thrift"
@@ -34,6 +36,7 @@
 package "facebook.com/thrift/annotation"
 
 namespace java com.facebook.thrift.annotation_deprecated
+namespace android com.facebook.thrift.annotation_deprecated
 namespace js thrift.annotation.scope
 namespace py.asyncio facebook_thrift_asyncio.annotation.scope
 namespace go thrift.annotation.scope
@@ -106,7 +109,7 @@ struct Const {} (hack.name = "TConst")
 
 // Due to cython bug, we can not use `Enum` as class name directly
 // https://github.com/cython/cython/issues/2474
-struct Enum {} (thrift.uri = "facebook.com/thrift/annotation/Enum", py3.hidden)
+struct Enum {} (py3.hidden)
 
 /** A scope that includes all 'structured' definitions. */
 @Struct
@@ -137,3 +140,10 @@ struct RootDefinition {}
 @EnumValue
 @Transitive
 struct Definition {}
+
+/**
+ * Not a scope, just here for dependency cycle reasons.
+ * Disables schema const injection for the program.
+ */
+@Program
+struct DisableSchemaConst {}

@@ -15,6 +15,7 @@
  */
 
 namespace cpp2 apache.thrift.test
+namespace py3 thrift.test
 
 cpp_include "folly/sorted_vector_types.h"
 
@@ -40,6 +41,10 @@ const string str_4 = '"foo"';
 const string str_5 = "line 1
 line 2
 ";
+const string str_nul = "hi\x00boo";
+
+const binary bin_e = "";
+const binary bin_nul = "hi\x00boo";
 
 const list<string> escapes = [
   "\x42cafes",
@@ -76,12 +81,12 @@ const map<string, string> m_2 = {"foo": "bar", "baz": "gaz"};
 const map<string, i32> m_3 = {'"': 34, "'": 39, "\\": 92, "\x61": 97};
 const map_i32_i32_7023 m_4 = {1: 2};
 
+const struct1 pod_0 = {};
+
 struct struct1 {
   1: i32 a = 1234567;
   2: string b = "<uninitialized>";
 }
-
-const struct1 pod_0 = {};
 
 const struct1 pod_1 = {"a": 10, "b": "foo"};
 

@@ -19,12 +19,12 @@
   This template creates a readField* method for a field in a Thrift struct.
 
 }}
-func (x *{{struct:go_name}}) readField{{field:key_str}}(p thrift.Protocol) error {  // {{field:go_name}}
+func (x *{{struct:go_name}}) readField{{field:key_str}}(p thrift.Decoder) error {  // {{field:go_name}}
     {{#field:type}}
     {{> codec/decode}}
     {{/field:type}}
 
-    x.{{field:go_setter_name}}{{#program:compat_setters?}}NonCompat{{/program:compat_setters?}}(result)
+    x.{{field:go_name}} = {{#field:non_struct_pointer?}}&{{/field:non_struct_pointer?}}result
     return nil
 }
 {{! new line }}

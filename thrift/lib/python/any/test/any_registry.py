@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
@@ -23,8 +25,8 @@ import testing.thrift_types
 from apache.thrift.type.standard.thrift_types import StandardProtocol, TypeName
 from apache.thrift.type.type.thrift_types import Protocol
 from folly.iobuf import IOBuf
-from thrift.python.any.any_registry import AnyRegistry
-from thrift.python.any.typestub import PrimitiveType, SerializableType
+from thrift.lib.python.any.any_registry import AnyRegistry, TypeUriOption
+from thrift.lib.python.any.typestub import PrimitiveType, SerializableType
 
 # @manual=//thrift/test/testset:testset-python-types
 from thrift.test.testset import thrift_types
@@ -93,6 +95,32 @@ class AnyRegistryTest(unittest.TestCase):
                     TEST_STRUCT, protocol=Protocol(standard=standard_protocol)
                 )
                 self.assertEqual(TypeName.Type.structType, any_obj.type.name.type)
+                self.assertIsNotNone(
+                    any_obj.type.name.structType.typeHashPrefixSha2_256,
+                )
+                loaded = registry.load(any_obj)
+                self.assertEqual(TEST_STRUCT, loaded)
+
+    def test_struct_round_trip_with_typeuri_option(self) -> None:
+        registry = AnyRegistry()
+        registry.register_module(thrift_types)
+
+        for standard_protocol in [
+            StandardProtocol.Binary,
+            StandardProtocol.Compact,
+            StandardProtocol.SimpleJson,
+        ]:
+            with self.subTest(standard_protocol=standard_protocol):
+                any_obj = registry.store(
+                    TEST_STRUCT,
+                    protocol=Protocol(standard=standard_protocol),
+                    typeuri_option=TypeUriOption.URI,
+                )
+                self.assertEqual(TypeName.Type.structType, any_obj.type.name.type)
+                self.assertEqual(
+                    any_obj.type.name.structType.uri,
+                    TEST_STRUCT.__get_thrift_uri__(),
+                )
                 loaded = registry.load(any_obj)
                 self.assertEqual(TEST_STRUCT, loaded)
 

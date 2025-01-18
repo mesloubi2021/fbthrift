@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <thrift/compiler/sema/scope_validator.h>
+#include <thrift/compiler/sema/standard_validator.h>
 
 #include <memory>
 #include <typeindex>
@@ -26,11 +26,9 @@
 #include <thrift/compiler/ast/t_struct.h>
 #include <thrift/compiler/ast/t_typedef.h>
 #include <thrift/compiler/ast/t_union.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/ast/uri.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
@@ -72,7 +70,8 @@ struct allowed_scopes {
 
 } // namespace
 
-void validate_annotation_scopes(diagnostic_context& ctx, const t_named& node) {
+void detail::validate_annotation_scopes(
+    sema_context& ctx, const t_named& node) {
   // Ignore a transitive annotation definition because it is a collection of
   // annotations that apply at other scopes. For example:
   //
@@ -111,6 +110,4 @@ void validate_annotation_scopes(diagnostic_context& ctx, const t_named& node) {
   }
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -23,6 +23,7 @@
       "definition_html": "decltype(auto) apache::thrift::op::find_by_field_id",
       "argsstring_html": "(F &amp;&amp;f)",
       "name_html": "find_by_field_id",
+      "qualifiedname_html": "apache::thrift::op::find_by_field_id",
       "param": [
         {
           "type_html": "F &amp;&amp;",
@@ -31,11 +32,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Get.h",
-        "line": "93",
-        "column": "1",
+        "line": "91",
+        "column": "10",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Get.h",
-        "bodystart": "93",
-        "bodyend": "96"
+        "bodystart": "91",
+        "bodyend": "94"
       },
       "definition": {
         "simple_html": "template &lt;typename T, typename F&gt;\ndecltype(auto) find_by_field_id(F&amp;&amp; f)",
@@ -46,7 +47,7 @@
         "original_argsstring_html": "(F &amp;&amp;f)"
       },
       "description": {
-        "detailed_html": "<p>Calls the given function with with each field_id&lt;{id}&gt;, returing the first 'true' result produced. </p>"
+        "detailed_html": "<p>Calls the given function with with each field_id&lt;{id}&gt;, returning the first 'true' result produced. </p>"
       },
       "compoundname_html": "apache::thrift::op::find_by_field_id",
       "namespace_html": "apache::thrift::op"
@@ -56,8 +57,14 @@
   "namespace_html": "apache::thrift::op",
   "minprot": "public",
   "displayname_html": "find_by_field_id",
-  "brief_html": "<p>Calls the given function with with each field_id&lt;{id}&gt;, returing the first 'true' result produced. </p>",
+  "brief_html": "<p>Calls the given function with with each field_id&lt;{id}&gt;, returning the first 'true' result produced. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/find_by_field_id",
-  "refid": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/find_by_field_id"
+  "refid": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/find_by_field_id",
+  "parent_links": [
+    {
+      "text_html": "Get",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/Get"
+    }
+  ]
 }

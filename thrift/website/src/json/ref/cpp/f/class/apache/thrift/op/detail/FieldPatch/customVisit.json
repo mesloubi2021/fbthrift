@@ -20,6 +20,7 @@
       "definition_html": "void apache::thrift::op::detail::FieldPatch&lt; Patch &gt;::customVisit",
       "argsstring_html": "(Visitor &amp;&amp;v) const",
       "name_html": "customVisit",
+      "qualifiedname_html": "apache::thrift::op::detail::FieldPatch::customVisit",
       "param": [
         {
           "type_html": "Visitor &amp;&amp;",
@@ -28,11 +29,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "61",
-        "column": "1",
+        "line": "84",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "61",
-        "bodyend": "64"
+        "bodystart": "84",
+        "bodyend": "87"
       },
       "definition": {
         "simple_html": "template &lt;typename Visitor&gt;\nvoid customVisit(Visitor&amp;&amp; v) const",
@@ -54,5 +55,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/FieldPatch/customVisit",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/FieldPatch/customVisit"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/FieldPatch/customVisit",
+  "parent_links": [
+    {
+      "text_html": "FieldPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/FieldPatch"
+    }
+  ]
 }

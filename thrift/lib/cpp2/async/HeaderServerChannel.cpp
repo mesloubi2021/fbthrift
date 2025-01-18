@@ -31,8 +31,7 @@ using namespace apache::thrift::transport;
 using apache::thrift::protocol::PROTOCOL_TYPES;
 using apache::thrift::server::TServerObserver;
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 std::atomic<uint32_t> HeaderServerChannel::sample_(0);
 
@@ -265,7 +264,7 @@ void HeaderServerChannel::HeaderRequest::sendErrorWrapped(
   // Other types are unimplemented.
   DCHECK(ew.is_compatible_with<TApplicationException>());
 
-  header_->setHeader("ex", exCode);
+  header_->setHeader("ex", std::move(exCode));
   ew.with_exception([&](TApplicationException& tae) {
     std::unique_ptr<folly::IOBuf> exbuf;
     uint16_t proto = header_->getProtocolId();
@@ -367,24 +366,10 @@ void HeaderServerChannel::sendCatchupRequests(
 }
 
 TServerObserver::SamplingStatus HeaderServerChannel::shouldSample(
-    const apache::thrift::transport::THeader* header) const {
+    const apache::thrift::transport::THeader*) const {
   bool isServerSamplingEnabled =
       (sampleRate_ > 0) && ((sample_++ % sampleRate_) == 0);
-
-  if (auto loggingContext = header->loggingContext()) {
-    auto clientLogSampleRatio = *loggingContext->logSampleRatio();
-    auto clientLogErrorSampleRatio = *loggingContext->logErrorSampleRatio();
-    if (clientLogSampleRatio > 0 || clientLogErrorSampleRatio > 0) {
-      return SamplingStatus(
-          isServerSamplingEnabled,
-          clientLogSampleRatio,
-          clientLogErrorSampleRatio);
-    }
-  }
-  bool isClientSamplingEnabledLegacy =
-      header->getHeaders().find(kClientLoggingHeader.str()) !=
-      header->getHeaders().end();
-  return SamplingStatus(isServerSamplingEnabled, isClientSamplingEnabledLegacy);
+  return SamplingStatus(isServerSamplingEnabled);
 }
 
 // Interface from MessageChannel::RecvCallback
@@ -470,5 +455,4 @@ void HeaderServerChannel::setCallback(ResponseChannel::Callback* callback) {
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

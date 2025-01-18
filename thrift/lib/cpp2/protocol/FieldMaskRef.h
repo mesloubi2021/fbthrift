@@ -51,6 +51,14 @@ class MaskRef {
   // map mask.
   MaskRef get(const std::string& key) const;
 
+  // Get nested MaskRef for the given type. If the type does not exist in the
+  // map, it returns noneMask or allMask depending on whether the field should
+  // be included. Throws a runtime exception if the mask is not a type map mask.
+  MaskRef get(const type::Type& type) const;
+
+  // This API is reserved for internal use only.
+  MaskRef getViaIdenticalType_INTERNAL_DO_NOT_USE(const type::Type& type) const;
+
   // Returns whether the ref includes all fields.
   bool isAllMask() const;
 
@@ -78,6 +86,13 @@ class MaskRef {
   // Returns true if the mask is a string map mask.
   bool isStringMapMask() const;
 
+  // Returns true if the mask is a type-map mask (i.e. AnyMask)
+  bool isTypeMask() const;
+
+  // Removes masked fields in schemaless Thrift Value
+  // Throws a runtime exception if the mask and object are incompatible.
+  void clear(protocol::Value& t) const;
+
   // Removes masked fields in schemaless Thrift Object (Protocol Object).
   // Throws a runtime exception if the mask and object are incompatible.
   void clear(protocol::Object& t) const;
@@ -86,26 +101,39 @@ class MaskRef {
   // Throws a runtime exception if the mask and object are incompatible.
   void clear(folly::F14FastMap<Value, Value>& map) const;
 
-  // Copies masked fields from one object to another (schemaless).
-  // If the masked field doesn't exist in src, the field in dst will be removed.
+  /**
+   * The API copy(protocol::Object, protocol::Object) is not provided here as
+   * it can produce invalid outputs for union masks
+   *
+   * i.e. it's not possible to tell whether a given protocol::Object instance
+   * is a struct or union - making it difficult to apply copy semantics
+   */
+
+  // Returns a new object that contains only the masked fields.
   // Throws a runtime exception if the mask and objects are incompatible.
-  void copy(const protocol::Object& src, protocol::Object& dst) const;
-  void copy(
-      const folly::F14FastMap<Value, Value>& src,
-      folly::F14FastMap<Value, Value>& dst) const;
+  // See docblock on protocol::filter for exact semantics.
+  protocol::Value filter(const protocol::Value& src) const;
+  protocol::Object filter(const protocol::Object& src) const;
+  folly::F14FastMap<Value, Value> filter(
+      const folly::F14FastMap<Value, Value>& src) const;
+
+  // Requires isFieldMask() == true
+  // Returns the number of fields that are set in this mask.
+  template <typename T>
+  size_t numFieldsSet() {
+    throwIfNotFieldMask();
+    if (auto includes = mask.includes_ref()) {
+      return includes->size();
+    } else {
+      return op::size_v<T> - mask.excludes_ref()->size();
+    }
+  }
 
  private:
-  // Gets all fields/ keys that need to be copied from src to dst.
-  std::unordered_set<FieldId> getFieldsToCopy(
-      const protocol::Object& src, const protocol::Object& dst) const;
-
-  std::set<std::reference_wrapper<const Value>, std::less<Value>> getKeysToCopy(
-      const folly::F14FastMap<Value, Value>& src,
-      const folly::F14FastMap<Value, Value>& dst) const;
-
   void throwIfNotFieldMask() const;
   void throwIfNotMapMask() const;
   void throwIfNotIntegerMapMask() const;
   void throwIfNotStringMapMask() const;
+  void throwIfNotTypeMask() const;
 };
 } // namespace apache::thrift::protocol

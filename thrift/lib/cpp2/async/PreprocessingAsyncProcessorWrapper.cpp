@@ -16,11 +16,11 @@
 
 #include <thrift/lib/cpp2/async/PreprocessingAsyncProcessorWrapper.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 PreprocessingAsyncProcessorWrapper::PreprocessingAsyncProcessorWrapper(
     std::unique_ptr<AsyncProcessor> innerProcessor)
-    : innerProcessor_(std::move(innerProcessor)) {
+    : AsyncProcessor(IgnoreGlobalEventHandlers{}),
+      innerProcessor_(std::move(innerProcessor)) {
   CHECK(innerProcessor_ != nullptr) << "Cannot wrap null async processor.";
 }
 
@@ -72,5 +72,4 @@ void PreprocessingAsyncProcessorWrapper::executeRequest(
   auto processedReq = executeRequestImpl(std::move(request), methodMetadata);
   inner()->executeRequest(std::move(processedReq), methodMetadata);
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

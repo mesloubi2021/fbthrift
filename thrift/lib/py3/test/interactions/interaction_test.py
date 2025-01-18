@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 import asyncio
 import unittest
 
@@ -108,6 +110,12 @@ class InteractionTest(unittest.TestCase):
                     pass
 
         asyncio.run(inner_test())
+
+    def test_async_interaction_create(self) -> None:
+        async def inner_test() -> None:
+            async with self.init_client() as calc:
+                # pyre-ignore[12] Incompatible awaitable type
+                await calc.async_createAddition()
 
     def test_terminate_client_error(self) -> None:
         class SpecificError(Exception):

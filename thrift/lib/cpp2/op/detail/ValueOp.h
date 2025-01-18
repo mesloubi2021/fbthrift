@@ -26,10 +26,7 @@
 #include <thrift/lib/cpp2/type/NativeType.h>
 #include <thrift/lib/cpp2/type/Tag.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 
 // TODO(afuller): Support heterogenous comparisons.
 template <typename Tag>
@@ -239,63 +236,50 @@ struct StringOp : BaseOp<Tag> {
     prepend(self, *val);
   }
 
+#define TRY_OP(ACCUM_TO, TRY_ON, TAG, OP)             \
+  do {                                                \
+    if (const auto* ptr##TAG = TRY_ON.tryAs<TAG>()) { \
+      return OP(ref(ACCUM_TO), *ptr##TAG);            \
+    }                                                 \
+  } while (false)
+
   static folly::partial_ordering compare(const void* lhs, const Dyn& rhs) {
     StringCompare cmp;
     // TODO(afuller): Consider using a ~map.
-    if (const T* ptr = rhs.tryAs<Tag>()) {
-      return cmp(ref(lhs), *ptr);
-    } else if (const auto* ptr = rhs.tryAs<StdTag>()) {
-      return cmp(ref(lhs), *ptr);
-    } else if (const auto* ptr = rhs.tryAs<IOBufTag>()) {
-      return cmp(ref(lhs), *ptr);
-    } else if (const auto* ptr = rhs.tryAs<IOBufPtrTag>()) {
-      return cmp(ref(lhs), **ptr);
-    }
+    TRY_OP(lhs, rhs, Tag, cmp);
+    TRY_OP(lhs, rhs, StdTag, cmp);
+    TRY_OP(lhs, rhs, IOBufTag, cmp);
+    TRY_OP(lhs, rhs, IOBufPtrTag, cmp);
     // TODO(afuller): Implement compatibility with any type convertable to
     // fmt::string_view.
     unimplemented();
   }
 
   static void assign(void* s, const Dyn& val) {
-    if (const T* ptr = val.tryAs<Tag>()) {
-      return assign(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<StdTag>()) {
-      return assign(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufTag>()) {
-      return assign(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufPtrTag>()) {
-      return assign(ref(s), *ptr);
-    }
+    TRY_OP(s, val, Tag, assign);
+    TRY_OP(s, val, StdTag, assign);
+    TRY_OP(s, val, IOBufTag, assign);
+    TRY_OP(s, val, IOBufPtrTag, assign);
     // TODO(afuller): Implement compatibility with any type convertable to
     // fmt::string_view.
     unimplemented();
   }
 
   static void prepend(void* s, const Dyn& val) {
-    if (const T* ptr = val.tryAs<Tag>()) {
-      return prepend(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<StdTag>()) {
-      return prepend(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufTag>()) {
-      return prepend(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufPtrTag>()) {
-      return prepend(ref(s), *ptr);
-    }
+    TRY_OP(s, val, Tag, prepend);
+    TRY_OP(s, val, StdTag, prepend);
+    TRY_OP(s, val, IOBufTag, prepend);
+    TRY_OP(s, val, IOBufPtrTag, prepend);
     // TODO(afuller): Implement compatibility with any type convertable to
     // fmt::string_view.
     unimplemented();
   }
 
   static void append(void* s, const Dyn& val) {
-    if (const T* ptr = val.tryAs<Tag>()) {
-      return append(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<StdTag>()) {
-      return append(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufTag>()) {
-      return append(ref(s), *ptr);
-    } else if (const auto* ptr = val.tryAs<IOBufPtrTag>()) {
-      return append(ref(s), *ptr);
-    }
+    TRY_OP(s, val, Tag, append);
+    TRY_OP(s, val, StdTag, append);
+    TRY_OP(s, val, IOBufTag, append);
+    TRY_OP(s, val, IOBufPtrTag, append);
     // TODO(afuller): Implement compatibility with any type convertable to
     // fmt::string_view.
     unimplemented();
@@ -314,7 +298,4 @@ template <typename T>
 struct AnyOp<type::cpp_type<T, type::binary_t>>
     : StringOp<type::cpp_type<T, type::binary_t>> {};
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

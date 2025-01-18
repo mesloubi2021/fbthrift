@@ -19,9 +19,7 @@
 #include <thrift/compiler/ast/t_container.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * A list is a lightweight container type that just wraps another data type.
@@ -31,11 +29,14 @@ class t_list final : public t_container {
   explicit t_list(t_type_ref elem_type) : elem_type_(std::move(elem_type)) {}
 
   const t_type_ref& elem_type() const { return elem_type_; }
+  t_type_ref& elem_type() { return elem_type_; }
 
   type container_type() const override { return type::t_list; }
   std::string get_full_name() const override {
     return "list<" + elem_type_->get_full_name() + ">";
   }
+
+  ~t_list() override;
 
  private:
   t_type_ref elem_type_;
@@ -48,6 +49,4 @@ class t_list final : public t_container {
   const t_type* get_elem_type() const { return elem_type().get_type(); }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

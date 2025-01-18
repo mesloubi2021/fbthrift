@@ -25,9 +25,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/ssl/OpenSSLHash.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
+namespace apache::thrift::op {
 
 class Sha256Hasher {
  public:
@@ -58,7 +56,7 @@ class Sha256Hasher {
 
   void finalize() {
     result_.emplace();
-    folly::MutableByteRange r(result_.value().begin(), result_.value().end());
+    folly::MutableByteRange r(result_.value().data(), result_.value().size());
     hash_.hash_final(r);
   }
 
@@ -77,6 +75,4 @@ class Sha256Hasher {
   folly::ssl::OpenSSLHash::Digest hash_;
 };
 
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op

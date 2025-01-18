@@ -30,19 +30,76 @@
 #include <fmt/core.h>
 
 #include <thrift/compiler/ast/t_struct.h>
+#include <thrift/compiler/ast/uri.h>
+#include <thrift/compiler/generate/cpp/name_resolver.h>
 #include <thrift/compiler/generate/mstch_objects.h>
+#include <thrift/compiler/generate/rust/uri.h>
+#include <thrift/compiler/generate/rust/util.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/rust/util.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/sema/ast_validator.h>
+#include <thrift/compiler/sema/sema_context.h>
 
-using namespace std;
+namespace apache::thrift::compiler::rust {
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+struct rust_codegen_options {
+  // Crate names used for referring to sibling crates within the same Thrift
+  // library.
+  std::string types_crate;
+  std::string clients_crate;
 
-namespace rust {
+  // Buck target label that identifies the Rust library built from the sources
+  // currently being generated.
+  std::string label;
+
+  // Index that can resolve a Thrift t_program to a Rust crate name.
+  rust_crate_index crate_index;
+
+  // Whether to emit derive(Serialize, Deserialize).
+  // Enabled by `--gen rust:serde`.
+  bool serde = false;
+
+  // Whether to emit derive(Valuable).
+  // Enabled by `--gen rust:valuable`
+  bool valuable = false;
+
+  // Whether fields w/optional values of None should
+  // be skipped during serialization. Enabled w/ `--gen
+  // rust:skip_none_serialization` Note: `rust:serde` must also be set for this
+  // to affect codegen.
+  bool skip_none_serialization = false;
+
+  // True if we are generating a submodule rather than the whole crate.
+  bool multifile_mode = false;
+
+  // List of extra sources to include at top level of crate.
+  mstch::array types_include_srcs;
+  mstch::array clients_include_srcs;
+  mstch::array services_include_srcs;
+
+  // Markdown file to include in front of crate-level documentation.
+  std::string include_docs;
+
+  // The current program being generated and its Rust module path.
+  const t_program* current_program;
+  std::string current_crate;
+
+  // Whether to generate Thrift metadata for structs or not.
+  bool gen_metadata = true;
+
+  // Determines whether or not to generate `fbthrift::conformance::AnyRegistry`
+  // initialization functions (c.f. `t_mstch_cpp2_generator::generate_program()`
+  // https://fburl.com/code/np814p6y). Enabled by `--gen rust:any`.
+  bool any_registry_initialization_enabled = false;
+};
+
+enum class FieldKind { Box, Arc, Inline };
+
+class mstch_rust_value;
+
+namespace {
+
 const std::string_view kRustCratePrefix = "crate::";
+const std::string_view kRustCrateTypesPrefix = "crate::types::";
 
 std::string quoted_rust_doc(const t_named* named_node) {
   const std::string& doc = named_node->doc();
@@ -59,105 +116,225 @@ std::string quoted_rust_doc(const t_named* named_node) {
   return quote(doc.substr(first, last - first + 1), true);
 }
 
+std::string get_type_annotation(const t_named* node) {
+  if (const t_const* annot =
+          node->find_structured_annotation_or_null(kRustTypeUri)) {
+    return get_annotation_property_string(annot, "name");
+  }
+
+  if (const t_type* type = dynamic_cast<const t_type*>(node)) {
+    return t_typedef::get_first_annotation(type, {"rust.type"});
+  }
+
+  return "";
+}
+
+bool has_type_annotation(const t_named* node) {
+  return !get_type_annotation(node).empty();
+}
+
+bool has_nonstandard_type_annotation(const t_named* node) {
+  return get_type_annotation(node).find("::") != std::string::npos;
+}
+
+bool has_newtype_annotation(const t_named* node) {
+  if (const t_typedef* type = dynamic_cast<const t_typedef*>(node)) {
+    if (node->find_structured_annotation_or_null(kRustNewTypeUri)) {
+      return true;
+    }
+
+    return type->has_annotation("rust.newtype");
+  }
+
+  return false;
+}
+
 bool can_derive_ord(const t_type* type) {
+  bool has_custom_type_annotation = has_type_annotation(type);
+
   type = type->get_true_type();
   if (type->is_string() || type->is_binary() || type->is_bool() ||
       type->is_byte() || type->is_i16() || type->is_i32() || type->is_i64() ||
       type->is_enum() || type->is_void()) {
     return true;
   }
-  if (type->has_annotation("rust.ord")) {
+  if (type->has_annotation("rust.ord") ||
+      type->find_structured_annotation_or_null(kRustOrdUri)) {
     return true;
   }
   if (type->is_list()) {
     auto elem_type = dynamic_cast<const t_list*>(type)->get_elem_type();
     return elem_type && can_derive_ord(elem_type);
   }
+  // We can implement Ord on BTreeMap (the default map type) if both the key and
+  // value implement Eq.
+  if (type->is_map() && !has_custom_type_annotation) {
+    auto map_type = dynamic_cast<const t_map*>(type);
+    auto key_elem_type = map_type->get_key_type();
+    auto val_elem_type = map_type->get_val_type();
+
+    return key_elem_type && val_elem_type && can_derive_ord(key_elem_type) &&
+        can_derive_ord(val_elem_type);
+  }
   return false;
 }
 
-struct rust_codegen_options {
-  // Name that the main crate uses to refer to its dependency on the types
-  // crate.
-  std::string types_crate;
-
-  // Key: package name according to Thrift.
-  // Value: rust_crate_name to use in generated code.
-  std::map<std::string, std::string> cratemap;
-
-  // Whether to emit derive(Serialize, Deserialize).
-  // Enabled by `--gen rust:serde`.
-  bool serde = false;
-
-  // Whether fields w/optional values of None should
-  // be skipped during serialization. Enabled w/ `--gen
-  // rust:skip_none_serialization` Note: `rust:serde` must also be set for this
-  // to affect codegen.
-  bool skip_none_serialization = false;
-
-  // Whether to skip server stubs. Server stubs are built by default, but can
-  // be turned off via `--gen rust:noserver`.
-  bool noserver = false;
-
-  // True if we are generating a submodule rather than the whole crate.
-  bool multifile_mode = false;
-
-  // List of extra sources to include at top-level of each crate.
-  mstch::array lib_include_srcs;
-  mstch::array types_include_srcs;
-
-  // The current program being generated and its Rust module path.
-  const t_program* current_program;
-  std::string current_crate;
-
-  // Whether to generate Thrift metadata for structs or not.
-  bool gen_metadata = true;
-};
-
-static bool validate_rust_serde(const t_node& node) {
-  const std::string* ann = node.find_annotation_or_null("rust.serde");
-
-  return ann == nullptr || *ann == "true" || *ann == "false";
+bool validate_rust_serde(const t_named& node) {
+  if (const std::string* ann = node.find_annotation_or_null("rust.serde")) {
+    return ann == nullptr || *ann == "true" || *ann == "false";
+  }
+  // The structued form `@rust.Serde { enabled = ... }` if it exists, does not
+  // require further validation.
+  return true;
 }
 
-static bool rust_serde_enabled(
-    const rust_codegen_options& options, const t_node& node) {
-  const std::string* ann = node.find_annotation_or_null("rust.serde");
+bool rust_serde_enabled(
+    const rust_codegen_options& options, const t_named& node) {
+  if (const t_const* annot =
+          node.find_structured_annotation_or_null(kRustSerdeUri)) {
+    return get_annotation_property_bool(annot, "enabled");
+  }
 
-  if (ann == nullptr) {
-    return options.serde;
-  } else if (*ann == "true") {
-    return true;
-  } else if (*ann == "false") {
-    return false;
-  } else {
+  if (const std::string* ann = node.find_annotation_or_null("rust.serde")) {
+    if (*ann == "true") {
+      return true;
+    }
+    if (*ann == "false") {
+      return false;
+    }
     throw std::runtime_error("rust.serde should be `true` or `false`");
+  }
+
+  return options.serde;
+}
+
+std::string get_types_import_name(
+    const t_program* program, const rust_codegen_options& options) {
+  if (program == options.current_program) {
+    return options.current_crate + "::types";
+  }
+
+  auto crate = options.crate_index.find(program);
+  if (!crate) {
+    return program->name() + "__types";
+  } else if (crate->dependency_path.empty()) {
+    return crate->import_name(program) + "::types";
+  } else {
+    return crate->import_name(program);
   }
 }
 
-std::string get_import_name(
+std::string get_client_import_name(
+    const t_program* program, const rust_codegen_options& options) {
+  if (program == options.current_program) {
+    return options.current_crate + "::client";
+  }
+
+  auto crate = options.crate_index.find(program);
+  if (!crate) {
+    return program->name() + "__clients";
+  } else if (crate->dependency_path.empty()) {
+    return crate->import_name(program) + "::client";
+  }
+
+  std::string path;
+  for (const auto& dep : crate->dependency_path) {
+    path += path.empty() ? "::" : "::__dependencies::";
+    path += dep + "_clients";
+  }
+
+  if (crate->multifile) {
+    path += "::" + multifile_module_name(program);
+  }
+
+  return path;
+}
+
+std::string get_server_import_name(
     const t_program* program, const rust_codegen_options& options) {
   if (program == options.current_program) {
     return options.current_crate;
   }
 
-  auto program_name = program->name();
-  auto crate_name = options.cratemap.find(program_name);
-  if (crate_name != options.cratemap.end()) {
-    return crate_name->second;
+  auto crate = options.crate_index.find(program);
+  if (!crate) {
+    return program->name() + "__services";
+  } else if (crate->dependency_path.empty()) {
+    return crate->import_name(program);
   }
-  return program_name;
+
+  std::string path;
+  for (const auto& dep : crate->dependency_path) {
+    path += path.empty() ? "::" : "::__dependencies::";
+    path += dep + "_services";
+  }
+
+  if (crate->multifile) {
+    path += "::" + multifile_module_name(program);
+  }
+
+  return path;
 }
 
-enum class FieldKind { Box, Arc, Inline };
+std::string get_mock_import_name(
+    const t_program* program, const rust_codegen_options& options) {
+  if (program == options.current_program) {
+    return options.current_crate;
+  }
+
+  auto crate = options.crate_index.find(program);
+  if (!crate) {
+    return program->name() + "__mocks";
+  } else if (crate->dependency_path.empty()) {
+    return crate->import_name(program);
+  }
+
+  std::string path;
+  for (const auto& dep : crate->dependency_path) {
+    path += path.empty() ? "::" : "::__dependencies::";
+    path += dep + "_mocks";
+  }
+
+  if (crate->multifile) {
+    path += "::" + multifile_module_name(program);
+  }
+
+  return path;
+}
+
+// Path to the crate root of the given service's mocks crate. Unlike
+// `get_mock_import_name`, for multifile Thrift libraries the module name is not
+// included here.
+std::string get_mock_crate(
+    const t_program* program, const rust_codegen_options& options) {
+  if (program == options.current_program) {
+    return "crate";
+  }
+
+  auto crate = options.crate_index.find(program);
+  if (!crate) {
+    return program->name() + "__mocks";
+  } else if (crate->dependency_path.empty()) {
+    return "crate";
+  }
+
+  std::string path;
+  for (const auto& dep : crate->dependency_path) {
+    path += path.empty() ? "::" : "::__dependencies::";
+    path += dep + "_mocks";
+  }
+  return path;
+}
 
 bool node_is_boxed(const t_named& node) {
   return node.has_annotation("rust.box") || node.has_annotation("thrift.box") ||
-      node.find_structured_annotation_or_null(kBoxUri);
+      node.find_structured_annotation_or_null(kBoxUri) ||
+      node.find_structured_annotation_or_null(kRustBoxUri);
 }
 
 bool node_is_arced(const t_named& node) {
-  return node.has_annotation("rust.arc");
+  return node.has_annotation("rust.arc") ||
+      node.find_structured_annotation_or_null(kRustArcUri);
 }
 
 FieldKind field_kind(const t_named& node) {
@@ -170,44 +347,30 @@ FieldKind field_kind(const t_named& node) {
   return FieldKind::Inline;
 }
 
-// For example `set<Value> (rust.type = "indexmap::IndexSet")` or `map<string,
-// Value> (rust.type = "indexmap::IndexMap")`. Unlike for standard library
-// collections, serialization impls for these types are not provided in the
-// fbthrift Rust runtime library and instead that logic will need to be emitted
-// into the generated crate.
-bool has_nonstandard_type_annotation(const t_type* type) {
-  return type->get_annotation("rust.type").find("::") != string::npos;
-}
-
 void parse_include_srcs(
-    mstch::array& elements, boost::optional<std::string> const& include_srcs) {
+    mstch::array& elements, std::optional<std::string> const& include_srcs) {
   if (!include_srcs) {
     return;
   }
-  auto paths = *include_srcs;
-  string::size_type pos = 0;
-  while (pos != string::npos && pos < paths.size()) {
-    mstch::map node;
-    string::size_type next_pos = paths.find(':', pos);
-    node["program:include_src"] = paths.substr(pos, next_pos - pos);
-    elements.push_back(std::move(node));
-    pos = ((next_pos == string::npos) ? next_pos : next_pos + 1);
+  const auto& paths = *include_srcs;
+  std::string::size_type pos = 0;
+  while (pos != std::string::npos && pos < paths.size()) {
+    std::string::size_type next_pos = paths.find(':', pos);
+    elements.push_back(paths.substr(pos, next_pos - pos));
+    pos = ((next_pos == std::string::npos) ? next_pos : next_pos + 1);
   }
 }
 
 const t_const* find_structured_adapter_annotation(const t_named& node) {
-  return node.find_structured_annotation_or_null(
-      "facebook.com/thrift/annotation/rust/Adapter");
+  return node.find_structured_annotation_or_null(kRustAdapterUri);
 }
 
 const t_const* find_structured_derive_annotation(const t_named& node) {
-  return node.find_structured_annotation_or_null(
-      "facebook.com/thrift/annotation/rust/Derive");
+  return node.find_structured_annotation_or_null(kRustDeriveUri);
 }
 
 const t_const* find_structured_service_exn_annotation(const t_named& node) {
-  return node.find_structured_annotation_or_null(
-      "facebook.com/thrift/annotation/rust/ServiceExn");
+  return node.find_structured_annotation_or_null(kRustServiceExnUri);
 }
 
 bool node_has_adapter(const t_named& node) {
@@ -224,8 +387,7 @@ bool type_has_transitive_adapter(
         return true;
       }
 
-      if (!step_through_newtypes &&
-          (*typedef_type).has_annotation("rust.newtype")) {
+      if (!step_through_newtypes && has_newtype_annotation(typedef_type)) {
         return false;
       }
 
@@ -269,7 +431,7 @@ const t_type* step_through_typedefs(const t_type* t, bool break_on_adapter) {
       return t;
     }
 
-    if ((*typedef_type).has_annotation("rust.newtype")) {
+    if (has_newtype_annotation(typedef_type)) {
       return t;
     }
 
@@ -284,32 +446,9 @@ const t_type* step_through_typedefs(const t_type* t, bool break_on_adapter) {
 }
 
 bool node_has_custom_rust_type(const t_named& node) {
-  return node.has_annotation("rust.type") ||
-      node.has_annotation("rust.newtype");
-}
-
-const std::string get_annotation_property(
-    const t_const* annotation, const std::string& key) {
-  if (annotation) {
-    for (const auto& item : annotation->value()->get_map()) {
-      if (item.first->get_string() == key) {
-        return item.second->get_string();
-      }
-    }
-  }
-  return "";
-}
-
-bool get_annotation_property_bool(
-    const t_const* annotation, const std::string& key) {
-  if (annotation) {
-    for (const auto& item : annotation->value()->get_map()) {
-      if (item.first->get_string() == key) {
-        return item.second->get_bool();
-      }
-    }
-  }
-  return false;
+  return node.find_structured_annotation_or_null(kRustTypeUri) ||
+      node.find_structured_annotation_or_null(kRustNewTypeUri) ||
+      node.has_annotation("rust.type") || node.has_annotation("rust.newtype");
 }
 
 // NOTE: a transitive _adapter_ is different from a transitive _annotation_. A
@@ -369,23 +508,29 @@ mstch::node adapter_node(
     // If the annotation originates from the same module, this will just return
     // `crate::` anyways to be a no-op.
     std::string package =
-        get_import_name(adapter_annotation->program(), options);
+        get_types_import_name(adapter_annotation->program(), options);
 
-    auto adapter_name = get_annotation_property(adapter_annotation, "name");
+    auto adapter_name =
+        get_annotation_property_string(adapter_annotation, "name");
 
     is_generic = boost::algorithm::ends_with(adapter_name, "<>");
     if (is_generic) {
       adapter_name = adapter_name.substr(0, adapter_name.length() - 2);
     }
 
-    if (!(boost::algorithm::starts_with(adapter_name, "::") ||
-          boost::algorithm::starts_with(adapter_name, kRustCratePrefix))) {
-      adapter_name = "::" + adapter_name;
+    if (!package.empty() &&
+        boost::algorithm::starts_with(adapter_name, kRustCrateTypesPrefix)) {
+      adapter_name =
+          package + "::" + adapter_name.substr(kRustCrateTypesPrefix.length());
     } else if (
         !package.empty() &&
         boost::algorithm::starts_with(adapter_name, kRustCratePrefix)) {
       adapter_name =
           package + "::" + adapter_name.substr(kRustCratePrefix.length());
+    } else if (!(boost::algorithm::starts_with(adapter_name, "::") ||
+                 boost::algorithm::starts_with(
+                     adapter_name, kRustCratePrefix))) {
+      adapter_name = "::" + adapter_name;
     }
 
     name = adapter_name;
@@ -418,8 +563,6 @@ mstch::node adapter_node(
   return node;
 }
 
-class mstch_rust_value;
-
 mstch::node structured_annotations_node(
     const t_named& named,
     unsigned depth,
@@ -430,7 +573,7 @@ mstch::node structured_annotations_node(
 
   // Note, duplicate annotations are not allowed per the Thrift spec.
   for (const t_const& annotation : named.structured_annotations()) {
-    auto direct_annotation = std::make_shared<mstch_rust_value>(
+    auto direct_annotation = mstch::make_shared_node<mstch_rust_value>(
         annotation.value(), annotation.type(), depth, context, pos, options);
 
     mstch::node transitive;
@@ -449,14 +592,46 @@ mstch::node structured_annotations_node(
   return annotations;
 }
 
+std::string get_resolved_name(const t_type* t) {
+  t = t->get_true_type();
+  if (auto c = dynamic_cast<const t_list*>(t)) {
+    return fmt::format("list<{}>", get_resolved_name(c->get_elem_type()));
+  }
+  if (auto c = dynamic_cast<const t_set*>(t)) {
+    return fmt::format("set<{}>", get_resolved_name(c->get_elem_type()));
+  }
+  if (auto c = dynamic_cast<const t_map*>(t)) {
+    return fmt::format(
+        "map<{},{}>",
+        get_resolved_name(c->get_key_type()),
+        get_resolved_name(c->get_val_type()));
+  }
+  return t->get_full_name();
+}
+
+std::string get_resolved_name(const t_field* field) {
+  return get_resolved_name(&field->type().deref());
+}
+
+} // namespace
+
 class t_mstch_rust_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
 
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "typedef:newtype?",
+        "function:name",
+    };
+    return opts;
+  }
+
   std::string template_prefix() const override { return "rust"; }
 
   void generate_program() override;
-  void fill_validator_list(validator_list&) const override;
+  void fill_validator_visitors(ast_validator&) const override;
 
  private:
   void set_mstch_factories();
@@ -474,32 +649,37 @@ class rust_mstch_program : public mstch_program {
     register_methods(
         this,
         {
-            {"program:types?", &rust_mstch_program::rust_has_types},
+            {"program:direct_dependencies?",
+             &rust_mstch_program::rust_has_direct_dependencies},
+            {"program:direct_dependencies",
+             &rust_mstch_program::rust_direct_dependencies},
             {"program:types", &rust_mstch_program::rust_types},
-            {"program:structsOrEnums?",
-             &rust_mstch_program::rust_structs_or_enums},
+            {"program:clients", &rust_mstch_program::rust_clients},
             {"program:nonexhaustiveStructs?",
              &rust_mstch_program::rust_nonexhaustive_structs},
             {"program:serde?", &rust_mstch_program::rust_serde},
+            {"program:valuable?", &rust_mstch_program::rust_valuable},
             {"program:skip_none_serialization?",
              &rust_mstch_program::rust_skip_none_serialization},
-            {"program:server?", &rust_mstch_program::rust_server},
             {"program:multifile?", &rust_mstch_program::rust_multifile},
             {"program:crate", &rust_mstch_program::rust_crate},
-            {"program:package", &rust_mstch_program::rust_package},
+            {"program:client_package",
+             &rust_mstch_program::rust_client_package},
             {"program:includes", &rust_mstch_program::rust_includes},
-            {"program:anyServiceWithoutParent?",
-             &rust_mstch_program::rust_any_service_without_parent},
-            {"program:nonstandardTypes?",
-             &rust_mstch_program::rust_has_nonstandard_types},
+            {"program:label", &rust_mstch_program::rust_label},
             {"program:nonstandardTypes",
              &rust_mstch_program::rust_nonstandard_types},
+            {"program:nonstandardFields",
+             &rust_mstch_program::rust_nonstandard_fields},
             {"program:docs?", &rust_mstch_program::rust_has_docs},
             {"program:docs", &rust_mstch_program::rust_docs},
-            {"program:lib_include_srcs",
-             &rust_mstch_program::rust_lib_include_srcs},
             {"program:types_include_srcs",
              &rust_mstch_program::rust_types_include_srcs},
+            {"program:clients_include_srcs",
+             &rust_mstch_program::rust_clients_include_srcs},
+            {"program:services_include_srcs",
+             &rust_mstch_program::rust_services_include_srcs},
+            {"program:include_docs", &rust_mstch_program::rust_include_docs},
             {"program:has_default_tests?",
              &rust_mstch_program::rust_has_default_tests},
             {"program:structs_for_default_test",
@@ -517,38 +697,58 @@ class rust_mstch_program : public mstch_program {
             {"program:rust_gen_native_metadata?",
              &rust_mstch_program::rust_gen_native_metadata},
         });
-    register_has_option("program:default_enum_zero?", "default_enum_zero");
     register_has_option(
         "program:deprecated_optional_with_default_is_some?",
         "deprecated_optional_with_default_is_some");
+    register_has_option(
+        "program:deprecated_default_enum_min_i32?",
+        "deprecated_default_enum_min_i32");
   }
-  mstch::node rust_has_types() {
-    return !program_->structs_and_unions().empty() ||
-        !program_->enums().empty() || !program_->typedefs().empty() ||
-        !program_->xceptions().empty();
+
+  mstch::node rust_has_direct_dependencies() {
+    return !options_.crate_index.direct_dependencies().empty();
+  }
+
+  mstch::node rust_direct_dependencies() {
+    mstch::array direct_dependencies;
+    for (auto crate : options_.crate_index.direct_dependencies()) {
+      mstch::map dependency;
+      dependency["dependency:name"] =
+          mangle_crate_name(crate->dependency_path[0]);
+      dependency["dependency:name_unmangled"] = crate->dependency_path[0];
+      dependency["dependency:label"] = crate->label;
+      direct_dependencies.push_back(std::move(dependency));
+    }
+    return direct_dependencies;
   }
 
   mstch::node rust_types() {
     auto types = "::" + options_.types_crate;
     if (options_.multifile_mode) {
-      types += "::" + mangle(program_->name());
+      types += "::" + multifile_module_name(program_);
     }
     return types;
   }
 
-  mstch::node rust_structs_or_enums() {
-    return !program_->structs_and_unions().empty() ||
-        !program_->enums().empty() || !program_->xceptions().empty();
+  mstch::node rust_clients() {
+    auto clients = "::" + options_.clients_crate;
+    if (options_.multifile_mode) {
+      clients += "::" + multifile_module_name(program_);
+    }
+    return clients;
   }
+
   mstch::node rust_nonexhaustive_structs() {
     for (t_structured* strct : program_->structs_and_unions()) {
       // The is_union is because `union` are also in this collection.
-      if (!strct->is_union() && !strct->has_annotation("rust.exhaustive")) {
+      if (!strct->is_union() && !strct->has_annotation("rust.exhaustive") &&
+          !strct->find_structured_annotation_or_null(kRustExhaustiveUri)) {
         return true;
       }
     }
-    for (t_exception* strct : program_->xceptions()) {
-      if (!strct->has_annotation("rust.exhaustive")) {
+    for (t_exception* strct : program_->exceptions()) {
+      if (!strct->has_annotation("rust.exhaustive") &&
+          !strct->find_structured_annotation_or_null(kRustExhaustiveUri)) {
         return true;
       }
     }
@@ -558,15 +758,17 @@ class rust_mstch_program : public mstch_program {
   mstch::node rust_skip_none_serialization() {
     return options_.skip_none_serialization;
   }
-  mstch::node rust_server() { return !options_.noserver; }
+  mstch::node rust_valuable() { return options_.valuable; }
   mstch::node rust_multifile() { return options_.multifile_mode; }
   mstch::node rust_crate() {
     if (options_.multifile_mode) {
-      return "crate::" + mangle(program_->name());
+      return "crate::" + multifile_module_name(program_);
     }
     return std::string("crate");
   }
-  mstch::node rust_package() { return get_import_name(program_, options_); }
+  mstch::node rust_client_package() {
+    return get_client_import_name(program_, options_);
+  }
   mstch::node rust_includes() {
     mstch::array includes;
     for (auto* program : program_->get_includes_for_codegen()) {
@@ -575,13 +777,23 @@ class rust_mstch_program : public mstch_program {
     }
     return includes;
   }
-  mstch::node rust_any_service_without_parent() {
-    for (const t_service* service : program_->services()) {
-      if (service->get_extends() == nullptr) {
-        return true;
-      }
+  mstch::node rust_label() {
+    if (program_ == options_.current_program) {
+      return options_.label;
+    }
+    auto crate = options_.crate_index.find(program_);
+    if (crate) {
+      return crate->label;
     }
     return false;
+  }
+  template <typename F>
+  void foreach_field(F&& f) const {
+    for (const t_structured* strct : program_->structs_and_unions()) {
+      for (const auto& field : strct->fields()) {
+        f(&field);
+      }
+    }
   }
   template <typename F>
   void foreach_type(F&& f) const {
@@ -602,61 +814,26 @@ class rust_mstch_program : public mstch_program {
       f(typedf);
     }
   }
-  mstch::node rust_has_nonstandard_types() {
-    bool has_nonstandard_types = false;
-    foreach_type([&](const t_type* type) {
-      if (has_nonstandard_type_annotation(type)) {
-        has_nonstandard_types = true;
-      }
-    });
-    return has_nonstandard_types;
-  }
   mstch::node rust_nonstandard_types() {
-    // Sort/deduplicate by value of `rust.type` annotation.
-    struct rust_type_less {
-      bool operator()(const t_type* lhs, const t_type* rhs) const {
-        auto& lhs_annotation = lhs->get_annotation("rust.type");
-        auto& rhs_annotation = rhs->get_annotation("rust.type");
-        if (lhs_annotation != rhs_annotation) {
-          return lhs_annotation < rhs_annotation;
-        }
-
-        std::function<std::string(const t_type*)> get_resolved_name =
-            [&](const t_type* t) {
-              t = t->get_true_type();
-              if (auto c = dynamic_cast<const t_list*>(t)) {
-                return fmt::format(
-                    "list<{}>", get_resolved_name(c->get_elem_type()));
-              }
-              if (auto c = dynamic_cast<const t_set*>(t)) {
-                return fmt::format(
-                    "set<{}>", get_resolved_name(c->get_elem_type()));
-              }
-              if (auto c = dynamic_cast<const t_map*>(t)) {
-                return fmt::format(
-                    "map<{},{}>",
-                    get_resolved_name(c->get_key_type()),
-                    get_resolved_name(c->get_val_type()));
-              }
-              return t->get_full_name();
-            };
-        return get_resolved_name(lhs) < get_resolved_name(rhs);
-      }
-    };
-    std::set<const t_type*, rust_type_less> nonstandard_types;
-    foreach_type([&](const t_type* type) {
-      if (has_nonstandard_type_annotation(type)) {
-        nonstandard_types.insert(type);
-      }
-    });
-    std::vector<const t_type*> elements(
-        nonstandard_types.begin(), nonstandard_types.end());
-    return make_mstch_types(elements);
+    types_set_t types = nonstandard_types();
+    return make_mstch_types(
+        std::vector<const t_type*>(types.begin(), types.end()));
+  }
+  mstch::node rust_nonstandard_fields() {
+    fields_set_t fields = nonstandard_fields();
+    return make_mstch_fields(
+        std::vector<const t_field*>(fields.begin(), fields.end()));
   }
   mstch::node rust_has_docs() { return program_->has_doc(); }
   mstch::node rust_docs() { return quoted_rust_doc(program_); }
-  mstch::node rust_lib_include_srcs() { return options_.lib_include_srcs; }
   mstch::node rust_types_include_srcs() { return options_.types_include_srcs; }
+  mstch::node rust_clients_include_srcs() {
+    return options_.clients_include_srcs;
+  }
+  mstch::node rust_services_include_srcs() {
+    return options_.services_include_srcs;
+  }
+  mstch::node rust_include_docs() { return options_.include_docs; }
   mstch::node rust_has_default_tests() {
     for (const t_structured* strct : program_->structs_and_unions()) {
       for (const t_field& field : strct->fields()) {
@@ -769,6 +946,55 @@ class rust_mstch_program : public mstch_program {
 
  private:
   const rust_codegen_options& options_;
+
+ private:
+  template <class T>
+  struct rust_type_less {
+    bool operator()(const T* lhs, const T* rhs) const {
+      std::string lhs_annotation = get_type_annotation(lhs);
+      std::string rhs_annotation = get_type_annotation(rhs);
+      if (lhs_annotation != rhs_annotation) {
+        return lhs_annotation < rhs_annotation;
+      }
+      return get_resolved_name(lhs) < get_resolved_name(rhs);
+    }
+  };
+  using strings_set_t = std::set<std::string>;
+  using types_set_t = std::set<const t_type*, rust_type_less<t_type>>;
+  using fields_set_t = std::set<const t_field*, rust_type_less<t_field>>;
+
+ private:
+  types_set_t nonstandard_types() {
+    types_set_t types;
+    foreach_type([&](const t_type* type) {
+      if (has_nonstandard_type_annotation(type)) {
+        types.insert(type);
+      }
+    });
+    return types;
+  }
+  // Collect fields with nonstandard types not contained by
+  // `nonstandard_types()` (avoid generating multiple definitions for the same
+  // type).
+  fields_set_t nonstandard_fields() {
+    fields_set_t fields;
+    strings_set_t names;
+    types_set_t types = nonstandard_types();
+    std::transform(
+        types.begin(),
+        types.end(),
+        std::inserter(names, names.end()),
+        [](const t_type* t) { return get_resolved_name(t); });
+    foreach_field([&](const t_field* field) {
+      if (has_nonstandard_type_annotation(field)) {
+        if (names.find(get_resolved_name(&field->type().deref())) ==
+            names.end()) {
+          fields.insert(field);
+        }
+      }
+    });
+    return fields;
+  }
 };
 
 class rust_mstch_service : public mstch_service {
@@ -777,53 +1003,73 @@ class rust_mstch_service : public mstch_service {
       const t_service* service,
       mstch_context& ctx,
       mstch_element_position pos,
-      const rust_codegen_options* options)
-      : mstch_service(service, ctx, pos), options_(*options) {
+      const rust_codegen_options* options,
+      const t_service* containing_service = nullptr)
+      : mstch_service(service, ctx, pos, containing_service),
+        options_(*options) {
     for (auto function : service->get_functions()) {
       function_upcamel_names_.insert(camelcase(function->get_name()));
     }
     register_methods(
         this,
-        {{"service:rustFunctions", &rust_mstch_service::rust_functions},
+        {{"service:rust_name", &rust_mstch_service::rust_name},
+         {"service:rustFunctions", &rust_mstch_service::rust_functions},
          {"service:rust_exceptions", &rust_mstch_service::rust_all_exceptions},
-         {"service:package", &rust_mstch_service::rust_package},
+         {"service:client_package", &rust_mstch_service::rust_client_package},
+         {"service:server_package", &rust_mstch_service::rust_server_package},
+         {"service:mock_package", &rust_mstch_service::rust_mock_package},
+         {"service:mock_crate", &rust_mstch_service::rust_mock_crate},
          {"service:snake", &rust_mstch_service::rust_snake},
          {"service:requestContext?", &rust_mstch_service::rust_request_context},
-         {"service:extendedServices",
-          &rust_mstch_service::rust_extended_services},
+         {"service:extendedClients",
+          &rust_mstch_service::rust_extended_clients},
          {"service:docs?", &rust_mstch_service::rust_has_doc},
          {"service:docs", &rust_mstch_service::rust_doc},
-         {"service:parent_service_name",
-          &rust_mstch_service::parent_service_name},
-         {"service:enable_anyhow_to_application_exn",
-          &rust_mstch_service::rust_anyhow_to_application_exn}});
+         {"service:program_name", &rust_mstch_service::program_name}});
   }
+  mstch::node rust_name() { return named_rust_name(service_); }
   mstch::node rust_functions();
-  mstch::node rust_package() {
-    return get_import_name(service_->program(), options_);
+  mstch::node rust_client_package() {
+    return get_client_import_name(service_->program(), options_);
+  }
+  mstch::node rust_server_package() {
+    return get_server_import_name(service_->program(), options_);
+  }
+  mstch::node rust_mock_package() {
+    return get_mock_import_name(service_->program(), options_);
+  }
+  mstch::node rust_mock_crate() {
+    return get_mock_crate(service_->program(), options_);
   }
   mstch::node rust_snake() {
-    return service_->get_annotation(
-        "rust.mod", mangle_type(snakecase(service_->get_name())));
+    if (service_->has_annotation("rust.mod")) {
+      return service_->get_annotation("rust.mod");
+    } else if (
+        const t_const* annot_mod =
+            service_->find_structured_annotation_or_null(kRustModUri)) {
+      return get_annotation_property_string(annot_mod, "name");
+    } else if (
+        const t_const* annot_name =
+            service_->find_structured_annotation_or_null(kRustNameUri)) {
+      return snakecase(get_annotation_property_string(annot_name, "name"));
+    } else if (service_->has_annotation("rust.name")) {
+      return snakecase(service_->get_annotation("rust.name"));
+    } else {
+      return mangle_type(snakecase(service_->get_name()));
+    }
   }
   mstch::node rust_request_context() {
-    return service_->has_annotation("rust.request_context");
+    return service_->has_annotation("rust.request_context") ||
+        service_->find_structured_annotation_or_null(kRustRequestContextUri);
   }
-  mstch::node rust_extended_services() {
+  mstch::node rust_extended_clients() {
     mstch::array extended_services;
     const t_service* service = service_;
-    std::string type_prefix = get_import_name(service_->program(), options_);
     std::string as_ref_impl = "&self.parent";
-    while (true) {
-      const t_service* parent_service = service->get_extends();
-      if (parent_service == nullptr) {
-        break;
-      }
-      if (parent_service->program() != service->program()) {
-        type_prefix += "::dependencies::" + parent_service->program()->name();
-      }
+    while (const t_service* parent_service = service->get_extends()) {
       mstch::map node;
-      node["extendedService:packagePrefix"] = type_prefix;
+      node["extendedService:packagePrefix"] =
+          get_client_import_name(parent_service->program(), options_);
       node["extendedService:asRefImpl"] = as_ref_impl;
       node["extendedService:service"] =
           make_mstch_extended_service_cached(parent_service);
@@ -833,20 +1079,11 @@ class rust_mstch_service : public mstch_service {
     }
     return extended_services;
   }
-  virtual mstch::node parent_service_name() { return service_->get_name(); }
+  mstch::node program_name() { return service_->program()->name(); }
 
   mstch::node rust_all_exceptions();
   mstch::node rust_has_doc() { return service_->has_doc(); }
   mstch::node rust_doc() { return quoted_rust_doc(service_); }
-
-  mstch::node rust_anyhow_to_application_exn() {
-    if (const t_const* annot =
-            find_structured_service_exn_annotation(*service_)) {
-      return get_annotation_property_bool(annot, "anyhow_to_application_exn");
-    }
-
-    return false;
-  }
 
  private:
   std::unordered_multiset<std::string> function_upcamel_names_;
@@ -863,15 +1100,8 @@ class rust_mstch_interaction : public rust_mstch_service {
       mstch_element_position pos,
       const t_service* containing_service,
       const rust_codegen_options* options)
-      : rust_mstch_service(interaction, ctx, pos, options),
-        containing_service_(containing_service) {}
-
-  mstch::node parent_service_name() override {
-    return containing_service_->get_name();
+      : rust_mstch_service(interaction, ctx, pos, options, containing_service) {
   }
-
- private:
-  const t_service* containing_service_ = nullptr;
 };
 
 class rust_mstch_function : public mstch_function {
@@ -900,20 +1130,12 @@ class rust_mstch_function : public mstch_function {
          {"function:docs", &rust_mstch_function::rust_doc},
          {"function:interaction_name",
           &rust_mstch_function::rust_interaction_name},
-         {"function:void_excluding_interaction?",
-          &rust_mstch_function::rust_void_excluding_interaction},
+         {"function:void_or_void_stream?",
+          &rust_mstch_function::rust_void_or_void_stream},
          {"function:enable_anyhow_to_application_exn",
-          &rust_mstch_function::rust_anyhow_to_application_exn},
-         {"function:check_service_for_enable_anyhow_to_application_exn",
-          &rust_mstch_function::
-              rust_check_service_for_anyhow_to_application_exn}});
+          &rust_mstch_function::rust_anyhow_to_application_exn}});
   }
-  mstch::node rust_name() {
-    if (!function_->has_annotation("rust.name")) {
-      return mangle(function_->get_name());
-    }
-    return function_->get_annotation("rust.name");
-  }
+  mstch::node rust_name() { return named_rust_name(function_); }
   mstch::node rust_upcamel() {
     auto upcamel_name = camelcase(function_->get_name());
     if (function_upcamel_names_.count(upcamel_name) > 1) {
@@ -1036,37 +1258,37 @@ class rust_mstch_function : public mstch_function {
     return interaction ? interaction->get_name()
                        : function_->return_type()->get_name();
   }
-  mstch::node rust_void_excluding_interaction() {
-    return function_->return_type()->is_void() && !function_->sink_or_stream();
+  mstch::node rust_void_or_void_stream() {
+    if (function_->sink_or_stream()) {
+      return !function_->has_return_type();
+    } else {
+      return function_->return_type()->is_void();
+    }
   }
   mstch::node rust_anyhow_to_application_exn() {
+    // First look for annotation on the function.
     if (const t_const* annot =
             find_structured_service_exn_annotation(*function_)) {
+      for (const auto& item : annot->value()->get_map()) {
+        if (item.first->get_string() == "anyhow_to_application_exn") {
+          return get_annotation_property_bool(
+              annot, "anyhow_to_application_exn");
+        }
+      }
+    }
+
+    // If not present on function, look at service annotations.
+    if (const t_const* annot =
+            find_structured_service_exn_annotation(*interface_)) {
       return get_annotation_property_bool(annot, "anyhow_to_application_exn");
     }
 
     return false;
   }
-  mstch::node rust_check_service_for_anyhow_to_application_exn() {
-    // Only check for the service annotation if we didn't explicitly define it
-    // on the function.
-    if (const t_const* annot =
-            find_structured_service_exn_annotation(*function_)) {
-      for (const auto& item : annot->value()->get_map()) {
-        if (item.first->get_string() == "anyhow_to_application_exn") {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
 
  private:
   const std::unordered_multiset<std::string>& function_upcamel_names_;
 };
-
-class mstch_rust_value;
 
 class rust_mstch_function_factory {
  public:
@@ -1114,14 +1336,16 @@ class rust_mstch_struct : public mstch_struct {
             {"struct:rust_structured_annotations",
              &rust_mstch_struct::rust_structured_annotations},
             {"struct:generated?", &rust_mstch_struct::rust_generated_struct},
+            {"struct:all_optional?", &rust_mstch_struct::rust_all_optional},
         });
   }
-  mstch::node rust_name() { return struct_rust_name(struct_); }
+  mstch::node rust_name() { return type_rust_name(struct_); }
   mstch::node rust_package() {
-    return get_import_name(struct_->program(), options_);
+    return get_types_import_name(struct_->program(), options_);
   }
   mstch::node rust_is_ord() {
-    if (struct_->has_annotation("rust.ord")) {
+    if (struct_->has_annotation("rust.ord") ||
+        struct_->find_structured_annotation_or_null(kRustOrdUri)) {
       return true;
     }
 
@@ -1135,12 +1359,20 @@ class rust_mstch_struct : public mstch_struct {
           type_has_transitive_adapter(field.get_type(), true)) {
         return false;
       }
+
+      if (field.find_structured_annotation_or_null(kRustTypeUri)) {
+        return false;
+      }
     }
     return true;
   }
-  mstch::node rust_is_copy() { return struct_->has_annotation("rust.copy"); }
+  mstch::node rust_is_copy() {
+    return struct_->has_annotation("rust.copy") ||
+        struct_->find_structured_annotation_or_null(kRustCopyUri);
+  }
   mstch::node rust_is_exhaustive() {
-    return struct_->has_annotation("rust.exhaustive");
+    return struct_->has_annotation("rust.exhaustive") ||
+        struct_->find_structured_annotation_or_null(kRustExhaustiveUri);
   }
   mstch::node rust_fields_by_name() {
     auto fields = struct_->fields().copy();
@@ -1157,7 +1389,8 @@ class rust_mstch_struct : public mstch_struct {
       // originated to support derives applied with `@scope.Transitive`.
       // If the annotation originates from the same module, this will just
       // return `crate::` anyways to be a no-op.
-      std::string package = get_import_name(annotation->program(), options_);
+      std::string package =
+          get_types_import_name(annotation->program(), options_);
 
       std::string ret;
       std::string delimiter = "";
@@ -1188,16 +1421,20 @@ class rust_mstch_struct : public mstch_struct {
     return struct_->get_annotation("rust.derive");
   }
   mstch::node has_exception_message() {
-    return struct_->has_annotation("message");
+    return !!dynamic_cast<const t_exception&>(*struct_).get_message_field();
   }
   mstch::node is_exception_message_optional() {
-    if (!struct_->has_annotation("message")) {
-      return nullptr;
+    if (const auto* message_field =
+            dynamic_cast<const t_exception&>(*struct_).get_message_field()) {
+      return message_field->get_req() == t_field::e_req::optional;
     }
-    return struct_->get_field_by_name(struct_->get_annotation("message"))
-               ->get_req() == t_field::e_req::optional;
+    return {};
   }
-  mstch::node exception_message() { return struct_->get_annotation("message"); }
+  mstch::node exception_message() {
+    const auto* message_field =
+        dynamic_cast<const t_exception&>(*struct_).get_message_field();
+    return message_field ? message_field->name() : "";
+  }
   mstch::node rust_serde() { return rust_serde_enabled(options_, *struct_); }
   mstch::node has_adapter() {
     // Structs cannot have transitive types, so we ignore the transitive type
@@ -1209,6 +1446,14 @@ class rust_mstch_struct : public mstch_struct {
     return structured_annotations_node(*struct_, 1, context_, pos_, options_);
   }
   mstch::node rust_generated_struct() { return (*struct_).generated(); }
+  mstch::node rust_all_optional() {
+    for (const auto& field : struct_->fields()) {
+      if (field.get_req() != t_field::e_req::optional) {
+        return false;
+      }
+    }
+    return true;
+  }
 
  private:
   const rust_codegen_options& options_;
@@ -1228,12 +1473,7 @@ class rust_mstch_enum_value : public mstch_enum_value {
             {"enum_value:docs", &rust_mstch_enum_value::rust_doc},
         });
   }
-  mstch::node rust_name() {
-    if (!enum_value_->has_annotation("rust.name")) {
-      return mangle(enum_value_->get_name());
-    }
-    return enum_value_->get_annotation("rust.name");
-  }
+  mstch::node rust_name() { return named_rust_name(enum_value_); }
   mstch::node rust_has_doc() { return enum_value_->has_doc(); }
   mstch::node rust_doc() { return quoted_rust_doc(enum_value_); }
 };
@@ -1265,7 +1505,8 @@ class rust_mstch_enum : public mstch_enum {
       // originated to support derives applied with `@scope.Transitive`.
       // If the annotation originates from the same module, this will just
       // return `crate::` anyways to be a no-op.
-      std::string package = get_import_name(annotation->program(), options_);
+      std::string package =
+          get_types_import_name(annotation->program(), options_);
 
       std::string ret;
       std::string delimiter = "";
@@ -1291,14 +1532,9 @@ class rust_mstch_enum : public mstch_enum {
     }
     return mstch::node();
   }
-  mstch::node rust_name() {
-    if (!enum_->has_annotation("rust.name")) {
-      return mangle_type(enum_->get_name());
-    }
-    return enum_->get_annotation("rust.name");
-  }
+  mstch::node rust_name() { return type_rust_name(enum_); }
   mstch::node rust_package() {
-    return get_import_name(enum_->program(), options_);
+    return get_types_import_name(enum_->program(), options_);
   }
   mstch::node variants_by_name() {
     std::vector<t_enum_value*> variants = enum_->get_enum_values();
@@ -1337,32 +1573,31 @@ class rust_mstch_type : public mstch_type {
             {"type:rust_name_snake", &rust_mstch_type::rust_name_snake},
             {"type:package", &rust_mstch_type::rust_package},
             {"type:rust", &rust_mstch_type::rust_type},
+            {"type:type_annotation?", &rust_mstch_type::rust_type_annotation},
             {"type:nonstandard?", &rust_mstch_type::rust_nonstandard},
             {"type:has_adapter?", &rust_mstch_type::adapter},
         });
   }
-  mstch::node rust_name() {
-    if (!type_->has_annotation("rust.name")) {
-      return mangle_type(type_->get_name());
-    }
-    return type_->get_annotation("rust.name");
-  }
+  mstch::node rust_name() { return type_rust_name(type_); }
   mstch::node rust_name_snake() {
     return snakecase(mangle_type(type_->get_name()));
   }
   mstch::node rust_package() {
-    return get_import_name(type_->program(), options_);
+    return get_types_import_name(type_->program(), options_);
   }
   mstch::node rust_type() {
-    const std::string& rust_type = type_->get_annotation("rust.type");
+    auto rust_type = get_type_annotation(type_);
     if (!rust_type.empty() && rust_type.find("::") == std::string::npos) {
       return "fbthrift::builtin_types::" + rust_type;
     }
     return rust_type;
   }
+  mstch::node rust_type_annotation() {
+    return has_type_annotation(type_) && !has_newtype_annotation(type_);
+  }
   mstch::node rust_nonstandard() {
     return has_nonstandard_type_annotation(type_) &&
-        !(type_->is_typedef() && type_->has_annotation("rust.newtype"));
+        !has_newtype_annotation(type_);
   }
   mstch::node adapter() {
     return adapter_node(nullptr, type_, false, context_, pos_, options_);
@@ -1374,7 +1609,7 @@ class rust_mstch_type : public mstch_type {
 
 class mstch_rust_value : public mstch_base {
  public:
-  using value_type = t_const_value::t_const_value_type;
+  using value_type = t_const_value::t_const_value_kind;
   mstch_rust_value(
       const t_const_value* const_value,
       const t_type* type,
@@ -1431,9 +1666,7 @@ class mstch_rust_value : public mstch_base {
     return context_.type_factory->make_mstch_object(
         local_type_, context_, pos_);
   }
-  mstch::node is_newtype() {
-    return type_->is_typedef() && type_->has_annotation("rust.newtype");
-  }
+  mstch::node is_newtype() { return has_newtype_annotation(type_); }
   mstch::node inner() {
     auto typedef_type = dynamic_cast<const t_typedef*>(type_);
     if (typedef_type) {
@@ -1445,7 +1678,7 @@ class mstch_rust_value : public mstch_base {
   }
   mstch::node is_bool() { return type_->is_bool(); }
   mstch::node bool_value() {
-    if (const_value_->get_type() == value_type::CV_INTEGER) {
+    if (const_value_->kind() == value_type::CV_INTEGER) {
       return const_value_->get_integer() != 0;
     }
     return const_value_->get_bool();
@@ -1463,7 +1696,7 @@ class mstch_rust_value : public mstch_base {
   mstch::node floating_point_value() {
     auto str = fmt::format(
         "{}",
-        const_value_->get_type() == value_type::CV_INTEGER
+        const_value_->kind() == value_type::CV_INTEGER
             ? const_value_->get_integer()
             : const_value_->get_double());
 
@@ -1481,8 +1714,8 @@ class mstch_rust_value : public mstch_base {
   }
   mstch::node is_list() {
     return type_->is_list() &&
-        (const_value_->get_type() == value_type::CV_LIST ||
-         (const_value_->get_type() == value_type::CV_MAP &&
+        (const_value_->kind() == value_type::CV_LIST ||
+         (const_value_->kind() == value_type::CV_MAP &&
           const_value_->get_map().empty()));
   }
   mstch::node list_elements() {
@@ -1510,26 +1743,26 @@ class mstch_rust_value : public mstch_base {
   }
   mstch::node is_set() {
     return type_->is_set() &&
-        (const_value_->get_type() == value_type::CV_LIST ||
-         (const_value_->get_type() == value_type::CV_MAP &&
+        (const_value_->kind() == value_type::CV_LIST ||
+         (const_value_->kind() == value_type::CV_MAP &&
           const_value_->get_map().empty()));
   }
   mstch::node set_members() { return list_elements(); }
   mstch::node is_map() {
     return type_->is_map() &&
-        (const_value_->get_type() == value_type::CV_MAP ||
-         (const_value_->get_type() == value_type::CV_LIST &&
+        (const_value_->kind() == value_type::CV_MAP ||
+         (const_value_->kind() == value_type::CV_LIST &&
           const_value_->get_list().empty()));
   }
   mstch::node map_entries();
   mstch::node is_struct() {
     return (type_->is_struct() || type_->is_exception()) &&
-        !type_->is_union() && const_value_->get_type() == value_type::CV_MAP;
+        !type_->is_union() && const_value_->kind() == value_type::CV_MAP;
   }
   mstch::node struct_fields();
   mstch::node is_exhaustive();
   mstch::node is_union() {
-    if (!type_->is_union() || const_value_->get_type() != value_type::CV_MAP) {
+    if (!type_->is_union() || const_value_->kind() != value_type::CV_MAP) {
       return false;
     }
     if (const_value_->get_map().empty()) {
@@ -1537,14 +1770,31 @@ class mstch_rust_value : public mstch_base {
       return true;
     }
     return const_value_->get_map().size() == 1 &&
-        const_value_->get_map().at(0).first->get_type() ==
-        value_type::CV_STRING;
+        const_value_->get_map().at(0).first->kind() == value_type::CV_STRING;
   }
   mstch::node union_variant() {
+    auto struct_type = dynamic_cast<const t_struct*>(type_);
+    if (!struct_type) {
+      return mstch::node();
+    }
+
     if (const_value_->get_map().empty()) {
       return mstch::node();
     }
-    return const_value_->get_map().at(0).first->get_string();
+
+    const auto& entry = const_value_->get_map().at(0);
+    const auto& variant = entry.first->get_string();
+
+    for (auto&& field : struct_type->fields()) {
+      if (field.name() == variant) {
+        if (!field.has_annotation("rust.name") &&
+            !field.find_structured_annotation_or_null(kRustNameUri)) {
+          return variant;
+        }
+        return field.get_annotation("rust.name");
+      }
+    }
+    return mstch::node();
   }
   mstch::node union_value() {
     auto struct_type = dynamic_cast<const t_struct*>(type_);
@@ -1552,9 +1802,9 @@ class mstch_rust_value : public mstch_base {
       return mstch::node();
     }
 
-    auto entry = const_value_->get_map().at(0);
-    auto variant = entry.first->get_string();
-    auto content = entry.second;
+    const auto& entry = const_value_->get_map().at(0);
+    const auto& variant = entry.first->get_string();
+    const auto* content = entry.second;
 
     for (auto&& field : struct_type->fields()) {
       if (field.name() == variant) {
@@ -1575,14 +1825,14 @@ class mstch_rust_value : public mstch_base {
     return mstch::node();
   }
   mstch::node is_empty() {
-    auto type = const_value_->get_type();
-    if (type == value_type::CV_LIST) {
+    auto kind = const_value_->kind();
+    if (kind == value_type::CV_LIST) {
       return const_value_->get_list().empty();
     }
-    if (type == value_type::CV_MAP) {
+    if (kind == value_type::CV_MAP) {
       return const_value_->get_map().empty();
     }
-    if (type == value_type::CV_STRING) {
+    if (kind == value_type::CV_STRING) {
       return const_value_->get_string().empty();
     }
     return false;
@@ -1690,13 +1940,8 @@ class mstch_rust_struct_field : public mstch_base {
             {"field:has_adapter?", &mstch_rust_struct_field::has_adapter},
         });
   }
-  mstch::node key() { return std::to_string(field_->get_key()); }
-  mstch::node rust_name() {
-    if (!field_->has_annotation("rust.name")) {
-      return mangle(field_->get_name());
-    }
-    return field_->get_annotation("rust.name");
-  }
+  mstch::node key() { return field_->get_key(); }
+  mstch::node rust_name() { return named_rust_name(field_); }
   mstch::node is_optional() {
     return field_->get_req() == t_field::e_req::optional;
   }
@@ -1756,7 +2001,7 @@ mstch::node mstch_rust_value::map_entries() {
         key_type,
         entry.second,
         value_type,
-        depth_ + 1,
+        depth_ + 3,
         context_,
         pos_,
         options_));
@@ -1773,7 +2018,7 @@ mstch::node mstch_rust_value::struct_fields() {
   std::map<std::string, const t_const_value*> map_entries;
   for (auto entry : const_value_->get_map()) {
     auto key = entry.first;
-    if (key->get_type() == value_type::CV_STRING) {
+    if (key->kind() == value_type::CV_STRING) {
       map_entries[key->get_string()] = entry.second;
     }
   }
@@ -1789,7 +2034,9 @@ mstch::node mstch_rust_value::struct_fields() {
 
 mstch::node mstch_rust_value::is_exhaustive() {
   auto struct_type = dynamic_cast<const t_struct*>(type_);
-  return struct_type && struct_type->has_annotation("rust.exhaustive");
+  return struct_type &&
+      (struct_type->has_annotation("rust.exhaustive") ||
+       struct_type->find_structured_annotation_or_null(kRustExhaustiveUri));
 }
 
 class rust_mstch_const : public mstch_const {
@@ -1807,15 +2054,11 @@ class rust_mstch_const : public mstch_const {
     register_methods(
         this,
         {
-            {"constant:package", &rust_mstch_const::rust_package},
             {"constant:lazy?", &rust_mstch_const::rust_lazy},
             {"constant:rust", &rust_mstch_const::rust_typed_value},
             {"constant:docs?", &rust_mstch_const::rust_has_docs},
             {"constant:docs", &rust_mstch_const::rust_docs},
         });
-  }
-  mstch::node rust_package() {
-    return get_import_name(const_->program(), options_);
   }
   mstch::node rust_lazy() {
     if (type_has_transitive_adapter(const_->type(), true)) {
@@ -1860,17 +2103,27 @@ class rust_mstch_field : public mstch_field {
             {"field:arc?", &rust_mstch_field::rust_is_arc},
             {"field:docs?", &rust_mstch_field::rust_has_docs},
             {"field:docs", &rust_mstch_field::rust_docs},
+            {"field:type_annotation?", &rust_mstch_field::rust_type_annotation},
+            {"field:type_nonstandard?",
+             &rust_mstch_field::rust_type_nonstandard},
+            {"field:type_rust", &rust_mstch_field::rust_type},
             {"field:has_adapter?", &rust_mstch_field::has_adapter},
             {"field:rust_structured_annotations",
              &rust_mstch_field::rust_structured_annotations},
         });
   }
-  mstch::node rust_name() {
-    if (!field_->has_annotation("rust.name")) {
-      return mangle(field_->get_name());
-    }
-    return field_->get_annotation("rust.name");
+  mstch::node rust_type_annotation() { return has_type_annotation(field_); }
+  mstch::node rust_type_nonstandard() {
+    return has_nonstandard_type_annotation(field_);
   }
+  mstch::node rust_type() {
+    auto rust_type = get_type_annotation(field_);
+    if (!rust_type.empty() && rust_type.find("::") == std::string::npos) {
+      return "fbthrift::builtin_types::" + rust_type;
+    }
+    return rust_type;
+  }
+  mstch::node rust_name() { return named_rust_name(field_); }
   mstch::node rust_primitive() {
     auto type = field_->get_type();
     return type->is_bool() || type->is_any_int() || type->is_floating_point();
@@ -1935,12 +2188,19 @@ class rust_mstch_typedef : public mstch_typedef {
             {"typedef:has_adapter?", &rust_mstch_typedef::has_adapter},
         });
   }
-  mstch::node rust_name() { return typedef_rust_name(typedef_); }
-  mstch::node rust_newtype() {
-    return typedef_->has_annotation("rust.newtype");
-  }
+  mstch::node rust_name() { return type_rust_name(typedef_); }
+  mstch::node rust_newtype() { return has_newtype_annotation(typedef_); }
   mstch::node rust_type() {
-    const std::string& rust_type = typedef_->get_annotation("rust.type");
+    // See 'typedef.mustache'. The context is writing a newtype: e.g. `pub
+    // struct T(pub X)`. If `X` has a `rust.Type` annotation `A` we should write
+    // `struct T(pub A)` If it does not, we should write `pub struct T (pub X)`.
+    std::string rust_type;
+    if (const t_const* annot =
+            typedef_->find_structured_annotation_or_null(kRustTypeUri)) {
+      rust_type = get_annotation_property_string(annot, "name");
+    } else {
+      rust_type = typedef_->get_annotation("rust.type");
+    }
     if (!rust_type.empty() && rust_type.find("::") == std::string::npos) {
       return "fbthrift::builtin_types::" + rust_type;
     }
@@ -1948,7 +2208,8 @@ class rust_mstch_typedef : public mstch_typedef {
   }
   mstch::node rust_ord() {
     return typedef_->has_annotation("rust.ord") ||
-        (can_derive_ord(typedef_->get_type()) &&
+        typedef_->find_structured_annotation_or_null(kRustOrdUri) ||
+        (can_derive_ord(typedef_) &&
          !type_has_transitive_adapter(typedef_->get_type(), true));
   }
   mstch::node rust_copy() {
@@ -1966,7 +2227,20 @@ class rust_mstch_typedef : public mstch_typedef {
     return false;
   }
   mstch::node rust_nonstandard() {
-    return typedef_->get_annotation("rust.type").find("::") != string::npos;
+    // See 'typedef.mustache'. The context is writing serialization functions
+    // for a newtype `pub struct T(pub X)`.
+    // If `X` has a type annotation `A` that is non-standard we should emit the
+    // phrase `crate::r#impl::write(&self.0, p)`. If `X` does not have an
+    // annotation or does but it is not non-standard we should write
+    // `self.0.write(p)`.
+    std::string rust_type;
+    if (const t_const* annot =
+            typedef_->find_structured_annotation_or_null(kRustTypeUri)) {
+      rust_type = get_annotation_property_string(annot, "name");
+    } else {
+      rust_type = typedef_->get_annotation("rust.type");
+    }
+    return rust_type.find("::") != std::string::npos;
   }
   mstch::node rust_has_docs() { return typedef_->has_doc(); }
   mstch::node rust_docs() { return quoted_rust_doc(typedef_); }
@@ -2017,20 +2291,25 @@ mstch::node rust_mstch_service::rust_functions() {
       function_upcamel_names_);
 }
 
-struct name_less {
-  bool operator()(const t_type* lhs, const t_type* rhs) const {
-    return lhs->get_scoped_name() < rhs->get_scoped_name();
-  }
-};
-
 mstch::node rust_mstch_service::rust_all_exceptions() {
-  std::map<const t_type*, std::vector<const t_function*>, name_less>
-      function_map;
-  std::map<const t_type*, std::vector<const t_field*>> field_map;
+  struct name_less {
+    bool operator()(const t_type* lhs, const t_type* rhs) const {
+      return lhs->get_scoped_name() < rhs->get_scoped_name();
+    }
+  };
+  typedef std::vector<const t_field*> fields_t;
+  typedef std::vector<const t_function*> functions_t;
+  typedef std::map<const t_type*, fields_t> field_map_t;
+  typedef std::map<const t_type*, functions_t, name_less> function_map_t;
+
+  field_map_t field_map;
+  function_map_t function_map;
   for (const auto& fun : service_->functions()) {
-    for (const t_field& fld : get_elems(fun.exceptions())) {
-      function_map[&fld.type().deref()].push_back(&fun);
-      field_map[&fld.type().deref()].push_back(&fld);
+    if (!fun.sink()) {
+      for (const t_field& fld : get_elems(fun.exceptions())) {
+        function_map[&fld.type().deref()].push_back(&fun);
+        field_map[&fld.type().deref()].push_back(&fld);
+      }
     }
   }
 
@@ -2068,29 +2347,42 @@ void t_mstch_rust_generator::generate_program() {
         boost::algorithm::replace_all_copy(*types_crate_flag, "-", "_");
   }
 
+  if (auto clients_crate_flag = get_option("clients_crate")) {
+    options_.clients_crate =
+        boost::algorithm::replace_all_copy(*clients_crate_flag, "-", "_");
+  }
+
   if (auto cratemap_flag = get_option("cratemap")) {
     auto cratemap = load_crate_map(*cratemap_flag);
     options_.multifile_mode = cratemap.multifile_mode;
-    options_.cratemap = std::move(cratemap.cratemap);
+    options_.label = std::move(cratemap.label);
+    options_.crate_index =
+        rust_crate_index{program_, std::move(cratemap.cratemap)};
   }
 
   options_.serde = has_option("serde");
-  options_.noserver = has_option("noserver");
   options_.skip_none_serialization = has_option("skip_none_serialization");
   if (options_.skip_none_serialization) {
     assert(options_.serde);
   }
 
-  if (auto include_prefix_flag = get_option("include_prefix")) {
-    program_->set_include_prefix(*include_prefix_flag);
-  }
+  options_.valuable = has_option("valuable");
 
-  parse_include_srcs(options_.lib_include_srcs, get_option("lib_include_srcs"));
+  options_.any_registry_initialization_enabled = has_option("any");
+
   parse_include_srcs(
       options_.types_include_srcs, get_option("types_include_srcs"));
+  parse_include_srcs(
+      options_.clients_include_srcs, get_option("clients_include_srcs"));
+  parse_include_srcs(
+      options_.services_include_srcs, get_option("services_include_srcs"));
+
+  if (auto include_docs = get_option("include_docs")) {
+    options_.include_docs = include_docs.value();
+  }
 
   if (options_.multifile_mode) {
-    options_.current_crate = "crate::" + mangle(program_->name());
+    options_.current_crate = "crate::" + multifile_module_name(program_);
   } else {
     options_.current_crate = "crate";
   }
@@ -2102,15 +2394,15 @@ void t_mstch_rust_generator::generate_program() {
     options_.gen_metadata = gen_metadata.value() == "true";
   }
 
-  boost::optional<std::string> crate_name_option = get_option("crate_name");
+  std::optional<std::string> crate_name_option = get_option("crate_name");
   std::string namespace_rust = program_->get_namespace("rust");
   if (!namespace_rust.empty()) {
     std::vector<std::string> pieces;
     boost::split(pieces, namespace_rust, boost::is_any_of("."));
     if (options_.multifile_mode) {
-      if (pieces.size() != 2) {
+      if (pieces.size() > 2) {
         throw std::runtime_error(fmt::format(
-            "`namespace rust {}`: namespace for multi-file Thrift library must have 2 pieces separated by '.'",
+            "`namespace rust {}`: namespace for multi-file Thrift library must have 1 piece, or 2 pieces separated by '.'",
             namespace_rust));
       }
     } else {
@@ -2122,29 +2414,41 @@ void t_mstch_rust_generator::generate_program() {
     }
     if (crate_name_option && pieces[0] != *crate_name_option) {
       throw std::runtime_error(fmt::format(
-          "`namespace rust` disagrees with rust_crate_name option: \"{}\" vs \"{}\"",
+          R"(`namespace rust` disagrees with rust_crate_name option: "{}" vs "{}")",
           pieces[0],
           *crate_name_option));
     }
   } else if (crate_name_option) {
     namespace_rust = *crate_name_option;
+  } else if (
+      std::optional<std::string> default_crate_name_option =
+          get_option("default_crate_name")) {
+    namespace_rust = *default_crate_name_option;
   } else {
     namespace_rust = program_->name();
+  }
+
+  std::string namespace_cpp2 = cpp_name_resolver::gen_namespace(*program_);
+
+  std::string service_names;
+  for (const t_service* service : program_->services()) {
+    service_names += named_rust_name(service);
+    service_names += '\n';
   }
 
   set_mstch_factories();
 
   const auto& prog = cached_program(program_);
-  render_to_file(prog, "lib.rs", "lib.rs");
   render_to_file(prog, "types.rs", "types.rs");
   render_to_file(prog, "services.rs", "services.rs");
   render_to_file(prog, "errors.rs", "errors.rs");
   render_to_file(prog, "consts.rs", "consts.rs");
-  render_to_file(prog, "dependencies.rs", "dependencies.rs");
   render_to_file(prog, "client.rs", "client.rs");
   render_to_file(prog, "server.rs", "server.rs");
   render_to_file(prog, "mock.rs", "mock.rs");
-  write_output("namespace", namespace_rust);
+  write_output("namespace-rust", namespace_rust + '\n');
+  write_output("namespace-cpp2", namespace_cpp2 + '\n');
+  write_output("service-names", service_names);
 }
 
 void t_mstch_rust_generator::set_mstch_factories() {
@@ -2162,60 +2466,66 @@ void t_mstch_rust_generator::set_mstch_factories() {
 }
 
 namespace {
-class annotation_validator : public validator {
- public:
-  explicit annotation_validator(const rust_codegen_options& options)
-      : options_(options) {}
-  using validator::visit;
-  bool visit(t_structured*) override;
-  bool visit(t_enum*) override;
-  bool visit(t_program*) override;
 
- private:
-  const rust_codegen_options& options_;
-};
-
-bool annotation_validator::visit(t_structured* s) {
-  if (!validate_rust_serde(*s)) {
-    report_error(*s, "`rust.serde` must be `true` or `false`");
+void validate_struct_annotations(
+    sema_context& ctx,
+    const t_structured& s,
+    const rust_codegen_options& options) {
+  if (!validate_rust_serde(s)) {
+    ctx.report(
+        s,
+        "rust-serde-true-false-rule",
+        diagnostic_level::error,
+        "`rust.serde` must be `true` or `false`");
   }
 
-  for (auto& field : s->fields()) {
+  for (auto& field : s.fields()) {
     FieldKind kind = field_kind(field);
     bool box = node_is_boxed(field) || kind == FieldKind::Box;
     bool arc = node_is_arced(field) || kind == FieldKind::Arc;
     if (box && arc) {
-      report_error(
-          field, "Field `{}` cannot be both Box'ed and Arc'ed", field.name());
+      ctx.report(
+          field,
+          "rust-field-box-arc-rule",
+          diagnostic_level::error,
+          "Field `{}` cannot be both Box'ed and Arc'ed",
+          field.name());
     }
 
     if (node_has_adapter(field) &&
         (node_has_custom_rust_type(field) ||
-         rust_serde_enabled(options_, field))) {
-      report_error(
+         rust_serde_enabled(options, field))) {
+      ctx.report(
           field,
+          "rust-field-adapter-rule",
+          diagnostic_level::error,
           "Field `{}` cannot have both an adapter and `rust.type` or `rust.newtype` or `rust.serde = true`",
           field.name());
     }
   }
-  return true;
 }
 
-bool annotation_validator::visit(t_enum* e) {
-  if (!validate_rust_serde(*e)) {
-    report_error(*e, "`rust.serde` must be `true` or `false`");
+bool validate_enum_annotations(sema_context& ctx, const t_enum& e) {
+  if (!validate_rust_serde(e)) {
+    ctx.report(
+        e,
+        "rust-serde-true-false-rule",
+        diagnostic_level::error,
+        "`rust.serde` must be `true` or `false`");
   }
   return true;
 }
 
-bool annotation_validator::visit(t_program* p) {
-  for (auto t : p->typedefs()) {
+bool validate_program_annotations(sema_context& ctx, const t_program& program) {
+  for (auto t : program.typedefs()) {
     if (node_has_adapter(*t)) {
       if (node_has_custom_rust_type(*t)) {
-        report_error(
+        ctx.report(
             *t,
+            "rust-typedef-adapter-rule",
+            diagnostic_level::error,
             "Typedef `{}` cannot have both an adapter and `rust.type` or `rust.newtype`",
-            (*t).name());
+            t->name());
       }
 
       // To be spec compliant, adapted typedefs can be composed only if they are
@@ -2239,10 +2549,12 @@ bool annotation_validator::visit(t_program* p) {
           step_through_typedefs(t->get_type(), true);
 
       if (node_has_adapter(*typedef_stepped)) {
-        report_error(
+        ctx.report(
             *t,
+            "rust-typedef-transitive-adapter-rule",
+            diagnostic_level::error,
             "Typedef `{}` cannot have a direct transitive adapter",
-            (*t).name());
+            t->name());
       }
     }
   }
@@ -2252,27 +2564,31 @@ bool annotation_validator::visit(t_program* p) {
 
 } // namespace
 
-void t_mstch_rust_generator::fill_validator_list(validator_list& l) const {
-  l.add<annotation_validator>(options_);
+void t_mstch_rust_generator::fill_validator_visitors(
+    ast_validator& validator) const {
+  validator.add_structured_definition_visitor(std::bind(
+      validate_struct_annotations,
+      std::placeholders::_1,
+      std::placeholders::_2,
+      options_));
+  validator.add_enum_visitor(validate_enum_annotations);
+  validator.add_program_visitor(validate_program_annotations);
 }
 
 THRIFT_REGISTER_GENERATOR(
     mstch_rust,
     "Rust",
     "    serde:           Derive serde Serialize/Deserialize traits for types\n"
-    "    noserver:        Don't emit server code\n"
-    "    default_enum_zero:\n"
-    "                     Default enum value is zero, conforming to the thrift spec\n"
+    "    valuable:        Derive valuable Valuable trait for types\n"
+    "    any:             Generate \"any registry\" initialization functions\n"
+    "    deprecated_default_enum_min_i32:\n"
+    "                     Default enum value is i32::MIN. Deprecated, to be removed in future versions\n"
     "    deprecated_optional_with_default_is_some:\n"
     "                     Optionals with defaults initialized to `Some`. Deprecated, to be removed in future versions\n"
     "    include_prefix=: Set program:include_prefix.\n"
-    "    lib_include_srcs=:\n"
-    "                     Additional Rust source files to include in lib crate, `:` separated\n"
-    "    types_include_srcs=:\n"
-    "                     Additional Rust source files to include in types crate, `:` separated\n"
+    "    types_include_srcs=, clients_include_srcs=, services_include_srcs=:\n"
+    "                     Additional Rust source files to include in each crate, `:` separated\n"
+    "    include_docs=:   Markdown to include in front of crate-level documentation.\n"
     "    cratemap=map:    Mapping file from services to crate names\n"
     "    types_crate=:    Name that the main crate uses to refer to its dependency on the types crate\n");
-} // namespace rust
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler::rust

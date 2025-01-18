@@ -32,8 +32,7 @@
 #include <thrift/lib/cpp/transport/THeader.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 struct FirstResponsePayload {
   FirstResponsePayload(
@@ -164,14 +163,13 @@ folly::Try<StreamPayload> encodeMessageVariant(
       [&](UnorderedHeader&& val) {
         StreamPayloadMetadata md;
         md.otherMetadata() = std::move(val.metadata);
-        return folly::Try<StreamPayload>(
-            folly::in_place, nullptr, std::move(md));
+        return folly::Try<StreamPayload>(std::in_place, nullptr, std::move(md));
       },
       [&](OrderedHeader&& val) {
         StreamPayloadMetadata md;
         md.otherMetadata() = std::move(val.metadata);
         return folly::Try<StreamPayload>(
-            folly::in_place,
+            std::in_place,
             nullptr,
             std::move(md),
             /* isOrderedHeader */ true);
@@ -234,6 +232,17 @@ struct FOLLY_EXPORT EncodedStreamError : std::exception {
       if (md.getType() == PayloadMetadata::Type::exceptionMetadata &&
           md.exceptionMetadata_ref()->what_utf8().has_value()) {
         return md.exceptionMetadata_ref()->what_utf8()->c_str();
+      }
+    }
+    return "";
+  }
+
+  const char* getUnderlyingExceptionName() const noexcept {
+    if (encoded.metadata.payloadMetadata().has_value()) {
+      auto& md = *encoded.metadata.payloadMetadata();
+      if (md.getType() == PayloadMetadata::Type::exceptionMetadata &&
+          md.exceptionMetadata_ref()->name_utf8().has_value()) {
+        return md.exceptionMetadata_ref()->name_utf8()->c_str();
       }
     }
     return "";
@@ -385,5 +394,4 @@ struct SinkServerCallbackSendError {
 
 using SinkServerCallbackPtr =
     std::unique_ptr<SinkServerCallback, SinkServerCallbackSendError>;
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

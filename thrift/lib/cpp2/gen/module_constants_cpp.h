@@ -17,6 +17,22 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
+#include <string_view>
 
+#include <folly/CPortability.h>
 #include <folly/Indestructible.h>
+#include <folly/Range.h>
 #include <folly/lang/Exception.h>
+
+FOLLY_GNU_DISABLE_WARNING("-Woverlength-strings")
+FOLLY_GNU_DISABLE_WARNING("-Wtrigraphs")
+
+namespace apache::thrift::detail::mc {
+
+::std::string_view readSchema(::std::string_view (*access)());
+
+::std::string_view readSchemaInclude(
+    ::folly::Range<const ::std::string_view*> (*access)(), ::std::size_t index);
+
+} // namespace apache::thrift::detail::mc

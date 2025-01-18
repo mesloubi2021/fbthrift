@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeSetBegin",
       "argsstring_html": "(protocol::TType, uint32_t size)",
       "name_html": "writeSetBegin",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeSetBegin",
       "param": [
         {
           "type_html": "protocol::TType"
@@ -27,7 +28,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "139",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "139",
         "bodyend": "141"
@@ -52,5 +53,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeSetBegin",
+  "parent_links": [
+    {
+      "text_html": "HashProtocol",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+    }
+  ]
 }

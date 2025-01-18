@@ -17,30 +17,33 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
-
-#include <boost/optional.hpp>
 
 #include <thrift/compiler/ast/t_enum_value.h>
 #include <thrift/compiler/ast/t_exception.h>
 #include <thrift/compiler/ast/t_function.h>
 #include <thrift/compiler/source_location.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class diagnostics_engine;
 class lexer;
 
-class t_base_type;
+class t_primitive_type;
 class t_sink;
 class t_stream;
 class t_throws;
 
-struct identifier {
+struct identifier final {
   std::string_view str;
   source_location loc;
+
+  /**
+   * Returns the source range for this identifier, i.e. that starts at `loc` and
+   * includes `str`.
+   */
+  source_range range() const { return {loc, loc + str.size()}; }
 };
 
 struct comment {
@@ -55,7 +58,7 @@ struct deprecated_annotations {
 
 struct attributes {
   source_location loc;
-  boost::optional<comment> doc;
+  std::optional<comment> doc;
   node_list<t_const> annotations;
   std::unique_ptr<struct deprecated_annotations> deprecated_annotations;
 };
@@ -67,7 +70,7 @@ struct type_throws_spec {
 
 struct return_clause {
   identifier name; // An interaction or type name.
-  const t_type* type;
+  t_type_ref type;
   std::unique_ptr<t_node> sink_or_stream;
 };
 
@@ -93,7 +96,7 @@ class parser_actions {
   virtual void on_namespace(
       const identifier& language, std::string_view ns) = 0;
 
-  virtual boost::optional<comment> on_doctext() = 0;
+  virtual std::optional<comment> on_doctext() = 0;
   virtual void on_program_doctext() = 0;
   virtual comment on_inline_doc(source_range range, std::string_view text) = 0;
 
@@ -181,16 +184,16 @@ class parser_actions {
   virtual std::unique_ptr<t_field> on_field(
       source_range range,
       std::unique_ptr<attributes> attrs,
-      boost::optional<int64_t> id,
+      std::optional<int64_t> id,
       t_field_qualifier qual,
       t_type_ref type,
       const identifier& name,
       std::unique_ptr<t_const_value> value,
-      boost::optional<comment> doc) = 0;
+      std::optional<comment> doc) = 0;
 
   virtual t_type_ref on_type(
       source_range range,
-      const t_base_type& type,
+      const t_primitive_type& type,
       std::unique_ptr<deprecated_annotations> annotations) = 0;
 
   virtual t_type_ref on_type(
@@ -208,8 +211,8 @@ class parser_actions {
       source_range range,
       std::unique_ptr<attributes> attrs,
       const identifier& name,
-      boost::optional<int64_t> value,
-      boost::optional<comment> doc) = 0;
+      std::optional<int64_t> value,
+      std::optional<comment> doc) = 0;
 
   virtual void on_const(
       source_range range,
@@ -221,15 +224,14 @@ class parser_actions {
   virtual std::unique_ptr<t_const_value> on_const_ref(
       const identifier& name) = 0;
 
-  virtual std::unique_ptr<t_const_value> on_integer(
-      source_location loc, int64_t value) = 0;
+  virtual std::unique_ptr<t_const_value> on_integer(int64_t value) = 0;
   virtual std::unique_ptr<t_const_value> on_float(double value) = 0;
   virtual std::unique_ptr<t_const_value> on_string_literal(
       std::string value) = 0;
   virtual std::unique_ptr<t_const_value> on_bool_literal(bool value) = 0;
-  virtual std::unique_ptr<t_const_value> on_list_literal() = 0;
-  virtual std::unique_ptr<t_const_value> on_map_literal() = 0;
-  virtual std::unique_ptr<t_const_value> on_struct_literal(
+  virtual std::unique_ptr<t_const_value> on_list_initializer() = 0;
+  virtual std::unique_ptr<t_const_value> on_map_initializer() = 0;
+  virtual std::unique_ptr<t_const_value> on_struct_initializer(
       source_range range, std::string_view name) = 0;
 
   virtual int64_t on_integer(source_range range, sign s, uint64_t value) = 0;
@@ -241,6 +243,4 @@ class parser_actions {
 // syntactic constructs and reports parse errors if any via diags.
 bool parse(lexer& lex, parser_actions& actions, diagnostics_engine& diags);
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

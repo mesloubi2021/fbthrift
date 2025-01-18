@@ -18,8 +18,7 @@
 
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using apache::thrift::transport::THeader;
 
@@ -99,6 +98,8 @@ void HeaderChannel::preprocessHeader(
       header->setDesiredCompressionConfig(compressionConfig);
     }
   }
+  if (loggingContext_) {
+    header->loggingContext() = *loggingContext_;
+  }
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

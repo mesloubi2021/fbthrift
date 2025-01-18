@@ -16,48 +16,49 @@
 
 package thrift
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
+)
 
 func TestHeaderProtocolHeaders(t *testing.T) {
-	tmb := NewMemoryBuffer()
-	proto1 := NewHeaderProtocol(tmb)
-	proto2 := NewHeaderProtocol(tmb)
+	mockSocket := newMockSocket()
+	proto1, err := newHeaderProtocol(mockSocket, types.ProtocolIDCompact, 0, map[string]string{
+		"preferred_cheese": "gouda",
+		IDVersionHeader:    IDVersion,
+		IdentityHeader:     "batman",
+	})
+	if err != nil {
+		t.Fatalf("failed to create header protocol: %s", err)
+	}
+	proto2, err := NewHeaderProtocol(mockSocket)
+	if err != nil {
+		t.Fatalf("failed to create header protocol: %s", err)
+	}
 
-	proto1.SetHeader("preferred_cheese", "cheddar")
-	if v, _ := proto1.Header("preferred_cheese"); v != "cheddar" {
+	proto1.SetRequestHeader("preferred_cheese", "cheddar")
+	if v, _ := proto1.(*headerProtocol).trans.writeInfoHeaders["preferred_cheese"]; v != "cheddar" {
 		t.Fatalf("failed to set header")
 	}
-	if len(proto1.Headers()) != 1 {
+	if len(proto1.(*headerProtocol).trans.writeInfoHeaders) != 1 {
 		t.Fatalf("wrong number of headers")
 	}
 
-	proto1.SetPersistentHeader("preferred_cheese", "gouda")
-	if v, _ := proto1.PersistentHeader("preferred_cheese"); v != "gouda" {
-		t.Fatalf("failed to set persistent header")
-	}
-	if len(proto1.PersistentHeaders()) != 1 {
-		t.Fatalf("wrong number of headers")
-	}
-
-	proto1.SetIdentity("batman")
-	if proto1.Identity() != "batman" {
-		t.Fatalf("failed to set identity")
-	}
-
-	proto1.WriteMessageBegin("", CALL, 1)
+	proto1.WriteMessageBegin("", types.CALL, 1)
 	proto1.WriteMessageEnd()
 	proto1.Flush()
 
-	_, _, _, err := proto2.ReadMessageBegin()
+	_, _, _, err = proto2.ReadMessageBegin()
 	if err != nil {
 		t.Fatalf("failed to read message from proto1 in proto2")
 	}
 
-	if v, _ := proto2.ReadHeader("preferred_cheese"); v != "gouda" {
+	if v, _ := proto2.GetResponseHeaders()["preferred_cheese"]; v != "gouda" {
 		t.Fatalf("failed to read header, got: %s", v)
 	}
 
-	if proto2.PeerIdentity() != "batman" {
+	if peerIdentity(proto2.(*headerProtocol).trans) != "batman" {
 		t.Fatalf("failed to peer identity")
 	}
 }

@@ -16,15 +16,16 @@
 
 #include <thrift/lib/cpp2/async/AsyncProcessor.h>
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 #include <folly/io/async/EventBaseAtomicNotificationQueue.h>
 
 #include <thrift/lib/cpp2/async/ReplyInfo.h>
 #include <thrift/lib/cpp2/server/IResourcePoolAcceptor.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
-constexpr std::chrono::seconds ServerInterface::BlockingThreadManager::kTimeout;
 thread_local RequestParams ServerInterface::requestParams_;
 
 EventTask::~EventTask() {
@@ -121,6 +122,17 @@ void AsyncProcessor::executeRequest(
   LOG(FATAL) << "Unimplemented executeRequest called";
 }
 
+void AsyncProcessor::coalesceWithServerScopedLegacyEventHandlers(
+    const apache::thrift::server::ServerConfigs& server) {
+  const auto& serverScopedEventHandlers = server.getLegacyEventHandlers();
+  if (!serverScopedEventHandlers.empty()) {
+    std::shared_lock lock{getRWMutex()};
+    for (const auto& eventHandler : serverScopedEventHandlers) {
+      addEventHandler(eventHandler);
+    }
+  }
+}
+
 void GeneratedAsyncProcessorBase::processInteraction(ServerRequest&& req) {
   if (!setUpRequestProcessing(req)) {
     return;
@@ -163,8 +175,9 @@ void GeneratedAsyncProcessorBase::processInteraction(ServerRequest&& req) {
   apache::thrift::detail::ServerRequestHelper::setInternalPriority(
       request, source);
 
-  apache::thrift::detail::ServerRequestHelper::resourcePool(request)->accept(
-      std::move(request));
+  auto&& resourcePool =
+      apache::thrift::detail::ServerRequestHelper::resourcePool(request);
+  resourcePool->accept(std::move(request));
 }
 
 bool GeneratedAsyncProcessorBase::createInteraction(ServerRequest& req) {
@@ -178,19 +191,21 @@ bool GeneratedAsyncProcessorBase::createInteraction(ServerRequest& req) {
     }
     return tile;
   };
-  auto& conn = *req.requestContext()->getConnectionContext();
+  auto* reqCtx = req.requestContext();
+  auto& conn = *reqCtx->getConnectionContext();
   bool isFactoryFunction = req.methodMetadata()->createsInteraction;
-  auto interactionCreate = req.requestContext()->getInteractionCreate();
+  auto interactionCreate = reqCtx->getInteractionCreate();
   auto isEbMethod =
       req.methodMetadata()->executorType == MethodMetadata::ExecutorType::EVB;
-  auto id = req.requestContext()->getInteractionId();
+  auto id = reqCtx->getInteractionId();
 
   // In the eb model with old-style constructor we create the interaction
   // inline.
   if (isEbMethod && !isFactoryFunction) {
     auto tile = folly::makeTryWith([&] {
       return nullthrows(createInteractionImpl(
-          std::move(*interactionCreate->interactionName_ref()).str()));
+          std::move(*interactionCreate->interactionName_ref()).str(),
+          reqCtx->getHeader()->getProtocolId()));
     });
     if (tile.hasException()) {
       req.request()->sendErrorWrapped(
@@ -200,6 +215,8 @@ bool GeneratedAsyncProcessorBase::createInteraction(ServerRequest& req) {
           kInteractionConstructorErrorErrorCode);
       return true; // Not a duplicate; caller will see missing tile.
     }
+    tile.value()->setOverloadPolicy(
+        InteractionOverloadPolicy::createFromThriftFlag());
     return conn.addTile(id, {tile->release(), &eb});
   }
 
@@ -215,11 +232,20 @@ bool GeneratedAsyncProcessorBase::createInteraction(ServerRequest& req) {
   // Old-style constructor + tm : schedule constructor and return
   if (!isFactoryFunction) {
     apache::thrift::detail::ServerRequestHelper::executor(req)->add(
-        [=, &eb, &conn] {
+        [this,
+         &eb,
+         &conn,
+         nullthrows,
+         interactionCreate,
+         promisePtr,
+         executor,
+         id,
+         reqCtx] {
           std::exception_ptr ex;
           try {
             auto tilePtr = nullthrows(createInteractionImpl(
-                std::move(*interactionCreate->interactionName_ref()).str()));
+                std::move(*interactionCreate->interactionName_ref()).str(),
+                reqCtx->getHeader()->getProtocolId()));
             eb.add([=, &conn, &eb, t = std::move(tilePtr)]() mutable {
               TilePtr tile{t.release(), &eb};
               promisePtr->fulfill(*tile, executor, eb);
@@ -227,7 +253,7 @@ bool GeneratedAsyncProcessorBase::createInteraction(ServerRequest& req) {
             });
             return;
           } catch (...) {
-            ex = std::current_exception();
+            ex = folly::current_exception();
           }
           DCHECK(ex);
           eb.add([promisePtr, ex = std::move(ex)]() {
@@ -270,8 +296,10 @@ bool GeneratedAsyncProcessorBase::createInteraction(
   if (!tm && !isFactoryFunction) {
     si->setEventBase(&eb);
     si->setRequestContext(&ctx);
-    auto tile = folly::makeTryWith(
-        [&] { return nullthrows(createInteractionImpl(name)); });
+    auto tile = folly::makeTryWith([&] {
+      return nullthrows(
+          createInteractionImpl(name, ctx.getHeader()->getProtocolId()));
+    });
     if (tile.hasException()) {
       req->sendErrorWrapped(
           folly::make_exception_wrapper<TApplicationException>(
@@ -280,6 +308,8 @@ bool GeneratedAsyncProcessorBase::createInteraction(
           kInteractionConstructorErrorErrorCode);
       return true; // Not a duplicate; caller will see missing tile.
     }
+    tile.value()->setOverloadPolicy(
+        InteractionOverloadPolicy::createFromThriftFlag());
     return conn.addTile(id, {tile->release(), &eb});
   }
 
@@ -292,14 +322,24 @@ bool GeneratedAsyncProcessorBase::createInteraction(
 
   // Old-style constructor + tm : schedule constructor and return
   if (!isFactoryFunction) {
-    tm->add([=, &eb, &ctx, name = std::move(name), &conn] {
+    tm->add([this,
+             &eb,
+             &ctx,
+             name = std::move(name),
+             &conn,
+             si,
+             tm,
+             nullthrows,
+             promisePtr,
+             id] {
       si->setEventBase(&eb);
       si->setThreadManager(tm);
       si->setRequestContext(&ctx);
 
       std::exception_ptr ex;
       try {
-        auto tilePtr = nullthrows(createInteractionImpl(name));
+        auto tilePtr = nullthrows(
+            createInteractionImpl(name, ctx.getHeader()->getProtocolId()));
         eb.add([=, &conn, &eb, t = std::move(tilePtr)]() mutable {
           TilePtr tile{t.release(), &eb};
           promisePtr->fulfill(*tile, tm, eb);
@@ -307,7 +347,7 @@ bool GeneratedAsyncProcessorBase::createInteraction(
         });
         return;
       } catch (...) {
-        ex = std::current_exception();
+        ex = folly::current_exception();
       }
       DCHECK(ex);
       eb.add([promisePtr, ex = std::move(ex)]() {
@@ -327,8 +367,149 @@ bool GeneratedAsyncProcessorBase::createInteraction(
 }
 
 std::unique_ptr<Tile> GeneratedAsyncProcessorBase::createInteractionImpl(
-    const std::string&) {
+    const std::string&, int16_t) {
   return nullptr;
+}
+
+namespace {
+const std::string kNONE = "NONE";
+/**
+ * Call this version to only invoke handlers that explicitly okays
+ * callbacks from non-per-request contexts.
+ * @see TProcessorEventHandler::wantNonPerRequestCallbacks
+ */
+ContextStack::UniquePtr getContextStackForNonPerRequestCallbacks(
+    const std::shared_ptr<std::vector<std::shared_ptr<TProcessorEventHandler>>>&
+        allHandlers,
+    const char* serviceName,
+    const char* method,
+    TConnectionContext* connectionContext) {
+  if (!allHandlers || allHandlers->empty()) {
+    return nullptr;
+  }
+  auto handlersForNonPerRequestCallbacks =
+      std::make_shared<std::vector<std::shared_ptr<TProcessorEventHandler>>>();
+  std::copy_if(
+      allHandlers->begin(),
+      allHandlers->end(),
+      std::back_inserter(*handlersForNonPerRequestCallbacks),
+      [](const auto& handler) {
+        return handler->wantNonPerRequestCallbacks();
+      });
+  return ContextStack::create(
+      handlersForNonPerRequestCallbacks,
+      serviceName,
+      method,
+      connectionContext);
+}
+
+std::string priorityToString(concurrency::PRIORITY priority) {
+  switch (priority) {
+    case concurrency::PRIORITY::HIGH_IMPORTANT:
+      return "HIGH_IMPORTANT";
+    case concurrency::PRIORITY::HIGH:
+      return "HIGH";
+    case concurrency::PRIORITY::IMPORTANT:
+      return "IMPORTANT";
+    case concurrency::PRIORITY::NORMAL:
+      return "NORMAL";
+    case concurrency::PRIORITY::BEST_EFFORT:
+      return "BEST_EFFORT";
+    case concurrency::PRIORITY::N_PRIORITIES:
+      return "N_PRIORITIES";
+    default:
+      folly::assume_unreachable();
+  }
+}
+
+std::string executorTypeToString(
+    AsyncProcessorFactory::MethodMetadata::ExecutorType executorType) {
+  switch (executorType) {
+    case AsyncProcessorFactory::MethodMetadata::ExecutorType::UNKNOWN:
+      return "UNKNOWN";
+    case AsyncProcessorFactory::MethodMetadata::ExecutorType::EVB:
+      return "EVB";
+    case AsyncProcessorFactory::MethodMetadata::ExecutorType::ANY:
+      return "ANY";
+    default:
+      folly::assume_unreachable();
+  }
+}
+
+std::string interactionTypeToString(
+    AsyncProcessorFactory::MethodMetadata::InteractionType interactionType) {
+  switch (interactionType) {
+    case AsyncProcessorFactory::MethodMetadata::InteractionType::UNKNOWN:
+      return "UNKNOWN";
+    case AsyncProcessorFactory::MethodMetadata::InteractionType::NONE:
+      return "NONE";
+    case AsyncProcessorFactory::MethodMetadata::InteractionType::INTERACTION_V1:
+      return "INTERACTION_V1";
+    default:
+      folly::assume_unreachable();
+  }
+}
+} // namespace
+
+std::string AsyncProcessorFactory::MethodMetadata::describeFields() const {
+  return fmt::format(
+      "executorType={} interactionType={} rpcKind={} priority={} "
+      "interactionName={} createsInteraction={} isWildcard={}",
+      executorTypeToString(executorType),
+      interactionTypeToString(interactionType),
+      rpcKind ? util::enumNameSafe(*rpcKind) : kNONE,
+      priority ? priorityToString(*priority) : kNONE,
+      interactionName.value_or(kNONE),
+      createsInteraction,
+      isWildcard());
+}
+
+std::string AsyncProcessorFactory::WildcardMethodMetadata::describe() const {
+  return fmt::format("WildcardMethodMetadata({})", describeFields());
+}
+
+std::string AsyncProcessorFactory::MethodMetadata::describe() const {
+  return fmt::format("MethodMetadata({})", describeFields());
+}
+
+std::string AsyncProcessorFactory::describe(
+    const MethodMetadataMap& metadataMap) {
+  auto buf = fmt::memory_buffer();
+  auto inserter = std::back_inserter(buf);
+  fmt::format_to(inserter, "MethodMetadataMap(");
+
+  for (auto entry = cbegin(metadataMap); entry != cend(metadataMap); ++entry) {
+    if (entry != cbegin(metadataMap)) {
+      fmt::format_to(inserter, " ");
+    }
+    fmt::format_to(inserter, "{}={}", entry->first, entry->second->describe());
+  }
+
+  fmt::format_to(inserter, ")");
+  return fmt::to_string(buf);
+}
+
+std::string AsyncProcessorFactory::describe(
+    const WildcardMethodMetadataMap& metadataMap) {
+  return fmt::format(
+      "WildcardMethodMetadataMap(wildcardMetadata={} knownMethods={})",
+      metadataMap.wildcardMetadata ? metadataMap.wildcardMetadata->describe()
+                                   : kNONE,
+      describe(metadataMap.knownMethods));
+}
+
+std::string AsyncProcessorFactory::describe(
+    const CreateMethodMetadataResult& createMethodMetadataResult) {
+  auto buf = fmt::memory_buffer();
+  auto inserter = std::back_inserter(buf);
+  fmt::format_to(inserter, "CreateMethodMetadataResult(");
+  std::visit(
+      [&inserter](auto&& arg) {
+        fmt::format_to(inserter, "{}", describe(arg));
+      },
+      createMethodMetadataResult);
+  fmt::format_to(inserter, ")");
+  return fmt::to_string(buf);
 }
 
 void GeneratedAsyncProcessorBase::terminateInteraction(
@@ -336,12 +517,14 @@ void GeneratedAsyncProcessorBase::terminateInteraction(
   eb.dcheckIsInEventBaseThread();
 
   if (auto tile = conn.removeTile(id)) {
-    Tile::onTermination(std::move(tile), eb);
-    auto ctxStack =
-        getContextStack(getServiceName(), "#terminateInteraction", &conn);
+    auto ctxStack = getContextStackForNonPerRequestCallbacks(
+        handlers_, getServiceName(), "#terminateInteraction", &conn);
     if (ctxStack) {
-      ctxStack->onInteractionTerminate(id);
+      tile->onDestroy([id, ctxStack = std::move(ctxStack)] {
+        ctxStack->onInteractionTerminate(id);
+      });
     }
+    Tile::onTermination(std::move(tile), eb);
   }
 }
 
@@ -358,8 +541,12 @@ void GeneratedAsyncProcessorBase::destroyAllInteractions(
   for (auto& [id, tile] : conn.tiles_) {
     ids.push_back(id);
   }
+  auto ctxStack = getContextStackForNonPerRequestCallbacks(
+      handlers_, getServiceName(), "#terminateInteraction", &conn);
   for (auto id : ids) {
-    conn.removeTile(id);
+    if (conn.removeTile(id) && ctxStack) {
+      ctxStack->onInteractionTerminate(id);
+    }
   }
 }
 
@@ -421,7 +608,7 @@ bool GeneratedAsyncProcessorBase::setUpRequestProcessing(ServerRequest& req) {
     if (auto interactionCreate = ctx->getInteractionCreate()) {
       if (!interactionName ||
           *interactionCreate->interactionName_ref() !=
-              interactionName.value()) {
+              std::string_view(interactionName.value())) {
         interactionMetadataValid = false;
       } else if (!createInteraction(req)) {
         // Duplicate id is a contract violation so close the connection.
@@ -566,7 +753,7 @@ void ServerInterface::BlockingThreadManager::add(folly::Func f) {
     return;
   } catch (...) {
     LOG(FATAL) << "Failed to schedule a task within timeout: "
-               << folly::exceptionStr(std::current_exception());
+               << folly::exceptionStr(folly::current_exception());
   }
 }
 
@@ -606,9 +793,11 @@ HandlerCallbackBase::~HandlerCallbackBase() {
   // req must be deleted in the eb
   if (req_) {
     if (req_->isActive() && ewp_) {
-      exception(TApplicationException(
+      // We must call doException() here instead of exception() because the
+      // latter may invoke ServiceInterceptor::onResponse.
+      doException(std::make_exception_ptr(TApplicationException(
           TApplicationException::INTERNAL_ERROR,
-          "apache::thrift::HandlerCallback not completed"));
+          "apache::thrift::HandlerCallback not completed")));
       return;
     }
     if (getEventBase()) {
@@ -759,7 +948,7 @@ void HandlerCallbackBase::sendReply(
 }
 
 void HandlerCallbackBase::sendReply(
-    FOLLY_MAYBE_UNUSED std::pair<
+    [[maybe_unused]] std::pair<
         SerializedResponse,
         apache::thrift::detail::SinkConsumerImpl>&& responseAndSinkConsumer) {
 #if FOLLY_HAS_COROUTINES
@@ -801,25 +990,16 @@ bool HandlerCallbackBase::fulfillTilePromise(std::unique_ptr<Tile> ptr) {
     return false;
   }
 
-  auto fn = [ctx = reqCtx_,
-             interaction = std::move(interaction_),
-             ptr = std::move(ptr),
-             tm = getThreadManager_deprecated(),
-             eb = eb_,
-             executor = executor_,
-             isRPEnabled = isResourcePoolEnabled()]() mutable {
-    TilePtr tile{ptr.release(), eb};
-    DCHECK(dynamic_cast<TilePromise*>(interaction.get()));
-    if (isRPEnabled) {
-      static_cast<TilePromise&>(*interaction).fulfill(*tile, executor, *eb);
-    } else {
-      static_cast<TilePromise&>(*interaction).fulfill(*tile, tm, *eb);
-    }
-    ctx->getConnectionContext()->tryReplaceTile(
-        ctx->getInteractionId(), std::move(tile));
-  };
-
-  eb_->runImmediatelyOrRunInEventBaseThread(std::move(fn));
+  putMessageInReplyQueue(
+      std::in_place_type_t<TilePromiseReplyInfo>(),
+      reqCtx_->getConnectionContext(),
+      reqCtx_->getInteractionId(),
+      std::move(interaction_),
+      std::move(ptr),
+      getThreadManager_deprecated(),
+      eb_,
+      executor_,
+      isResourcePoolEnabled());
   return true;
 }
 
@@ -839,6 +1019,9 @@ void HandlerCallbackBase::breakTilePromise() {
 HandlerCallback<void>::HandlerCallback(
     ResponseChannelRequest::UniquePtr req,
     ContextStack::UniquePtr ctx,
+    const char* serviceName,
+    const char* definingServiceName,
+    const char* methodName,
     cob_ptr cp,
     exnw_ptr ewp,
     int32_t protoSeqId,
@@ -849,6 +1032,9 @@ HandlerCallback<void>::HandlerCallback(
     : HandlerCallbackBase(
           std::move(req),
           std::move(ctx),
+          serviceName,
+          definingServiceName,
+          methodName,
           ewp,
           eb,
           tm,
@@ -861,6 +1047,9 @@ HandlerCallback<void>::HandlerCallback(
 HandlerCallback<void>::HandlerCallback(
     ResponseChannelRequest::UniquePtr req,
     ContextStack::UniquePtr ctx,
+    const char* serviceName,
+    const char* definingServiceName,
+    const char* methodName,
     cob_ptr cp,
     exnw_ptr ewp,
     int32_t protoSeqId,
@@ -874,6 +1063,9 @@ HandlerCallback<void>::HandlerCallback(
     : HandlerCallbackBase(
           std::move(req),
           std::move(ctx),
+          serviceName,
+          definingServiceName,
+          methodName,
           ewp,
           eb,
           std::move(executor),
@@ -902,5 +1094,181 @@ void HandlerCallback<void>::doDone() {
   sendReply(std::move(queue));
 }
 
-} // namespace thrift
-} // namespace apache
+void HandlerCallbackOneWay::done() noexcept {
+#if FOLLY_HAS_COROUTINES
+  if (!shouldProcessServiceInterceptorsOnResponse()) {
+    return;
+  }
+  startOnExecutor(doInvokeServiceInterceptorsOnResponse(sharedFromThis()));
+#endif // FOLLY_HAS_COROUTINES
+}
+
+void HandlerCallbackOneWay::complete(folly::Try<folly::Unit>&& r) noexcept {
+  if (r.hasException()) {
+    exception(std::move(r).exception());
+  } else {
+    done();
+  }
+}
+
+#if FOLLY_HAS_COROUTINES
+bool HandlerCallbackBase::shouldProcessServiceInterceptorsOnRequest()
+    const noexcept {
+  // The chain of objects can be null in unit tests when these objects are
+  // mocked.
+  if (reqCtx_ != nullptr) {
+    if (auto connCtx = reqCtx_->getConnectionContext()) {
+      if (auto workerCtx = connCtx->getWorkerContext()) {
+        if (auto server = workerCtx->getServerContext()) {
+          return server->getServiceInterceptors().size() > 0;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool HandlerCallbackBase::shouldProcessServiceInterceptorsOnResponse()
+    const noexcept {
+  if (!shouldProcessServiceInterceptorsOnRequest()) {
+    return false;
+  }
+  if (intrusivePtrControlBlock_.useCount() == 0) {
+    // unsafeRelease() was called on IntrusiveSharedPtr(this) that was passed to
+    // the user-defined handler implementation. This means that we cannot
+    // guarantee that the request outlives ServiceInterceptorBase::onResponse().
+    // So the only safe option is to avoid calling it.
+    return false;
+  }
+  return true;
+}
+
+folly::coro::Task<void>
+HandlerCallbackBase::processServiceInterceptorsOnRequest(
+    detail::ServiceInterceptorOnRequestArguments arguments) {
+  if (!shouldProcessServiceInterceptorsOnRequest()) {
+    co_return;
+  }
+  const apache::thrift::server::ServerConfigs* server =
+      reqCtx_->getConnectionContext()->getWorkerContext()->getServerContext();
+  DCHECK(server);
+  const std::vector<server::ServerConfigs::ServiceInterceptorInfo>&
+      serviceInterceptorsInfo = server->getServiceInterceptors();
+  std::vector<std::pair<std::size_t, std::exception_ptr>> exceptions;
+
+  for (std::size_t i = 0; i < serviceInterceptorsInfo.size(); ++i) {
+    auto* connectionCtx = reqCtx_->getConnectionContext();
+    auto connectionInfo = ServiceInterceptorBase::ConnectionInfo{
+        connectionCtx,
+        connectionCtx->getStorageForServiceInterceptorOnConnectionByIndex(i)};
+    auto requestInfo = ServiceInterceptorBase::RequestInfo{
+        reqCtx_,
+        reqCtx_->getStorageForServiceInterceptorOnRequestByIndex(i),
+        arguments,
+        serviceName_,
+        definingServiceName_,
+        methodName_};
+    try {
+      co_await serviceInterceptorsInfo[i].interceptor->internal_onRequest(
+          std::move(connectionInfo), std::move(requestInfo));
+    } catch (...) {
+      exceptions.emplace_back(i, folly::current_exception());
+    }
+  }
+  if (!exceptions.empty()) {
+    std::string message = fmt::format(
+        "ServiceInterceptor::onRequest threw exceptions:\n[{}] {}\n",
+        serviceInterceptorsInfo[exceptions[0].first].qualifiedName,
+        folly::exceptionStr(exceptions[0].second));
+    for (std::size_t i = 1; i < exceptions.size(); ++i) {
+      message += fmt::format(
+          "[{}] {}\n",
+          serviceInterceptorsInfo[exceptions[i].first].qualifiedName,
+          folly::exceptionStr(exceptions[i].second));
+    }
+    co_yield folly::coro::co_error(TApplicationException(message));
+  }
+}
+
+folly::coro::Task<void>
+HandlerCallbackBase::processServiceInterceptorsOnResponse(
+    detail::ServiceInterceptorOnResponseResult resultOrActiveException) {
+  if (!shouldProcessServiceInterceptorsOnResponse()) {
+    co_return;
+  }
+  const apache::thrift::server::ServerConfigs* server =
+      reqCtx_->getConnectionContext()->getWorkerContext()->getServerContext();
+  DCHECK(server);
+  const std::vector<server::ServerConfigs::ServiceInterceptorInfo>&
+      serviceInterceptorsInfo = server->getServiceInterceptors();
+  std::vector<std::pair<std::size_t, std::exception_ptr>> exceptions;
+
+  for (auto i = std::ptrdiff_t(serviceInterceptorsInfo.size()) - 1; i >= 0;
+       --i) {
+    auto* connectionCtx = reqCtx_->getConnectionContext();
+    auto connectionInfo = ServiceInterceptorBase::ConnectionInfo{
+        connectionCtx,
+        connectionCtx->getStorageForServiceInterceptorOnConnectionByIndex(i)};
+    auto responseInfo = ServiceInterceptorBase::ResponseInfo{
+        reqCtx_,
+        reqCtx_->getStorageForServiceInterceptorOnRequestByIndex(i),
+        resultOrActiveException,
+        serviceName_,
+        definingServiceName_,
+        methodName_};
+    try {
+      co_await serviceInterceptorsInfo[i].interceptor->internal_onResponse(
+          std::move(connectionInfo), std::move(responseInfo));
+    } catch (...) {
+      exceptions.emplace_back(i, folly::current_exception());
+    }
+  }
+
+  if (!exceptions.empty()) {
+    std::string message = fmt::format(
+        "ServiceInterceptor::onResponse threw exceptions:\n[{}] {}\n",
+        serviceInterceptorsInfo[exceptions[0].first].qualifiedName,
+        folly::exceptionStr(exceptions[0].second));
+    for (std::size_t i = 1; i < exceptions.size(); ++i) {
+      message += fmt::format(
+          "[{}] {}\n",
+          serviceInterceptorsInfo[exceptions[i].first].qualifiedName,
+          folly::exceptionStr(exceptions[i].second));
+    }
+    co_yield folly::coro::co_error(TApplicationException(message));
+  }
+}
+
+/* static */ folly::coro::Task<void>
+HandlerCallbackOneWay::doInvokeServiceInterceptorsOnResponse(Ptr callback) {
+  folly::Try<void> onResponseResult = co_await folly::coro::co_awaitTry(
+      callback->processServiceInterceptorsOnResponse(
+          apache::thrift::util::TypeErasedRef::of<folly::Unit>(folly::unit)));
+  if (onResponseResult.hasException()) {
+    callback->doException(onResponseResult.exception().to_exception_ptr());
+  }
+}
+#endif // FOLLY_HAS_COROUTINES
+
+namespace detail {
+
+#if FOLLY_HAS_COROUTINES
+bool shouldProcessServiceInterceptorsOnRequest(
+    HandlerCallbackBase& callback) noexcept {
+  return callback.shouldProcessServiceInterceptorsOnRequest();
+}
+
+folly::coro::Task<void> processServiceInterceptorsOnRequest(
+    HandlerCallbackBase& callback,
+    detail::ServiceInterceptorOnRequestArguments arguments) {
+  try {
+    co_await callback.processServiceInterceptorsOnRequest(std::move(arguments));
+  } catch (...) {
+    callback.exception(folly::current_exception());
+    throw;
+  }
+}
+#endif // FOLLY_HAS_COROUTINES
+} // namespace detail
+
+} // namespace apache::thrift

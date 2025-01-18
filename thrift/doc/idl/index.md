@@ -59,6 +59,12 @@ A qualified identifier is a sequence of two or more identifiers separated by per
 maybe_qualified_id ::=  identifier ["." identifier]*
 ```
 
+#### Reserved Identifiers
+
+In addition to [reserved words](#keywords), Thrift reserves all words that begin with the case-insensitive string `fbthrift` preceded by zero or more underscores and should not be used as identifiers. The use of such words as identifiers requires explicit annotation of the usage as specified below, and may result in undefined behavior.
+* To use reserved identifiers for filenames, annotate the [package declaration](#package-declaration) with `@thrift.AllowReservedFilename`.
+* For all other uses of reserved identifiers, annotate the identifier with `@thrift.AllowReservedIdentifier`.
+
 ### Keywords
 
 Thrift has two types of keywords: reserved words and context-sensitive keywords.
@@ -166,15 +172,11 @@ The following tokens serve as operators and punctuation in Thrift:
 ,       ;       @       =       +       -
 ```
 
-Thrift uses an optional comma (`,`) or semicolon (`;`) as delimiters in certain constructs such as parameter and field lists:
-
-```grammar
-delimiter ::=  ["," | ";"]
-```
-
-## Thrift Files
+## Thrift Files (Programs)
 
 A Thrift file starts with an optional package declaration and a, possibly empty, sequence of include and namespace directives. It is followed by a sequence of definitions which can also be empty. There can be at most one package declaration and it is normally placed at the beginning of a source file.
+
+You may also see Thrift Files referred to as "Programs" in this document, as this is the internal name that Thrift files are referred to in the thrift source code.
 
 ```grammar
 thrift_file ::=
@@ -249,12 +251,14 @@ struct PeopleSearchResponse {
 
 If there is a circular dependency between files, a compile-time error is reported. So `a.thrift` cannot include itself, and cannot include `b.thrift` if `b.thrift` includes `a.thrift`. Including multiple files with a common ancestor is okay - so `a.thrift` can include `b.thrift` and `c.thrift` when both `b.thrift` and `c.thrift` include `d.thrift`.
 
+Including a file only provides access to symbols defined directly in that file; if `a.thrift` only includes `b.thrift` and `b.thrift` includes `d.thrift` then `a.thrift` can use symbols starting with `b.` but not `d.`. Referencing the latter without the corresponding include directive is an error in some target languages and is deprecated behavior in Thrift.
+
 ### Package Declaration
 
 A package declaration determines the default namespaces for target languages, e.g. the namespace for the generated C++ code and the package for Java. It is also used for applying file-level annotations and as the default [universal name](../features/universal-name.md) prefix.
 
 ```grammar
-package_declaration ::=  [annotations] "package" package_name [";"]
+package_declaration ::=  [annotations] "package" package_name [";"] | [annotations] "package" ";"
 ```
 
 A package name is a string containing a domain name and a path separated with `/`, for example:
@@ -262,6 +266,12 @@ A package name is a string containing a domain name and a path separated with `/
 ```thrift
 package "meta.com/search"
 ```
+
+You should choose a unique package name for a `.thrift` file or a set of closely related files. To this end combine a domain name that belongs to you or your organization with a path, possibly consisting of multiple components, that uniquely identifies this set of files within the domain/organization.
+
+:::caution
+Package name conflicts can be difficult to resolve, so choose these names carefully and prefer longer, more specific names to shorter, generic ones.
+:::
 
 <!-- package_name is defined here and not in Lexical Elements because its components are used to specify the default namespace rules. -->
 
@@ -316,10 +326,12 @@ In both cases the Python namespaces don't include the file name component.
 
 The default namespace can be overriden for individual target languages with the [namespace directive](#namespace-directives).
 
-Annotations on a package declaration apply to the whole file. For example:
+Annotations on a package declaration apply to the file broadly, with the exact behaviour defined by the specific annotation.
+
+For example, the following annotation would apply to all [unqualified fields](#field-qualifiers) in a given file:
 
 ```thrift
-@cpp.TerseWrite
+@thrift.TerseWrite
 package "facebook.com/peoplesearch"
 
 struct PeopleSearchRequest {
@@ -328,7 +340,7 @@ struct PeopleSearchRequest {
 }
 ```
 
-This enables terse writes for `query` and `numResults` fields even though they are not annotated with `@cpp.TerseWrite` themselves.
+This enables terse writes for `query` and `numResults` fields even though they are not annotated with `@thrift.TerseWrite` themselves.
 
 The package name is also used as a prefix for universal names. For example:
 
@@ -337,6 +349,13 @@ package "facebook.com/peoplesearch"
 
 // Has the universal name "facebook.com/peoplesearch/PeopleSearchRequest".
 struct PeopleSearchRequest { /* ... */ }
+```
+
+The package name may be omitted to allow applying annotations to a file before a package name has been chosen. In this case the trailing semicolon is required. For example:
+
+```thrift
+@thrift.TerseWrite
+package;
 ```
 
 ### Namespace Directives
@@ -552,7 +571,8 @@ Removing and adding enum values can be dangerous - see [Schema Compatibility](/f
 
 ### Typedefs
 
-A typedef introduces a named alias of a type and has the following form:
+Thrift IDL types can be *aliased* in source Thrift files by using the `typedef`
+keyword.
 
 ```grammar
 typedef ::=  [annotations] "typedef" type identifier [";"]
@@ -563,6 +583,62 @@ It can be used to provide a simpler way to access complex types, for example:
 ```thrift
 typedef map<string, string> StringMap
 ```
+
+Such aliases always (eventually) resolve to *exactly one
+[Thrift IDL type](./#types)*.
+
+We distinguish the following usages:
+
+1. **"Pure" non-annotated aliases** are simple name aliases. They are completely
+   equivalent to, and interchangeable with, their target types:
+
+   ```thrift
+   // A transparent alias: StringMap and map<string, string> are completely
+   // interchangeable.
+   typedef map<string, string> StringMap
+
+   // The types of the two fields below must be indistinguishable from each
+   // other throughout the Thrift ecosystem, i.e. in IDL, target or wire types.
+   struct MyStruct {
+      1: map<string, string> map1;
+
+      2: StringMap map2;
+    }
+   ```
+
+2. **Annotated aliases** are slightly more complex, as their annotations may
+   affect the corresponding target types.:
+
+   ```thrift
+   // An annotated (non-"pure") type alias: the new alias (ui64) results
+   // in a different target type in C++ generated code.
+   @cpp.Type{name = "uint64_t"}
+   typedef i64 ui64
+
+   // The C++ target types of the two fields below will differ:
+   //   * int1 will use the default type corresponding to i64: int64_t.
+   //   * int2 will use the custom implicitly supported type: uint64_t.
+   struct MyStruct {
+     1: i64 int1;
+
+     2: ui64 int2;
+   }
+   ```
+
+:::note
+While annotations may affect the native target type corresponding to an aliased
+type, they do not change the Thrift IDL type being aliased.
+
+For example, at the Thrift IDL level, the following typedefs both resolve to the
+same exact type (in this case, `i64`):
+
+```thrift
+typedef i64 LongInteger
+
+@cpp.Type{name = "uint64_t"}
+typedef i64 UnsignedLongInteger
+```
+:::
 
 ### Services
 
@@ -710,7 +786,7 @@ interaction ::=
 
 An **interaction** is a multi-request contract that keeps related methods together, manages states, and integrates with the routing layer to ensure those requests are sent over the same connection to the same host. It can be created using a **factory function** that returns an interaction or a **constructor** using reserved word `performs` that generates a non-RPC constructor on the client and server. The server also listens to a **termination signal** that immediately is invoked instead of waiting for outstanding requests and streams unlike the destructor. Using annotations, it supports serial interaction that limits processing to a single method at a time and event base threading model that directly processes on the I/O thread instead of the server executor.
 
-Refer to [Interactions](/fb/features/interactions.md) for more information.
+Refer to [Interactions](/fb/features/interactions/index.md) for more information.
 
 ### Constants
 
@@ -767,6 +843,7 @@ Initializers can have the following inferred types:
 | `float`             | a floating-point type                  |
 | `string_literal`    | `string`, `binary`                     |
 | `bool_literal`      | `bool`                                 |
+| `map_initializer`   | a map, struct or union type            |
 
 The value of the initializer must be representable by the inferred type. For example:
 
@@ -779,41 +856,41 @@ const i16 UPPER = 100000; // error: 100000 is out of range for i16
 For legacy reasons some implementations support additional kinds of inference not listed in the table above. Using them is discouraged.
 :::
 
-A name referring to a constant can be one of:
+`maybe_qualified_id` represents a name referring to a constant and can be one of:
 
 * An identifier that denotes a constant defined in the same Thrift file.
-* A qualified name of the form `filename.constname` where `filename` and `constname` are identifiers, and `constname` denotes a constant defined in the Thrift file denoted by `filename`.
-* A qualified name of the form `enumtype.enum` where `enumtype` and `enum` are identifiers, and `enum` denotes an enumerator defined in the enumeration type `enumtype`.
-* A qualified name of the form `filename.enumtype.enum` where `filename`, `enumtype`, and `enum` are identifiers, and `enum` denotes an enumerator defined in the enumeration type `enumtype`, which in turn is defined in the Thrift file denoted by `filename`.
+* A qualified name of the form `<filename>.<const>` where `<filename>` and `<const>` are identifiers, and `<const>` denotes a constant defined in the Thrift file denoted by `<filename>`.
+* A qualified name of the form `<enum>.<enumerator>` where `<enum>` and `<enumerator>` are identifiers denoting an enum and an enumerator defined in it respectively.
+* A qualified name of the form `<filename>.<enum>.<enumerator>` where `<filename>`, `<enum>`, and `<enumerator>` are identifiers. `<enum>` denotes an enum defined in the Thrift file denoted by `<filename>` and `<enumerator>` is the enumerator defined in this enum.
 
-```
-const i32 SEARCH_AGGREGATOR_PORT = PORT
-const double EULERS_NUMBER = MathConstants.e
-const Gender NAN = Gender.MALE
-const search_types.Gender NV = search_types.Gender.FEMALE
+```thrift
+const i32 SEARCH_AGGREGATOR_PORT = PORT;
+const double EULERS_NUMBER = MathConstants.E;
+const SearchKind SEARCH_KIND = SearchKind.PAGES;
+const search_types.SearchKind SK = search_types.SearchKind.GROUPS;
 ```
 
 #### List and Map Initializers
 
-```
-list_initializer ::=  "[" (initializer delimiter)* "]"
-map_initializer  ::=  "{" (initializer ":" initializer)* "}"
+```grammar
+list_initializer ::=  "[" [(initializer ",")* initializer [","]] "]"
+map_initializer  ::=  "{" [(map_entry ",")* map_entry [","]] "}"
+map_entry        ::=  initializer ":" initializer
 ```
 
 Constants can also be of list, set, or map types.
 
 ```
-list<i32> AList = [2, 3, 5, 7]
+const list<i32> AList = [2, 3, 5, 7]
 
-set<string> ASet = ["foo", "bar", "baz"]
+const set<string> ASet = ["foo", "bar", "baz"]
 
-map<string, list<i32>> AMap = {
+const map<string, list<i32>> AMap = {
   "foo" : [1, 2, 3, 4],
   "bar" : [10, 32, 54],
 }
 ```
 
-NOTE: We cannot write constants of struct, union, or exception types.
 
 ## Types
 
@@ -821,7 +898,20 @@ NOTE: We cannot write constants of struct, union, or exception types.
 type ::=  primitive_type | container_type | maybe_qualified_id
 ```
 
-Thrift supports primitive, container and named types. The name can be an identifier that denotes a type defined in the same Thrift file, or a qualified name of the form `filename.typename` where `filename` and `typename` are identifiers, and `typename` denotes a type defined in the Thrift file denoted by `filename`.
+:::note
+The concept of data *types* is central to the mission of Thrift as a data
+definition and interoperability framework, and to the underlying programming
+languages. As such, depending on the context, different [kinds of
+"types"](/glossary/kinds-of-types.md) may be relevant when interacting with
+Thrift. Unless explicitly stated otherwise, this section refers to [**Thrift IDL
+types**](/glossary/kinds-of-types.md#thrift-idl-types).
+:::
+
+Thrift supports primitive, container and named types. The name can be an
+identifier that denotes a type defined in the same Thrift file, or a qualified
+name of the form `filename.typename` where `filename` and `typename` are
+identifiers, and `typename` denotes a type defined in the Thrift file denoted by
+`filename`.
 
 ### Primitive Types
 
@@ -875,30 +965,54 @@ Although not enforced, it is strongly encouraged to only use set and map when ke
 
 The element, key, and value types can be any Thrift type, including nested containers.
 
+### Named Types
+
+Also known as "user-defined", these types are defined explicitly through the
+following [type definitions](./#definitions):
+
+1. Structured types
+    * [structs](./#structs),
+    * [unions](./#unions)
+    * [exceptions](./#exceptions).
+
+2. [Enums](./#enums)
+
+
+:::note
+Similarly, [typedefs](./#typedefs) are user-defined and named, but unlike the
+above, they do not introduce a new Thrift IDL type (instead merely aliasing an
+existing type).
+:::
+
 ## Default Values
 
 ```
 default_value ::=  "=" initializer
 ```
 
-All fields of struct types and exception types have a default value. This is either explicitly provided via the syntax shown above, or (if not explicitly provided) is the natural default value for that type. The natural default values for listed below:
+Every Thrift type has a _standard default value_:
 
 * bool: `false`
 * Integer types: 0
-* enum: 0 (even enum has no value for zero)
-* float and double: 0.0
+* enum: 0 (even if that enum has no enumerator with value zero)
+* float and double: +0.0
 * string and binary: empty string
 * containers: empty container
-* structs: language dependent. Empty struct for C++, null/None for Hack/python/Java
+* structs:
+  * each optional field is not present
+  * each non-optional field is set to its custom default if an initializer was provided or (recursively) to the standard default value for its type.
+* unions: empty union
 
-Default values are used as follows:
+An instance of a Thrift struct that is initialized without an explicit value should be initialized to its standard default value.
 
-* To initialize required fields (fields with the qualifier `required`).
-* As the value used to serialize an unqualified field (a field with no qualifier) when this field is *not present*.
+:::note
+When initializing or deserializing a struct in Java, or in Hack without the `nonnullables` compiler option, unqualified fields that are not present / explicitly initialized will be set to null/None instead of their standard default values.
+:::
 
-NOTE: The concepts "required", "unqualified", and "not present" are described in more detail below.
 
-In addition, default values can be used in generated code to provide default behaviors when fields have not been initialized. For example, the method `getValueOrDefault()` can be provided for a field that returns the value of the field when present, and the default value when not present.
+:::note
+The concepts "optional", "unqualified", and "not present" are described in more detail below.
+:::
 
 ```
 enum Foo { A = 1, B = 2, C = 3}
@@ -910,10 +1024,33 @@ struct Bar {
   1: i64 field1 = 10;  // default value is 10
   2: i64 field2;  // default value is 0
   3: map<i32, string> field3 = {15 : 'a_value', 2: 'b_value'};  // default value is the map with two entries
-  4: list<Foo> = [Foo.A, Foo.B, Foo.A];  // default value is a list with three entries
-  5: Person person = {"age": 40, "name": "John"}; // default value is a struct with these default values
+  4: list<Foo> field4 = [Foo.A, Foo.B, Foo.A];  // default value is a list with three entries
+  5: Person field5 = Person{age = 40, name = "John"}; // default value is a struct with these default values
+  6: Foo field6; // default value is 0 (unnamed)
 }
 ```
+### Intrinsic Default Value
+
+Every Thrift type also has an _intrinsic default value_. The intrinsic default value of a type is the same as its standard default value except for structs, where custom field initializers are ignored.
+
+For example, the intrinsic default value of `struct Bar` above is:
+
+```
+Bar {
+    field1 = 0,  // vs. standard default value: 10
+    field2 = 0,  // same as standard default value
+    field3 = {}, // vs. {15 : 'a_value', 2: 'b_value'}
+    field4 = [], // vs. [Foo.A, Foo.B, Foo.A]
+    field5 = Person{age = 0, name = ""}, // vs. Person{age = 40, name = "John"}
+    field6 = 0.  // same
+}
+```
+
+:::note
+In practice, users are less likely to interact with intrinsic default values than the standard ones, but they are nonetheless relevant in specific use cases such as [Terse Fields](./#terse-fields).
+
+In C++, the `apache::thrift::clear()` function sets objects to their instrinsic default values.
+:::
 
 :::caution
 Avoid using default values on optional fields. It is not possible to tell if the server sent the value, or if it is just the default value.
@@ -938,7 +1075,9 @@ There are four kinds of fields that may be part of a struct type (or exception t
 * *terse*: Filed is annotated with the structured annotation `@thrift.TerseWrite`.
 * *unqualified*: Field is not qualified with either of these reserved words or `@thrift.TerseWrite`.
 
-NOTE: Union types may only have optional fields.
+:::note
+Union types may only have optional fields.
+:::
 
 ```
 include "thrift/annotation/thrift.thrift"
@@ -973,9 +1112,9 @@ Optional fields start their lifecycle as *not present* (when the object is initi
 Unqualified fields are just like optional fields with the following difference: When an object with an unqualified field is serialized and the field is *not present*, the default value of the field is serialized as the value for that field.
 
 :::note
-Regarding unqualified vs. optional field, we don't have a generalized strong recommendation on which one should be used. It depends on individual use cases. If you need to know whether the field is explicit set or not, use optional fields.
+Regarding unqualified vs. optional field, we don't have a generalized strong recommendation on which one should be used. It depends on individual use cases. If you need to know whether the field is explicitly set or not, use optional fields.
 :::
 
 ### Terse Fields
 
-Terse fields do not distinguish whether they are explicitly set. They are skipped during serialization if their values are equal to the [intrinsic default values](./#intrinsic-default-values).
+Terse fields are skipped during serialization if their values are equal to the [_intrinsic default values_](./#intrinsic-default-value) for their types. There is no difference between a terse field set to its intrinsic default and not set at all.

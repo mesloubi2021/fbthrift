@@ -62,6 +62,10 @@ Useful (but not complete set of) options that can be set on the ThriftServer:
 
 * `setIdleTimeout(std::chrono::milliseconds)` - milliseconds before we close idle connections.
 
+:::caution
+Idle timeout will not work for Rocket connections unless the `rocket_set_idle_connection_timeout` Thrift Flag is set to `true`.
+:::
+
 * `setTaskExpireTime(std::chrono::milliseconds)` - milliseconds before
   we timeout any individual request. This can also be set on a
   per-function bases by overriding the appropriate generated code
@@ -82,11 +86,6 @@ Useful (but not complete set of) options that can be set on the ThriftServer:
   requests.
 
 * `setSSLContext(context)` - Allow SSL connections.
-
-*There are other options for specific use cases, such as*
-
-* `setProcessorFactory(factory)` - Not necessary if setInterface is
-  called. Used for custom processors, usually proxies.
 
 ### Code example
 

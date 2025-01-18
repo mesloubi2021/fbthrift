@@ -28,11 +28,9 @@
 #include <thrift/lib/cpp2/async/RocketClientChannel.h>
 #include <thrift/lib/cpp2/util/ScopedServerThread.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class AsyncProcessorFactory;
-class BaseThriftServer;
 class ThriftServer;
 
 /**
@@ -65,9 +63,9 @@ class ScopedServerInterfaceThread {
   explicit ScopedServerInterfaceThread(
       std::shared_ptr<AsyncProcessorFactory> apf, ServerConfigCb configCb);
 
-  explicit ScopedServerInterfaceThread(std::shared_ptr<BaseThriftServer> ts);
+  explicit ScopedServerInterfaceThread(std::shared_ptr<ThriftServer> ts);
 
-  BaseThriftServer& getThriftServer() const;
+  ThriftServer& getThriftServer() const;
   const folly::SocketAddress& getAddress() const;
   uint16_t getPort() const;
 
@@ -79,7 +77,9 @@ class ScopedServerInterfaceThread {
   template <class AsyncClientT>
   std::unique_ptr<AsyncClientT> newClient(
       folly::Executor* callbackExecutor = nullptr,
-      MakeChannelFunc channelFunc = RocketClientChannel::newChannel) const;
+      MakeChannelFunc channelFunc = RocketClientChannel::newChannel,
+      protocol::PROTOCOL_TYPES prot =
+          protocol::PROTOCOL_TYPES::T_COMPACT_PROTOCOL) const;
 
   /**
    * Like newClient but invokes injectFault before each request and
@@ -110,16 +110,18 @@ class ScopedServerInterfaceThread {
       std::shared_ptr<AsyncProcessorFactory> apf,
       ScopedServerInterfaceThread::FaultInjectionFunc injectFault,
       ScopedServerInterfaceThread::StreamFaultInjectionFunc streamInjectFault =
-          nullptr);
+          nullptr,
+      protocol::PROTOCOL_TYPES prot = protocol::T_COMPACT_PROTOCOL);
 
  private:
-  std::shared_ptr<BaseThriftServer> ts_;
+  std::shared_ptr<ThriftServer> ts_;
   util::ScopedServerThread sst_;
 
   RequestChannel::Ptr newChannel(
       folly::Executor* callbackExecutor,
       MakeChannelFunc channelFunc,
-      size_t numThreads = folly::hardware_concurrency()) const;
+      size_t numThreads = folly::hardware_concurrency(),
+      protocol::PROTOCOL_TYPES prot = protocol::T_COMPACT_PROTOCOL) const;
 };
 
 namespace detail {
@@ -154,15 +156,16 @@ std::unique_ptr<Client<ServiceTag>> makeTestClient(
     std::shared_ptr<ServiceHandler> handler,
     ScopedServerInterfaceThread::FaultInjectionFunc injectFault = nullptr,
     ScopedServerInterfaceThread::StreamFaultInjectionFunc streamInjectFault =
-        nullptr);
+        nullptr,
+    protocol::PROTOCOL_TYPES prot = protocol::T_COMPACT_PROTOCOL);
 
 template <class AsyncClientT>
 std::unique_ptr<AsyncClientT> makeTestClient(
     std::shared_ptr<AsyncProcessorFactory> apf,
     ScopedServerInterfaceThread::FaultInjectionFunc injectFault = nullptr,
     ScopedServerInterfaceThread::StreamFaultInjectionFunc streamInjectFault =
-        nullptr);
-} // namespace thrift
-} // namespace apache
+        nullptr,
+    protocol::PROTOCOL_TYPES prot = protocol::T_COMPACT_PROTOCOL);
+} // namespace apache::thrift
 
 #include <thrift/lib/cpp2/util/ScopedServerInterfaceThread-inl.h>

@@ -23,8 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace test_cpp2 {
-namespace cpp_reflection {
+namespace test_cpp2::cpp_reflection {
 
 static struct3 test_data() {
   structA a1;
@@ -99,8 +98,7 @@ struct test_callback {
 
   template <typename T, typename Tag>
   void operator()(
-      Tag, T const*, T const*, folly::StringPiece path, folly::StringPiece)
-      const {
+      Tag, T const*, T const*, std::string_view path, std::string_view) const {
     out_.emplace_back(path.data(), path.size());
   }
 
@@ -490,5 +488,4 @@ TEST(Debug, adapters) {
 
 #undef TEST_IMPL
 
-} // namespace cpp_reflection
-} // namespace test_cpp2
+} // namespace test_cpp2::cpp_reflection

@@ -27,10 +27,7 @@
 #include <folly/Preprocessor.h>
 #include <thrift/lib/cpp2/FieldRefTraits.h>
 
-namespace apache {
-namespace thrift {
-namespace python {
-namespace capi {
+namespace apache::thrift::python::capi {
 
 #define __CAPI_LOCATED_ERROR_IMPL(MESSAGE, LINE) \
   __FILE__ ":" FOLLY_PP_STRINGIZE(LINE) ": " MESSAGE
@@ -41,6 +38,12 @@ constexpr bool is_optional_maybe_boxed_field_ref_v =
     apache::thrift::detail::is_optional_field_ref_v<RValue> ||
     apache::thrift::detail::is_optional_boxed_field_ref_v<RValue>;
 
+template <typename Field>
+struct is_union_field_ref : std::false_type {};
+template <typename FieldT>
+struct is_union_field_ref<::apache::thrift::union_field_ref<FieldT>>
+    : std::true_type {};
+
 /*
  * RAII wrapper around PyObject* representing a strong reference, i.e.,
  * a PyObject* returned by a C api function that returns a *new* reference.
@@ -50,13 +53,7 @@ constexpr bool is_optional_maybe_boxed_field_ref_v =
 struct StrongRef {
   StrongRef() : obj_(nullptr) {}
   StrongRef(StrongRef&& other) : obj_(nullptr) { std::swap(obj_, other.obj_); }
-  StrongRef& operator=(StrongRef&& other) {
-    if (this != &other) {
-      obj_ = nullptr;
-      std::swap(obj_, other.obj_);
-    }
-    return *this;
-  }
+  StrongRef& operator=(StrongRef&& other);
 
   PyObject* obj_;
   // Constructor "steals" a reference so that object, so it should onl be
@@ -70,11 +67,8 @@ struct StrongRef {
   PyObject* operator->() const { return obj_; }
   operator bool() const { return obj_ != nullptr; }
   // Release ownership to function that "steals" reference
-  PyObject* release() && {
-    PyObject* ptr = obj_;
-    obj_ = nullptr;
-    return ptr;
-  }
+  PyObject* release() &&;
+  bool isNone() const;
 };
 
 template <typename T>
@@ -186,7 +180,4 @@ struct native<map<K, V, CppT>> {
   using type = CppT;
 };
 
-} // namespace capi
-} // namespace python
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::python::capi

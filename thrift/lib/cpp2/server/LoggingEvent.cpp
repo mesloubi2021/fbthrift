@@ -16,14 +16,13 @@
 
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
 
+#include <folly/Indestructible.h>
 #include <folly/Portability.h>
 #include <folly/Random.h>
-#include <folly/Singleton.h>
 #include <folly/Synchronized.h>
 #include <folly/io/async/AsyncSSLSocket.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace {
 
 class DefaultLoggingEventRegistry : public LoggingEventRegistry {
@@ -62,11 +61,11 @@ THRIFT_PLUGGABLE_FUNC_REGISTER(
 }
 
 THRIFT_PLUGGABLE_FUNC_REGISTER(
-    bool,
+    CertIPResult,
     isCertIPMismatch,
     const ConnectionLoggingContext&,
     const folly::AsyncTransportCertificate*) {
-  return false;
+  return CertIPResult::SKIPPED;
 }
 } // namespace detail
 
@@ -81,9 +80,6 @@ class Registry {
   std::unique_ptr<LoggingEventRegistry> reg_;
 };
 
-struct RegistryTag {};
-folly::LeakySingleton<Registry, RegistryTag> registryStorage;
-
 } // namespace
 
 bool LoggingSampler::shouldSample(SamplingRate samplingRate) {
@@ -93,13 +89,9 @@ bool LoggingSampler::shouldSample(SamplingRate samplingRate) {
   return folly::Random::rand64(samplingRate) == 0;
 }
 
-void useMockLoggingEventRegistry() {
-  folly::LeakySingleton<Registry, RegistryTag>::make_mock();
-}
-
 const LoggingEventRegistry& getLoggingEventRegistry() {
-  return registryStorage.get().getRegistry();
+  static folly::Indestructible<Registry> registryStorage;
+  return registryStorage.get()->getRegistry();
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

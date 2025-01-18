@@ -15,13 +15,14 @@
       "definition_html": "static FOLLY_NODISCARD Derived apache::thrift::op::detail::BaseClearPatch&lt; Patch, Derived &gt;::createClear",
       "argsstring_html": "()",
       "name_html": "createClear",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseClearPatch::createClear",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "211",
-        "column": "1",
+        "line": "240",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "bodystart": "211",
-        "bodyend": "215"
+        "bodystart": "240",
+        "bodyend": "244"
       },
       "definition": {
         "simple_html": "static FOLLY_NODISCARD Derived createClear()",
@@ -46,5 +47,11 @@
   "brief_html": "<p>Creates a new patch that clears the value. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BaseContainerPatch/createClear",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseContainerPatch/createClear"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseContainerPatch/createClear",
+  "parent_links": [
+    {
+      "text_html": "BaseContainerPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseContainerPatch"
+    }
+  ]
 }

@@ -20,8 +20,7 @@
 #include <thrift/lib/cpp2/server/ThriftProcessor.h>
 #include <thrift/lib/cpp2/server/TransportRoutingHandler.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class Cpp2Worker;
 
@@ -38,7 +37,7 @@ class HTTP2RoutingHandler : public TransportRoutingHandler {
       : options_(std::move(options)),
         processor_(processor),
         serverConfigs_(serverConfigs) {}
-  virtual ~HTTP2RoutingHandler() = default;
+  ~HTTP2RoutingHandler() override = default;
   HTTP2RoutingHandler(const HTTP2RoutingHandler&) = delete;
 
   void stopListening() override;
@@ -67,5 +66,4 @@ class HTTP2RoutingHandler : public TransportRoutingHandler {
   bool listening_{true};
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

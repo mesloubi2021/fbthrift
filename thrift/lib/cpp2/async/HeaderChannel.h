@@ -20,8 +20,7 @@
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /**
  * HeaderChannel manages persistent headers.
@@ -41,6 +40,10 @@ class HeaderChannel {
     compressionConfig_ = compressionConfig;
   }
 
+  void setLoggingContext(LoggingContext loggingContext) {
+    loggingContext_ = std::move(loggingContext);
+  }
+
   const transport::THeader::StringToStringMap& getPersistentWriteHeaders() {
     return persistentWriteHeaders_;
   }
@@ -56,6 +59,6 @@ class HeaderChannel {
   // Map to use for persistent headers
   transport::THeader::StringToStringMap persistentWriteHeaders_;
   folly::Optional<CompressionConfig> compressionConfig_;
+  std::optional<LoggingContext> loggingContext_;
 };
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

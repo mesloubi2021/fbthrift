@@ -12,16 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
 import time
 import unittest
 
+from thrift.lib.python.client.test.client_event_handler.helper import (
+    TestHelper as ClientEventHandlerTestHelper,
+)
+
 from thrift.lib.python.client.test.event_handler_helper import (
     addEventHandler,
     client_handler_that_throws,
 )
+from thrift.lib.python.client.test.test_server import server_in_another_process
 
 from thrift.python.client import ClientType, get_sync_client
 from thrift.python.common import RpcOptions
@@ -33,7 +40,6 @@ from thrift.python.exceptions import (
 )
 from thrift.python.leaf.thrift_clients import LeafService
 from thrift.python.serializer import Protocol
-from thrift.python.test.test_server import server_in_another_process
 from thrift.python.test.thrift_clients import EchoService, TestService
 from thrift.python.test.thrift_types import ArithmeticException, EmptyException
 
@@ -114,7 +120,7 @@ class SyncClientTests(unittest.TestCase):
                 self.assertEqual(3, client.add(1, 2))
 
     def test_transport_error(self) -> None:
-        with get_sync_client(TestService, path="/no/where") as client:
+        with get_sync_client(TestService, host="localhost", port=1) as client:
             with self.assertRaises(TransportError) as ex:
                 client.add(1, 2)
             self.assertEqual(TransportErrorType.UNKNOWN, ex.exception.type)
@@ -140,7 +146,7 @@ class SyncClientTests(unittest.TestCase):
         self,
     ) -> None:
         with HijackTestHelper():
-            with get_sync_client(TestService, path="/no/where") as client:
+            with get_sync_client(TestService, host="localhost", port=1) as client:
                 with self.assertRaises(HijackTestException) as context:
                     options = RpcOptions()
                     options.timeout = 12.5
@@ -151,7 +157,7 @@ class SyncClientTests(unittest.TestCase):
         self,
     ) -> None:
         with HijackTestHelper():
-            with get_sync_client(TestService, path="/no/where") as client:
+            with get_sync_client(TestService, host="localhost", port=1) as client:
                 with self.assertRaises(HijackTestException) as context:
                     client.add(1, 2)
                 self.assertEqual(context.exception.timeout, 0.0)
@@ -174,6 +180,16 @@ class SyncClientTests(unittest.TestCase):
 
         self.assertTrue(cb1.triggered)
         self.assertTrue(cb2.triggered)
+
+    async def test_client_event_handler(self) -> None:
+        test_helper: ClientEventHandlerTestHelper = ClientEventHandlerTestHelper()
+        self.assertFalse(test_helper.is_handler_called())
+        with test_helper.get_sync_client(TestService, port=1) as cli:
+            try:
+                cli.noop()
+            except TransportError:
+                pass
+            self.assertTrue(test_helper.is_handler_called())
 
     def test_exception_in_client_event_handler(self) -> None:
         with self.assertRaises(RuntimeError):

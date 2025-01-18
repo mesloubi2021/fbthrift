@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/observer/SimpleObservable.h>
 #include <thrift/lib/cpp/transport/THeader.h>
 #include <thrift/lib/cpp2/async/ResponseChannel.h>
 #include <thrift/lib/cpp2/server/AdaptiveConcurrency.h>
@@ -27,9 +27,7 @@
 #include <thrift/lib/cpp2/server/ThriftServerConfig.h>
 #include <thrift/lib/cpp2/transport/core/testutil/FakeServerObserver.h>
 
-namespace apache {
-namespace thrift {
-namespace server {
+namespace apache::thrift::server {
 
 // Use instance of this class, instead of ThriftServer, in the unit tests of
 // ThriftProcessor.
@@ -40,7 +38,7 @@ class ServerConfigsMock : public ServerConfigs {
   }
 
   /**
-   * @see BaseThriftServer::getTaskExpireTimeForRequest function.
+   * @see ThriftServer::getTaskExpireTimeForRequest function.
    */
   bool getTaskExpireTimeForRequest(
       std::chrono::milliseconds,
@@ -67,9 +65,9 @@ class ServerConfigsMock : public ServerConfigs {
     return 123;
   }
 
-  folly::Optional<ServerConfigs::ErrorCodeAndMessage> checkOverload(
-      const transport::THeader::StringToStringMap*,
-      const std::string*) override {
+  folly::Optional<OverloadResult> checkOverload(
+      const transport::THeader::StringToStringMap&,
+      const std::string&) override {
     return {};
   }
 
@@ -137,6 +135,22 @@ class ServerConfigsMock : public ServerConfigs {
     return {};
   }
 
+  std::chrono::milliseconds getQueueTimeout() const override {
+    return queueTimeout_;
+  }
+
+  uint32_t getQueueTimeoutPct() const override {
+    return thriftServerConfig_.getQueueTimeoutPct().get();
+  }
+
+  bool getUseClientTimeout() const override {
+    return thriftServerConfig_.getUseClientTimeout().get();
+  }
+
+  std::chrono::milliseconds getTaskExpireTime() const override {
+    return taskTimeout_;
+  }
+
  public:
   uint64_t maxResponseSize_{0};
   std::chrono::milliseconds queueTimeout_{std::chrono::milliseconds(500)};
@@ -161,6 +175,4 @@ class ServerConfigsMock : public ServerConfigs {
       cConfig_.getObserver(), *this, thriftServerConfig_};
 };
 
-} // namespace server
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::server

@@ -24,13 +24,13 @@
 #include <variant>
 
 #include <folly/container/F14Map.h>
+#include <folly/io/async/AsyncSSLSocket.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <folly/io/async/AsyncTransport.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventHandler.h>
 #include <folly/io/async/HHWheelTimer.h>
 #include <folly/net/NetworkSocket.h>
-#include <thrift/lib/cpp/async/TAsyncSSLSocket.h>
 #include <thrift/lib/cpp2/security/FizzPeeker.h>
 #include <thrift/lib/cpp2/server/IOWorkerContext.h>
 #include <thrift/lib/cpp2/server/MemoryTracker.h>
@@ -41,8 +41,7 @@
 #include <wangle/acceptor/ConnectionManager.h>
 #include <wangle/acceptor/PeekingAcceptorHandshakeHelper.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 // Forward declaration of classes
 class Cpp2Connection;
@@ -256,6 +255,7 @@ class Cpp2Worker : public IOWorkerContext,
   }
 
   static void dispatchRequest(
+      const AsyncProcessorFactory& processorFactory,
       AsyncProcessor* processor,
       ResponseChannelRequest::UniquePtr request,
       SerializedCompressedRequest&& serializedCompressedRequest,
@@ -263,7 +263,7 @@ class Cpp2Worker : public IOWorkerContext,
       protocol::PROTOCOL_TYPES protocolId,
       Cpp2RequestContext* cpp2ReqCtx,
       concurrency::ThreadManager* tm,
-      server::ServerConfigs* serverConfigs);
+      ThriftServer* server);
 
  protected:
   Cpp2Worker(
@@ -271,7 +271,7 @@ class Cpp2Worker : public IOWorkerContext,
       DoNotUse /* ignored, never call constructor directly */)
       : Acceptor(
             server ? server->getServerSocketConfig()
-                   : wangle::ServerSocketConfig()),
+                   : std::make_shared<wangle::ServerSocketConfig>()),
         wangle::PeekingAcceptorHandshakeHelper::PeekCallback(kPeekCount),
         server_(server),
         activeRequests_(0) {
@@ -367,6 +367,8 @@ class Cpp2Worker : public IOWorkerContext,
       wangle::SecureTransportType,
       const wangle::TransportInfo&);
 
+  void invokeServiceInterceptorsOnConnectionForHeader(Cpp2Connection&) noexcept;
+
   /// The mother ship.
   ThriftServer* server_;
 
@@ -387,14 +389,13 @@ class Cpp2Worker : public IOWorkerContext,
       folly::EventBase* base,
       int fd,
       const folly::SocketAddress* peerAddress) override {
-    return folly::AsyncSSLSocket::UniquePtr(
-        new apache::thrift::async::TAsyncSSLSocket(
-            ctx,
-            base,
-            folly::NetworkSocket::fromFd(fd),
-            true, /* set server */
-            true /* defer the security negotiation until sslAccept. */,
-            peerAddress));
+    return folly::AsyncSSLSocket::newSocket(
+        ctx,
+        base,
+        folly::NetworkSocket::fromFd(fd),
+        true, /* set server */
+        true /* defer the security negotiation until sslAccept. */,
+        peerAddress);
   }
 
   void cancelQueuedRequests();
@@ -441,5 +442,4 @@ class Cpp2Worker : public IOWorkerContext,
   friend class TestRoutingHandler;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

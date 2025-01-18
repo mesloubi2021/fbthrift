@@ -15,6 +15,7 @@
       "definition_html": "virtual void apache::thrift::TProcessorEventHandler::userExceptionWrapped",
       "argsstring_html": "(void *ctx, const char *fn_name, bool declared, const folly::exception_wrapper &amp;ew_)",
       "name_html": "userExceptionWrapped",
+      "qualifiedname_html": "apache::thrift::TProcessorEventHandler::userExceptionWrapped",
       "reimplementedby": [
         {
           "refid": "classapache_1_1thrift_1_1TProcessorEventHandlerNoUserExnCallbacks_1a4aa8738c9f9c2913ce6b205274a71513",
@@ -41,11 +42,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "line": "150",
-        "column": "1",
+        "line": "165",
+        "column": "16",
         "bodyfile": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "bodystart": "150",
-        "bodyend": "169"
+        "bodystart": "165",
+        "bodyend": "184"
       },
       "definition": {
         "simple_html": "virtual void userExceptionWrapped(\n    void* ctx,\n    const char* fn_name,\n    bool declared,\n    const folly::exception_wrapper&amp; ew_)",
@@ -67,5 +68,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/userExceptionWrapped",
-  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/userExceptionWrapped"
+  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/userExceptionWrapped",
+  "parent_links": [
+    {
+      "text_html": "TProcessorEventHandler",
+      "href": "/ref/cpp/class/apache/thrift/TProcessorEventHandler"
+    }
+  ]
 }

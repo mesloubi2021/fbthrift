@@ -30,17 +30,14 @@
 
 #include <thrift/lib/cpp/TApplicationException.h>
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include <thrift/lib/cpp2/transport/rocket/PayloadUtils.h>
 #include <thrift/lib/cpp2/transport/rocket/RocketException.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
+#include <thrift/lib/cpp2/transport/rocket/compression/CompressionManager.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/ErrorCode.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Flags.h>
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 // RocketSinkClientCallback methods
 RocketSinkClientCallback::RocketSinkClientCallback(
@@ -63,7 +60,10 @@ bool RocketSinkClientCallback::onFirstResponse(
 
   connection_.sendPayload(
       streamId_,
-      pack(std::move(firstResponse), connection_.getRawSocket()),
+      PayloadSerializer::getInstance()->pack(
+          std::move(firstResponse),
+          connection_.isDecodingMetadataUsingBinaryProtocol(),
+          connection_.getRawSocket()),
       Flags().next(true));
   return true;
 }
@@ -78,8 +78,9 @@ void RocketSinkClientCallback::onFirstResponseError(
             DCHECK(encodedError.encoded.payload);
             connection_.sendPayload(
                 streamId_,
-                pack(
+                PayloadSerializer::getInstance()->pack(
                     std::move(encodedError.encoded),
+                    connection_.isDecodingMetadataUsingBinaryProtocol(),
                     connection_.getRawSocket()),
                 Flags().next(true).complete(true));
           });
@@ -95,7 +96,7 @@ void RocketSinkClientCallback::onFinalResponse(StreamPayload&& finalResponse) {
 
   // apply compression if client has specified compression codec
   if (compressionConfig_) {
-    apache::thrift::rocket::detail::setCompressionCodec(
+    CompressionManager().setCompressionCodec(
         *compressionConfig_,
         finalResponse.metadata,
         finalResponse.payload->computeChainDataLength());
@@ -103,7 +104,10 @@ void RocketSinkClientCallback::onFinalResponse(StreamPayload&& finalResponse) {
 
   connection_.sendPayload(
       streamId_,
-      pack(std::move(finalResponse), connection_.getRawSocket()),
+      PayloadSerializer::getInstance()->pack(
+          std::move(finalResponse),
+          connection_.isDecodingMetadataUsingBinaryProtocol(),
+          connection_.getRawSocket()),
       Flags().next(true).complete(true));
   auto state = state_;
   auto& connection = connection_;
@@ -125,14 +129,17 @@ void RocketSinkClientCallback::onFinalResponseError(
       [this](::apache::thrift::detail::EncodedStreamError& err) {
         // apply compression if client has specified compression codec
         if (compressionConfig_) {
-          apache::thrift::rocket::detail::setCompressionCodec(
+          CompressionManager().setCompressionCodec(
               *compressionConfig_,
               err.encoded.metadata,
               err.encoded.payload->computeChainDataLength());
         }
         connection_.sendPayload(
             streamId_,
-            pack(std::move(err.encoded), connection_.getRawSocket()),
+            PayloadSerializer::getInstance()->pack(
+                std::move(err.encoded),
+                connection_.isDecodingMetadataUsingBinaryProtocol(),
+                connection_.getRawSocket()),
             Flags().next(true).complete(true));
       },
       [&](...) {
@@ -212,7 +219,8 @@ void RocketSinkClientCallback::timeoutExpired() noexcept {
           StreamRpcErrorCode::CHUNK_TIMEOUT);
   streamRpcError.what_utf8_ref() = "Sink chunk timeout";
   onFinalResponseError(folly::make_exception_wrapper<rocket::RocketException>(
-      rocket::ErrorCode::CANCELED, packCompact(streamRpcError)));
+      rocket::ErrorCode::CANCELED,
+      PayloadSerializer::getInstance()->packCompact(streamRpcError)));
 }
 
 void RocketSinkClientCallback::setProtoId(protocol::PROTOCOL_TYPES protoId) {
@@ -253,6 +261,4 @@ void RocketSinkClientCallback::TimeoutCallback::decCredits() {
   }
 }
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

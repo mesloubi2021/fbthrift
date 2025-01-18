@@ -19,9 +19,8 @@
 #include <folly/Overload.h>
 
 #if FOLLY_HAS_COROUTINES
-namespace apache {
-namespace thrift {
-namespace detail {
+
+namespace apache::thrift::detail {
 
 // Explicitly instantiate the base of ServerSinkBridge
 template class TwoWayBridge<
@@ -39,7 +38,7 @@ ServerSinkBridge::ServerSinkBridge(
       evb_(folly::getKeepAliveToken(&evb)),
       clientCallback_(callback) {
   interaction_ =
-      TileStreamGuard::transferFrom(std::move(sinkConsumer.interaction));
+      TileStreamGuard::transferFrom(std::move(consumer_.interaction));
   bool scheduledWait = clientWait(this);
   DCHECK(scheduledWait);
 }
@@ -175,7 +174,6 @@ void ServerSinkBridge::close() {
   Ptr(this);
 }
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail
+
 #endif

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
@@ -35,6 +37,9 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(permEnum.name, enumName)
         self.assertEqual(permEnum.elements[1], "execute")
         self.assertEqual(permEnum.elements[4], "read")
+        self.assertEqual(len(permEnum.structured_annotations), 1)
+        self.assertEqual(permEnum.structured_annotations[0].type.name, "python.Flags")
+        self.assertEqual(permEnum.structured_annotations[0].fields, {})
         self.assertEqual(len(permEnum.elements), 3)
         self.assertEqual(permEnum, gen_metadata(Perm))
         self.assertEqual(permEnum, gen_metadata(Perm(1)))
@@ -59,6 +64,8 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(field.name, "name")
         self.assertEqual(fieldClass.name, field.name)
         self.assertEqual(fieldInstance.name, field.name)
+        # if no structured annotation, the pyname is the same as name
+        self.assertEqual(fieldInstance.name, fieldInstance.pyname)
         self.assertEqual(field.is_optional, False)
         self.assertEqual(fieldClass.is_optional, False)
         self.assertEqual(fieldInstance.is_optional, False)
@@ -77,10 +84,11 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(meta.structs["testing.EmptyUnion"].is_union, True)
 
         mixedStruct = gen_metadata(mixed)
-        _, _, _, _, field, *rest = mixedStruct.fields
+        optional, non_optional, _, _, field, *rest = mixedStruct.fields
         self.assertEqual(field.name, "some_field")
-        # TODO pyname
-        # self.assertEqual(field.pyname, "some_field_")
+        self.assertTrue(optional.is_optional)
+        self.assertFalse(non_optional.is_optional)
+        self.assertEqual(field.pyname, "some_field_")
 
     def test_metadata_struct_recursive(self) -> None:
         hard_struct = gen_metadata(hard)

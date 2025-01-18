@@ -28,8 +28,7 @@
 FOLLY_GFLAGS_DECLARE_int32(thrift_cpp2_protocol_reader_string_limit);
 FOLLY_GFLAGS_DECLARE_int32(thrift_cpp2_protocol_reader_container_limit);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using folly::IOBuf;
 using folly::IOBufQueue;
@@ -153,6 +152,9 @@ class BinaryProtocolWriter : public detail::ProtocolBase {
   // Get last n bytes we just wrote
   folly::io::Cursor tail(size_t n);
 
+  uint8_t* ensure(size_t n);
+  void advance(size_t n);
+
  private:
   static void checkBinarySize(uint64_t size);
   template <bool kWriteSize>
@@ -257,7 +259,7 @@ class BinaryProtocolReader : public detail::ProtocolBase {
 
   static constexpr std::size_t fixedSizeInContainer(TType type);
   void skipBytes(size_t bytes) { in_.skip(bytes); }
-  void skip(TType type) { apache::thrift::skip(*this, type); }
+  void skip(TType type, int depth = 0);
 
   const Cursor& getCursor() const { return in_; }
 
@@ -368,8 +370,7 @@ struct ProtocolReaderStructReadState<BinaryProtocolReader>
     : BinaryProtocolReader::StructReadState {};
 
 } // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #include <thrift/lib/cpp2/protocol/BinaryProtocol-inl.h>
 

@@ -24,8 +24,7 @@
 #include <thrift/lib/cpp/protocol/TType.h>
 #include <thrift/lib/cpp2/TypeClass.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace detail {
 
@@ -45,7 +44,7 @@ struct protocol_type_<type_class::integral> {
   // clang-format off
   template <typename Type>
   static constexpr protocol::TType apply =
-      std::is_same<Type, bool>::value ? protocol::TType::T_BOOL :
+      std::is_same_v<Type, bool> ? protocol::TType::T_BOOL :
       sizeof(Type) == 1 ? protocol::TType::T_BYTE :
       sizeof(Type) == 2 ? protocol::TType::T_I16 :
       sizeof(Type) == 4 ? protocol::TType::T_I32 :
@@ -129,7 +128,7 @@ struct protocol_type_<indirection_tag<IndirectedTypeClass, Indirection>> {
 //  A trait variable and type to map from type-class and type to values of type
 //  enum TType.
 template <typename TypeClass, typename Type>
-FOLLY_INLINE_VARIABLE constexpr protocol::TType protocol_type_v =
+inline constexpr protocol::TType protocol_type_v =
     ::apache::thrift::detail::protocol_type_<TypeClass>::template apply<Type>;
 template <typename TypeClass, typename Type>
 struct protocol_type //
@@ -221,9 +220,8 @@ struct fixed_cost_skip_<type_class::map<KeyTypeClass, MappedTypeClass>> {
 //  list elements do not have fixed size. And it is not cheap to skip under
 //  SimpleJson Protocol since the list header does not include the list length.
 template <class Protocol, class TypeClass, class Type>
-FOLLY_INLINE_VARIABLE constexpr bool fixed_cost_skip_v =
+inline constexpr bool fixed_cost_skip_v =
     ::apache::thrift::detail::fixed_cost_skip_<
         TypeClass>::template apply<Protocol, Type>;
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

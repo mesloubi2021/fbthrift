@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <folly/ExceptionWrapper.h>
 #include <thrift/lib/cpp2/util/ScopedServerThread.h>
 
 #include <condition_variable>
@@ -24,7 +25,7 @@
 #include <folly/ScopeGuard.h>
 #include <folly/SocketAddress.h>
 #include <thrift/lib/cpp/concurrency/PosixThreadFactory.h>
-#include <thrift/lib/cpp2/server/BaseThriftServer.h>
+#include <thrift/lib/cpp2/server/ThriftServer.h>
 
 using std::shared_ptr;
 using std::weak_ptr;
@@ -32,9 +33,7 @@ using namespace apache::thrift::concurrency;
 using namespace apache::thrift::server;
 using namespace apache::thrift::transport;
 
-namespace apache {
-namespace thrift {
-namespace util {
+namespace apache::thrift::util {
 
 /**
  * ScopedServerThread::Helper runs the server loop in the new server thread.
@@ -47,9 +46,7 @@ class ScopedServerThread::Helper : public Runnable, public TServerEventHandler {
   Helper() : state_(STATE_NOT_STARTED) {}
 
   void init(
-      shared_ptr<BaseThriftServer> server,
-      shared_ptr<Helper> self,
-      Func onExit);
+      shared_ptr<ThriftServer> server, shared_ptr<Helper> self, Func onExit);
 
   void run() override;
 
@@ -76,7 +73,7 @@ class ScopedServerThread::Helper : public Runnable, public TServerEventHandler {
 
   void preServe(const folly::SocketAddress* address) override;
 
-  const shared_ptr<BaseThriftServer>& getServer() const { return server_; }
+  const shared_ptr<ThriftServer>& getServer() const { return server_; }
 
   void releaseServer() { server_.reset(); }
 
@@ -96,52 +93,19 @@ class ScopedServerThread::Helper : public Runnable, public TServerEventHandler {
     weak_ptr<Helper> outer_;
   };
 
-  // Helper class to polymorphically re-throw a saved exception type
-  class SavedException {
-   public:
-    virtual ~SavedException() {}
-    virtual void rethrow() = 0;
-  };
-
-  template <typename ExceptionT>
-  class SavedExceptionImpl : public SavedException {
-   public:
-    explicit SavedExceptionImpl(const ExceptionT& x) : exception_(x) {}
-
-    void rethrow() override { throw exception_; }
-
-   private:
-    ExceptionT exception_;
-  };
-
-  // Attempt to downcast to a specific type to avoid slicing.
-  template <typename ExceptionT>
-  bool tryHandleServeError(const std::exception& x) {
-    auto e = dynamic_cast<const ExceptionT*>(&x);
-    if (e) {
-      handleServeError<ExceptionT>(*e);
-    }
-    return e;
+  void handleServeError(const std::exception&) override {
+    // TODO(praihan): This function is no longer called by the Thrift server
+    // runtime. It should be removed.
+    std::terminate();
   }
 
-  // Copying exceptions is difficult because of the slicing problem. Match the
-  // most commonly expected exception types, and try our best to copy as much
-  // state as possible.
-  void handleServeError(const std::exception& x) override {
-    tryHandleServeError<TTransportException>(x) ||
-        tryHandleServeError<TException>(x) ||
-        tryHandleServeError<std::system_error>(x) ||
-        tryHandleServeError<std::exception>(x);
-  }
-
-  template <typename ExceptionT>
-  void handleServeError(const ExceptionT& x) {
+  void handleServeErrorImpl(folly::exception_wrapper ex) {
     std::unique_lock<std::mutex> l(stateMutex_);
 
     if (state_ == STATE_NOT_STARTED) {
       // If the error occurred before the server started,
       // save a copy of the error and notify the main thread
-      savedError_.reset(new SavedExceptionImpl<ExceptionT>(x));
+      savedError_ = ex;
       state_ = STATE_START_ERROR;
       stateCondVar_.notify_one();
     } else {
@@ -149,8 +113,8 @@ class ScopedServerThread::Helper : public Runnable, public TServerEventHandler {
       // Just log an error message.
       T_ERROR(
           "ScopedServerThread: serve() raised a %s while running: %s",
-          typeid(x).name(),
-          x.what());
+          ex.class_name().c_str(),
+          ex.what().c_str());
     }
   }
 
@@ -158,14 +122,14 @@ class ScopedServerThread::Helper : public Runnable, public TServerEventHandler {
   std::mutex stateMutex_;
   std::condition_variable stateCondVar_;
 
-  shared_ptr<BaseThriftServer> server_;
+  shared_ptr<ThriftServer> server_;
   Func onExit_;
-  shared_ptr<SavedException> savedError_;
+  folly::exception_wrapper savedError_;
   folly::SocketAddress address_;
 };
 
 void ScopedServerThread::Helper::init(
-    shared_ptr<BaseThriftServer> server, shared_ptr<Helper> self, Func onExit) {
+    shared_ptr<ThriftServer> server, shared_ptr<Helper> self, Func onExit) {
   server_ = std::move(server);
   onExit_ = std::move(onExit);
 
@@ -184,10 +148,8 @@ void ScopedServerThread::Helper::run() {
   // notify the main thread of the failure.
   try {
     server_->serve();
-  } catch (const std::exception& x) {
-    handleServeError(x);
   } catch (...) {
-    TServerEventHandler::handleServeError();
+    handleServeErrorImpl(folly::exception_wrapper(folly::current_exception()));
   }
   if (onExit_) {
     onExit_();
@@ -209,8 +171,8 @@ void ScopedServerThread::Helper::waitUntilStarted() {
   // If an error occurred starting the server,
   // throw the saved error in the main thread
   if (state_ == STATE_START_ERROR) {
-    assert(savedError_);
-    savedError_->rethrow();
+    assert(savedError_.has_exception_ptr());
+    savedError_.throw_exception();
   }
 }
 
@@ -239,7 +201,7 @@ void ScopedServerThread::Helper::EventHandler::preServe(
 
 ScopedServerThread::ScopedServerThread() {}
 
-ScopedServerThread::ScopedServerThread(shared_ptr<BaseThriftServer> server) {
+ScopedServerThread::ScopedServerThread(shared_ptr<ThriftServer> server) {
   start(std::move(server));
 }
 
@@ -247,8 +209,7 @@ ScopedServerThread::~ScopedServerThread() {
   stop();
 }
 
-void ScopedServerThread::start(
-    shared_ptr<BaseThriftServer> server, Func onExit) {
+void ScopedServerThread::start(shared_ptr<ThriftServer> server, Func onExit) {
   if (helper_) {
     throw TLibraryException("ScopedServerThread is already running");
   }
@@ -311,9 +272,9 @@ const folly::SocketAddress* ScopedServerThread::getAddress() const {
   return helper_->getAddress();
 }
 
-weak_ptr<BaseThriftServer> ScopedServerThread::getServer() const {
+weak_ptr<ThriftServer> ScopedServerThread::getServer() const {
   if (!helper_) {
-    return weak_ptr<BaseThriftServer>();
+    return weak_ptr<ThriftServer>();
   }
   return helper_->getServer();
 }
@@ -322,6 +283,4 @@ bool ScopedServerThread::setServeThreadName(const std::string& name) {
   return thread_->setName(name);
 }
 
-} // namespace util
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::util

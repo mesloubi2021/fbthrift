@@ -17,15 +17,20 @@
 include "thrift/annotation/cpp.thrift"
 include "thrift/annotation/thrift.thrift"
 include "thrift/lib/thrift/field_mask.thrift"
+include "thrift/lib/thrift/any.thrift"
 
 cpp_include "thrift/test/AdapterTest.h"
 cpp_include "thrift/lib/cpp2/protocol/FieldMask.h"
+cpp_include "thrift/lib/cpp2/type/Any.h"
 
 package "apache.org/thrift/test"
+
+struct Empty {}
 
 struct Foo {
   1: i32 field1;
   3: i32 field2;
+  11: map<string, Empty> field3;
 }
 
 struct Bar {
@@ -38,6 +43,18 @@ struct Bar {
 struct Baz {
   @cpp.Adapter{name = "::apache::thrift::test::TemplatedTestAdapter"}
   1: Foo foo;
+}
+
+union RecursiveUnion {
+  1: Foo foo;
+  2: Bar bar;
+  3: Baz baz;
+  @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
+  4: RecursiveUnion recurse;
+  @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
+  5: map<string, RecursiveUnion> recurseMap;
 }
 
 struct HasMap {
@@ -79,6 +96,7 @@ struct SmartPointerStruct {
 
 struct SharedConstPointerStruct {
   @cpp.Ref{type = cpp.RefType.Unique}
+  @cpp.AllowLegacyNonOptionalRef
   1: Foo2 unique;
   @cpp.Ref{type = cpp.RefType.Shared}
   2: optional Foo2 shared_const;
@@ -91,4 +109,15 @@ struct MaskStruct {
   @cpp.Adapter{name = "::apache::thrift::protocol::MaskAdapter<Bar>"}
   1: field_mask.Mask mask;
   2: TypedBarMask mask2;
+}
+
+@cpp.Adapter{
+  name = "::apache::thrift::InlineAdapter<::apache::thrift::type::AnyData>",
+}
+typedef any.Any AdaptedAny
+
+struct StructWithAny {
+  1: any.Any rawAny;
+  2: AdaptedAny adaptedAny;
+  3: optional any.Any optAny;
 }

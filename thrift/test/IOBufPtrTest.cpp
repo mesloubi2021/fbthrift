@@ -37,14 +37,12 @@ class IOBufPtrTestService
     : public apache::thrift::ServiceHandler<IOBufPtrTestService> {
  public:
   void async_tm_combine(
-      std::unique_ptr<
-          apache::thrift::HandlerCallback<std::unique_ptr<IOBufPtr>>> callback,
+      apache::thrift::HandlerCallbackPtr<std::unique_ptr<IOBufPtr>> callback,
       std::unique_ptr<Request> req) override;
 };
 
 void IOBufPtrTestService::async_tm_combine(
-    std::unique_ptr<apache::thrift::HandlerCallback<std::unique_ptr<IOBufPtr>>>
-        callback,
+    apache::thrift::HandlerCallbackPtr<std::unique_ptr<IOBufPtr>> callback,
     std::unique_ptr<Request> req) {
   folly::IOBufQueue queue;
   queue.append("(");
@@ -108,7 +106,9 @@ void IOBufPtrTest::serverThreadLoop() {
   server_.setPort(0); // pick one
   server_.setInterface(std::make_unique<IOBufPtrTestService>());
   server_.setup();
-  SCOPE_EXIT { server_.cleanUp(); };
+  SCOPE_EXIT {
+    server_.cleanUp();
+  };
   {
     std::unique_lock<std::mutex> lock(mutex_);
     serverEventBase_ = server_.getEventBaseManager()->getEventBase();
@@ -139,6 +139,13 @@ TEST_F(IOBufPtrTest, Simple) {
     client()->sync_combine(resp, req);
     EXPECT_EQ("(meow)+(woof)+(oink)", resp->moveToFbString());
   }
+}
+
+TEST(IOBufPtrUnionTest, Union) {
+  Union foo;
+  foo.foo_ref() = folly::IOBuf::wrapBufferAsValue("meow", 4);
+  Union bar = std::move(foo);
+  EXPECT_EQ(bar.foo_ref()->moveToFbString(), "meow");
 }
 
 } // namespace iobufptr

@@ -15,6 +15,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -54,6 +55,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -63,7 +65,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -93,6 +95,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -102,7 +105,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -132,6 +135,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -141,7 +145,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -171,6 +175,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -180,7 +185,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -210,6 +215,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -219,7 +225,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -249,6 +255,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -258,7 +265,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -288,6 +295,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -297,7 +305,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -327,6 +335,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -336,7 +345,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -366,6 +375,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -375,7 +385,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -405,6 +415,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -414,7 +425,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -444,6 +455,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -453,7 +465,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -483,6 +495,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -492,7 +505,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -522,6 +535,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -531,7 +545,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -561,6 +575,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -570,7 +585,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -600,6 +615,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -609,7 +625,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -639,6 +655,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -648,7 +665,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -678,6 +695,7 @@
       "definition_html": "static void apache::thrift::op::detail::BaseOp&lt; Tag &gt;::delete_",
       "argsstring_html": "(void *ptr)",
       "name_html": "delete_",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseOp::delete_",
       "param": [
         {
           "type_html": "void *",
@@ -687,7 +705,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "line": "68",
-        "column": "1",
+        "column": "15",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/BaseOp.h",
         "bodystart": "68",
         "bodyend": "68"
@@ -712,5 +730,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/delete_",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/delete_"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/AnyOp/delete_",
+  "parent_links": [
+    {
+      "text_html": "AnyOp",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/AnyOp"
+    }
+  ]
 }

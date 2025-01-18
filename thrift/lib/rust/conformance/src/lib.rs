@@ -17,8 +17,6 @@
 #![feature(trait_alias)]
 
 mod any_registry;
-mod bridge;
-mod universal_name;
 
 pub use any_registry::AnyRegistry;
 pub use any_registry::DeserializeSlice;

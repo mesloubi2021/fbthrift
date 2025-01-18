@@ -28,19 +28,21 @@
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/AsyncTransport.h>
 #include <folly/io/async/ssl/OpenSSLTransportCertificate.h>
+#include <folly/io/async/ssl/OpenSSLUtils.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp/server/TConnectionContext.h>
 #include <thrift/lib/cpp/server/TServerObserver.h>
 #include <thrift/lib/cpp/transport/THeader.h>
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/cpp2/async/Interaction.h>
-#include <thrift/lib/cpp2/util/TypeErasedStorage.h>
+#include <thrift/lib/cpp2/server/ServiceInterceptorStorage.h>
+#include <thrift/lib/cpp2/util/TypeErasedValue.h>
+#include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 #include <wangle/ssl/SSLUtil.h>
 
 using apache::thrift::concurrency::PriorityThreadManager;
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace rocket {
 class ThriftRocketServerHandler;
@@ -69,12 +71,11 @@ class ClientMetadataRef {
 };
 
 namespace detail {
-using ConnectionInternalFieldsT =
-    util::TypeErasedValue<64, alignof(std::max_align_t)>;
+class Cpp2ConnContextInternalAPI;
+using ConnectionInternalFieldsT = util::TypeErasedValue<128>;
 THRIFT_PLUGGABLE_FUNC_DECLARE(
     ConnectionInternalFieldsT, createPerConnectionInternalFields);
-using RequestInternalFieldsT =
-    util::TypeErasedValue<128, alignof(std::max_align_t)>;
+using RequestInternalFieldsT = util::TypeErasedValue<128>;
 THRIFT_PLUGGABLE_FUNC_DECLARE(
     RequestInternalFieldsT, createPerRequestInternalFields);
 
@@ -103,11 +104,13 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
       apache::thrift::ClientIdentityHook clientIdentityHook,
       const Cpp2Worker* worker,
       const IOWorkerContext* workerContext,
+      std::size_t numServiceInterceptors,
       detail::ConnectionInternalFieldsT internalFields)
       : transport_(transport),
         manager_(manager),
         worker_(worker),
         workerContext_(workerContext),
+        serviceInterceptorsStorage_(numServiceInterceptors),
         internalFields_(std::move(internalFields)) {
     if (address) {
       transportInfo_.peerAddress = *address;
@@ -152,6 +155,7 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
       std::shared_ptr<X509> peerCert /*overridden from socket*/,
       apache::thrift::ClientIdentityHook clientIdentityHook,
       const WorkerT* worker,
+      std::size_t numServiceInterceptors,
       detail::ConnectionInternalFieldsT internalFields)
       : Cpp2ConnContext(
             address,
@@ -161,6 +165,7 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
             std::move(clientIdentityHook),
             worker,
             worker,
+            numServiceInterceptors,
             std::move(internalFields)) {}
 
  public:
@@ -175,7 +180,8 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
       const folly::AsyncTransport* transport = nullptr,
       folly::EventBaseManager* manager = nullptr,
       std::shared_ptr<X509> peerCert = nullptr /*overridden from socket*/,
-      apache::thrift::ClientIdentityHook clientIdentityHook = nullptr)
+      apache::thrift::ClientIdentityHook clientIdentityHook = nullptr,
+      std::size_t numServiceInterceptors = 0)
       : Cpp2ConnContext(
             address,
             transport,
@@ -184,6 +190,7 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
             std::move(clientIdentityHook),
             nullptr,
             nullptr,
+            numServiceInterceptors,
             detail::createPerConnectionInternalFields()) {}
 
   template <typename WorkerT>
@@ -193,7 +200,8 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
       folly::EventBaseManager* manager,
       std::shared_ptr<X509> peerCert /*overridden from socket*/,
       apache::thrift::ClientIdentityHook clientIdentityHook,
-      const WorkerT* worker)
+      const WorkerT* worker,
+      std::size_t numServiceInterceptors)
       : Cpp2ConnContext(
             address,
             transport,
@@ -202,6 +210,7 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
             std::move(clientIdentityHook),
             worker,
             worker,
+            numServiceInterceptors,
             detail::createPerConnectionInternalFields()) {}
 
   ~Cpp2ConnContext() override { DCHECK(tiles_.empty()); }
@@ -364,6 +373,12 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
     return ClientMetadataRef{*clientMetadata_};
   }
 
+  detail::ServiceInterceptorOnConnectionStorage*
+  getStorageForServiceInterceptorOnConnectionByIndex(std::size_t index) {
+    DCHECK_LT(index, serviceInterceptorsStorage_.size());
+    return &serviceInterceptorsStorage_[index];
+  }
+
   template <class T>
   T& getInternalFields() noexcept {
     return internalFields_.value_unchecked<T>();
@@ -415,6 +430,12 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
    * Throws std::out_of_range if not found
    */
   Tile& getTile(int64_t id) { return *tiles_.at(id); }
+  Tile* findTile(int64_t id) {
+    if (auto tile = tiles_.find(id); tile != tiles_.end()) {
+      return tile->second.get();
+    }
+    return nullptr;
+  }
   friend class GeneratedAsyncProcessorBase;
   friend class Tile;
   friend class TilePromise;
@@ -440,6 +461,7 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
   friend class Cpp2Connection;
   friend class rocket::ThriftRocketServerHandler;
   friend class HTTP2RoutingHandler;
+  friend class detail::Cpp2ConnContextInternalAPI;
 
   /**
    * Platform-independent representation of unix domain socket peer credentials,
@@ -535,17 +557,25 @@ class Cpp2ConnContext : public apache::thrift::server::TConnectionContext {
   std::optional<TransportType> transportType_;
   std::optional<CLIENT_TYPE> clientType_;
   std::optional<ClientMetadata> clientMetadata_;
+  std::vector<detail::ServiceInterceptorOnConnectionStorage>
+      serviceInterceptorsStorage_;
   detail::ConnectionInternalFieldsT internalFields_;
 };
 
-class Cpp2ClientRequestContext
-    : public apache::thrift::server::TConnectionContext {
+namespace detail {
+class Cpp2ConnContextInternalAPI {
  public:
-  explicit Cpp2ClientRequestContext(transport::THeader* header)
-      : TConnectionContext(header) {}
+  explicit Cpp2ConnContextInternalAPI(Cpp2ConnContext& connContext)
+      : connContext_(connContext) {}
 
-  void setRequestHeader(transport::THeader* header) { header_ = header; }
+  Tile* findTile(int64_t interactionId) const {
+    return connContext_.findTile(interactionId);
+  }
+
+ private:
+  Cpp2ConnContext& connContext_;
 };
+} // namespace detail
 
 // Request-specific context
 class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
@@ -554,21 +584,27 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
    * because this may result in a security SEV**/
   Cpp2RequestContext(
       Cpp2ConnContext* ctx,
+      apache::thrift::detail::ServiceInterceptorRequestStorageContext
+          serviceInterceptorsStorage,
       detail::RequestInternalFieldsT internalFields,
       apache::thrift::transport::THeader* header = nullptr,
       std::string methodName = std::string{})
       : TConnectionContext(header),
         ctx_(ctx),
         methodName_(std::move(methodName)),
+        serviceInterceptorsStorage_(std::move(serviceInterceptorsStorage)),
         internalFields_(std::move(internalFields)) {}
 
  public:
   explicit Cpp2RequestContext(
       Cpp2ConnContext* ctx,
       apache::thrift::transport::THeader* header = nullptr,
-      std::string methodName = std::string{})
+      std::string methodName = std::string{},
+      apache::thrift::detail::ServiceInterceptorRequestStorageContext
+          serviceInterceptorsStorage = {})
       : Cpp2RequestContext(
             ctx,
+            std::move(serviceInterceptorsStorage),
             detail::createPerRequestInternalFields(),
             header,
             std::move(methodName)) {}
@@ -654,13 +690,17 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
 
   std::string releaseMethodName() { return std::move(methodName_); }
 
+  void setRpcKind(RpcKind rpcKind) { rpcKind_ = rpcKind; }
+
+  RpcKind getRpcKind() const { return rpcKind_; }
+
   void setProtoSeqId(int32_t protoSeqId) { protoSeqId_ = protoSeqId; }
 
   int32_t getProtoSeqId() { return protoSeqId_; }
 
   void setInteractionId(int64_t id) { interactionId_ = id; }
 
-  int64_t getInteractionId() { return interactionId_; }
+  int64_t getInteractionId() const { return interactionId_; }
 
   void setFrameworkMetadata(folly::IOBuf frameworkMetadata) {
     frameworkMetadata_ = std::move(frameworkMetadata);
@@ -673,6 +713,10 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
   }
 
   folly::Optional<InteractionCreate>& getInteractionCreate() {
+    return interactionCreate_;
+  }
+
+  const folly::Optional<InteractionCreate>& getInteractionCreate() const {
     return interactionCreate_;
   }
 
@@ -710,6 +754,30 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
     return nullptr;
   }
 
+  int getRequestAttemptId() const {
+    if (auto* header = getHeader()) {
+      if (const auto& loggingContext = header->loggingContext()) {
+        if (const auto attemptIdRef = loggingContext->requestAttemptId();
+            attemptIdRef.is_set()) {
+          return *attemptIdRef;
+        }
+      }
+    }
+    return 0;
+  }
+
+  const std::string* getRoutingTarget() const {
+    if (auto* header = getHeader()) {
+      if (const auto& loggingContext = header->loggingContext()) {
+        if (const auto routingTargetRef = loggingContext->routingTarget();
+            routingTargetRef.has_value() && !routingTargetRef->empty()) {
+          return &*routingTargetRef;
+        }
+      }
+    }
+    return nullptr;
+  }
+
   const std::string* tenantId() const {
     if (auto header = getHeader(); header && header->tenantId()) {
       return &*header->tenantId();
@@ -720,6 +788,19 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
     return nullptr;
   }
 
+  void setWiredRequestBytes(size_t wiredRequestBytes) {
+    wiredRequestBytes_ = wiredRequestBytes;
+  }
+
+  size_t getWiredRequestBytes() const { return wiredRequestBytes_; }
+
+  detail::ServiceInterceptorOnRequestStorage*
+  getStorageForServiceInterceptorOnRequestByIndex(std::size_t index) {
+    DCHECK_NE(serviceInterceptorsStorage_.onRequest.get(), nullptr);
+    DCHECK_LE(index, serviceInterceptorsStorage_.count);
+    return &serviceInterceptorsStorage_.onRequest[index];
+  }
+
  protected:
   apache::thrift::server::TServerObserver::CallTimestamps timestamps_;
 
@@ -728,6 +809,7 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
   folly::erased_unique_ptr requestData_{nullptr, nullptr};
   std::chrono::milliseconds requestTimeout_{0};
   std::string methodName_;
+  RpcKind rpcKind_{RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE};
   int32_t protoSeqId_{0};
   int64_t interactionId_{0};
   bool isException_{false};
@@ -736,10 +818,12 @@ class Cpp2RequestContext : public apache::thrift::server::TConnectionContext {
   concurrency::ThreadManager::ExecutionScope executionScope_{
       concurrency::PRIORITY::NORMAL};
   folly::IOBuf frameworkMetadata_;
+  apache::thrift::detail::ServiceInterceptorRequestStorageContext
+      serviceInterceptorsStorage_;
   detail::RequestInternalFieldsT internalFields_;
+  size_t wiredRequestBytes_{0};
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // #ifndef THRIFT_ASYNC_CPP2CONNCONTEXT_H_

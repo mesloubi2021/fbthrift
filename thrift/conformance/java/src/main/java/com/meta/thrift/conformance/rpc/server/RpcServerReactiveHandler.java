@@ -224,6 +224,23 @@ public class RpcServerReactiveHandler implements RPCConformanceService.Reactive 
   }
 
   @Override
+  public Flux<StreamResponse<Response, Response>> sinkInitialResponse(
+      Request request, Publisher<Request> publisher) {
+    // The return type makes no sense here. Definitely a bug
+    return null;
+  }
+
+  @Override
+  public Mono<Response> sinkDeclaredException(Request request, Publisher<Request> publisher) {
+    return null;
+  }
+
+  @Override
+  public Mono<Response> sinkUndeclaredException(Request request, Publisher<Request> publisher) {
+    return null;
+  }
+
+  @Override
   public BasicInteraction createBasicInteraction() {
     return null;
   }

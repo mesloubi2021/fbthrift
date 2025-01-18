@@ -11,14 +11,10 @@
   },
   "tparams": [
     {
-      "type_html": "typename",
-      "declname_html": "F",
-      "defname_html": "F"
+      "type_html": "typename F"
     },
     {
-      "type_html": "typename",
-      "declname_html": "I",
-      "defname_html": "I"
+      "type_html": "typename I"
     }
   ],
   "functions": [
@@ -34,6 +30,7 @@
       "definition_html": "bool apache::thrift::op::detail::FloatIdenticalTo&lt; F, I &gt;::operator()",
       "argsstring_html": "(F lhs, F rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::FloatIdenticalTo::operator()",
       "param": [
         {
           "type_html": "F",
@@ -46,11 +43,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "269",
-        "column": "1",
+        "line": "274",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "269",
-        "bodyend": "274"
+        "bodystart": "274",
+        "bodyend": "279"
       },
       "definition": {
         "simple_html": "bool operator()(F lhs, F rhs) const",
@@ -66,11 +63,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "line": "268",
+    "line": "273",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-    "bodystart": "268",
-    "bodyend": "275"
+    "bodystart": "273",
+    "bodyend": "280"
   },
   "namespacednames_html": [
     "apache",
@@ -108,6 +105,7 @@
               "definition_html": "bool apache::thrift::op::detail::FloatIdenticalTo&lt; F, I &gt;::operator()",
               "argsstring_html": "(F lhs, F rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::FloatIdenticalTo::operator()",
               "param": [
                 {
                   "type_html": "F",
@@ -120,11 +118,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "line": "269",
-                "column": "1",
+                "line": "274",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-                "bodystart": "269",
-                "bodyend": "274"
+                "bodystart": "274",
+                "bodyend": "279"
               },
               "definition": {
                 "simple_html": "bool operator()(F lhs, F rhs) const",
@@ -146,7 +144,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/FloatIdenticalTo/operator.call",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/FloatIdenticalTo/operator.call"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/FloatIdenticalTo/operator.call",
+          "parent_links": [
+            {
+              "text_html": "FloatIdenticalTo",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/FloatIdenticalTo"
+            }
+          ]
         }
       ]
     }

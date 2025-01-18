@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::protocol::TCompactProtocolT&lt; Transport_ &gt;::readByte",
       "argsstring_html": "(int8_t &amp;byte)",
       "name_html": "readByte",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolT::readByte",
       "param": [
         {
           "type_html": "int8_t &amp;",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "227",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol-inl.h",
         "bodystart": "607",
         "bodyend": "612"
@@ -52,5 +53,11 @@
   "brief_html": "<p>Read a single byte off the wire. Nothing interesting here. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readByte",
-  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readByte"
+  "refid": "/ref/cpp/f/class/apache/thrift/protocol/TCompactProtocolT/readByte",
+  "parent_links": [
+    {
+      "text_html": "TCompactProtocolT",
+      "href": "/ref/cpp/class/apache/thrift/protocol/TCompactProtocolT"
+    }
+  ]
 }

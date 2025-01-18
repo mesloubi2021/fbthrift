@@ -20,13 +20,14 @@
       "definition_html": "decltype(auto) apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::patch",
       "argsstring_html": "()",
       "name_html": "patch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::patch",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "176",
-        "column": "1",
+        "line": "260",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "176",
-        "bodyend": "178"
+        "bodystart": "260",
+        "bodyend": "262"
       },
       "definition": {
         "simple_html": "template &lt;typename Id&gt;\ndecltype(auto) patch()",
@@ -51,5 +52,11 @@
   "brief_html": "<p>Ensures the given field is initalized, and return the associated patch object. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patch",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patch"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patch",
+  "parent_links": [
+    {
+      "text_html": "StructPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/StructPatch"
+    }
+  ]
 }

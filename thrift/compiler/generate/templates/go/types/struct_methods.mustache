@@ -46,30 +46,29 @@
 
   writeField method.
 
+}}{{^program:use_reflect_codec?}}{{!
 }}{{#struct:fields_sorted}}
 {{> types/field_method_write}}
 
 {{/struct:fields_sorted}}{{!
+}}{{/program:use_reflect_codec?}}{{!
 
   readField method.
 
+}}{{^program:use_reflect_codec?}}{{!
 }}{{#struct:fields_sorted}}
 {{> types/field_method_read}}
 
 {{/struct:fields_sorted}}{{!
-
-  toString method.
-
-}}{{#struct:fields_sorted}}
-{{> types/field_method_to_string}}
-
-{{/struct:fields_sorted}}{{!
+}}{{/program:use_reflect_codec?}}{{!
 
   DefaultGet method.
 
 }}{{#struct:fields_sorted}}
 {{#field:pointer?}}
+{{#program:gen_default_get?}}
 {{> types/field_method_default_get}}
+{{/program:gen_default_get?}}
 
 {{/field:pointer?}}
 {{/struct:fields_sorted}}{{!

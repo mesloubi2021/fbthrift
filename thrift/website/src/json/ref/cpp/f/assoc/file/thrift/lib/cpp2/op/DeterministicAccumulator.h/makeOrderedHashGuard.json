@@ -20,6 +20,7 @@
       "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeOrderedHashGuard",
       "argsstring_html": "(Accumulator &amp;accumulator)",
       "name_html": "makeOrderedHashGuard",
+      "qualifiedname_html": "apache::thrift::op::makeOrderedHashGuard",
       "param": [
         {
           "type_html": "Accumulator &amp;",
@@ -29,7 +30,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "169",
-        "column": "1",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "169",
         "bodyend": "172"

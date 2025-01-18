@@ -13,17 +13,61 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
 import unittest
 
-from testing.thrift_types import ComplexRef
+from typing import Type, TypeVar
+
+import python_test.refs.thrift_mutable_types as mutable_types
+import python_test.refs.thrift_types as immutable_ypes
+
+from parameterized import parameterized_class
+
+from python_test.refs.thrift_types import ComplexRef as ComplexRefType
+from thrift.python.mutable_types import (
+    _ThriftListWrapper,
+    _ThriftMapWrapper,
+    to_thrift_list,
+    to_thrift_map,
+    to_thrift_set,
+)
+
+ListT = TypeVar("ListT")
+MapKey = TypeVar("MapKey")
+MapValue = TypeVar("MapValue")
 
 
+@parameterized_class(
+    ("test_types"),
+    [(immutable_ypes,), (mutable_types,)],
+)
 class RefTest(unittest.TestCase):
+    def setUp(self) -> None:
+        """
+        The `setUp` method performs these assignments with type hints to enable
+        pyre when using 'parameterized'. Otherwise, Pyre cannot deduce the types
+        behind `test_types`.
+        """
+        # pyre-ignore[16]: has no attribute `sets_types`
+        self.ComplexRef: Type[ComplexRefType] = self.test_types.ComplexRef
+        self.is_mutable_run: bool = self.test_types.__name__.endswith(
+            "thrift_mutable_types"
+        )
+
+    def to_list(self, list_data: list[ListT]) -> list[ListT] | _ThriftListWrapper:
+        return to_thrift_list(list_data) if self.is_mutable_run else list_data
+
+    def to_map(
+        self, map_data: dict[MapKey, MapValue]
+    ) -> dict[MapKey, MapValue] | _ThriftMapWrapper:
+        return to_thrift_map(map_data) if self.is_mutable_run else map_data
+
     def test_create_default(self) -> None:
-        x = ComplexRef()
+        x = self.ComplexRef()
         self.assertEqual(x.name, "")
         self.assertIsNone(x.list_basetype_ref)
         self.assertIsNone(x.list_recursive_ref)
@@ -35,48 +79,73 @@ class RefTest(unittest.TestCase):
         self.assertIsNone(x.set_const_shared_ref)
 
     def test_single(self) -> None:
-        x = ComplexRef(name="foo", ref=ComplexRef(name="bar"))
+        x = self.ComplexRef(name="foo", ref=self.ComplexRef(name="bar"))
         self.assertIsNotNone(x.ref)
         assert x.ref  # for type checking
         self.assertEqual(x.ref.name, "bar")
 
     def test_list(self) -> None:
-        bar, baz = ComplexRef(name="bar"), ComplexRef(name="baz")
-        x = ComplexRef(
-            name="foo", list_basetype_ref=[1, 2, 3], list_recursive_ref=[bar, baz]
+        bar, baz = self.ComplexRef(name="bar"), self.ComplexRef(name="baz")
+        x = self.ComplexRef(
+            name="foo",
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            list_basetype_ref=self.to_list([1, 2, 3]),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            list_recursive_ref=self.to_list([bar, baz]),
         )
         self.assertEqual(x.list_basetype_ref, (1, 2, 3))
         self.assertEqual(x.list_recursive_ref, (bar, baz))
 
     def test_set(self) -> None:
-        bar, baz = ComplexRef(name="bar"), ComplexRef(name="baz")
-        x = ComplexRef(
-            name="foo", set_basetype_ref={1, 2, 3}, set_recursive_ref={bar, baz}
+        bar, baz = self.ComplexRef(name="bar"), self.ComplexRef(name="baz")
+        x = self.ComplexRef(
+            name="foo",
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            set_basetype_ref=to_thrift_set({1, 2, 3})
+            if self.is_mutable_run
+            else {1, 2, 3},
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            set_recursive_ref=to_thrift_set(set())  # mutable-types not hashable
+            if self.is_mutable_run
+            else {bar, baz},
         )
         self.assertEqual(x.set_basetype_ref, {1, 2, 3})
-        self.assertEqual(x.set_recursive_ref, {bar, baz})
+        self.assertEqual(
+            x.set_recursive_ref, set() if self.is_mutable_run else {bar, baz}
+        )
 
     def test_map(self) -> None:
-        bar, baz = ComplexRef(name="bar"), ComplexRef(name="baz")
-        x = ComplexRef(
+        bar, baz = self.ComplexRef(name="bar"), self.ComplexRef(name="baz")
+        x = self.ComplexRef(
             name="foo",
-            map_basetype_ref={1: 1, 2: 2, 3: 3},
-            map_recursive_ref={1: bar, 2: baz},
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            map_basetype_ref=self.to_map({1: 1, 2: 2, 3: 3}),
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            map_recursive_ref=self.to_map({1: bar, 2: baz}),
         )
         self.assertEqual(x.map_basetype_ref, {1: 1, 2: 2, 3: 3})
         self.assertEqual(x.map_recursive_ref, {1: bar, 2: baz})
 
     def test_shared_ref(self) -> None:
-        bar, baz = ComplexRef(name="bar"), ComplexRef(name="baz")
-        x = ComplexRef(name="foo", list_shared_ref=[bar, baz])
+        bar, baz = self.ComplexRef(name="bar"), self.ComplexRef(name="baz")
+        # pyre-ignore[6]: TODO: Thrift-Container init
+        x = self.ComplexRef(name="foo", list_shared_ref=self.to_list([bar, baz]))
         self.assertEqual(x.list_shared_ref, (bar, baz))
 
     def test_const_shared_ref(self) -> None:
-        bar, baz = ComplexRef(name="bar"), ComplexRef(name="baz")
-        x = ComplexRef(name="foo", set_const_shared_ref={bar, baz})
-        self.assertEqual(x.set_const_shared_ref, {bar, baz})
+        bar, baz = self.ComplexRef(name="bar"), self.ComplexRef(name="baz")
+        x = self.ComplexRef(
+            name="foo",
+            # pyre-ignore[6]: TODO: Thrift-Container init
+            set_const_shared_ref=to_thrift_set(set())
+            if self.is_mutable_run
+            else {bar, baz},
+        )
+        self.assertEqual(
+            x.set_const_shared_ref, set() if self.is_mutable_run else {bar, baz}
+        )
 
     def test_recursive(self) -> None:
-        bar = ComplexRef(name="bar")
-        baz = ComplexRef(recursive=bar)
+        bar = self.ComplexRef(name="bar")
+        baz = self.ComplexRef(recursive=bar)
         self.assertEqual(baz.recursive, bar)

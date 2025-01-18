@@ -23,10 +23,9 @@
 #include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include <thrift/lib/cpp2/transport/rocket/Compression.h>
+#include <thrift/lib/cpp2/transport/rocket/compression/CompressionManager.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace {
 
@@ -110,8 +109,8 @@ std::unique_ptr<folly::IOBuf> makeEnvelope(
 SerializedRequest SerializedCompressedRequest::uncompress() && {
   return compression_ == CompressionAlgorithm::NONE
       ? SerializedRequest(std::move(buffer_))
-      : SerializedRequest(
-            rocket::uncompressBuffer(std::move(buffer_), compression_));
+      : SerializedRequest(rocket::CompressionManager().uncompressBuffer(
+            std::move(buffer_), compression_));
 }
 
 SerializedCompressedRequest SerializedCompressedRequest::clone() const {
@@ -303,5 +302,4 @@ LegacySerializedResponse::extractPayload(
   return std::make_pair(mtype, ResponsePayload{std::move(buffer)});
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

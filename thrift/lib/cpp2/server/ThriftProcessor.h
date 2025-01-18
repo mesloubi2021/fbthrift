@@ -22,6 +22,7 @@
 
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/synchronization/DelayedInit.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/async/AsyncProcessor.h>
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
@@ -29,8 +30,7 @@
 #include <thrift/lib/cpp2/transport/core/ThriftChannelIf.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class ThriftServer;
 
@@ -66,9 +66,8 @@ class ThriftProcessor {
       std::unique_ptr<Cpp2ConnContext> connContext) noexcept;
 
  private:
-  std::unique_ptr<AsyncProcessor> processor_;
+  folly::DelayedInit<std::unique_ptr<AsyncProcessor>> processor_;
   ThriftServer& server_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -18,9 +18,7 @@
 
 #include <stdexcept>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 void t_enum::set_values(t_enum_value_list values) {
   values_.clear();
@@ -48,7 +46,7 @@ void t_enum::append_value(std::unique_ptr<t_enum_value> enum_value) {
   const_val->set_enum_value(enum_value.get());
   auto tconst = std::make_unique<t_const>(
       program_,
-      &t_base_type::t_i32(),
+      &t_primitive_type::t_i32(),
       enum_value->get_name(),
       std::move(const_val));
   append(std::move(enum_value), std::move(tconst));
@@ -57,6 +55,14 @@ void t_enum::append_value(std::unique_ptr<t_enum_value> enum_value) {
 const t_enum_value* t_enum::find_value(int32_t value) const {
   auto itr = value_map_.find(value);
   if (itr != value_map_.end()) {
+    return itr->second;
+  }
+  return nullptr;
+}
+
+const t_const* t_enum::find_const_by_name(std::string_view name) const {
+  auto itr = consts_by_name_.find(name);
+  if (itr != consts_by_name_.end()) {
     return itr->second;
   }
   return nullptr;
@@ -73,6 +79,6 @@ void t_enum::update_unused(int32_t val) {
   }
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+t_enum::~t_enum() = default;
+
+} // namespace apache::thrift::compiler

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Set as pySet
+from collections.abc import Iterable, Mapping, Set as pySet, Sized
 import enum
 import itertools
 import warnings
@@ -27,39 +27,50 @@ from types import MappingProxyType
 
 from thrift.py3.exceptions cimport GeneratedError
 from thrift.py3.serializer import deserialize, serialize
+from thrift.python.types cimport BadEnum as _fbthrift_python_BadEnum
+from thrift.python.types import (
+    Enum as _fbthrift_python_Enum,
+    EnumMeta as _fbthrift_python_EnumMeta,
+    Flag as _fbthrift_python_Flag,
+    StructOrUnion as _fbthrift_python_StructOrUnion,
+)
 
-__all__ = ['Struct', 'BadEnum', 'NOTSET', 'Union', 'Enum', 'Flag']
+# ensures that common classes can be reliably imported from thrift.py3.types
+BadEnum = _fbthrift_python_BadEnum
+EnumMeta = _fbthrift_python_EnumMeta
+
+__all__ = ['Struct', 'BadEnum', 'Union', 'Enum', 'Flag', 'EnumMeta']
 
 
-cdef __NotSet NOTSET = __NotSet.__new__(__NotSet)
+_fbthrift__module_name__ = "thrift.py3.types"
 
 # This isn't exposed to the module dict
 Object = cython.fused_type(Struct, GeneratedError)
 
 
+cdef list_eq(List self, object other):
+    if (
+        not isinstance(other, Iterable) or
+        not isinstance(other, Sized) or
+        len(self) != len(other)
+    ):
+        return False
 
-cdef list_compare(object first, object second, int op):
-    """ Take either Py_EQ or Py_LT, everything else is derived """
+    for x, y in zip(self, other):
+        if x != y:
+            return False
+    return True
+
+
+cdef list_lt(object first, object second):
     if not (isinstance(first, Iterable) and isinstance(second, Iterable)):
-        if op == Py_EQ:
-            return False
-        else:
-            return NotImplemented
-
-    if op == Py_EQ:
-        if len(first) != len(second):
-            return False
+        return NotImplemented
 
     for x, y in zip(first, second):
         if x != y:
-            if op == Py_LT:
-                return x < y
-            else:
-                return False
+            return x < y
 
-    if op == Py_LT:
-        return len(first) < len(second)
-    return True
+    return len(first) < len(second)
 
 
 @cython.internal
@@ -85,6 +96,11 @@ cdef class StructMeta(type):
         except (AttributeError, TypeError) as e:
             # Unify different exception types to ValueError
             raise ValueError(e)
+
+    # make the __module__ customizable
+    # this just enables the slot; impl here is ignored
+    def __module__(cls):
+        pass
 
     def __iter__(cls):
         for i in range(cls._fbthrift_get_struct_size()):
@@ -137,6 +153,8 @@ cdef class Struct:
     """
     Base class for all thrift structs
     """
+    __module__ = _fbthrift__module_name__
+
     cdef IOBuf _fbthrift_serialize(self, Protocol proto):
         return IOBuf(b'')
 
@@ -228,6 +246,8 @@ cdef class Union(Struct):
     """
     Base class for all thrift Unions
     """
+    __module__ = _fbthrift__module_name__
+
     cdef bint _fbthrift_noncomparable_eq(self, other):
         return self.type == other.type and self.value == other.value
 
@@ -264,6 +284,11 @@ cdef class UnionMeta(type):
             for i in range(cls._fbthrift_get_struct_size())
         ] + ["type", "value"]
 
+    # make the __module__ customizeable
+    # this just enables the slot; impl here is ignored
+    def __module__(cls):
+        pass
+
 
 SetMetaClass(<PyTypeObject*> Union, <PyTypeObject*> UnionMeta)
 
@@ -281,11 +306,23 @@ cdef class Container:
     def __len__(self):
         raise NotImplementedError()
 
+cdef class _ListPrivateCtorToken:
+    pass
+
+_fbthrift_list_private_ctor = _ListPrivateCtorToken()
+
 @cython.auto_pickle(False)
 cdef class List(Container):
     """
     Base class for all thrift lists
     """
+
+    def __init__(self, list py_obj not None, child_cls not None):
+        self._py_obj = py_obj
+        self._child_cls = child_cls
+
+    def __len__(self):
+        return len(self._py_obj)
 
     def __hash__(self):
         return super().__hash__()
@@ -297,24 +334,30 @@ cdef class List(Container):
         return type(other)(itertools.chain(other, self))
 
     def __eq__(self, other):
-        return list_compare(self, other, Py_EQ)
+        return list_eq(self, other)
 
     def __ne__(self, other):
-        return not list_compare(self, other, Py_EQ)
+        return not list_eq(self, other)
 
     def __lt__(self, other):
-        return list_compare(self, other, Py_LT)
+        return list_lt(self, other)
 
     def __gt__(self, other):
-        return list_compare(other, self, Py_LT)
+        return list_lt(other, self)
 
     def __le__(self, other):
-        result = list_compare(other, self, Py_LT)
-        return not result if result is not NotImplemented else NotImplemented
+        result = list_lt(other, self)
+        if result is NotImplemented:
+            return NotImplemented
+
+        return not result
 
     def __ge__(self, other):
-        result = list_compare(self, other, Py_LT)
-        return not result if result is not NotImplemented else NotImplemented
+        result = list_lt(self, other)
+        if result is NotImplemented:
+            return NotImplemented
+
+        return not result
 
     def __repr__(self):
         if not self:
@@ -326,8 +369,9 @@ cdef class List(Container):
 
     def __getitem__(self, object index_obj):
         if isinstance(index_obj, slice):
-            return self._get_slice(index_obj)
-        return self._get_single_item(self._normalize_index(<int?>index_obj))
+            return self._child_cls(self._py_obj[index_obj])
+        cdef int norm_index = self._normalize_index(<int?>index_obj)
+        return self._py_obj[norm_index]
 
     def __contains__(self, item):
         try:
@@ -337,12 +381,25 @@ cdef class List(Container):
         return True
 
     def __iter__(self):
-        for i in range(len(self)):
-            yield self._get_single_item(i)
+        yield from self._py_obj
 
     def __reversed__(self):
-        for i in reversed(range(len(self))):
-            yield self._get_single_item(i)
+        yield from reversed(self._py_obj)
+
+    def index(self, item, start=0, stop=None):
+        item = self._child_cls._check_item_type_or_none(item)
+        if not self or item is None:
+            raise ValueError(f'{item} is not in list')
+        if stop is None:
+            return self._py_obj.index(item, start)
+        else:
+            return self._py_obj.index(item, start, stop)
+
+    def count(self, item):
+        item = self._child_cls._check_item_type_or_none(item)
+        if item is None:
+            return 0
+        return self._py_obj.count(item)
 
     cdef int _normalize_index(self, int index) except *:
         cdef int size = len(self)
@@ -353,20 +410,27 @@ cdef class List(Container):
             raise IndexError('list index out of range')
         return index
 
-    cdef _get_slice(self, slice index_obj):
-        raise NotImplementedError()
 
-    cdef _get_single_item(self, size_t index):
-        raise NotImplementedError()
+cdef class _SetPrivateCtorToken:
+    pass
 
-    cdef _check_item_type(self, item):
-        raise NotImplementedError()
+
+_fbthrift_set_private_ctor = _SetPrivateCtorToken()
 
 @cython.auto_pickle(False)
 cdef class Set(Container):
     """
-    Base class for all thrift sets
+    Base class for pure python thrift sets
     """
+    def __init__(self, frozenset py_obj not None, child_cls not None):
+        self._py_obj = py_obj
+        self._child_cls = child_cls
+
+    def __len__(self):
+        return len(self._py_obj)
+
+    def __hash__(self):
+        return super().__hash__()
 
     def __reduce__(self):
         return (type(self), (set(self), ))
@@ -374,7 +438,9 @@ cdef class Set(Container):
     def __repr__(self):
         if not self:
             return 'iset()'
-        return f'i{{{", ".join(map(repr, self))}}}'
+        # historically these were stored in std::set
+        # the `sorted` preserves old order
+        return f'i{{{", ".join(sorted(map(repr, self)))}}}'
 
     def isdisjoint(self, other):
         return len(self & other) == 0
@@ -397,404 +463,199 @@ cdef class Set(Container):
     def issuperset(self, other):
         return self >= other
 
+    def __contains__(self, item):
+        item = self._child_cls._check_item_type_or_none(item)
+        if not self or item is None:
+            return False
+        return item in self._py_obj
+
+    def __iter__(self):
+        if not self:
+            return
+        yield from self._py_obj
+
+    def __richcmp__(self, other, int op):
+        if isinstance(other, Set):
+            return self._fbthrift_py_richcmp((<Set>other)._py_obj, op)
+        return self._fbthrift_py_richcmp(other, op)
+
     cdef _fbthrift_py_richcmp(self, other, int op):
         if op == Py_LT:
-            return pySet.__lt__(self, other)
+            return pySet.__lt__(self._py_obj, other)
         elif op == Py_LE:
-            return pySet.__le__(self, other)
+            return pySet.__le__(self._py_obj, other)
         elif op == Py_EQ:
-            return pySet.__eq__(self, other)
+            return pySet.__eq__(self._py_obj, other)
         elif op == Py_NE:
-            return pySet.__ne__(self, other)
+            return pySet.__ne__(self._py_obj, other)
         elif op == Py_GT:
-            return pySet.__gt__(self, other)
+            return pySet.__gt__(self._py_obj, other)
         elif op == Py_GE:
-            return pySet.__ge__(self, other)
-
-    cdef _fbthrift_do_set_op(self, other, cSetOp op):
-        raise NotImplementedError()
+            return pySet.__ge__(self._py_obj, other)
 
     def __and__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.AND)
-
-    def __sub__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.SUB)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj & _fbthrift_set_to_py_set(self, other)
+        )
 
     def __or__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.OR)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj | _fbthrift_set_to_py_set(self, other)
+        )
 
     def __xor__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.XOR)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj ^ _fbthrift_set_to_py_set(self, other)
+        )
+
+    def __sub__(Set self, other):
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj - _fbthrift_set_to_py_set(self, other)
+        )
 
     def __rand__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.AND)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj & _fbthrift_set_to_py_set(self, other)
+        )
 
     def __ror__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.OR)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj | _fbthrift_set_to_py_set(self, other)
+        )
 
     def __rxor__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.XOR)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            self._py_obj ^ _fbthrift_set_to_py_set(self, other)
+        )
 
     def __rsub__(Set self, other):
-        return self._fbthrift_do_set_op(other, cSetOp.REVSUB)
+        return _py_set_to_fbthrift_set_unchecked(
+            self,
+            _fbthrift_set_to_py_set(self, other) - self._py_obj
+        )
 
+cdef inline _fbthrift_set_to_py_set(Set self, other):
+    if isinstance(other, self._child_cls):
+        return (<Set>other)._py_obj
+    # try converting to self type
+    return (<Set>self._child_cls(other))._py_obj
+
+cdef inline _py_set_to_fbthrift_set_unchecked(Set self, py_set):
+    return self._child_cls(py_set, _fbthrift_set_private_ctor)
+
+cdef class _MapPrivateCtorToken:
+    pass
+
+_fbthrift_map_private_ctor = _MapPrivateCtorToken()
 
 @cython.auto_pickle(False)
 cdef class Map(Container):
     """
-    Base class for all thrift maps
+    Base class for pure python thrift maps
     """
+    def __init__(self, dict py_obj not None, child_cls not None):
+        self._py_obj = py_obj
+        self._child_cls = child_cls
 
-    def __eq__(self, other):
-        if not (isinstance(self, Mapping) and isinstance(other, Mapping)):
+    def __len__(Map self):
+        return len(self._py_obj)
+
+    def __eq__(Map self, other):
+        if not isinstance(other, Mapping):
             return False
-        if len(self) != len(other):
+        if len(self._py_obj) != len(other):
             return False
 
-        for key in self:
+        for key in self._py_obj:
             if key not in other:
                 return False
-            if other[key] != self[key]:
+            if other[key] != self._py_obj[key]:
                 return False
 
         return True
 
-    def __ne__(self, other):
+    def __ne__(Map self, other):
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(Map self):
         if not self._fbthrift_hash:
             self._fbthrift_hash = hash(tuple(self.items()))
         return self._fbthrift_hash
 
-    def __repr__(self):
+    def __repr__(Map self):
         if not self:
             return 'i{}'
-        return f'i{{{", ".join(map(lambda i: f"{repr(i[0])}: {repr(i[1])}", self.items()))}}}'
+        # print in sorted order for backward compatibility
+        if self._child_cls._FBTHRIFT_USE_SORTED_REPR:
+            key_val = sorted(self.items(), key=lambda x: x[0])
+        else:
+            key_val = self.items()
+        return f'i{{{", ".join(map(lambda i: f"{repr(i[0])}: {repr(i[1])}", key_val))}}}'
 
-    def __reduce__(self):
-        return (type(self), (dict(self), ))
+    def __reduce__(Map self):
+        return (type(self), (dict(self._py_obj), ))
 
-    def keys(self):
-        return self.__iter__()
+    def __copy__(Map self):
+        return self._child_cls(
+            dict(self._py_obj),
+            private_ctor_token=_fbthrift_map_private_ctor
+        )
 
-    def get(self, key, default=None):
+    def __contains__(Map self, key):
+        key = self._child_cls._check_key_type_or_none(key)
+        if not self or key is None:
+            return False
+        return key in self._py_obj
+
+    def __getitem__(Map self, key):
+        err = KeyError(f'{key}')
+        key = self._child_cls._check_key_type_or_none(key)
+        if key is None:
+            raise err
+        item = self._py_obj.get(key)
+        if item is None:
+            raise err
+        return item
+
+    def get(Map self, key, default=None):
         try:
-            return self.__getitem__(key)
+            return self._py_obj[key]
         except KeyError:
             return default
 
-    cdef _check_key_type(self, key):
-        raise NotImplementedError()
+    def __iter__(Map self):
+        if not self:
+            return
+        yield from self._py_obj
+
+    def keys(Map self):
+        return self.__iter__()
+
+    def values(Map self):
+        if not self:
+            return
+        yield from self._py_obj.values()
+
+    def items(Map self):
+        if not self:
+            return
+        yield from self._py_obj.items()
 
 
-
-@cython.auto_pickle(False)
-cdef class EnumData:
-    @staticmethod
-    cdef EnumData _fbthrift_create(cEnumData* ptr, py_type):
-        cdef EnumData inst = EnumData.__new__(EnumData)
-        inst._py_type = py_type
-        inst._cpp_obj = unique_ptr[cEnumData](ptr)
-        return inst
-
-    cdef get_by_name(self, str name):
-        cdef bytes name_bytes = name.encode("utf-8") # to keep the buffer alive
-        cdef string_view name_sv = string_view(name_bytes)
-        cdef pair[PyObjectPtr, cOptionalInt] r = self._cpp_obj.get().tryGetByName(name_sv)
-        cdef PyObject* inst = r.first
-        cdef optional[int] value = r.second
-        if inst != NULL:
-            return <object>inst
-        if not value.has_value():
-            raise AttributeError(f"'{self._py_type.__name__}' has no attribute '{name}'")
-        return <object>self._add_to_cache(name, value.value())
-
-    cdef get_by_value(self, int value):
-        if value < -(1<<31) or value >= (1 << 31):
-            self._value_error(value)
-        cdef pair[PyObjectPtr, string_view] r = self._cpp_obj.get().tryGetByValue(value)
-        cdef PyObject* inst = r.first
-        cdef string_view name = r.second
-        if inst != NULL:
-            return <object>inst
-        if name.data() == NULL:
-            self._value_error(value)
-        return <object>self._add_to_cache(sv_to_str(name), value)
-
-    cdef PyObject* _add_to_cache(self, str name, int value) except *:
-        new_inst = self._py_type.__new__(self._py_type, name, value, NOTSET)
-        return self._cpp_obj.get().tryAddToCache(
-            value,
-            <PyObject*>new_inst
-        )
-
-    def get_all_names(self):
-        cdef cEnumData* cpp_obj_ptr = self._cpp_obj.get()
-        cdef cRange[const cStringPiece*] names = cpp_obj_ptr.getNames()
-        cdef cStringPiece name
-        for name in names:
-            yield sv_to_str(cpp_obj_ptr.getPyName(string_view(name.data())))
-
-    cdef int size(self):
-        return self._cpp_obj.get().size()
-
-    cdef void _value_error(self, int value) except *:
-        raise ValueError(f"{value} is not a valid {self._py_type.__name__}")
-
-
-@cython.auto_pickle(False)
-cdef class EnumFlagsData(EnumData):
-
-    @staticmethod
-    cdef EnumFlagsData _fbthrift_create(cEnumFlagsData* ptr, py_type):
-        cdef EnumFlagsData inst = EnumFlagsData.__new__(EnumFlagsData)
-        inst._py_type = py_type
-        inst._cpp_obj = unique_ptr[cEnumData](ptr)
-        return inst
-
-    cdef get_by_value(self, int value):
-        cdef cEnumFlagsData* cpp_obj_ptr = down_cast_ptr[
-            cEnumFlagsData, cEnumData](self._cpp_obj.get())
-        if value < 0:
-            value = cpp_obj_ptr.convertNegativeValue(value)
-        cdef pair[PyObjectPtr, string_view] r = cpp_obj_ptr.tryGetByValue(value)
-        cdef PyObject* inst = r.first
-        cdef string_view name = r.second
-        if inst != NULL:
-            return <object>inst
-        if name.data() == NULL:
-            self._value_error(value)
-        if not name.empty():
-            # it's not a derived value
-            return <object>self._add_to_cache(sv_to_str(name), value)
-        # it's a derived value
-        new_inst = self._py_type.__new__(
-            self._py_type,
-            cpp_obj_ptr.getNameForDerivedValue(value).decode("utf-8"),
-            value,
-            NOTSET,
-        )
-        return <object>cpp_obj_ptr.tryAddToFlagValuesCache(value, <PyObject*>new_inst)
-
-    cdef get_invert(self, uint32_t value):
-        cdef cEnumFlagsData* cpp_obj_ptr = down_cast_ptr[
-            cEnumFlagsData, cEnumData](self._cpp_obj.get())
-        return self.get_by_value(cpp_obj_ptr.getInvertValue(value))
-
-@cython.auto_pickle(False)
-cdef class UnionTypeEnumData(EnumData):
-
-    @staticmethod
-    cdef UnionTypeEnumData _fbthrift_create(cEnumData* ptr, py_type):
-        cdef UnionTypeEnumData inst = UnionTypeEnumData.__new__(UnionTypeEnumData)
-        inst._py_type = py_type
-        inst._cpp_obj = unique_ptr[cEnumData](ptr)
-        inst.__empty = py_type.__new__(py_type, "EMPTY", 0, NOTSET)
-        return inst
-
-    def get_all_names(self):
-        yield "EMPTY"
-        yield from EnumData.get_all_names(self)
-
-    cdef get_by_name(self, str name):
-        if name == "EMPTY":
-            return self.__empty
-        return EnumData.get_by_name(self, name)
-
-    cdef get_by_value(self, int value):
-        if value == 0:
-            return self.__empty
-        return EnumData.get_by_value(self, value)
-
-    cdef int size(self):
-        return EnumData.size(self) + 1  # for EMPTY
-
-
-@cython.auto_pickle(False)
-cdef class EnumMeta(type):
-    def _fbthrift_get_by_value(cls, int value):
-        return NotImplemented
-
-    def _fbthrift_get_all_names(cls):
-        return NotImplemented
-
-    def __call__(cls, value):
-        if isinstance(value, cls):
-            return value
-        if not isinstance(value, int):
-            raise ValueError(f"{repr(value)} is not a valid {cls.__name__}")
-        return cls._fbthrift_get_by_value(value)
-
-    def __getitem__(cls, name):
-        if type(name) is not str:
-            if not isinstance(name, str):
-                raise KeyError(name)
-            name = str(name) # cast to str for Cython
-        try:
-            return getattr(cls, name)
-        except AttributeError:
-            raise KeyError(name)
-
-    def __iter__(cls):
-        for name in cls._fbthrift_get_all_names():
-            yield getattr(cls, name)
-
-    def __reversed__(cls):
-        return reversed(iter(cls))
-
-    def __contains__(cls, item):
-        if not isinstance(item, cls):
-            return False
-        return item in cls.__iter__()
-
-    def __len__(cls):
-        return NotImplemented
-
-    @property
-    def __members__(cls):
-        return MappingProxyType({inst.name: inst for inst in cls.__iter__()})
-
-    def __dir__(cls):
-        return ['__class__', '__doc__', '__members__', '__module__'] + [name for name in cls._fbthrift_get_all_names()]
-
-
-@cython.auto_pickle(False)
-cdef class CompiledEnum:
-    """
-    Base class for all thrift Enum
-    """
-    def __cinit__(self, name, value, __NotSet guard = None):
-        if guard is not NOTSET:
-            raise TypeError('__new__ is disabled in the interest of type-safety')
-        self.name = name
-        self.value = value
-        self._fbthrift_hash = hash(name)
-        self.__str = f"{type(self).__name__}.{name}"
-        self.__repr = f"<{self.__str}: {value}>"
-
-    cdef get_by_name(self, str name):
-        return NotImplemented
-
-    def __getattribute__(self, str name not None):
-        if name.startswith("__") or name in ("name", "value", "_to_python", "_to_py3", "_to_py_deprecated"):
-            return super().__getattribute__(name)
-        return self.get_by_name(name)
-
-    def __repr__(self):
-        return self.__repr
-
-    def __str__(self):
-        return self.__str
-
-    def __int__(self):
-        return self.value
-
-    def __index__(self):
-        return self.value
-
-    def __hash__(self):
-        return self._fbthrift_hash
-
-    def __reduce__(self):
-        return type(self), (self.value,)
-
-    def __eq__(self, other):
-        if type(other) is not type(self):
-            warnings.warn(f"comparison not supported between instances of { type(self) } and {type(other)}", RuntimeWarning, stacklevel=2)
-            return False
-        return self is other
-
-    @staticmethod
-    def __get_metadata__():
-        raise NotImplementedError()
-
-    @staticmethod
-    def __get_thrift_name__():
-        raise NotImplementedError()
-
-
-
-Enum = CompiledEnum
+CompiledEnum = _fbthrift_python_Enum
+Enum = _fbthrift_python_Enum
 # I wanted to call the base class Enum, but there is a cython bug
 # See https://github.com/cython/cython/issues/2474
 # Will move when the bug is fixed
 
-
-@cython.auto_pickle(False)
-cdef class Flag(CompiledEnum):
-    """
-    Base class for all thrift Flag
-    """
-    def __contains__(self, other):
-        if type(other) is not type(self):
-            return NotImplemented
-        return other.value & self.value == other.value
-
-    def __bool__(self):
-        return bool(self.value)
-
-    def __or__(self, other):
-        cls = type(self)
-        if type(other) is not cls:
-            return NotImplemented
-        return cls(self.value | other.value)
-
-    def __and__(self, other):
-        cls = type(self)
-        if type(other) is not cls:
-            return NotImplemented
-        return cls(self.value & other.value)
-
-    def __xor__(self, other):
-        cls = type(self)
-        if type(other) is not cls:
-            return NotImplemented
-        return cls(self.value ^ other.value)
-
-    def __invert__(self):
-        return NotImplemented
-
-
-cdef class BadEnum:
-    """
-    This represents a BadEnum value from thrift.
-    So an out of date thrift definition or a default value that is not
-    in the enum
-    """
-
-    def __init__(self, the_enum, value):
-        self._enum = the_enum
-        self.value = value
-        self.name = '#INVALID#'
-
-    def __repr__(self):
-        return f'<{self.enum.__name__}.{self.name}: {self.value}>'
-
-    def __int__(self):
-        return self.value
-
-    def __index__(self):
-        return self.value
-
-    @property
-    def enum(self):
-        return self._enum
-
-    def __reduce__(self):
-        return BadEnum, (self._enum, self.value)
-
-    def __hash__(self):
-        return hash((self._enum, self.value))
-
-    def __eq__(self, other):
-        if not isinstance(other, BadEnum):
-            return False
-        cdef BadEnum cother = <BadEnum>other
-        return (self._enum, self.value) == (cother._enum, cother.value)
-
-    def __ne__(self, other):
-        return not(self == other)
+Flag = _fbthrift_python_Flag
 
 cdef class StructFieldsSetter:
     cdef void set_field(self, const char* name, object val) except *:
@@ -808,14 +669,11 @@ cdef translate_cpp_enum_to_python(object EnumClass, int value):
         return BadEnum(EnumClass, value)
 
 
-try:
-    import thrift.python.types
-    def _is_python_struct(obj):
-        return isinstance(obj, thrift.python.types.StructOrUnion)
-    def _is_python_enum(obj):
-        return isinstance(obj, thrift.python.types.Enum)
-except ImportError:
-    def _is_python_struct(obj):
-        return False
-    def _is_python_enum(obj):
-        return False
+def _is_python_struct(obj):
+    return isinstance(obj, _fbthrift_python_StructOrUnion)
+
+def _is_python_enum(obj):
+    return (
+        isinstance(obj, _fbthrift_python_Enum) and
+        obj.__class__.__module__.endswith(".thrift_enums")
+    )

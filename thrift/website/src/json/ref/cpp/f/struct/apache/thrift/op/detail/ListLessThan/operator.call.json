@@ -15,6 +15,7 @@
       "definition_html": "bool apache::thrift::op::detail::ListLessThan&lt; T, E, LessThanImpl &gt;::operator()",
       "argsstring_html": "(const T &amp;l, const T &amp;r) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::ListLessThan::operator()",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -27,11 +28,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "line": "342",
-        "column": "1",
+        "line": "347",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Compare.h",
-        "bodystart": "342",
-        "bodyend": "345"
+        "bodystart": "347",
+        "bodyend": "350"
       },
       "definition": {
         "simple_html": "bool operator()(const T&amp; l, const T&amp; r) const",
@@ -53,5 +54,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/op/detail/ListLessThan/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ListLessThan/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/ListLessThan/operator.call",
+  "parent_links": [
+    {
+      "text_html": "ListLessThan",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/ListLessThan"
+    }
+  ]
 }

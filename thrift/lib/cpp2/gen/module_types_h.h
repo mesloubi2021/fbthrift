@@ -16,18 +16,20 @@
 
 #pragma once
 
+#include <any>
 #include <cstdint>
 #include <initializer_list>
 #include <memory>
 #include <shared_mutex>
 #include <type_traits>
+#include <vector>
 
 #include <folly/CPortability.h>
+#include <folly/Indestructible.h>
 #include <folly/Traits.h>
 #include <folly/Utility.h>
 #include <folly/container/F14Map.h>
 #include <folly/container/F14Set.h>
-#include <folly/synchronization/Lock.h>
 #include <thrift/lib/cpp2/Adapt.h>
 #include <thrift/lib/cpp2/Adapter.h>
 #include <thrift/lib/cpp2/FieldRef.h>
@@ -64,8 +66,7 @@
     }                                                        \
   }
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace detail {
 
 template <typename T>
@@ -77,7 +78,7 @@ constexpr ptrdiff_t unionTypeOffset();
 
 template <typename Ident, typename Adapter, FieldId Id, typename Ref>
 struct wrapped_struct_argument {
-  static_assert(std::is_reference<Ref>::value, "not a reference");
+  static_assert(std::is_reference_v<Ref>, "not a reference");
   Ref ref;
   FOLLY_ERASE explicit wrapped_struct_argument(Ref ref_)
       : ref(static_cast<Ref>(ref_)) {}
@@ -114,8 +115,8 @@ wrap_struct_argument(T&& value) {
 }
 
 template <typename Adapter, FieldId Id, typename F, typename T, typename S>
-FOLLY_ERASE typename std::enable_if<std::is_void<Adapter>::value>::type
-assign_struct_field(F f, T&& t, S&) {
+FOLLY_ERASE std::enable_if_t<std::is_void_v<Adapter>> assign_struct_field(
+    F f, T&& t, S&) {
   f = static_cast<T&&>(t);
 }
 template <typename Adapter, FieldId Id, typename F, typename T, typename S>
@@ -127,8 +128,8 @@ FOLLY_ERASE void assign_struct_field(std::shared_ptr<F>& f, T&& t, S&) {
   f = std::make_shared<folly::remove_cvref_t<T>>(static_cast<T&&>(t));
 }
 template <typename Adapter, FieldId Id, typename F, typename T, typename S>
-FOLLY_ERASE typename std::enable_if<!std::is_void<Adapter>::value>::type
-assign_struct_field(F f, T&& t, S& s) {
+FOLLY_ERASE std::enable_if_t<!std::is_void_v<Adapter>> assign_struct_field(
+    F f, T&& t, S& s) {
   f = ::apache::thrift::adapt_detail::
       fromThriftField<Adapter, folly::to_underlying(Id)>(
           static_cast<T&&>(t), s);
@@ -282,8 +283,7 @@ class FindOrdinal {
 template <class T, class... Args>
 class FindOrdinal<T, folly::tag_t<Args...>> {
  private:
-  static constexpr bool matches[sizeof...(Args)] = {
-      std::is_same<T, Args>::value...};
+  static constexpr bool matches[sizeof...(Args)] = {std::is_same_v<T, Args>...};
 
  public:
   static constexpr auto value = findOrdinal(matches, std::end(matches), true);
@@ -297,7 +297,7 @@ class FindOrdinal<T, folly::tag_t<Args...>> {
 };
 
 template <class T, class List>
-FOLLY_INLINE_VARIABLE constexpr type::Ordinal FindOrdinalInUniqueTypes =
+inline constexpr type::Ordinal FindOrdinalInUniqueTypes =
     FindOrdinal<T, List>::value;
 
 #if defined(__clang__) && \
@@ -316,14 +316,14 @@ struct IntTag {};
 //    template<
 //      class A0 = IntTag<0>,
 //      class A1 = IntTag<1>,
-//      ...,
+//      ...
 //      class AN = IntTag<N>>
 //    struct MultiWayLookup {
-//      template <class> static const int value = 0;
-//      template <> static const int value<A0> = 0 + 1;
-//      template <> static const int value<A1> = 1 + 1;
-//      ...;
-//      template <> static const int value<AN> = N + 1;
+//      template <class> struct value : std::integral_constant<int, 0> {};
+//      template <> struct value<A0> : std::integral_constant<int, 0 + 1> {};
+//      template <> struct value<A1> : std::integral_constant<int, 1 + 1> {};
+//      ...
+//      template <> struct value<AN> : std::integral_constant<int, N + 1> {};
 //    }
 //
 // So that MultiWayLookup<Args...>::value<T> returns Ordinal of T in [Args...]
@@ -331,11 +331,11 @@ struct IntTag {};
 template <BOOST_PP_REPEAT(FBTHRIFT_LOOKUP_SIZE, FBTHRIFT_PARAMS_WITH_DEFAULT, )>
 struct MultiWayLookup {
   template <class>
-  static const int value = 0;
+  struct value : std::integral_constant<int, 0> {};
 
 #define FBTHRIFT_DEFINE_VALUE_SPECIALIZATION(Z, NUM, TEXT) \
   template <>                                              \
-  static const int value<A##NUM> = NUM + 1;
+  struct value<A##NUM> : std::integral_constant<int, NUM + 1> {};
 
   BOOST_PP_REPEAT(FBTHRIFT_LOOKUP_SIZE, FBTHRIFT_DEFINE_VALUE_SPECIALIZATION, )
 
@@ -383,13 +383,15 @@ struct FoundOrdinalOrCheckTheRest<0, Args...>
 // If size of (Args...) < FBTHRIFT_LOOKUP_SIZE: just do a multiway lookup
 template <class T, class... Args>
 struct FindOrdinalInUniqueTypesImpl
-    : field_ordinal<MultiWayLookup<Args...>::template value<T>> {};
+    : field_ordinal<static_cast<int>(
+          typename MultiWayLookup<Args...>::template value<T>())> {};
 
 // If size of (Args...) > FBTHRIFT_LOOKUP_SIZE: used batched multiway lookup
 template <class T, FBTHRIFT_PARAMS_WITH_CLASS, class... Args>
 struct FindOrdinalInUniqueTypesImpl<T, FBTHRIFT_PARAMS, Args...>
     : FoundOrdinalOrCheckTheRest<
-          MultiWayLookup<FBTHRIFT_PARAMS>::template value<T>,
+          static_cast<int>(
+              typename MultiWayLookup<FBTHRIFT_PARAMS>::template value<T>()),
           T,
           Args...> {};
 
@@ -399,13 +401,13 @@ struct FindOrdinalInUniqueTypesImpl<T, FBTHRIFT_PARAMS, Args...>
 #undef FBTHRIFT_LOOKUP_SIZE
 
 template <class T, class... Args>
-FOLLY_INLINE_VARIABLE constexpr type::Ordinal
+inline constexpr type::Ordinal
     FindOrdinalInUniqueTypes<T, folly::tag_t<Args...>> =
         FindOrdinalInUniqueTypesImpl<T, Args...>::value;
 #endif
 
 template <class Id, class Idents, class TypeTags, class IdList>
-FOLLY_CONSTEVAL std::enable_if_t<std::is_same<Id, void>::value, FieldOrdinal>
+FOLLY_CONSTEVAL std::enable_if_t<std::is_same_v<Id, void>, FieldOrdinal>
 getFieldOrdinal(IdList&&) {
   return static_cast<FieldOrdinal>(0);
 }
@@ -435,5 +437,98 @@ namespace ident {
 template <class T>
 void __fbthrift_check_whether_type_is_ident_via_adl(T&&);
 }
-} // namespace thrift
-} // namespace apache
+
+} // namespace apache::thrift
+
+namespace apache::thrift::detail::annotation {
+
+inline const std::vector<std::any>& empty_annotations() {
+  static const folly::Indestructible<std::vector<std::any>> ret;
+  return *ret;
+}
+
+template <class Struct>
+const std::vector<std::any>& field_annotation_values(FieldId) {
+  // @lint-ignore CLANGTIDY bugprone-sizeof-expression
+  static_assert(sizeof(Struct) >= 0, "Struct must be a complete type");
+  return empty_annotations();
+}
+
+template <class T>
+inline constexpr bool is_runtime_annotation =
+    decltype(detail::st::struct_private_access::
+                 __fbthrift_cpp2_is_runtime_annotation<T>())::value;
+} // namespace apache::thrift::detail::annotation
+
+namespace apache::thrift {
+
+/// Get the field annotation. If Struct.Ident doesn't have the corresponding
+/// Annotation, returns nullptr.
+///
+/// For example, for the following thrift file
+///
+///     @cpp.RuntimeAnnotation
+///     @scope.Field
+///     struct Oncall {
+///       1: string name;
+///     }
+///
+///     @cpp.RuntimeAnnotation
+///     @scope.Struct
+///     @scope.Field
+///     struct Doc {
+///       1: string text;
+///     }
+///
+///     @cpp.RuntimeAnnotation
+///     @scope.Field
+///     struct Sensitive {}
+///
+///     @scope.Field
+///     struct Other {}
+///
+///     @Doc{text="I am a struct"}
+///     struct MyStruct {
+///       @Oncall{name = "thrift"}
+///       @Sensitive
+///       @Other
+///       1: string field;
+///     }
+///
+/// We can write the following code.
+///
+///     // `Oncall` annotation exists on MyStruct.field
+///     assert(get_field_annotation<Oncall, MyStruct, ident::field>());
+///
+///     // Check the value of `Oncall` annotation on MyStruct.field
+///     assert(*get_field_annotation<Oncall, MyStruct, ident::field>() ==
+///            Oncall{"thrift"});
+///
+///     // Build failure since `Other` is not marked with
+///     @cpp.RuntimeAnnotation.
+///     get_field_annotation<Other, MyStruct, ident::field>;
+///
+template <class Annotation, class Struct, class Id>
+const Annotation* get_field_annotation() {
+  using detail::annotation::field_annotation_values;
+  using detail::annotation::is_runtime_annotation;
+  static_assert(
+      is_runtime_annotation<Annotation>,
+      "Annotation is not annotated with @cpp.RuntimeAnnotation.");
+  static_assert(
+      op::get_ordinal<Struct, Id>::value != static_cast<FieldOrdinal>(0),
+      "Id not found in Struct.");
+
+  static const Annotation* ret = []() -> const Annotation* {
+    for (const std::any& v :
+         field_annotation_values<Struct>(op::get_field_id<Struct, Id>::value)) {
+      if (auto* p = std::any_cast<Annotation>(&v)) {
+        return p;
+      }
+    }
+    return nullptr;
+  }();
+
+  return ret;
+}
+} // namespace apache::thrift

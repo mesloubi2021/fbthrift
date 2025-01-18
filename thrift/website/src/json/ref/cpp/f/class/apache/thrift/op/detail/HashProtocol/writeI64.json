@@ -15,6 +15,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::writeI64",
       "argsstring_html": "(int64_t val)",
       "name_html": "writeI64",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::writeI64",
       "param": [
         {
           "type_html": "int64_t",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "147",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "147",
         "bodyend": "147"
@@ -49,5 +50,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/writeI64",
+  "parent_links": [
+    {
+      "text_html": "HashProtocol",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+    }
+  ]
 }

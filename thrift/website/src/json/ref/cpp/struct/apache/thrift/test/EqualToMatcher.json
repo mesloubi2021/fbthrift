@@ -35,6 +35,7 @@
       "definition_html": "bool apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::MatchAndExplain",
       "argsstring_html": "(const U &amp;actual, ::testing::MatchResultListener *) const",
       "name_html": "MatchAndExplain",
+      "qualifiedname_html": "apache::thrift::test::EqualToMatcher::MatchAndExplain",
       "param": [
         {
           "type_html": "const U &amp;",
@@ -46,11 +47,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "61",
-        "column": "1",
+        "line": "60",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "bodystart": "61",
-        "bodyend": "63"
+        "bodystart": "60",
+        "bodyend": "62"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nbool MatchAndExplain(const U&amp; actual, ::testing::MatchResultListener*) const",
@@ -75,6 +76,7 @@
       "definition_html": "void apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::DescribeTo",
       "argsstring_html": "(std::ostream *os) const",
       "name_html": "DescribeTo",
+      "qualifiedname_html": "apache::thrift::test::EqualToMatcher::DescribeTo",
       "param": [
         {
           "type_html": "std::ostream *",
@@ -83,11 +85,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "64",
-        "column": "1",
+        "line": "63",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "bodystart": "64",
-        "bodyend": "66"
+        "bodystart": "63",
+        "bodyend": "65"
       },
       "definition": {
         "simple_html": "void DescribeTo(std::ostream* os) const",
@@ -112,6 +114,7 @@
       "definition_html": "void apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::DescribeNegationTo",
       "argsstring_html": "(std::ostream *os) const",
       "name_html": "DescribeNegationTo",
+      "qualifiedname_html": "apache::thrift::test::EqualToMatcher::DescribeNegationTo",
       "param": [
         {
           "type_html": "std::ostream *",
@@ -120,11 +123,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "67",
-        "column": "1",
+        "line": "66",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "bodystart": "67",
-        "bodyend": "69"
+        "bodystart": "66",
+        "bodyend": "68"
       },
       "definition": {
         "simple_html": "void DescribeNegationTo(std::ostream* os) const",
@@ -140,11 +143,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-    "line": "58",
+    "line": "57",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-    "bodystart": "58",
-    "bodyend": "70"
+    "bodystart": "57",
+    "bodyend": "69"
   },
   "namespacednames_html": [
     "apache",
@@ -164,12 +167,13 @@
       "definition_html": "T apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::expected",
       "argsstring_html": "",
       "name_html": "expected",
+      "qualifiedname_html": "apache::thrift::test::EqualToMatcher::expected",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "59",
-        "column": "1",
+        "line": "58",
+        "column": "5",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "bodystart": "59",
+        "bodystart": "58",
         "bodyend": "-1"
       }
     }
@@ -205,6 +209,7 @@
               "definition_html": "bool apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::MatchAndExplain",
               "argsstring_html": "(const U &amp;actual, ::testing::MatchResultListener *) const",
               "name_html": "MatchAndExplain",
+              "qualifiedname_html": "apache::thrift::test::EqualToMatcher::MatchAndExplain",
               "param": [
                 {
                   "type_html": "const U &amp;",
@@ -216,11 +221,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "line": "61",
-                "column": "1",
+                "line": "60",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "bodystart": "61",
-                "bodyend": "63"
+                "bodystart": "60",
+                "bodyend": "62"
               },
               "definition": {
                 "simple_html": "template &lt;typename U&gt;\nbool MatchAndExplain(const U&amp; actual, ::testing::MatchResultListener*) const",
@@ -242,7 +247,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/MatchAndExplain",
-          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/MatchAndExplain"
+          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/MatchAndExplain",
+          "parent_links": [
+            {
+              "text_html": "EqualToMatcher",
+              "href": "/ref/cpp/struct/apache/thrift/test/EqualToMatcher"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -261,6 +272,7 @@
               "definition_html": "void apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::DescribeTo",
               "argsstring_html": "(std::ostream *os) const",
               "name_html": "DescribeTo",
+              "qualifiedname_html": "apache::thrift::test::EqualToMatcher::DescribeTo",
               "param": [
                 {
                   "type_html": "std::ostream *",
@@ -269,11 +281,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "line": "64",
-                "column": "1",
+                "line": "63",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "bodystart": "64",
-                "bodyend": "66"
+                "bodystart": "63",
+                "bodyend": "65"
               },
               "definition": {
                 "simple_html": "void DescribeTo(std::ostream* os) const",
@@ -295,7 +307,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeTo",
-          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeTo"
+          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeTo",
+          "parent_links": [
+            {
+              "text_html": "EqualToMatcher",
+              "href": "/ref/cpp/struct/apache/thrift/test/EqualToMatcher"
+            }
+          ]
         },
         {
           "kind": "overloadset",
@@ -314,6 +332,7 @@
               "definition_html": "void apache::thrift::test::EqualToMatcher&lt; Tag, T &gt;::DescribeNegationTo",
               "argsstring_html": "(std::ostream *os) const",
               "name_html": "DescribeNegationTo",
+              "qualifiedname_html": "apache::thrift::test::EqualToMatcher::DescribeNegationTo",
               "param": [
                 {
                   "type_html": "std::ostream *",
@@ -322,11 +341,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "line": "67",
-                "column": "1",
+                "line": "66",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-                "bodystart": "67",
-                "bodyend": "69"
+                "bodystart": "66",
+                "bodyend": "68"
               },
               "definition": {
                 "simple_html": "void DescribeNegationTo(std::ostream* os) const",
@@ -348,7 +367,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeNegationTo",
-          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeNegationTo"
+          "refid": "/ref/cpp/f/struct/apache/thrift/test/EqualToMatcher/DescribeNegationTo",
+          "parent_links": [
+            {
+              "text_html": "EqualToMatcher",
+              "href": "/ref/cpp/struct/apache/thrift/test/EqualToMatcher"
+            }
+          ]
         }
       ]
     }

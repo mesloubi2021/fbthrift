@@ -17,28 +17,34 @@
 #pragma once
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/Try.h>
 
 #include <thrift/lib/cpp/SerializedMessage.h>
 #include <thrift/lib/cpp/TProcessorEventHandler.h>
 #include <thrift/lib/cpp/protocol/TProtocolTypes.h>
 #include <thrift/lib/cpp/transport/THeader.h>
+#include <thrift/lib/cpp2/async/ClientInterceptorBase.h>
+#include <thrift/lib/cpp2/async/ClientInterceptorStorage.h>
+#include <thrift/lib/cpp2/util/AllocationColocator.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
+
+class ContextStack;
+
+namespace detail {
+class ContextStackInternals {
+ public:
+  static void*& contextAt(ContextStack&, size_t index);
+};
+} // namespace detail
 
 class ContextStack {
   friend class EventHandlerBase;
+  friend class detail::ContextStackInternals;
 
  public:
-  // Customly sized allocation is used for ContextStack, so we can't use default
-  // unique_ptr deleter.
-  struct Deleter {
-    void operator()(ContextStack* ptr) {
-      ptr->~ContextStack();
-      operator delete (ptr, std::align_val_t{alignof(ContextStack)});
-    }
-  };
-  using UniquePtr = std::unique_ptr<ContextStack, Deleter>;
+  using UniquePtr =
+      apache::thrift::util::AllocationColocator<ContextStack>::Ptr;
 
   // Note: factory functions return nullptr if handlers is nullptr or empty.
   static UniquePtr create(
@@ -51,6 +57,9 @@ class ContextStack {
   static UniquePtr createWithClientContext(
       const std::shared_ptr<
           std::vector<std::shared_ptr<TProcessorEventHandler>>>& handlers,
+      const std::shared_ptr<
+          std::vector<std::shared_ptr<ClientInterceptorBase>>>&
+          clientInterceptors,
       const char* serviceName,
       const char* method,
       transport::THeader& header);
@@ -58,6 +67,9 @@ class ContextStack {
   static ContextStack::UniquePtr createWithClientContextCopyNames(
       const std::shared_ptr<
           std::vector<std::shared_ptr<TProcessorEventHandler>>>& handlers,
+      const std::shared_ptr<
+          std::vector<std::shared_ptr<ClientInterceptorBase>>>&
+          clientInterceptors,
       const std::string& serviceName,
       const std::string& methodName,
       transport::THeader& header);
@@ -88,41 +100,68 @@ class ContextStack {
 
   void resetClientRequestContextHeader();
 
+  const std::shared_ptr<std::vector<std::shared_ptr<ClientInterceptorBase>>>&
+  getClientInterceptors() const {
+    return clientInterceptors_;
+  }
+
+  [[nodiscard]] folly::Try<void> processClientInterceptorsOnRequest(
+      ClientInterceptorOnRequestArguments arguments,
+      apache::thrift::transport::THeader* headers) noexcept;
+  [[nodiscard]] folly::Try<void> processClientInterceptorsOnResponse(
+      const apache::thrift::transport::THeader* headers) noexcept;
+
  private:
   std::shared_ptr<std::vector<std::shared_ptr<TProcessorEventHandler>>>
       handlers_;
+  std::shared_ptr<std::vector<std::shared_ptr<ClientInterceptorBase>>>
+      clientInterceptors_;
+  // Must be NUL-terminated.
   const char* const serviceName_;
-  const char* const method_;
-  const bool hasClientRequestContext_{false};
-
-  friend struct std::default_delete<apache::thrift::ContextStack>;
-
-  struct WithEmbeddedClientRequestContext {};
+  // "{service_name}.{method_name}"
+  const char* const methodNamePrefixed_;
+  // "{method_name}", without the service name prefix
+  const char* const methodNameUnprefixed_;
+  void** serviceContexts_;
+  // While the server-side has a Cpp2RequestContext, the client-side "fakes" it
+  // with an embedded version. We can't make it nullptr because this is the API
+  // used to read/write headers. The root cause of this limitation is that the
+  // TProcessorEventHandler API is shared between the client and the server, but
+  // is primarily designed for the server-side use case.
+  class EmbeddedClientRequestContext;
+  using EmbeddedClientContextPtr =
+      apache::thrift::util::AllocationColocator<>::Ptr<
+          EmbeddedClientRequestContext>;
+  EmbeddedClientContextPtr embeddedClientContext_;
+  util::AllocationColocator<>::ArrayPtr<
+      detail::ClientInterceptorOnRequestStorage>
+      clientInterceptorsStorage_;
 
   ContextStack(
       const std::shared_ptr<
           std::vector<std::shared_ptr<TProcessorEventHandler>>>& handlers,
       const char* serviceName,
       const char* method,
+      void** serviceContexts,
       TConnectionContext* connectionContext);
 
   ContextStack(
-      WithEmbeddedClientRequestContext,
       const std::shared_ptr<
           std::vector<std::shared_ptr<TProcessorEventHandler>>>& handlers,
+      const std::shared_ptr<
+          std::vector<std::shared_ptr<ClientInterceptorBase>>>&
+          clientInterceptors,
       const char* serviceName,
       const char* method,
-      TConnectionContext* connectionContext);
+      void** serviceContexts,
+      EmbeddedClientContextPtr embeddedClientContext,
+      util::AllocationColocator<>::ArrayPtr<
+          detail::ClientInterceptorOnRequestStorage> clientInterceptorsStorage);
 
   void*& contextAt(size_t i);
+
+  detail::ClientInterceptorOnRequestStorage*
+  getStorageForClientInterceptorOnRequestByIndex(std::size_t index);
 };
 
-} // namespace thrift
-} // namespace apache
-
-namespace std {
-template <>
-struct default_delete<apache::thrift::ContextStack> {
-  void operator()(apache::thrift::ContextStack* cs) const;
-};
-} // namespace std
+} // namespace apache::thrift

@@ -20,6 +20,7 @@
       "definition_html": "std::string apache::thrift::op::prettyPrintPatch",
       "argsstring_html": "(const T &amp;obj, DebugProtocolWriter::Options options=DebugProtocolWriter::Options::simple())",
       "name_html": "prettyPrintPatch",
+      "qualifiedname_html": "apache::thrift::op::prettyPrintPatch",
       "param": [
         {
           "type_html": "const T &amp;",
@@ -33,11 +34,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Patch.h",
-        "line": "88",
-        "column": "1",
+        "line": "137",
+        "column": "13",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Patch.h",
-        "bodystart": "88",
-        "bodyend": "94"
+        "bodystart": "137",
+        "bodyend": "143"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nstd::string prettyPrintPatch(\n    const T&amp; obj,\n    DebugProtocolWriter::Options options =\n        DebugProtocolWriter::Options::simple())",

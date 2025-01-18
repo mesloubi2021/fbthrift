@@ -15,13 +15,14 @@
       "definition_html": "apache::thrift::TProcessorEventHandler::TProcessorEventHandler",
       "argsstring_html": "()",
       "name_html": "TProcessorEventHandler",
+      "qualifiedname_html": "apache::thrift::TProcessorEventHandler::TProcessorEventHandler",
       "location": {
         "file": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "line": "172",
-        "column": "1",
+        "line": "187",
+        "column": "3",
         "bodyfile": "fbcode/thrift/lib/cpp/TProcessorEventHandler.h",
-        "bodystart": "172",
-        "bodyend": "172"
+        "bodystart": "187",
+        "bodyend": "187"
       },
       "definition": {
         "simple_html": "TProcessorEventHandler()",
@@ -44,5 +45,11 @@
   "brief_html": "Constructs the TProcessorEventHandler.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/TProcessorEventHandler",
-  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/TProcessorEventHandler"
+  "refid": "/ref/cpp/f/class/apache/thrift/TProcessorEventHandler/TProcessorEventHandler",
+  "parent_links": [
+    {
+      "text_html": "TProcessorEventHandler",
+      "href": "/ref/cpp/class/apache/thrift/TProcessorEventHandler"
+    }
+  ]
 }

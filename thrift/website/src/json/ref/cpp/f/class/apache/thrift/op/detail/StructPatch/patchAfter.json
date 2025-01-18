@@ -20,13 +20,14 @@
       "definition_html": "decltype(auto) apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::patchAfter",
       "argsstring_html": "()",
       "name_html": "patchAfter",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::patchAfter",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "282",
-        "column": "1",
+        "line": "424",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "282",
-        "bodyend": "284"
+        "bodystart": "424",
+        "bodyend": "426"
       },
       "definition": {
         "simple_html": "template &lt;typename Id&gt;\ndecltype(auto) patchAfter()",
@@ -48,5 +49,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patchAfter",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patchAfter"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/StructPatch/patchAfter",
+  "parent_links": [
+    {
+      "text_html": "StructPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/StructPatch"
+    }
+  ]
 }

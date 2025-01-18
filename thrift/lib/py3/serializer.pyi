@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 from enum import Enum
 from typing import Tuple, Type, TypeVar, Union
 
@@ -20,8 +22,12 @@ from folly.iobuf import IOBuf
 from thrift.py3.common import Protocol as Protocol
 from thrift.py3.exceptions import GeneratedError
 from thrift.py3.types import Struct
+from thrift.python.exceptions import GeneratedError as PythonGeneratedError
+from thrift.python.types import StructOrUnion as PythonStruct
 
-sT = TypeVar("sT", bound=Union[Struct, GeneratedError])
+sT = TypeVar(
+    "sT", bound=Union[Struct, GeneratedError, PythonGeneratedError, PythonStruct]
+)
 
 class Transform(Enum):
     NONE: Transform = ...
@@ -32,11 +38,13 @@ def serialize(tstruct: sT, protocol: Protocol = ...) -> bytes: ...
 def serialize_iobuf(tstruct: sT, protocol: Protocol = ...) -> IOBuf: ...
 def deserialize(
     structKlass: Type[sT],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
 ) -> sT: ...
 def deserialize_with_length(
     structKlass: Type[sT],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
     buf: Union[bytes, bytearray, IOBuf, memoryview],
     protocol: Protocol = ...,
 ) -> Tuple[sT, int]: ...
@@ -47,5 +55,7 @@ def serialize_with_header_iobuf(
     tstruct: sT, protocol: Protocol = ..., transform: Transform = ...
 ) -> IOBuf: ...
 def deserialize_from_header(
-    structKlass: Type[sT], buf: Union[bytes, bytearray, IOBuf, memoryview]
+    structKlass: Type[sT],
+    # pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
+    buf: Union[bytes, bytearray, IOBuf, memoryview],
 ) -> sT: ...

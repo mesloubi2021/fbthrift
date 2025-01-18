@@ -22,20 +22,18 @@
 
 #include <folly/GLog.h>
 #include <folly/Portability.h>
-#include <folly/experimental/coro/AsyncGenerator.h>
-#include <folly/experimental/coro/Baton.h>
+#include <folly/coro/AsyncGenerator.h>
+#include <folly/coro/Baton.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/fdsock/SocketFds.h>
 #include <folly/synchronization/Baton.h>
 #include <thrift/lib/cpp2/async/ClientStreamBridge.h>
 
-namespace yarpl {
-namespace flowable {
+namespace yarpl::flowable {
 class ThriftStreamShim;
 }
-} // namespace yarpl
-namespace apache {
-namespace thrift {
+
+namespace apache::thrift {
 
 template <typename T>
 class ClientBufferedStream {
@@ -507,7 +505,7 @@ class ClientBufferedStream {
       outstanding_ = chunkBufferSize_;
     }
 
-    ~Continuation() { state_->promise.setValue(); }
+    ~Continuation() override { state_->promise.setValue(); }
 
     // takes ownership of pointer on success
     static bool wait(std::unique_ptr<Continuation>& cb) {
@@ -603,5 +601,4 @@ struct ResponseAndClientBufferedStream {
   Response response;
   ClientBufferedStream<StreamElement> stream;
 };
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

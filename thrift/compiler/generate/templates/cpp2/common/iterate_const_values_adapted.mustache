@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,6 +14,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%><%#type:cpp_adapter%><%type:cpp_adapter%>::fromThrift(<%type:cpp_standard_type%>(<%/type:cpp_adapter%><%!
-%><% > common/iterate_const_values%><%!
-%><%#type:cpp_adapter%>))<%/type:cpp_adapter%>
+}}{{#type:cpp_adapter}}{{type:cpp_adapter}}::fromThrift({{type:cpp_standard_type}}({{/type:cpp_adapter}}{{!
+}}{{> common/iterate_const_values}}{{!
+}}{{#type:cpp_adapter}})){{/type:cpp_adapter}}

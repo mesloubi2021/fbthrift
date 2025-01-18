@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import asyncio
 import signal
 import sys
 from argparse import ArgumentParser
 
-from apache.thrift.test.py3.load_handler import LoadTestHandler
+from thrift.perf.py3.load_handler import LoadTestHandler
 from thrift.py3 import ThriftServer
 
 
@@ -35,5 +37,9 @@ def main():
     loop.run_until_complete(server.serve())
 
 
-if __name__ == "__main__":
+def invoke_main() -> None:
     sys.exit(main())
+
+
+if __name__ == "__main__":
+    invoke_main()  # pragma: no cover

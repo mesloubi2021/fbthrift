@@ -29,12 +29,12 @@
 #include <thrift/lib/cpp2/SerializationSwitch.h>
 #include <thrift/lib/cpp2/async/ServerSinkBridge.h>
 #include <thrift/lib/cpp2/async/StreamCallbacks.h>
-#include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
 #include <thrift/lib/cpp2/transport/core/RpcMetadataUtil.h>
 #include <thrift/lib/cpp2/transport/core/SendCallbacks.h>
-#include <thrift/lib/cpp2/transport/rocket/PayloadUtils.h>
+#include <thrift/lib/cpp2/transport/rocket/compression/CompressionManager.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Flags.h>
+#include <thrift/lib/cpp2/transport/rocket/payload/PayloadSerializer.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnection.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketSinkClientCallback.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketStreamClientCallback.h>
@@ -45,9 +45,7 @@
 #define THRIFT_ANY_AVAILABLE
 #endif
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 namespace {
 ResponseRpcError makeResponseRpcError(
@@ -72,6 +70,10 @@ ResponseRpcError makeResponseRpcError(
       case ResponseRpcErrorCode::QUEUE_OVERLOADED:
       case ResponseRpcErrorCode::QUEUE_TIMEOUT:
       case ResponseRpcErrorCode::APP_OVERLOAD:
+      case ResponseRpcErrorCode::INTERACTION_LOADSHEDDED:
+      case ResponseRpcErrorCode::INTERACTION_LOADSHEDDED_OVERLOAD:
+      case ResponseRpcErrorCode::INTERACTION_LOADSHEDDED_APP_OVERLOAD:
+      case ResponseRpcErrorCode::INTERACTION_LOADSHEDDED_QUEUE_TIMEOUT:
         return ResponseRpcErrorCategory::LOADSHEDDING;
       case ResponseRpcErrorCode::SHUTDOWN:
         return ResponseRpcErrorCategory::SHUTDOWN;
@@ -105,7 +107,9 @@ RocketException makeRocketException(const ResponseRpcError& responseRpcError) {
     }
   }();
 
-  return RocketException(rocketCategory, packCompact(responseRpcError));
+  return RocketException(
+      rocketCategory,
+      PayloadSerializer::getInstance()->packCompact(responseRpcError));
 }
 
 template <typename Serializer>
@@ -290,7 +294,19 @@ FOLLY_NODISCARD std::optional<ResponseRpcError> processFirstResponseHelper(
                        {kUnimplementedMethodErrorCode,
                         ResponseRpcErrorCode::UNIMPLEMENTED_METHOD},
                        {kTenantQuotaExceededErrorCode,
-                        ResponseRpcErrorCode::TENANT_QUOTA_EXCEEDED}});
+                        ResponseRpcErrorCode::TENANT_QUOTA_EXCEEDED},
+                       {kTenantBlocklistedErrorCode,
+                        ResponseRpcErrorCode::TENANT_BLOCKLISTED},
+                       {kInteractionLoadsheddedErrorCode,
+                        ResponseRpcErrorCode::INTERACTION_LOADSHEDDED},
+                       {kInteractionLoadsheddedOverloadErrorCode,
+                        ResponseRpcErrorCode::INTERACTION_LOADSHEDDED_OVERLOAD},
+                       {kInteractionLoadsheddedAppOverloadErrorCode,
+                        ResponseRpcErrorCode::
+                            INTERACTION_LOADSHEDDED_APP_OVERLOAD},
+                       {kInteractionLoadsheddedQueueTimeoutErrorCode,
+                        ResponseRpcErrorCode::
+                            INTERACTION_LOADSHEDDED_QUEUE_TIMEOUT}});
                   if (auto errorCode = folly::get_ptr(errorCodeMap, *exPtr)) {
                     return *errorCode;
                   }
@@ -339,7 +355,7 @@ FOLLY_NODISCARD std::optional<ResponseRpcError> processFirstResponseHelper(
         ResponseRpcErrorCode::UNKNOWN,
         fmt::format(
             "Invalid response payload envelope: {}",
-            folly::exceptionStr(std::current_exception()).toStdString()),
+            folly::exceptionStr(folly::current_exception()).toStdString()),
         metadata);
   }
   return {};
@@ -374,7 +390,7 @@ FOLLY_NODISCARD std::optional<ResponseRpcError> processFirstResponse(
 
   // apply compression if client has specified compression codec
   if (compressionConfig.has_value()) {
-    rocket::detail::setCompressionCodec(
+    CompressionManager().setCompressionCodec(
         *compressionConfig, metadata, payload->computeChainDataLength());
   }
 
@@ -415,9 +431,14 @@ RocketThriftRequest::RocketThriftRequest(
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
     Cpp2ConnContext& connContext,
+    ServiceInterceptorsStorage serviceInterceptorsStorage,
     folly::EventBase& evb,
     RocketServerFrameContext&& context)
-    : ThriftRequestCore(serverConfigs, std::move(metadata), connContext),
+    : ThriftRequestCore(
+          serverConfigs,
+          std::move(metadata),
+          connContext,
+          std::move(serviceInterceptorsStorage)),
       evb_(evb),
       context_(std::move(context)) {
   detail::onRocketThriftRequestReceived(
@@ -428,7 +449,7 @@ RocketThriftRequest::RocketThriftRequest(
 }
 
 ThriftServerRequestResponse::ThriftServerRequestResponse(
-    RequestsRegistry::DebugStub& debugStubToInit,
+    ColocatedConstructionParams colocationParams,
     folly::EventBase& evb,
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
@@ -443,11 +464,12 @@ ThriftServerRequestResponse::ThriftServerRequestResponse(
           serverConfigs,
           std::move(metadata),
           connContext,
+          std::move(colocationParams.data),
           evb,
           std::move(context)),
       version_(version),
       maxResponseWriteTime_(maxResponseWriteTime) {
-  new (&debugStubToInit) RequestsRegistry::DebugStub(
+  new (colocationParams.debugStubToInit) RequestsRegistry::DebugStub(
       reqRegistry,
       *this,
       *getRequestContext(),
@@ -467,18 +489,18 @@ void ThriftServerRequestResponse::sendThriftResponse(
   // When creating request logging callback, we need to access payload metadata
   // which is populated in the processFirstResponse, so
   // createRequestLoggingCallback must happen after processFirstResponse.
-  cb = createRequestLoggingCallback(
-      std::move(cb), metadata, responseRpcError, serverConfigs_.getObserver());
+  cb = createRequestLoggingCallback(std::move(cb), metadata, responseRpcError);
 
   if (responseRpcError) {
     auto ex = makeRocketException(*responseRpcError);
     context_.sendError(std::move(ex), std::move(cb));
     return;
   }
-  auto payload = packWithFds(
+  auto payload = PayloadSerializer::getInstance()->packWithFds(
       &metadata,
       std::move(data),
       std::move(getRequestContext()->getHeader()->fds),
+      context_.connection().isDecodingMetadataUsingBinaryProtocol(),
       context_.connection().getRawSocket());
 
   if (maxResponseWriteTime_ > std::chrono::milliseconds{0}) {
@@ -509,7 +531,7 @@ void ThriftServerRequestResponse::closeConnection(
 }
 
 ThriftServerRequestFnf::ThriftServerRequestFnf(
-    RequestsRegistry::DebugStub& debugStubToInit,
+    ColocatedConstructionParams colocationParams,
     folly::EventBase& evb,
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
@@ -523,10 +545,11 @@ ThriftServerRequestFnf::ThriftServerRequestFnf(
           serverConfigs,
           std::move(metadata),
           connContext,
+          std::move(colocationParams.data),
           evb,
           std::move(context)),
       onComplete_(std::move(onComplete)) {
-  new (&debugStubToInit) RequestsRegistry::DebugStub(
+  new (colocationParams.debugStubToInit) RequestsRegistry::DebugStub(
       reqRegistry,
       *this,
       *getRequestContext(),
@@ -566,7 +589,7 @@ void ThriftServerRequestFnf::closeConnection(
 }
 
 ThriftServerRequestStream::ThriftServerRequestStream(
-    RequestsRegistry::DebugStub& debugStubToInit,
+    ColocatedConstructionParams colocationParams,
     folly::EventBase& evb,
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
@@ -582,12 +605,13 @@ ThriftServerRequestStream::ThriftServerRequestStream(
           serverConfigs,
           std::move(metadata),
           connContext,
+          std::move(colocationParams.data),
           evb,
           std::move(context)),
       version_(version),
       clientCallback_(clientCallback),
       cpp2Processor_(std::move(cpp2Processor)) {
-  new (&debugStubToInit) RequestsRegistry::DebugStub(
+  new (colocationParams.debugStubToInit) RequestsRegistry::DebugStub(
       reqRegistry,
       *this,
       *getRequestContext(),
@@ -598,6 +622,7 @@ ThriftServerRequestStream::ThriftServerRequestStream(
   if (auto compressionConfig = getCompressionConfig()) {
     clientCallback_->setCompressionConfig(*compressionConfig);
   }
+  clientCallback_->setRpcMethodName(getMethodName());
   scheduleTimeouts();
 }
 
@@ -683,7 +708,7 @@ void ThriftServerRequestStream::closeConnection(
 }
 
 ThriftServerRequestSink::ThriftServerRequestSink(
-    RequestsRegistry::DebugStub& debugStubToInit,
+    ColocatedConstructionParams colocationParams,
     folly::EventBase& evb,
     server::ServerConfigs& serverConfigs,
     RequestRpcMetadata&& metadata,
@@ -699,12 +724,13 @@ ThriftServerRequestSink::ThriftServerRequestSink(
           serverConfigs,
           std::move(metadata),
           connContext,
+          std::move(colocationParams.data),
           evb,
           std::move(context)),
       version_(version),
       clientCallback_(clientCallback),
       cpp2Processor_(std::move(cpp2Processor)) {
-  new (&debugStubToInit) RequestsRegistry::DebugStub(
+  new (colocationParams.debugStubToInit) RequestsRegistry::DebugStub(
       reqRegistry,
       *this,
       *getRequestContext(),
@@ -811,6 +837,4 @@ void ThriftServerRequestSink::closeConnection(
   context_.connection().close(std::move(ew));
 }
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

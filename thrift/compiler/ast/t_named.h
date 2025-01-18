@@ -16,20 +16,16 @@
 
 #pragma once
 
-#include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include <boost/optional.hpp>
-
 #include <thrift/compiler/ast/node_list.h>
 #include <thrift/compiler/ast/t_node.h>
-#include <thrift/compiler/lib/uri.h>
+#include <thrift/compiler/ast/uri.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_const;
 class t_program;
@@ -85,6 +81,20 @@ class t_named : public t_node {
     doc_ = node_doc{std::move(doc), range};
   }
 
+  /**
+   * Returns the range, in Thrift source, where this instances name is defined,
+   * if any (i.e., if previously set by `set_name_range()`.
+   */
+  std::optional<source_range> name_range() const { return name_range_; }
+
+  /**
+   * Sets the range, in the source Thrift IDL code, corresponding to this
+   * instance's `name()`.
+   */
+  void set_name_range(source_range name_range) {
+    name_range_ = std::move(name_range);
+  }
+
  protected:
   explicit t_named(const t_program* program = nullptr, std::string name = "");
   t_named(const t_named& named);
@@ -103,7 +113,9 @@ class t_named : public t_node {
     std::string value;
     source_range range;
   };
-  boost::optional<node_doc> doc_;
+  std::optional<node_doc> doc_;
+
+  std::optional<source_range> name_range_;
 
   // TODO(afuller): Remove everything below this comment. It is only provided
   // for backwards compatibility.
@@ -115,6 +127,4 @@ class t_named : public t_node {
 // i.e. it has the @scope.Transitive annotation itself.
 bool is_transitive_annotation(const t_named& node);
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

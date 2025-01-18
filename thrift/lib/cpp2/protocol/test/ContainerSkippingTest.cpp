@@ -21,10 +21,9 @@
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
 #include <thrift/lib/cpp2/protocol/SimpleJSONProtocol.h>
 #include <thrift/lib/cpp2/protocol/test/gen-cpp2/Module_types.h>
+#include <thrift/lib/cpp2/protocol/test/gen-cpp2/Module_types.tcc>
 
-namespace apache {
-namespace thrift {
-namespace test {
+namespace apache::thrift::test {
 
 OneOfEach makeTestData1() {
   OneOfEach ooe;
@@ -131,6 +130,4 @@ TEST(ContainerSkippingTest, SimpleJSONProtocolSkipListAndSet) {
   OneOfEach3 ooe3;
   EXPECT_THROW(ooe3.read(&protocolReader), TProtocolException);
 }
-} // namespace test
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::test

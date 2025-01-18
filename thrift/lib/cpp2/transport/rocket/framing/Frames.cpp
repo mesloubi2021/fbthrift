@@ -31,17 +31,12 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 
-#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/FrameType.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Serializer.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Util.h>
 
-THRIFT_FLAG_DEFINE_bool(fix_cpp_fragmentation, false);
-
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
 
 namespace {
 std::unique_ptr<folly::IOBuf> trimBuffer(
@@ -87,12 +82,10 @@ void serializeInFragmentsSlowCommon(
       frame.setHasFollows(follows);
       std::move(frame).serialize(writer);
     } else {
-      bool completeFlag =
-          THRIFT_FLAG(fix_cpp_fragmentation) ? !follows && complete : complete;
       PayloadFrame pf(
           frame.streamId(),
           std::move(p),
-          flags.follows(follows).complete(completeFlag));
+          flags.follows(follows).complete(!follows && complete));
       std::move(pf).serialize(writer);
     }
   } while (follows);
@@ -235,8 +228,17 @@ void SetupFrame::serialize(Serializer& writer) && {
     nwritten += writer.write(resumeIdentificationToken_);
   }
 
-  const auto& metadataMimeType =
-      rocketMimeTypes_ ? kRocketMetadataMimeType : kLegacyMimeType;
+  std::string_view metadataMimeType;
+  if (rocketMimeTypes_) {
+    if (encodeMetadataUsingBinary_) {
+      metadataMimeType = kRocketMetadataBinaryMimeType;
+    } else {
+      metadataMimeType = kRocketMetadataCompactMimeType;
+    }
+  } else {
+    metadataMimeType = kLegacyMimeType;
+  }
+
   const auto& payloadMimeType =
       rocketMimeTypes_ ? kRocketPayloadMimeType : kLegacyMimeType;
 
@@ -714,7 +716,10 @@ SetupFrame::SetupFrame(std::unique_ptr<folly::IOBuf> frame) {
   const auto dataMimeLength = cursor.read<uint8_t>();
   auto dataMimeType = cursor.readFixedString(dataMimeLength);
 
-  rocketMimeTypes_ = (metadataMimeType == kRocketMetadataMimeType) &&
+  encodeMetadataUsingBinary_ =
+      metadataMimeType == kRocketMetadataBinaryMimeType;
+  rocketMimeTypes_ = (metadataMimeType == kRocketMetadataBinaryMimeType ||
+                      metadataMimeType == kRocketMetadataCompactMimeType) &&
       (dataMimeType == kRocketPayloadMimeType);
 
   payload_ = readPayload(flags_.metadata(), cursor, std::move(frame));
@@ -953,11 +958,4 @@ ExtFrame::ExtFrame(
       readPayload(flags_.metadata(), cursor, std::move(underlyingBuffer));
 }
 
-// Static member definition
-constexpr folly::StringPiece SetupFrame::kLegacyMimeType;
-constexpr folly::StringPiece SetupFrame::kRocketMetadataMimeType;
-constexpr folly::StringPiece SetupFrame::kRocketPayloadMimeType;
-
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

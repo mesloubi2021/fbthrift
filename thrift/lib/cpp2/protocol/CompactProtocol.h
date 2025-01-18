@@ -31,8 +31,7 @@
 FOLLY_GFLAGS_DECLARE_int32(thrift_cpp2_protocol_reader_string_limit);
 FOLLY_GFLAGS_DECLARE_int32(thrift_cpp2_protocol_reader_container_limit);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using folly::IOBuf;
 using folly::IOBufQueue;
@@ -41,8 +40,7 @@ typedef folly::io::RWPrivateCursor RWCursor;
 using folly::io::Cursor;
 using folly::io::QueueAppender;
 
-namespace detail {
-namespace compact {
+namespace detail::compact {
 
 static const int8_t COMPACT_PROTOCOL_VERSION = 0x02;
 static const int32_t VERSION_2 = 0x82020000;
@@ -50,8 +48,7 @@ static const int8_t PROTOCOL_ID = int8_t(0x82);
 static const int8_t TYPE_MASK = int8_t(0xE0);
 static const int32_t TYPE_SHIFT_AMOUNT = 5;
 
-} // namespace compact
-} // namespace detail
+} // namespace detail::compact
 
 class CompactProtocolReader;
 
@@ -295,7 +292,9 @@ class CompactProtocolReader : public detail::ProtocolBase {
 
   static constexpr std::size_t fixedSizeInContainer(TType type);
   void skipBytes(size_t bytes) { in_.skip(bytes); }
-  void skip(TType type) { apache::thrift::skip(*this, type); }
+  void skip(TType type, int depth = 0) {
+    apache::thrift::skip(*this, type, depth);
+  }
   bool peekMap() { return false; }
   bool peekSet() { return false; }
   bool peekList() { return false; }
@@ -429,8 +428,7 @@ struct ProtocolReaderStructReadState<CompactProtocolReader>
     : CompactProtocolReader::StructReadState {};
 
 } // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #include <thrift/lib/cpp2/protocol/CompactProtocol-inl.h>
 

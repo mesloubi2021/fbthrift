@@ -23,6 +23,7 @@
       "definition_html": "void apache::thrift::op::for_each_ident",
       "argsstring_html": "(F &amp;&amp;f)",
       "name_html": "for_each_ident",
+      "qualifiedname_html": "apache::thrift::op::for_each_ident",
       "param": [
         {
           "type_html": "F &amp;&amp;",
@@ -31,11 +32,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Get.h",
-        "line": "109",
-        "column": "1",
+        "line": "107",
+        "column": "6",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Get.h",
-        "bodystart": "109",
-        "bodyend": "112"
+        "bodystart": "107",
+        "bodyend": "110"
       },
       "definition": {
         "simple_html": "template &lt;typename T, typename F&gt;\nvoid for_each_ident(F&amp;&amp; f)",
@@ -59,5 +60,11 @@
   "brief_html": "<p>It calls the given function with each folly::tag&lt;thrift::ident::*&gt;{} in Thrift class. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/for_each_ident",
-  "refid": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/for_each_ident"
+  "refid": "/ref/cpp/f/assoc/struct/apache/thrift/op/detail/Get/for_each_ident",
+  "parent_links": [
+    {
+      "text_html": "Get",
+      "href": "/ref/cpp/struct/apache/thrift/op/detail/Get"
+    }
+  ]
 }

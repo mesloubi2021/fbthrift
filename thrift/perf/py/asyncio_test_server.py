@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import asyncio
 import sys
 from argparse import ArgumentParser
 
-from apache.thrift.test.asyncio.asyncio_load_handler import LoadHandler
+from thrift.perf.py.asyncio_load_handler import LoadHandler
 from thrift.server.TAsyncioServer import ThriftAsyncServerFactory
 
 
@@ -40,5 +42,9 @@ def main():
         loop.close()
 
 
-if __name__ == "__main__":
+def invoke_main() -> None:
     sys.exit(main())
+
+
+if __name__ == "__main__":
+    invoke_main()  # pragma: no cover

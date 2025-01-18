@@ -72,21 +72,20 @@ struct Reserver<C, folly::void_t<typename reserve_result<C>::type>> {
 };
 
 template <typename Cont, typename Elem, typename Enable = void>
-FOLLY_INLINE_VARIABLE constexpr bool alloc_is_recursive = false;
+inline constexpr bool alloc_is_recursive = false;
 template <typename Cont, typename Elem>
-FOLLY_INLINE_VARIABLE constexpr bool alloc_is_recursive<
+inline constexpr bool alloc_is_recursive<
     Cont,
     Elem,
     folly::
         void_t<typename Cont::allocator_type, typename Elem::allocator_type>> =
     std::uses_allocator<Elem, typename Cont::allocator_type>::value;
 template <typename Cont, typename Elem>
-FOLLY_INLINE_VARIABLE constexpr bool alloc_should_propagate =
-    alloc_is_recursive<Cont, Elem> &&
+inline constexpr bool alloc_should_propagate = alloc_is_recursive<Cont, Elem> &&
     !std::uses_allocator<Cont, std::allocator<char>>::value;
 
 template <typename Map>
-FOLLY_INLINE_VARIABLE constexpr bool alloc_should_propagate_map =
+inline constexpr bool alloc_should_propagate_map =
     alloc_should_propagate<Map, typename Map::key_type> ||
     alloc_should_propagate<Map, typename Map::mapped_type>;
 
@@ -671,7 +670,7 @@ class Cpp2Ops<
     typedef typename std::remove_cv<
         typename std::remove_reference<decltype(*value->begin())>::type>::type
         PairType;
-    typedef typename PairType::second_type ValueType;
+    typedef folly::remove_cvref_t<typename PairType::second_type> ValueType;
     uint32_t xfer = 0;
     xfer += prot->writeMapBegin(
         Cpp2Ops<KeyType>::thriftType(),
@@ -693,7 +692,7 @@ class Cpp2Ops<
     typedef typename std::remove_cv<
         typename std::remove_reference<decltype(*value->begin())>::type>::type
         PairType;
-    typedef typename PairType::second_type ValueType;
+    typedef folly::remove_cvref_t<typename PairType::second_type> ValueType;
     value->clear();
     uint32_t size;
     protocol::TType keytype, valuetype;
@@ -713,7 +712,7 @@ class Cpp2Ops<
     typedef typename std::remove_cv<
         typename std::remove_reference<decltype(*value->begin())>::type>::type
         PairType;
-    typedef typename PairType::second_type ValueType;
+    typedef folly::remove_cvref_t<typename PairType::second_type> ValueType;
     uint32_t xfer = 0;
     xfer += prot->serializedSizeMapBegin(
         Cpp2Ops<KeyType>::thriftType(),
@@ -732,7 +731,7 @@ class Cpp2Ops<
     typedef typename std::remove_cv<
         typename std::remove_reference<decltype(*value->begin())>::type>::type
         PairType;
-    typedef typename PairType::second_type ValueType;
+    typedef folly::remove_cvref_t<typename PairType::second_type> ValueType;
     uint32_t xfer = 0;
     xfer += prot->serializedSizeMapBegin(
         Cpp2Ops<KeyType>::thriftType(),

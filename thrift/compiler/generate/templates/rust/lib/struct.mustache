@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
     }}{{#struct:ord?}}, Eq, PartialOrd, Ord, Hash{{/struct:ord?}}{{!
     }}{{#struct:union?}}, Debug{{/struct:union?}}{{!
     }}{{#struct:serde?}}, ::serde_derive::Serialize, ::serde_derive::Deserialize{{/struct:serde?}}{{!
+    }}{{#program:valuable?}}, ::valuable::Valuable{{/program:valuable?}}{{!
     }}{{#struct:exception?}}{{#struct:union?}}, ::thiserror::Error{{/struct:union?}}{{/struct:exception?}}{{!
     }}{{#struct:derive}}, {{.}}{{/struct:derive}}{{!
 }})]
@@ -29,7 +30,7 @@
 #[doc = {{struct:docs}}]
 {{/struct:docs?}}{{!
 }}{{^struct:union?}}
-pub struct {{struct:rust_name}} {{>lib/block}}{{!
+pub struct {{struct:rust_name}} {{> lib/block}}{{!
 }}{{#struct:fields}}{{!
     }}{{#struct:serde?}}{{#field:rename?}}
     #[serde(rename = "{{field:name}}")]{{!
@@ -37,18 +38,18 @@ pub struct {{struct:rust_name}} {{>lib/block}}{{!
     #[serde(default)]{{!
     }}{{/field:optional?}}{{!
     }}{{#field:optional?}}{{#struct:serde?}}{{#program:skip_none_serialization?}}
-    #[serde(skip_serializing_if = "Option::is_none")]{{!
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]{{!
     }}{{/program:skip_none_serialization?}}{{/struct:serde?}}{{/field:optional?}}{{!
     }}{{/struct:serde?}}{{#field:docs?}}
     #[doc = {{field:docs}}]{{!
     }}{{/field:docs?}}
-    pub {{field:rust_name}}: {{>lib/fieldtype}},{{!
+    pub {{field:rust_name}}: {{> lib/fieldtype}},{{!
 }}{{/struct:fields}}{{!
 }}{{^struct:exhaustive?}}
     // This field forces `..Default::default()` when instantiating this
     // struct, to make code future-proof against new fields added later to
     // the definition in Thrift. If you don't want this, add the annotation
-    // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+    // `@rust.Exhaustive` to the Thrift struct to eliminate this field.
     #[doc(hidden)]{{!
     }}{{#struct:serde?}}
     #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]{{!
@@ -75,7 +76,7 @@ impl ::fbthrift::ExceptionInfo for {{struct:rust_name}} {
 
 impl ::std::error::Error for {{struct:rust_name}} {}
 
-impl ::std::fmt::Display for {{struct:rust_name}} {{>lib/block}}
+impl ::std::fmt::Display for {{struct:rust_name}} {{> lib/block}}
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         {{#struct:exception?}}
         write!(f, {{!
@@ -100,7 +101,7 @@ impl ::std::fmt::Display for {{struct:rust_name}} {{>lib/block}}
 {{/struct:exception?}}
 {{/struct:union?}}
 {{#struct:union?}}
-pub enum {{struct:rust_name}} {{>lib/block}}{{!
+pub enum {{struct:rust_name}} {{> lib/block}}{{!
 }}{{#struct:fields}}
     {{#field:docs?}}
     #[doc = {{field:docs}}]
@@ -108,9 +109,8 @@ pub enum {{struct:rust_name}} {{>lib/block}}{{!
     {{#struct:exception?}}
     #[error("{0:?}")]
     {{/struct:exception?}}
-    {{field:rust_name}}({{>lib/fieldtype}}),{{!
+    {{field:rust_name}}({{> lib/fieldtype}}),{{!
 }}{{/struct:fields}}
     UnknownField(::std::primitive::i32),
 }
 {{/struct:union?}}
-{{!newline}}

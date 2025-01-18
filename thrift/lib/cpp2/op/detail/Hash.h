@@ -25,10 +25,7 @@
 #include <thrift/lib/cpp2/type/NativeType.h>
 #include <thrift/lib/cpp2/type/Tag.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
+namespace apache::thrift::op::detail {
 
 // By default, pass the value directly to the accumulator.
 template <typename Accumulator, typename T>
@@ -78,22 +75,22 @@ void accumulateHash(
   value.write(&protocol);
 }
 
-template <typename Tag>
+template <typename Tag, typename Hasher>
 struct Hash {
   template <typename T, typename Accumulator>
   void operator()(const T& value, Accumulator& accumulator) const {
+    static_assert(
+        std::is_void_v<Hasher>, "Passing accumulator overrides Hasher");
     accumulateHash(Tag{}, accumulator, value);
   }
   template <typename T = type::native_type<Tag>>
   auto operator()(const T& value) const {
     // TODO(afuller): Only use an accumulator for composite types.
-    auto accumulator = makeDeterministicAccumulator<StdHasher>();
+    auto accumulator = makeDeterministicAccumulator<
+        std::conditional_t<std::is_void_v<Hasher>, StdHasher, Hasher>>();
     accumulateHash(Tag{}, accumulator, value);
     return std::move(accumulator.result()).getResult();
   }
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

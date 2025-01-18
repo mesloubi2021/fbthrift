@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <boost/filesystem.hpp>
 
 #include <thrift/compiler/ast/node_list.h>
 #include <thrift/compiler/ast/t_include.h>
@@ -31,9 +30,7 @@
 
 using namespace std;
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * JSON code generator.
@@ -93,21 +90,21 @@ class t_json_generator : public t_concat_generator {
  */
 void t_json_generator::generate_program() {
   // Make output directory
-  boost::filesystem::create_directory(get_out_dir());
+  std::filesystem::create_directory(get_out_dir());
   string module_name = program_->get_namespace("json");
   string fname = get_out_dir();
   if (module_name.empty()) {
     module_name = program_->name();
   }
   string mangled_module_name = module_name;
-  boost::filesystem::create_directory(fname);
+  std::filesystem::create_directory(fname);
   for (string::size_type pos = mangled_module_name.find('.');
        pos != string::npos;
        pos = mangled_module_name.find('.')) {
     fname += '/';
     fname += mangled_module_name.substr(0, pos);
     mangled_module_name.erase(0, pos + 1);
-    boost::filesystem::create_directory(fname);
+    std::filesystem::create_directory(fname);
   }
 
   fname += '/';
@@ -116,9 +113,8 @@ void t_json_generator::generate_program() {
   f_out_.open(fname.c_str());
   indent(f_out_) << "{" << endl;
   indent_up();
-  indent(f_out_) << "\"__fbthrift\": {\"@"
-                 << "generated\": 0}," << endl;
-  indent(f_out_) << "\"thrift_module\" : \"" << module_name << "\"";
+  indent(f_out_) << R"("__fbthrift": {"@)" << "generated\": 0}," << endl;
+  indent(f_out_) << R"("thrift_module" : ")" << module_name << "\"";
 
   if (!program_->consts().empty()) {
     f_out_ << "," << endl << indent() << "\"constants\" : {" << endl;
@@ -232,27 +228,28 @@ string t_json_generator::type_to_string(const t_type* type) {
     type = type->get_true_type();
   }
 
-  if (type->is_base_type()) {
-    t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+  if (type->is_primitive_type()) {
+    t_primitive_type::t_primitive tbase =
+        ((t_primitive_type*)type)->primitive_type();
     switch (tbase) {
-      case t_base_type::TYPE_VOID:
+      case t_primitive_type::TYPE_VOID:
         return "VOID";
-      case t_base_type::TYPE_STRING:
-      case t_base_type::TYPE_BINARY:
+      case t_primitive_type::TYPE_STRING:
+      case t_primitive_type::TYPE_BINARY:
         return "STRING";
-      case t_base_type::TYPE_BOOL:
+      case t_primitive_type::TYPE_BOOL:
         return "BOOL";
-      case t_base_type::TYPE_BYTE:
+      case t_primitive_type::TYPE_BYTE:
         return "BYTE";
-      case t_base_type::TYPE_I16:
+      case t_primitive_type::TYPE_I16:
         return "I16";
-      case t_base_type::TYPE_I32:
+      case t_primitive_type::TYPE_I32:
         return "I32";
-      case t_base_type::TYPE_I64:
+      case t_primitive_type::TYPE_I64:
         return "I64";
-      case t_base_type::TYPE_DOUBLE:
+      case t_primitive_type::TYPE_DOUBLE:
         return "DOUBLE";
-      case t_base_type::TYPE_FLOAT:
+      case t_primitive_type::TYPE_FLOAT:
         return "FLOAT";
     }
   } else if (type->is_enum()) {
@@ -289,7 +286,7 @@ string t_json_generator::type_to_spec_args(const t_type* ttype) {
     ttype = ttype->get_true_type();
   }
 
-  if (ttype->is_base_type()) {
+  if (ttype->is_primitive_type()) {
     return "null";
   } else if (
       ttype->is_struct() || ttype->is_exception() || ttype->is_service() ||
@@ -300,23 +297,23 @@ string t_json_generator::type_to_spec_args(const t_type* ttype) {
     }
     return "\"" + module + ttype->get_name() + "\"";
   } else if (ttype->is_map()) {
-    return "{ \"key_type\" : { \"type_enum\" : \"" +
+    return R"({ "key_type" : { "type_enum" : ")" +
         type_to_string(((t_map*)ttype)->get_key_type()) +
-        "\", \"spec_args\" : " +
+        R"(", "spec_args" : )" +
         type_to_spec_args(((t_map*)ttype)->get_key_type()) +
-        " }, \"val_type\" : { \"type_enum\" : \"" +
+        R"( }, "val_type" : { "type_enum" : ")" +
         type_to_string(((t_map*)ttype)->get_val_type()) +
-        "\", \"spec_args\" : " +
+        R"(", "spec_args" : )" +
         type_to_spec_args(((t_map*)ttype)->get_val_type()) + "} } ";
   } else if (ttype->is_set()) {
-    return "{ \"type_enum\" : \"" +
+    return R"({ "type_enum" : ")" +
         type_to_string(((t_set*)ttype)->get_elem_type()) +
-        "\", \"spec_args\" : " +
+        R"(", "spec_args" : )" +
         type_to_spec_args(((t_set*)ttype)->get_elem_type()) + "} ";
   } else if (ttype->is_list()) {
-    return "{ \"type_enum\" : \"" +
+    return R"({ "type_enum" : ")" +
         type_to_string(((t_list*)ttype)->get_elem_type()) +
-        "\", \"spec_args\" : " +
+        R"(", "spec_args" : )" +
         type_to_spec_args(((t_list*)ttype)->get_elem_type()) + "} ";
   }
 
@@ -342,14 +339,13 @@ string t_json_generator::type_name(const t_type* ttype) {
  * Prints out the provided type spec
  */
 void t_json_generator::print_type(const t_type* ttype) {
-  indent(f_out_) << "\"type_enum\" : \"" << type_to_string(ttype) << "\","
+  indent(f_out_) << R"("type_enum" : ")" << type_to_string(ttype) << "\","
                  << endl;
   indent(f_out_) << "\"spec_args\" : " << type_to_spec_args(ttype);
 }
 
 void t_json_generator::print_name(const string& name) {
-  f_out_ << indent() << "\"name\" : "
-         << "\"" << name << "\"," << endl;
+  f_out_ << indent() << "\"name\" : " << "\"" << name << "\"," << endl;
 }
 
 /**
@@ -358,7 +354,7 @@ void t_json_generator::print_name(const string& name) {
  * TODO - support serialization of complex keys...
  */
 void t_json_generator::print_const_key(t_const_value* tvalue) {
-  switch (tvalue->get_type()) {
+  switch (tvalue->kind()) {
     case t_const_value::CV_INTEGER:
       f_out_ << "\"" << tvalue->get_integer() << "\"";
       break;
@@ -372,7 +368,7 @@ void t_json_generator::print_const_key(t_const_value* tvalue) {
     case t_const_value::CV_LIST:
     default: {
       std::ostringstream msg;
-      msg << "INVALID TYPE IN print_const_key: " << tvalue->get_type();
+      msg << "INVALID TYPE IN print_const_key: " << tvalue->kind();
       throw msg.str();
     }
   }
@@ -383,7 +379,7 @@ void t_json_generator::print_const_key(t_const_value* tvalue) {
  */
 void t_json_generator::print_const_value(const t_const_value* tvalue) {
   bool first = true;
-  switch (tvalue->get_type()) {
+  switch (tvalue->kind()) {
     case t_const_value::CV_INTEGER:
       f_out_ << tvalue->get_integer();
       break;
@@ -416,7 +412,6 @@ void t_json_generator::print_const_value(const t_const_value* tvalue) {
     case t_const_value::CV_LIST: {
       f_out_ << "[ ";
       vector<t_const_value*> list_elems = tvalue->get_list();
-      ;
       vector<t_const_value*>::iterator list_iter;
       for (list_iter = list_elems.begin(); list_iter != list_elems.end();
            list_iter++) {
@@ -521,7 +516,7 @@ void t_json_generator::print_node_annotations(
 void t_json_generator::generate_include(const t_program* included_program) {
   indent(f_out_) << "\"" << included_program->get_name() << "\" : {" << endl;
   indent_up();
-  indent(f_out_) << "\"path\" : \""
+  indent(f_out_) << R"("path" : ")"
                  << included_program->include_prefix() +
           included_program->name() + ".thrift"
                  << "\"" << endl;
@@ -575,8 +570,8 @@ void t_json_generator::generate_enum(const t_enum* tenum) {
     // approach of compartmentalization, but may be backwards-incompatible.
     // Adding annotations as a separate top-level enum list/map would go
     // against this general approach.
-    indent(f_out_) << "\"" << (*val_iter)->get_name() << "\""
-                   << " : " << (*val_iter)->get_value();
+    indent(f_out_) << "\"" << (*val_iter)->get_name() << "\"" << " : "
+                   << (*val_iter)->get_value();
   }
   f_out_ << endl;
   indent_down();
@@ -855,6 +850,4 @@ THRIFT_REGISTER_GENERATOR(
     "JSON",
     "    annotate:        Generate annotations in json representation\n");
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

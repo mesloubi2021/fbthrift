@@ -10,6 +10,7 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -20,6 +21,7 @@
       "definition_html": "void apache::thrift::detail::unset_unsafe_fn::operator()",
       "argsstring_html": "(field_ref&lt; T &gt; ref) const noexcept",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::detail::unset_unsafe_fn::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/field_ref\">field_ref</a>&lt; T &gt;",
@@ -28,11 +30,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1645",
-        "column": "1",
+        "line": "1660",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1645",
-        "bodyend": "1647"
+        "bodystart": "1660",
+        "bodyend": "1662"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nvoid operator()(field_ref&lt;T&gt; ref) const",
@@ -54,6 +56,7 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "tparams": [
         {
@@ -64,6 +67,7 @@
       "definition_html": "void apache::thrift::detail::unset_unsafe_fn::operator()",
       "argsstring_html": "(optional_field_ref&lt; T &gt; ref) const noexcept",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::detail::unset_unsafe_fn::operator()",
       "param": [
         {
           "type_html": "<a href=\"https://www.internalfb.com/intern/staticdocs/fbcref/ref/cpp/class/apache/thrift/optional_field_ref\">optional_field_ref</a>&lt; T &gt;",
@@ -72,11 +76,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1650",
-        "column": "1",
+        "line": "1665",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1650",
-        "bodyend": "1652"
+        "bodystart": "1665",
+        "bodyend": "1667"
       },
       "definition": {
         "simple_html": "template &lt;typename T&gt;\nvoid operator()(optional_field_ref&lt;T&gt; ref) const",
@@ -98,5 +102,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/detail/unset_unsafe_fn/operator.call",
-  "refid": "/ref/cpp/f/struct/apache/thrift/detail/unset_unsafe_fn/operator.call"
+  "refid": "/ref/cpp/f/struct/apache/thrift/detail/unset_unsafe_fn/operator.call",
+  "parent_links": [
+    {
+      "text_html": "unset_unsafe_fn",
+      "href": "/ref/cpp/struct/apache/thrift/detail/unset_unsafe_fn"
+    }
+  ]
 }

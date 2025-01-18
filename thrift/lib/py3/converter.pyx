@@ -19,7 +19,9 @@ from thrift.py3.reflection import inspect
 
 from libcpp cimport bool
 from thrift.py3.reflection cimport FieldSpec, MapSpec, Qualifier, StructType
-from thrift.py3.types cimport BadEnum, CompiledEnum, Container, Struct
+from thrift.python.types cimport BadEnum
+from thrift.py3.types cimport Container, Struct
+from thrift.py3.types import CompiledEnum
 from thrift.python.types cimport Struct as PythonStruct, Union as PythonUnion
 
 def to_py3_struct(cls, obj):
@@ -67,7 +69,7 @@ cdef object _get_src_union_field(object obj, FieldSpec field_spec):
     return getattr(obj, "get_" + field_spec.name)()
 
 
-cdef bool _should_ignore_field(object obj, FieldSpec field_spec):
+cdef bool _should_ignore_field(object obj, FieldSpec field_spec) noexcept:
     dft = field_spec.default
     if not (field_spec.qualifier == Qualifier.OPTIONAL and dft is not None):
         return False

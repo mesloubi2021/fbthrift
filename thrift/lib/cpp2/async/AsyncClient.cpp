@@ -16,17 +16,35 @@
 
 #include <thrift/lib/cpp2/async/AsyncClient.h>
 
+#include <folly/Overload.h>
+
+#include <thrift/lib/cpp2/runtime/Init.h>
+
 #include <string_view>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace {
+
 static InteractionId createInteraction(
     RequestChannel& channel, std::string_view methodName) {
   DCHECK(
       !channel.getEventBase() || channel.getEventBase()->isInEventBaseThread());
   return channel.createInteraction(methodName);
 }
+
+GeneratedAsyncClient::InterceptorList extractInterceptors(
+    GeneratedAsyncClient::InterceptorSpecification&& spec) {
+  using Result = GeneratedAsyncClient::InterceptorList;
+  return folly::variant_match(
+      std::move(spec),
+      [](GeneratedAsyncClient::UseGlobalInterceptors) -> Result {
+        return apache::thrift::runtime::getGlobalClientInterceptors();
+      },
+      [](GeneratedAsyncClient::InterceptorList&& interceptors) -> Result {
+        return std::move(interceptors);
+      });
+}
+
 } // namespace
 
 GeneratedAsyncClient::GeneratedAsyncClient(
@@ -35,7 +53,16 @@ GeneratedAsyncClient::GeneratedAsyncClient(
 
 GeneratedAsyncClient::GeneratedAsyncClient(
     std::shared_ptr<RequestChannel> channel, Options options)
-    : TClientBase(options.clientBaseOptions_), channel_(std::move(channel)) {}
+    : GeneratedAsyncClient(
+          std::move(channel), UseGlobalInterceptors(), std::move(options)) {}
+
+GeneratedAsyncClient::GeneratedAsyncClient(
+    std::shared_ptr<RequestChannel> channel,
+    InterceptorSpecification interceptors,
+    Options options)
+    : TClientBase(options.clientBaseOptions_),
+      channel_(std::move(channel)),
+      interceptors_(extractInterceptors(std::move(interceptors))) {}
 
 void GeneratedAsyncClient::setInteraction(
     const InteractionHandle& handle, RpcOptions& rpcOptions) {
@@ -43,15 +70,20 @@ void GeneratedAsyncClient::setInteraction(
 }
 
 InteractionHandle::InteractionHandle(
-    std::shared_ptr<RequestChannel> channel, folly::StringPiece methodName)
-    : GeneratedAsyncClient(channel),
+    std::shared_ptr<RequestChannel> channel,
+    folly::StringPiece methodName,
+    InterceptorList interceptors)
+    : GeneratedAsyncClient(channel, std::move(interceptors)),
       interactionId_(createInteraction(*channel, methodName)) {
   DCHECK(interactionId_);
 }
 
 InteractionHandle::InteractionHandle(
-    std::shared_ptr<RequestChannel> channel, InteractionId id)
-    : GeneratedAsyncClient(channel), interactionId_(std::move(id)) {
+    std::shared_ptr<RequestChannel> channel,
+    InteractionId id,
+    InterceptorList interceptors)
+    : GeneratedAsyncClient(channel, std::move(interceptors)),
+      interactionId_(std::move(id)) {
   DCHECK(interactionId_);
 }
 
@@ -93,5 +125,4 @@ void InteractionHandle::terminate() {
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

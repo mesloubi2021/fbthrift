@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
@@ -25,6 +27,8 @@ from FastProto.ttypes import (
     StructWithUnion,
     TestUnion,
 )
+
+# pyre-fixme[21]: Could not find name `fastproto` in `thrift.protocol`.
 from thrift.protocol import fastproto, TBinaryProtocol, TCompactProtocol
 from thrift.protocol.exceptions import ThriftUnicodeDecodeError
 from thrift.transport.TTransport import TMemoryBuffer

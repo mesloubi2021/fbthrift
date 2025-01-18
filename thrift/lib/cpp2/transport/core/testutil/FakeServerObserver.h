@@ -21,8 +21,7 @@
 #include <folly/synchronization/Baton.h>
 #include <thrift/lib/cpp/server/TServerObserver.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class FakeServerObserver : public apache::thrift::server::TServerObserver {
  public:
@@ -37,7 +36,6 @@ class FakeServerObserver : public apache::thrift::server::TServerObserver {
   std::atomic<size_t> serverOverloaded_{0};
   std::atomic<size_t> receivedRequest_{0};
   std::atomic<size_t> queuedRequests_{0};
-  std::atomic<size_t> shadowQueueTimeout_{0};
   std::atomic<size_t> sentReply_{0};
   std::atomic<size_t> activeRequests_{0};
   std::atomic<size_t> callCompleted_{0};
@@ -47,11 +45,14 @@ class FakeServerObserver : public apache::thrift::server::TServerObserver {
 
   FakeServerObserver() : TServerObserver(1) {}
 
-  void connAccepted(const wangle::TransportInfo& /* info */) override {
+  void connAccepted(
+      const wangle::TransportInfo& /* info */,
+      const TServerObserver::ConnectionInfo& /* connInfo */) override {
     ++connAccepted_;
   }
 
-  void connClosed() override {
+  void connClosed(
+      const TServerObserver::ConnectionInfo& /* connInfo */) override {
     ++connClosed_;
     if (connClosedNotifBaton) {
       connClosedNotifBaton->post();
@@ -81,7 +82,7 @@ class FakeServerObserver : public apache::thrift::server::TServerObserver {
 
   void taskTimeout() override { ++taskTimeout_; }
 
-  void serverOverloaded() override {
+  void serverOverloaded(apache::thrift::LoadShedder /*loadShedder*/) override {
     // TODO: T24439936 - Implement LOADSHEDDING
     ++serverOverloaded_;
   }
@@ -95,8 +96,6 @@ class FakeServerObserver : public apache::thrift::server::TServerObserver {
   }
 
   void queueTimeout() override { ++queueTimeout_; }
-
-  void shadowQueueTimeout() override { ++shadowQueueTimeout_; }
 
   void sentReply() override { ++sentReply_; }
 
@@ -113,5 +112,4 @@ class FakeServerObserver : public apache::thrift::server::TServerObserver {
   void tlsWithClientCert() override {}
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

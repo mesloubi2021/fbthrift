@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import timeit
 import typing
 from enum import Enum
@@ -27,6 +29,7 @@ class Flavor(Enum):
     PY3 = 1
     PY_DEPRECATED = 2
     PYTHON_FULLY_POPULATE_CACHE = 3
+    MUTABLE_PYTHON = 4
 
 
 def import_statement(flavor: Flavor) -> str:
@@ -35,27 +38,48 @@ def import_statement(flavor: Flavor) -> str:
         Flavor.PY3: "types",
         Flavor.PY_DEPRECATED: "ttypes",
         Flavor.PYTHON_FULLY_POPULATE_CACHE: "thrift_types",
+        Flavor.MUTABLE_PYTHON: "thrift_mutable_types",
     }
     return (
         f"from thrift.benchmark.struct.{NAMESPACES[flavor]} import Included, MyStruct"
     )
 
 
+def import_container_wrappers(flavor: Flavor) -> str:
+    if flavor == Flavor.MUTABLE_PYTHON:
+        return "from thrift.python.mutable_types import to_thrift_list, to_thrift_set, to_thrift_map"
+
+    return ""
+
+
 @click.pass_context
 def list_init_statement(ctx, flavor: Flavor) -> str:
     size = ctx.params["size"]
+    if flavor == Flavor.MUTABLE_PYTHON:
+        return f"inst = MyStruct(val_list=to_thrift_list(list(range({size}))))"
+
     return f"inst = MyStruct(val_list=list(range({size})))"
 
 
 @click.pass_context
 def set_init_statement(ctx, flavor: Flavor) -> str:
     size = ctx.params["size"]
+    if flavor == Flavor.MUTABLE_PYTHON:
+        return f"inst = MyStruct(val_set=to_thrift_set(set(range({size}))))"
+
     return f"inst = MyStruct(val_set=set(range({size})))"
 
 
 @click.pass_context
 def map_init_statement(ctx, flavor: Flavor) -> str:
     size = ctx.params["size"]
+    if flavor == Flavor.MUTABLE_PYTHON:
+        return f"""
+inst = MyStruct(val_map=to_thrift_map({{
+    i: f\"str_{{i}}"
+    for i in range({size})
+}}))
+"""
     return f"""
 inst = MyStruct(val_map={{
     i: f\"str_{{i}}"
@@ -68,6 +92,21 @@ inst = MyStruct(val_map={{
 def nested_map_init_statement(ctx, flavor: Flavor) -> str:
     size = ctx.params["size"]
     inner_size = ctx.params["inner_size"]
+    if flavor == Flavor.MUTABLE_PYTHON:
+        return f"""
+inst = MyStruct(
+    val_map_structs = to_thrift_map({{
+        i: Included(
+            vals=to_thrift_list([
+                f\"str_{{i}}_{{j}}"
+                for j in range({inner_size})
+            ])
+        )
+        for i in range({size})
+    }})
+)
+"""
+
     return f"""
 inst = MyStruct(
     val_map_structs = {{
@@ -83,6 +122,7 @@ inst = MyStruct(
 """
 
 
+# pyre-fixme[7]: Expected `str` but got implicit return value of `None`.
 def import_serializer_statement(flavor: Flavor) -> str:
     if flavor == Flavor.PYTHON:
         return "from thrift.python.serializer import deserialize, serialize"
@@ -113,6 +153,8 @@ from thrift.python.serializer import deserialize as d, serialize
 def deserialize(klass, bytes):
     return d(klass, bytes, fully_populate_cache=True)
 """
+    elif flavor == Flavor.MUTABLE_PYTHON:
+        return "from thrift.python.mutable_serializer import deserialize, serialize"
 
 
 def serialze_statement(flavor: Flavor) -> str:
@@ -183,6 +225,8 @@ def benchmark_steps(ctx, *statements: typing.List[str]) -> typing.List[str]:
     setup = ""
     for stmt in statements:
         timer = timeit.Timer(
+            # pyre-fixme[6]: For 1st argument expected `Union[typing.Callable[[],
+            #  object], str]` but got `List[str]`.
             stmt=stmt,
             setup=setup,
         )
@@ -209,6 +253,7 @@ def benchmark_container(
     headers = [
         title,
         "Import Types",
+        "Import Container Wrappers",
         "Construct",
         "Import Serializer",
         "Serialize",
@@ -221,6 +266,7 @@ def benchmark_container(
         [flavor_name(flavor)]
         + benchmark_steps(
             import_statement(flavor),
+            import_container_wrappers(flavor),
             init_statement_func(flavor),
             import_serializer_statement(flavor),
             serialze_statement(flavor),

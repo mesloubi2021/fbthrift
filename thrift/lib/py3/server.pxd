@@ -20,7 +20,7 @@ from folly.iobuf cimport cIOBuf
 from folly.range cimport StringPiece
 from folly cimport cFollyExecutor
 from cpython.ref cimport PyObject
-from thrift.py3.common cimport cPriority, Priority_to_cpp, Headers, cThriftMetadata
+from thrift.python.common cimport cPriority, Priority_to_cpp, Headers, cThriftMetadata
 from thrift.py3.std_libcpp cimport milliseconds, seconds, string_view
 from libcpp.optional cimport optional
 from libcpp.utility cimport pair
@@ -101,9 +101,8 @@ cdef extern from "thrift/lib/cpp2/server/ThriftServer.h" \
         uint16_t getPort() nogil
         void setAddress(cfollySocketAddress& addr) nogil
         void setAddress(string ip, uint16_t port) nogil
-        void setInterface(shared_ptr[cServerInterface]) nogil
+        void setInterface(shared_ptr[cAsyncProcessorFactory]) nogil
         void setStatusInterface(shared_ptr[cStatusServerInterface]) nogil
-        void setProcessorFactory(shared_ptr[cAsyncProcessorFactory]) nogil
         void serve() nogil except +
         void stop() nogil except +
         void stopListening() nogil except +
@@ -128,6 +127,8 @@ cdef extern from "thrift/lib/cpp2/server/ThriftServer.h" \
         milliseconds getIdleTimeout()
         void setQueueTimeout(milliseconds timeout)
         milliseconds getQueueTimeout()
+        void setSocketQueueTimeout(milliseconds timeout)
+        milliseconds getSocketQueueTimeoutMs()
         void setIsOverloaded(cIsOverloadedFunc isOverloaded)
         void useExistingSocket(int socket) except +
         cBaseThriftServerMetadata& metadata()
@@ -138,6 +139,12 @@ cdef extern from "thrift/lib/cpp2/server/ThriftServer.h" \
         void setIdleServerTimeout(milliseconds idleServerTimeout)
         cbool getQuickExitOnShutdownTimeout()
         void setQuickExitOnShutdownTimeout(cbool quickExitOnShutdownTimeout)
+        void addRoutingHandler(unique_ptr[cTransportRoutingHandler])
+        void disableInfoLogging()
+        cbool resourcePoolEnabled() nogil noexcept
+        void requireResourcePools() nogil noexcept
+        void setTaskExpireTime(milliseconds timeout)
+        void setUseClientTimeout(cbool useClientTimeout)
 
 cdef extern from "folly/ssl/OpenSSLCertUtils.h" \
         namespace "folly::ssl":
@@ -209,6 +216,7 @@ cdef extern from "thrift/lib/cpp2/server/Cpp2ConnContext.h" \
 
 cdef class AsyncProcessorFactory:
     cdef shared_ptr[cAsyncProcessorFactory] _cpp_obj
+    cdef cbool requireResourcePools(AsyncProcessorFactory self)
 
 
 cdef class ServiceInterface(AsyncProcessorFactory):
@@ -221,6 +229,7 @@ cdef class ThriftServer:
     cdef object loop
     cdef object address_future
     cdef void set_is_overloaded(self, cIsOverloadedFunc is_overloaded)
+    cdef void add_routing_handler(self, unique_ptr[cTransportRoutingHandler] handler)
 
 
 cdef class ClientMetadata:
@@ -268,8 +277,5 @@ cdef class WriteHeaders(Headers):
 cdef class StatusServerInterface:
     cdef shared_ptr[cStatusServerInterface] _cpp_obj
 
-
-cdef extern from "<utility>" namespace "std" nogil:
-    cdef unique_ptr[cTransportRoutingHandler] move(unique_ptr[cTransportRoutingHandler])
 
 cdef object THRIFT_REQUEST_CONTEXT

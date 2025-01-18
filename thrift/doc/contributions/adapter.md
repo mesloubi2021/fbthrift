@@ -1,7 +1,7 @@
 # Thrift Adapter
 
 Thrift Adapter supports two conversions.
-- Conversion from [standard type](../glossary/#kinds-of-types) to [adapted type](../glossary/#kinds-of-types)
+- Conversion from [standard type](../glossary/kinds-of-types#default-target-types) to [adapted type](../glossary/kinds-of-types#adapted-types)
 - Conversion from adapted type to standard type
 A conforming implementation **should** name these conversion `fromThrift` (or `fromThriftField` for Field Adapter) and `toThrift` for consistency.
 
@@ -36,4 +36,4 @@ An implementation **may** provide in-place deserialization optimization for wrap
 ## Certain details to note while implementing the APIs
 * Each language **may** provide additional features in Thrift Adapter to support additional needs in each language.
 * Type and Field Wrapper **may** not exist in some languages (C++ and Python), as these implementation does not differentiate Adapter and Wrapper.
-* Thrift Adapter serves as a building block for many Thrift features, such as [Thrift Patch](../features/patch), [Thrift Any](../features/any), and more.
+* Thrift Adapter serves as a building block for many Thrift features, such as Protocol Object.

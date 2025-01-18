@@ -16,8 +16,6 @@
 
 #include <thrift/lib/cpp2/transport/util/ConnectionManager.h>
 
-#include <unistd.h>
-
 #include <folly/portability/GFlags.h>
 
 #include <folly/Singleton.h>
@@ -28,8 +26,7 @@ DEFINE_int32(
     "Number of connections client will establish with each "
     "server (a specific address and port).");
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using std::string;
 
@@ -61,5 +58,4 @@ std::shared_ptr<ClientConnectionIf> ConnectionManager::getConnection(
   return thread->getConnection(addr, port);
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

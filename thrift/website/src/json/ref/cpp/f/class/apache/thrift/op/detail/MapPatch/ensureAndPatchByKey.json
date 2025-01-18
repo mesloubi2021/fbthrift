@@ -4,7 +4,7 @@
   "compoundname_html": "apache::thrift::op::detail::MapPatch::ensureAndPatchByKey",
   "functions": [
     {
-      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1MapPatch_1ae5c069329e219c0ebd70da221c0fc719",
+      "refid": "classapache_1_1thrift_1_1op_1_1detail_1_1MapPatch_1a1a29a25fd6007839cec574aa70b5961a",
       "prot": "public",
       "static": "no",
       "const": "no",
@@ -18,9 +18,10 @@
         }
       ],
       "type_html": "FOLLY_NODISCARD VP &amp;",
-      "definition_html": "FOLLY_NODISCARD VP&amp; apache::thrift::op::detail::MapPatch&lt; Patch &gt;::ensureAndPatchByKey",
+      "definition_html": "FOLLY_NODISCARD VP &amp; apache::thrift::op::detail::MapPatch&lt; Patch &gt;::ensureAndPatchByKey",
       "argsstring_html": "(K &amp;&amp;key)",
       "name_html": "ensureAndPatchByKey",
+      "qualifiedname_html": "apache::thrift::op::detail::MapPatch::ensureAndPatchByKey",
       "param": [
         {
           "type_html": "K &amp;&amp;",
@@ -29,18 +30,18 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "line": "372",
-        "column": "1",
+        "line": "360",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "bodystart": "372",
-        "bodyend": "375"
+        "bodystart": "360",
+        "bodyend": "363"
       },
       "definition": {
         "simple_html": "template &lt;typename K = typename T::key_type&gt;\nFOLLY_NODISCARD VP&amp; ensureAndPatchByKey(K&amp;&amp; key)",
         "simple_raw": "template <typename K = typename T::key_type>\nFOLLY_NODISCARD VP& ensureAndPatchByKey(K&& key)",
         "detailed_html": "template &lt;typename K = typename T::key_type&gt;\ninline FOLLY_NODISCARD VP&amp; ensureAndPatchByKey(K&amp;&amp; key)",
         "detailed_raw": "template <typename K = typename T::key_type>\ninline FOLLY_NODISCARD VP& ensureAndPatchByKey(K&& key)",
-        "original_definition_html": "FOLLY_NODISCARD VP&amp; apache::thrift::op::detail::MapPatch&lt; Patch &gt;::ensureAndPatchByKey",
+        "original_definition_html": "FOLLY_NODISCARD VP &amp; apache::thrift::op::detail::MapPatch&lt; Patch &gt;::ensureAndPatchByKey",
         "original_argsstring_html": "(K &amp;&amp;key)"
       },
       "description": {
@@ -58,5 +59,11 @@
   "brief_html": "<p>Ensures that key exists and patches the entry. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensureAndPatchByKey",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensureAndPatchByKey"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/MapPatch/ensureAndPatchByKey",
+  "parent_links": [
+    {
+      "text_html": "MapPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/MapPatch"
+    }
+  ]
 }

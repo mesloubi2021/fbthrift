@@ -17,11 +17,10 @@
 #pragma once
 
 #include <folly/CPortability.h>
+#include <folly/Optional.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 /**
  * Default stub implementation for StructReadState for protocols that don't
@@ -110,6 +109,4 @@ struct ProtocolReaderStructReadState {
   }
 };
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

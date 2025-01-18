@@ -37,7 +37,7 @@
 #include <wangle/ssl/SSLContextConfig.h>
 
 using namespace apache::thrift;
-using apache::thrift::BaseThriftServer;
+using apache::thrift::ThriftServer;
 using apache::thrift::concurrency::PosixThreadFactory;
 using apache::thrift::concurrency::ThreadManager;
 using apache::thrift::server::TConnectionContext;
@@ -127,7 +127,9 @@ class CppServerEventHandler : public TServerEventHandler {
   void callPythonHandler(TConnectionContext* ctx, const char* method) {
     if (!_Py_IsFinalizing()) {
       PyGILState_STATE state = PyGILState_Ensure();
-      SCOPE_EXIT { PyGILState_Release(state); };
+      SCOPE_EXIT {
+        PyGILState_Release(state);
+      };
 
       // This cast always succeeds because it is called from Cpp2Connection.
       Cpp2ConnContext* cpp2Ctx = dynamic_cast<Cpp2ConnContext*>(ctx);
@@ -172,7 +174,9 @@ class CppServerObserver : public TServerObserver {
   explicit CppServerObserver(object serverObserver)
       : observer_(serverObserver) {}
 
-  void connAccepted(const wangle::TransportInfo& /* info */) override {
+  void connAccepted(
+      const wangle::TransportInfo& /* info */,
+      const TServerObserver::ConnectionInfo& /* connInfo */) override {
     this->call("connAccepted");
   }
   void connDropped() override { this->call("connDropped"); }
@@ -183,7 +187,9 @@ class CppServerObserver : public TServerObserver {
   void tlsResumption() override { this->call("tlsResumption"); }
   void taskKilled() override { this->call("taskKilled"); }
   void taskTimeout() override { this->call("taskTimeout"); }
-  void serverOverloaded() override { this->call("serverOverloaded"); }
+  void serverOverloaded(apache::thrift::LoadShedder /*loadShedder*/) override {
+    this->call("serverOverloaded");
+  }
   void receivedRequest(const std::string* /*method*/) override {
     this->call("receivedRequest");
   }
@@ -205,7 +211,9 @@ class CppServerObserver : public TServerObserver {
   template <class... Types>
   void call(const char* method_name, Types... args) {
     PyGILState_STATE state = PyGILState_Ensure();
-    SCOPE_EXIT { PyGILState_Release(state); };
+    SCOPE_EXIT {
+      PyGILState_Release(state);
+    };
 
     // check if the object has an attribute, because we want to be accepting
     // if we added a new listener callback and didn't yet update call the
@@ -299,6 +307,12 @@ class PythonAsyncProcessor : public AsyncProcessor {
         true /* fromExecuteRequest  */);
   }
 
+  void processInteraction(apache::thrift::ServerRequest&&) override {
+    LOG(FATAL)
+        << "This AsyncProcessor doesn't support Thrift interactions. "
+        << "Please implement processInteraction to support interactions.";
+  }
+
   /**
    * Get the priority of the request
    * Check the headers directly in C++ since noone seems to override that logic
@@ -314,7 +328,9 @@ class PythonAsyncProcessor : public AsyncProcessor {
     }
 
     PyGILState_STATE state = PyGILState_Ensure();
-    SCOPE_EXIT { PyGILState_Release(state); };
+    SCOPE_EXIT {
+      PyGILState_Release(state);
+    };
 
     try {
       auto fname = ctx->getMethodName();
@@ -361,7 +377,9 @@ class PythonAsyncProcessor : public AsyncProcessor {
 
     {
       PyGILState_STATE state = PyGILState_Ensure();
-      SCOPE_EXIT { PyGILState_Release(state); };
+      SCOPE_EXIT {
+        PyGILState_Release(state);
+      };
 
 #if PY_MAJOR_VERSION == 2
       auto input =
@@ -477,7 +495,9 @@ class PythonAsyncProcessor : public AsyncProcessor {
 
   void getPythonOnewayMethods() {
     PyGILState_STATE state = PyGILState_Ensure();
-    SCOPE_EXIT { PyGILState_Release(state); };
+    SCOPE_EXIT {
+      PyGILState_Release(state);
+    };
     object ret = adapter_->attr("oneway_methods")();
     if (ret.is_none()) {
       LOG(ERROR) << "Unexpected error in processor method";
@@ -527,7 +547,7 @@ class PythonAsyncProcessorFactory : public AsyncProcessorFactory {
 class CppServerWrapper : public ThriftServer {
  public:
   CppServerWrapper() {
-    BaseThriftServer::metadata().wrapper = "CppServerWrapper-py";
+    ThriftServer::metadata().wrapper = "CppServerWrapper-py";
   }
 
   void setAdapter(object adapter) {
@@ -548,7 +568,9 @@ class CppServerWrapper : public ThriftServer {
 
   void loop() {
     PyThreadState* save_state = PyEval_SaveThread();
-    SCOPE_EXIT { PyEval_RestoreThread(save_state); };
+    SCOPE_EXIT {
+      PyEval_RestoreThread(save_state);
+    };
 
     // Thrift main loop.  This will run indefinitely, until stop() is
     // called.
@@ -563,7 +585,9 @@ class CppServerWrapper : public ThriftServer {
 
   void setup() {
     PyThreadState* save_state = PyEval_SaveThread();
-    SCOPE_EXIT { PyEval_RestoreThread(save_state); };
+    SCOPE_EXIT {
+      PyEval_RestoreThread(save_state);
+    };
 
     // This check is only useful for C++-based Thrift servers.
     ThriftServer::setAllowCheckUnimplementedExtraInterfaces(false);
@@ -663,7 +687,9 @@ class CppServerWrapper : public ThriftServer {
     // only once thrift is all cleaned up.
 
     PyThreadState* save_state = PyEval_SaveThread();
-    SCOPE_EXIT { PyEval_RestoreThread(save_state); };
+    SCOPE_EXIT {
+      PyEval_RestoreThread(save_state);
+    };
     ThriftServer::cleanUp();
   }
 
@@ -686,7 +712,7 @@ class CppServerWrapper : public ThriftServer {
     if (THRIFT_FLAG(allow_resource_pools_in_cpp_server_wrapper)) {
       setNumCPUWorkerThreads(count);
       setThreadManagerType(
-          apache::thrift::BaseThriftServer::ThreadManagerType::SIMPLE);
+          apache::thrift::ThriftServer::ThreadManagerType::SIMPLE);
     } else {
       auto tm = ThreadManager::newSimpleThreadManager(count);
       auto poolThreadName = getCPUWorkerThreadName();
@@ -704,7 +730,7 @@ class CppServerWrapper : public ThriftServer {
     if (THRIFT_FLAG(allow_resource_pools_in_cpp_server_wrapper)) {
       setNumCPUWorkerThreads(numThreads);
       setThreadManagerType(
-          apache::thrift::BaseThriftServer::ThreadManagerType::PRIORITY_QUEUE);
+          apache::thrift::ThriftServer::ThreadManagerType::PRIORITY_QUEUE);
     } else {
       auto tm = ThreadManager::newPriorityQueueThreadManager(numThreads);
       auto poolThreadName = getCPUWorkerThreadName();
@@ -727,7 +753,7 @@ class CppServerWrapper : public ThriftServer {
       size_t) {
     if (THRIFT_FLAG(allow_resource_pools_in_cpp_server_wrapper)) {
       setThreadManagerType(
-          apache::thrift::BaseThriftServer::ThreadManagerType::PRIORITY);
+          apache::thrift::ThriftServer::ThreadManagerType::PRIORITY);
       setThreadManagerPoolSizes(
           {{high_important, high, important, normal, best_effort}});
     } else {
@@ -760,28 +786,27 @@ class CppServerWrapper : public ThriftServer {
   }
 
   void setNumIOWorkerThreads(size_t numIOWorkerThreads) {
-    BaseThriftServer::setNumIOWorkerThreads(numIOWorkerThreads);
+    ThriftServer::setNumIOWorkerThreads(numIOWorkerThreads);
   }
 
   void setListenBacklog(int listenBacklog) {
-    BaseThriftServer::setListenBacklog(listenBacklog);
+    ThriftServer::setListenBacklog(listenBacklog);
   }
 
   void setMaxConnections(uint32_t maxConnections) {
-    BaseThriftServer::setMaxConnections(maxConnections);
+    ThriftServer::setMaxConnections(maxConnections);
   }
 
   void setNumCPUWorkerThreads(size_t numCPUWorkerThreads) {
-    BaseThriftServer::setNumCPUWorkerThreads(numCPUWorkerThreads);
+    ThriftServer::setNumCPUWorkerThreads(numCPUWorkerThreads);
   }
 
   void setWrapperName(object wrapperName) {
-    BaseThriftServer::metadata().wrapper =
-        extract<std::string>(str(wrapperName));
+    ThriftServer::metadata().wrapper = extract<std::string>(str(wrapperName));
   }
 
   void setLanguageFrameworkName(object languageFrameworkName) {
-    BaseThriftServer::metadata().languageFramework =
+    ThriftServer::metadata().languageFramework =
         extract<std::string>(str(languageFrameworkName));
   }
 

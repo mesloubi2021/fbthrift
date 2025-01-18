@@ -20,13 +20,14 @@
       "definition_html": "decltype(auto) apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::patchPrior",
       "argsstring_html": "()",
       "name_html": "patchPrior",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::patchPrior",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "277",
-        "column": "1",
+        "line": "419",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "bodystart": "277",
-        "bodyend": "279"
+        "bodystart": "419",
+        "bodyend": "421"
       },
       "definition": {
         "simple_html": "template &lt;typename Id&gt;\ndecltype(auto) patchPrior()",
@@ -48,5 +49,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BaseEnsurePatch/patchPrior",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseEnsurePatch/patchPrior"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseEnsurePatch/patchPrior",
+  "parent_links": [
+    {
+      "text_html": "BaseEnsurePatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseEnsurePatch"
+    }
+  ]
 }

@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,33 +14,55 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%><% > Autogen%>
+}}
+{{> Autogen}}
 
-<% > common/namespace_cpp2_begin%>
+{{#program:needs_sinit?}}
 
-<%#program:any?%>
+{{#program:has_schema?}}{{! avoids circular dependency }}
+#include <thrift/lib/cpp2/gen/module_sinit_cpp.h>
+{{/program:has_schema?}}
+
+namespace {{program:qualified_namespace}} {
 // Call all static init functions.
 //
 // If this file is always linked (e.g. link_whole), it will force
 // static linking to include the intialization logic.
-<%#program:structs%>
-<%#struct:any?%>
-void __fbthrift_static_init_<%struct:cpp_underlying_name%>();
-<%/struct:any?%>
-<%/program:structs%>
+
+{{#program:any?}}
+{{#program:structs}}
+{{#struct:any?}}
+void __fbthrift_static_init_{{struct:cpp_underlying_name}}();
+{{/struct:any?}}
+{{/program:structs}}
+{{/program:any?}}
+
+{{#program:has_schema?}}
+namespace {{program:name}}_constants {
+extern ::std::string_view {{program:schema_name}}();
+}
+{{/program:has_schema?}}
+
 namespace {
+
 struct StaticInit {
   StaticInit() {
-    <%#program:structs%>
-    <%#struct:any?%>
-    __fbthrift_static_init_<%struct:cpp_underlying_name%>();
-    <%/struct:any?%>
-    <%/program:structs%>
+    {{#program:any?}}
+    {{#program:structs}}
+    {{#struct:any?}}
+    __fbthrift_static_init_{{struct:cpp_underlying_name}}();
+    {{/struct:any?}}
+    {{/program:structs}}
+    {{/program:any?}}
+
+    {{#program:has_schema?}}
+    ::apache::thrift::BaseSchemaRegistry::get().registerSchema("{{program:schema_name}}", {{program:name}}_constants::{{program:schema_name}}(), "{{program:autogen_path}}");
+    {{/program:has_schema?}}
   }
 };
 
 StaticInit staticInit;
-}
-<%/program:any?%>
 
-<% > common/namespace_cpp2_end%>
+}
+} // namespace {{program:qualified_namespace}}
+{{/program:needs_sinit?}}

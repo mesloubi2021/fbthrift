@@ -13,24 +13,56 @@
 # limitations under the License.
 
 import copy
+from enum import Enum, Flag
 
 from cython.operator cimport dereference as deref
 from thrift.python.serializer cimport cserialize, cdeserialize
-from thrift.python.types cimport StructInfo, createStructTuple, set_struct_field
+from thrift.python.types cimport StructInfo, createImmutableStructTupleWithDefaultValues, set_struct_field
 from libcpp.vector cimport vector
 from libcpp.utility cimport move as cmove
 
 
 cdef class Error(Exception):
     """base class for all thrift exceptions (TException)"""
-    pass
+    def __init__(self, *args):
+        super().__init__(*args)
+
+cdef create_Error(const cTException* ex):
+    if not ex:
+        return
+    message = (<bytes>(deref(ex).what())).decode('utf-8')
+    inst = <Error>Error.__new__(Error, message)
+    return inst
+
+
+class ApplicationErrorType(Enum):
+    UNKNOWN = cTApplicationExceptionType__UNKNOWN
+    UNKNOWN_METHOD = cTApplicationExceptionType__UNKNOWN_METHOD
+    INVALID_MESSAGE_TYPE = cTApplicationExceptionType__INVALID_MESSAGE_TYPE
+    WRONG_METHOD_NAME = cTApplicationExceptionType__WRONG_METHOD_NAME
+    BAD_SEQUENCE_ID = cTApplicationExceptionType__BAD_SEQUENCE_ID
+    MISSING_RESULT = cTApplicationExceptionType__MISSING_RESULT
+    INTERNAL_ERROR = cTApplicationExceptionType__INTERNAL_ERROR
+    PROTOCOL_ERROR = cTApplicationExceptionType__PROTOCOL_ERROR
+    INVALID_TRANSFORM = cTApplicationExceptionType__INVALID_TRANSFORM
+    INVALID_PROTOCOL = cTApplicationExceptionType__INVALID_PROTOCOL
+    UNSUPPORTED_CLIENT_TYPE = cTApplicationExceptionType__UNSUPPORTED_CLIENT_TYPE
+    LOADSHEDDING = cTApplicationExceptionType__LOADSHEDDING
+    TIMEOUT = cTApplicationExceptionType__TIMEOUT
+    INJECTED_FAILURE = cTApplicationExceptionType__INJECTED_FAILURE
 
 
 cdef class ApplicationError(Error):
     """All Application Level Errors (TApplicationException)"""
 
-    def __init__(ApplicationError self, ApplicationErrorType type, str message):
+    def __init__(ApplicationError self, type, str message):
         assert message, "message is empty"
+        if not isinstance(type, ApplicationErrorType):
+            try:
+                type = ApplicationErrorType(int(type))
+            except ValueError as e:
+                raise TypeError(f"Invalid ApplicationErrorType {type}") from e
+        super().__init__(type, message)
 
     @property
     def type(self):
@@ -54,17 +86,53 @@ cdef ApplicationError create_ApplicationError(const cTApplicationException* ex):
         message,
     )
 
-
 cdef class LibraryError(Error):
     """Equivalent of a C++ TLibraryException"""
-    pass
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+cdef object create_LibraryError(const cTLibraryException* ex):
+    if not ex:
+        return
+    message = (<bytes>deref(ex).what()).decode('utf-8')
+    inst = <LibraryError>LibraryError.__new__(LibraryError, message)
+    return inst
+
+class TransportErrorType(Enum):
+    UNKNOWN = cTTransportExceptionType__UNKNOWN
+    NOT_OPEN = cTTransportExceptionType__NOT_OPEN
+    ALREADY_OPEN = cTTransportExceptionType__ALREADY_OPEN
+    TIMED_OUT = cTTransportExceptionType__TIMED_OUT
+    END_OF_FILE = cTTransportExceptionType__END_OF_FILE
+    INTERRUPTED = cTTransportExceptionType__INTERRUPTED
+    BAD_ARGS = cTTransportExceptionType__BAD_ARGS
+    CORRUPTED_DATA = cTTransportExceptionType__CORRUPTED_DATA
+    INTERNAL_ERROR = cTTransportExceptionType__INTERNAL_ERROR
+    NOT_SUPPORTED = cTTransportExceptionType__NOT_SUPPORTED
+    INVALID_STATE = cTTransportExceptionType__INVALID_STATE
+    INVALID_FRAME_SIZE = cTTransportExceptionType__INVALID_FRAME_SIZE
+    SSL_ERROR = cTTransportExceptionType__SSL_ERROR
+    COULD_NOT_BIND = cTTransportExceptionType__COULD_NOT_BIND
+    NETWORK_ERROR = cTTransportExceptionType__NETWORK_ERROR
+
+
+class TransportOptions(Flag):
+    CHANNEL_IS_VALID = cTTransportExceptionOptions__CHANNEL_IS_VALID
 
 
 cdef class TransportError(LibraryError):
     """All Transport Level Errors (TTransportException)"""
 
-    def __init__(TransportError self, TransportErrorType type, str message, int errno, int options):
-        super().__init__(type, message, errno, options)
+    def __init__(TransportError self, type, str message, int errno, options, *args):
+        if type is None:
+            type = TransportErrorType.UNKNOWN
+        elif not isinstance(type, TransportErrorType):
+            try:
+                type = TransportErrorType(type)
+            except ValueError as e:
+                raise TypeError(f"Invalid TransportErrorType {type}") from e
+        super().__init__(type, message, errno, options, *args)
 
     @property
     def type(self):
@@ -81,6 +149,39 @@ cdef class TransportError(LibraryError):
     @property
     def options(self):
         return self.args[3]
+
+
+class ProtocolErrorType(Enum):
+    UNKNOWN = cTProtocolExceptionType__UNKNOWN
+    INVALID_DATA = cTProtocolExceptionType__INVALID_DATA
+    NEGATIVE_SIZE = cTProtocolExceptionType__NEGATIVE_SIZE
+    SIZE_LIMIT = cTProtocolExceptionType__SIZE_LIMIT
+    BAD_VERSION = cTProtocolExceptionType__BAD_VERSION
+    NOT_IMPLEMENTED = cTProtocolExceptionType__NOT_IMPLEMENTED
+    MISSING_REQUIRED_FIELD = cTProtocolExceptionType__MISSING_REQUIRED_FIELD
+
+
+cdef class ProtocolError(LibraryError):
+    """Equivalent of a C++ TProtocolException"""
+    def __init__(self, type, str message):
+        super().__init__(type, message)
+
+    @property
+    def type(self):
+        return self.args[0]
+
+    @property
+    def message(self):
+        return self.args[1]
+
+
+cdef ProtocolError create_ProtocolError(const cTProtocolException* ex):
+    if not ex:
+        return
+    type = ProtocolErrorType(deref(ex).getType())
+    message = (<bytes>deref(ex).what()).decode('utf-8')
+    inst = <ProtocolError>ProtocolError.__new__(ProtocolError, type, message)
+    return inst
 
 
 cdef vector[Handler] handlers
@@ -109,7 +210,7 @@ cdef TransportError create_TransportError(const cTTransportException* ex):
     # Strip off the c++ message prefix
     message = message[message.startswith('TTransportException: ')*21:]
     errno = deref(ex).getErrno()
-    options = deref(ex).getOptions()
+    options = TransportOptions(deref(ex).getOptions())
     return <TransportError>TransportError.__new__(
         TransportError,
         type,
@@ -133,6 +234,18 @@ cdef object create_py_exception(const cFollyExceptionWrapper& ex, RpcOptions opt
     if pyex:
         return pyex
 
+    pyex = create_ProtocolError(ex.get_exception[cTProtocolException]())
+    if pyex:
+        return pyex
+
+    pyex = create_LibraryError(ex.get_exception[cTLibraryException]())
+    if pyex:
+        return pyex
+
+    pyex = create_Error(ex.get_exception[cTException]())
+    if pyex:
+        return pyex
+
     try:
         # No clue what this is just throw it and let the default cython logic takeover
         ex.throw_exception()
@@ -152,20 +265,23 @@ class GeneratedErrorMeta(type):
         num_fields = len(fields)
         dct["_fbthrift_struct_info"] = StructInfo(name, fields)
         for i, f in enumerate(fields):
-            dct[f[2]] = make_fget_error(i)
-        return super().__new__(cls, name, (GeneratedError,), dct)
+            dct[f.py_name] = make_fget_error(i)
+        bases = (GeneratedError, )
+        if "_fbthrift_abstract_base_class" in dct:
+            bases += (dct.pop("_fbthrift_abstract_base_class"),)
+        return super().__new__(cls, name, bases, dct)
 
     def _fbthrift_fill_spec(cls):
-        (<StructInfo>cls._fbthrift_struct_info).fill()
+        (<StructInfo>cls._fbthrift_struct_info)._fill_struct_info()
 
     def _fbthrift_store_field_values(cls):
-        (<StructInfo>cls._fbthrift_struct_info).store_field_values()
+        (<StructInfo>cls._fbthrift_struct_info)._initialize_default_values()
 
 
 cdef class GeneratedError(Error):
     def __cinit__(self):
         cdef StructInfo info = self._fbthrift_struct_info
-        self._fbthrift_data = createStructTuple(
+        self._fbthrift_data = createImmutableStructTupleWithDefaultValues(
             info.cpp_obj.get().getStructInfo()
         )
 

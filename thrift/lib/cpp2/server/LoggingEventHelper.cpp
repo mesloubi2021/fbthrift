@@ -23,8 +23,7 @@
 
 using fizz::server::AsyncFizzServer;
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace {
 void logTlsNoPeerCertEvent(const ConnectionLoggingContext& context) {
@@ -42,10 +41,22 @@ void maybeLogTlsPeerCertEvent(
     const ConnectionLoggingContext& context,
     const folly::AsyncTransportCertificate* cert) {
   DCHECK(context.getWorker() && context.getWorker()->getServer());
-  if (detail::isCertIPMismatch(context, cert)) {
-    THRIFT_CONNECTION_EVENT(tls.cert_ip_mismatch).log(context);
-  } else {
-    THRIFT_CONNECTION_EVENT(tls.cert_ip_match).log(context);
+  auto ret = detail::isCertIPMismatch(context, cert);
+  switch (ret) {
+    case CertIPResult::SKIPPED:
+      THRIFT_CONNECTION_EVENT(tls.cert_ip_skipped).log(context);
+      return;
+    case CertIPResult::MATCHED_ENFORCED:
+      THRIFT_CONNECTION_EVENT(tls.cert_ip_match_enforced).log(context);
+      return;
+    case CertIPResult::MATCHED_UNENFORCED:
+      THRIFT_CONNECTION_EVENT(tls.cert_ip_match_unenforced).log(context);
+      return;
+    case CertIPResult::MISMATCHED:
+      THRIFT_CONNECTION_EVENT(tls.cert_ip_mismatch).log(context);
+      return;
+    default:
+      return;
   }
 }
 
@@ -64,18 +75,6 @@ void logNonTLSEvent(const ConnectionLoggingContext& context) {
   }
 }
 
-void logIfPeekingTransport(
-    const ConnectionLoggingContext& context,
-    const folly::AsyncTransport* transport) {
-  if (auto decorator =
-          dynamic_cast<const PreReceivedDataAsyncTransportWrapper*>(
-              transport)) {
-    // Transport was wrapped by TransportPeekingManager, presumably because no
-    // ALPN was provided. The ConnectionEventLogEntry should captures all the
-    // ALPN details we need.
-    THRIFT_CONNECTION_EVENT(peeking_manager.tls).log(context);
-  }
-}
 } // namespace
 
 void logSetupConnectionEventsOnce(
@@ -107,7 +106,6 @@ void logSetupConnectionEventsOnce(
           } else {
             maybeLogTlsPeerCertEvent(context, transport->getPeerCertificate());
           }
-          logIfPeekingTransport(context, transport);
         } else {
           logNonTLSEvent(context);
         }
@@ -115,11 +113,10 @@ void logSetupConnectionEventsOnce(
     } catch (...) {
       LOG(ERROR)
           << "Exception thrown during Thrift server connection events logging: "
-          << folly::exceptionStr(std::current_exception());
+          << folly::exceptionStr(folly::current_exception());
     }
     return true;
   }));
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

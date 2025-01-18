@@ -59,14 +59,14 @@ std::unique_ptr<HTTP2RoutingHandler> createHTTP2RoutingHandler(
       std::move(h2_options), server.getThriftProcessor(), server);
 }
 
-std::shared_ptr<BaseThriftServer> createHttpServer() {
+std::shared_ptr<ThriftServer> createHttpServer() {
   auto handler = std::make_shared<TestServiceHandler>();
   auto server = std::make_shared<ThriftServer>();
   server->setAddress({"::1", 0});
   server->setInterface(handler);
   server->setNumIOWorkerThreads(1);
   server->setThreadFactory(std::make_shared<PosixThreadFactory>());
-  server->setThreadManagerType(BaseThriftServer::ThreadManagerType::SIMPLE);
+  server->setThreadManagerType(ThriftServer::ThreadManagerType::SIMPLE);
   server->addRoutingHandler(createHTTP2RoutingHandler(*server));
   return server;
 }

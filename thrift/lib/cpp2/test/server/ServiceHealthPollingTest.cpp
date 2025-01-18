@@ -19,10 +19,10 @@
 
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
-#include <folly/experimental/coro/Baton.h>
-#include <folly/experimental/coro/GtestHelpers.h>
-#include <folly/experimental/observer/Observer.h>
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/coro/Baton.h>
+#include <folly/coro/GtestHelpers.h>
+#include <folly/observer/Observer.h>
+#include <folly/observer/SimpleObservable.h>
 #include <folly/portability/GTest.h>
 
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
@@ -47,15 +47,14 @@ class Handler : public apache::thrift::ServiceHandler<DummyStatus>,
       : serviceHealth_(serviceHealth) {}
 
   folly::coro::Task<ServiceHealth> co_getServiceHealth() override {
-    folly::SharedMutex::ReadHolder guard{healthMutex_};
+    std::shared_lock guard{healthMutex_};
     // ensure the baton is not reset() while posting
     polled_.lock()->post();
     co_return **serviceHealthObserver_;
   }
 
   void async_eb_getStatus(
-      std::unique_ptr<apache::thrift::HandlerCallback<std::int64_t>> callback)
-      override {
+      apache::thrift::HandlerCallbackPtr<std::int64_t> callback) override {
     ThriftServer* server = callback->getRequestContext()
                                ->getConnectionContext()
                                ->getWorker()
@@ -71,7 +70,7 @@ class Handler : public apache::thrift::ServiceHandler<DummyStatus>,
   }
 
   void setHealth(ServiceHealth value) {
-    folly::SharedMutex::WriteHolder guard{healthMutex_};
+    std::unique_lock guard{healthMutex_};
     serviceHealth_.setValue(value);
     folly::observer_detail::ObserverManager::waitForAllUpdates();
   }
@@ -80,7 +79,7 @@ class Handler : public apache::thrift::ServiceHandler<DummyStatus>,
   folly::observer::SimpleObservable<ServiceHealth> serviceHealth_;
   folly::observer::Observer<ServiceHealth> serviceHealthObserver_{
       serviceHealth_.getObserver()};
-  folly::SharedMutex healthMutex_;
+  mutable folly::SharedMutex healthMutex_;
   folly::Synchronized<folly::coro::Baton, std::mutex> polled_;
 };
 

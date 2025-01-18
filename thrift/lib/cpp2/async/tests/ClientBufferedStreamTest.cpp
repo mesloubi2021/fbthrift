@@ -16,14 +16,13 @@
 
 #include <thrift/lib/cpp2/async/ClientBufferedStream.h>
 
-#include <folly/experimental/coro/Baton.h>
+#include <folly/coro/Baton.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/portability/GTest.h>
 #include <thrift/lib/cpp2/async/ServerStream.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using namespace ::testing;
 
@@ -251,5 +250,4 @@ TEST_F(ClientBufferedStreamTest, MaxChunkSize) {
   std::move(task).get();
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

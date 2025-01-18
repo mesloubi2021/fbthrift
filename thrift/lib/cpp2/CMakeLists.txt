@@ -15,6 +15,10 @@
 # Set the cpp2 directory
 set(LIB_CPP2_HOME ${CMAKE_CURRENT_SOURCE_DIR})
 
+if (enable_tests)
+  add_subdirectory(protocol/test)
+endif ()
+add_subdirectory(test)
 
 #######
 # CMAKE variables only have local/subdirectory scope
@@ -35,6 +39,8 @@ get_property(id-cpp2-SOURCES GLOBAL PROPERTY id-cpp2-SOURCES)
 get_property(standard-cpp2-SOURCES GLOBAL PROPERTY standard-cpp2-SOURCES)
 get_property(type_rep-cpp2-SOURCES GLOBAL PROPERTY type_rep-cpp2-SOURCES)
 get_property(type-cpp2-SOURCES GLOBAL PROPERTY type-cpp2-SOURCES)
+get_property(serverdbginfo-cpp2-SOURCES GLOBAL PROPERTY
+  serverdbginfo-cpp2-SOURCES)
 
 bypass_source_check("${metadata-cpp2-SOURCES}")
 add_library(
@@ -107,8 +113,8 @@ add_library(
   type/TypeRegistry.cpp
   type/UniversalName.cpp
 )
-add_dependencies(thrifttype type-cpp2-target thriftannotation thrifttyperep
-  thriftprotocol)
+add_dependencies(thrifttype any_rep-cpp2-target type-cpp2-target
+  thriftannotation thrifttyperep thriftprotocol)
 target_link_libraries(
   thrifttype
   PUBLIC
@@ -151,6 +157,19 @@ add_library(
 add_dependencies(rpcmetadata RpcMetadata-cpp2-target)
 target_link_libraries(
   rpcmetadata
+  PUBLIC
+    Folly::folly
+)
+
+bypass_source_check("${serverdbginfo-cpp2-SOURCES}")
+add_library(
+  serverdbginfo
+
+  ${serverdbginfo-cpp2-SOURCES}
+)
+add_dependencies(serverdbginfo serverdbginfo-cpp2-target)
+target_link_libraries(
+  serverdbginfo
   PUBLIC
     Folly::folly
 )
@@ -214,6 +233,7 @@ add_library(
   async/HeaderServerChannel.cpp
   async/HibernatingRequestChannel.cpp
   async/Interaction.cpp
+  async/InteractionOverloadPolicy.cpp
   async/MultiplexAsyncProcessor.cpp
   async/PooledRequestChannel.cpp
   async/ReconnectingRequestChannel.cpp
@@ -228,8 +248,10 @@ add_library(
   async/ServerRequestData.cpp
   async/ServerSinkBridge.cpp
   async/ThreadBoundAdaptorChannel.cpp
+  gen/module_constants_cpp.cpp
   gen/module_metadata_cpp.cpp
   gen/module_types_cpp.cpp
+  runtime/BaseSchemaRegistry.cpp
   security/AsyncStopTLS.cpp
   security/FizzPeeker.cpp
   security/SSLUtil.cpp
@@ -237,7 +259,6 @@ add_library(
   security/extensions/ThriftParametersContext.cpp
   security/extensions/Types.cpp
   server/AdaptiveConcurrency.cpp
-  server/BaseThriftServer.cpp
   server/ConcurrencyControllerInterface.cpp
   server/ConcurrencyControllerBase.cpp
   server/Cpp2ConnContext.cpp
@@ -245,9 +266,10 @@ add_library(
   server/Cpp2Worker.cpp
   server/CPUConcurrencyController.cpp
   server/IOUringUtil.cpp
-  server/InternalPriorityRequestPile.cpp
+  server/LegacyHeaderRoutingHandler.cpp
   server/LoggingEvent.cpp
   server/LoggingEventHelper.cpp
+  server/LoggingEventTransportMetadata.cpp
   server/MonitoringMethodNames.cpp
   server/ParallelConcurrencyController.cpp
   server/TokenBucketConcurrencyController.cpp
@@ -263,15 +285,18 @@ add_library(
   server/ResourcePoolHandle.cpp
   server/RoundRobinRequestPile.cpp
   server/WeightedRequestPileQueue.cpp
+  server/SEParallelConcurrencyController.cpp
   server/ServerAttribute.cpp
   server/ServerFlags.cpp
   server/ServerInstrumentation.cpp
   server/ServiceHealthPoller.cpp
+  server/ServiceInterceptorBase.cpp
   server/ThriftProcessor.cpp
   server/ThriftServer.cpp
   server/ThriftServerConfig.cpp
   server/TMConcurrencyController.cpp
   server/peeking/TLSHelper.cpp
+  server/metrics/PendingConnectionsMetrics.cpp
   transport/core/RequestStateMachine.cpp
   transport/core/RpcMetadataUtil.cpp
   transport/core/RpcMetadataPlugins.cpp
@@ -281,11 +306,14 @@ add_library(
   transport/core/ThriftRequest.cpp
   transport/rocket/FdSocket.cpp
   transport/rocket/PayloadUtils.cpp
+  transport/rocket/ChecksumGenerator.cpp
   transport/rocket/Types.cpp
-  transport/rocket/Compression.cpp
+  transport/rocket/compression/CompressionManager.cpp
+  transport/rocket/compression/CompressionAlgorithmSelector.cpp
   transport/rocket/client/RequestContext.cpp
   transport/rocket/client/RequestContextQueue.cpp
   transport/rocket/client/RocketClient.cpp
+  transport/rocket/client/KeepAliveWatcher.cpp
   transport/rocket/client/RocketStreamServerCallback.cpp
   transport/rocket/flush/FlushManager.cpp
   transport/rocket/framing/parser/AllocatingParserStrategy.cpp
@@ -294,6 +322,9 @@ add_library(
   transport/rocket/framing/Parser.cpp
   transport/rocket/framing/Serializer.cpp
   transport/rocket/framing/Util.cpp
+  transport/rocket/payload/DefaultPayloadSerializerStrategy.cpp
+  transport/rocket/payload/PayloadSerializer.cpp
+  transport/rocket/server/InteractionOverload.cpp
   transport/rocket/server/RocketRoutingHandler.cpp
   transport/rocket/server/RocketServerConnection.cpp
   transport/rocket/server/RocketServerConnectionPlugins.cpp
@@ -319,10 +350,13 @@ add_dependencies(
   thrifttyperep
   thrifttype
   thriftanyrep
+  serverdbginfo
 )
+
 target_link_libraries(
   thriftcpp2
   PUBLIC
+    fmt::fmt
     thrift
     rpcmetadata
     thriftannotation
@@ -332,6 +366,8 @@ target_link_libraries(
     thrifttyperep
     thrifttype
     thriftanyrep
+    serverdbginfo
+    ${Xxhash_LIBRARY}
 )
 
 add_library(
@@ -371,6 +407,7 @@ install(
 if (BUILD_SHARED_LIBS)
   set_target_properties(rpcmetadata thriftannotation thriftmetadata
     thriftfrozen2 thriftprotocol thriftcpp2 thrifttyperep thrifttype
+    serverdbginfo
     PROPERTIES VERSION ${PACKAGE_VERSION}
     )
 endif()
@@ -385,6 +422,7 @@ install(
     thriftanyrep
     thriftprotocol
     thriftcpp2
+    serverdbginfo
   EXPORT fbthrift-exports
   DESTINATION ${LIB_INSTALL_DIR}
 )

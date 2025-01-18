@@ -26,6 +26,7 @@ import com.facebook.thrift.metadata.ThriftTransportType;
 import com.facebook.thrift.model.StreamResponse;
 import com.facebook.thrift.payload.ClientRequestPayload;
 import com.facebook.thrift.payload.ClientResponsePayload;
+import com.facebook.thrift.payload.Constants;
 import com.facebook.thrift.payload.Reader;
 import com.facebook.thrift.protocol.ByteBufTProtocol;
 import com.facebook.thrift.protocol.TProtocolType;
@@ -76,6 +77,7 @@ import org.apache.thrift.transport.TTransportException;
 import reactor.core.Exceptions;
 
 public final class RpcClientUtils {
+
   private RpcClientUtils() {}
 
   /**
@@ -108,7 +110,8 @@ public final class RpcClientUtils {
                 : unavailabilityCause.getMessage();
         throw new UnsupportedOperationException(
             String.format(
-                "Unsupported combination of EventLoopGroup-{%s} & SocketAddress-{%s}. Likely due to system support for Epoll unavailable due to {%s}",
+                "Unsupported combination of EventLoopGroup-{%s} & SocketAddress-{%s}. Likely due to"
+                    + " system support for Epoll unavailable due to {%s}",
                 group.getClass(), socketAddress.getClass(), errorMsg),
             unavailabilityCause);
       }
@@ -122,7 +125,8 @@ public final class RpcClientUtils {
                 : unavailabilityCause.getMessage();
         throw new UnsupportedOperationException(
             String.format(
-                "Unsupported combination of EventLoopGroup-{%s} & SocketAddress-{%s}. Likely due to system support for Kqueue unavailable due to {%s}.",
+                "Unsupported combination of EventLoopGroup-{%s} & SocketAddress-{%s}. Likely due to"
+                    + " system support for Kqueue unavailable due to {%s}.",
                 group.getClass(), socketAddress.getClass(), errorMsg),
             unavailabilityCause);
       }
@@ -310,7 +314,6 @@ public final class RpcClientUtils {
     ClientResponsePayload<K> response;
     protocol.readStructBegin();
     TField field = protocol.readFieldBegin();
-
     if (field.id == 0) {
       K read = reader.read(protocol);
       response = ClientResponsePayload.createResult(read, responseRpcMetadata, null, false);
@@ -409,6 +412,7 @@ public final class RpcClientUtils {
     final Payload setupPayload = ByteBufPayload.create(Unpooled.EMPTY_BUFFER, setupMetadata);
 
     return RSocketConnector.create()
+        .metadataMimeType(Constants.ROCKET_METADATA_COMPACT_MIME_TYPE)
         .setupPayload(setupPayload)
         .payloadDecoder(PayloadDecoder.ZERO_COPY);
   }

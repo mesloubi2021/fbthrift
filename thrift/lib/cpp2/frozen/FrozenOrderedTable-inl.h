@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include <type_traits>
 #include <folly/Traits.h>
+#include <folly/container/Reserve.h>
 #include <thrift/lib/cpp2/protocol/detail/protocol_methods.h>
 
 namespace apache {
@@ -65,7 +67,7 @@ struct SortedTableLayout : public ArrayLayout<T, Item> {
       out = T{folly::sorted_unique, std::move(outBuffer)};
     } else {
       out.clear();
-      apache::thrift::detail::pm::reserve_if_possible(&out, v.size());
+      folly::reserve_if_available(out, v.size());
       for (auto it = v.begin(); it != v.end(); ++it) {
         out.insert(out.end(), it.thaw());
       }
@@ -186,21 +188,47 @@ struct SortedTableLayout : public ArrayLayout<T, Item> {
 
     void operator[](size_t) = delete;
 
-    iterator lower_bound(const KeyView& key) const {
+    /// Returns an iterator pointing to the first element that compares not less
+    /// to the value `key`. This allows finding a frozen element in the ordered
+    /// table without freezing the key.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    iterator lower_bound(const K& key) const {
       return std::lower_bound(
-          this->begin(), this->end(), key, [](ItemView a, KeyView b) {
+          this->begin(), this->end(), key, [](ItemView a, const K& b) {
             return KeyExtractor::getViewKey(a) < b;
           });
     }
 
-    iterator upper_bound(const KeyView& key) const {
+    iterator lower_bound(const KeyView& key) const {
+      return lower_bound<KeyView, void>(key);
+    }
+
+    /// Returns an iterator pointing to the first element that compares greater
+    /// to the value `key`. This allows finding a frozen element in the ordered
+    /// table without freezing the key.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    iterator upper_bound(const K& key) const {
       return std::upper_bound(
-          this->begin(), this->end(), key, [](KeyView a, ItemView b) {
+          this->begin(), this->end(), key, [](const K& a, ItemView b) {
             return a < KeyExtractor::getViewKey(b);
           });
     }
 
-    std::pair<iterator, iterator> equal_range(const KeyView& key) const {
+    iterator upper_bound(const KeyView& key) const {
+      return upper_bound<KeyView, void>(key);
+    }
+
+    /// Returns a range containing all elements that compares equal to the value
+    /// `key`. This allows finding a frozen element in the ordered table without
+    /// freezing the key.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    std::pair<iterator, iterator> equal_range(const K& key) const {
       auto found = lower_bound(key);
       if (found != this->end() && KeyExtractor::getViewKey(*found) == key) {
         auto next = found;
@@ -210,7 +238,17 @@ struct SortedTableLayout : public ArrayLayout<T, Item> {
       }
     }
 
-    iterator find(const KeyView& key) const {
+    std::pair<iterator, iterator> equal_range(const KeyView& key) const {
+      return equal_range<KeyView, void>(key);
+    }
+
+    /// Finds an element with key that compares equivalent to the value `key`.
+    /// This allows finding a frozen element in the ordered table without
+    /// freezing the key.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    iterator find(const K& key) const {
       auto found = lower_bound(key);
       if (found != this->end() && KeyExtractor::getViewKey(*found) == key) {
         return found;
@@ -219,9 +257,19 @@ struct SortedTableLayout : public ArrayLayout<T, Item> {
       }
     }
 
-    size_t count(const KeyView& key) const {
+    iterator find(const KeyView& key) const { return find<KeyView, void>(key); }
+
+    /// Returns the number of elements with key that compares equivalent to the
+    /// value `key`. This allows finding a frozen element in the ordered table
+    /// without freezing the key.
+    template <
+        typename K,
+        class = std::enable_if_t<!std::is_convertible_v<K, KeyView>, void>>
+    size_t count(const K& key) const {
       return find(key) == this->end() ? 0 : 1;
     }
+
+    size_t count(const KeyView& key) const { return count<KeyView, void>(key); }
 
     T thaw() const {
       T ret;

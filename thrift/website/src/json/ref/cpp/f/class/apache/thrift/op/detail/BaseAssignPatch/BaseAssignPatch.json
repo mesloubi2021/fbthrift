@@ -15,6 +15,7 @@
       "definition_html": "apache::thrift::op::detail::BaseAssignPatch&lt; Patch, Derived &gt;::BaseAssignPatch",
       "argsstring_html": "(const BaseAssignPatch &amp;)=default",
       "name_html": "BaseAssignPatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseAssignPatch::BaseAssignPatch",
       "param": [
         {
           "type_html": "const <code>BaseAssignPatch</code> &amp;"
@@ -22,8 +23,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "140",
-        "column": "1"
+        "line": "162",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BaseAssignPatch(const BaseAssignPatch&amp;)",
@@ -46,11 +47,13 @@
       "const": "no",
       "explicit": "no",
       "inline": "no",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "",
       "definition_html": "apache::thrift::op::detail::BaseAssignPatch&lt; Patch, Derived &gt;::BaseAssignPatch",
       "argsstring_html": "(BaseAssignPatch &amp;&amp;) noexcept=default",
       "name_html": "BaseAssignPatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseAssignPatch::BaseAssignPatch",
       "param": [
         {
           "type_html": "<code>BaseAssignPatch</code> &amp;&amp;"
@@ -58,8 +61,8 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/BasePatch.h",
-        "line": "141",
-        "column": "1"
+        "line": "163",
+        "column": "3"
       },
       "definition": {
         "simple_html": "BaseAssignPatch(BaseAssignPatch&amp;&amp;)",
@@ -82,5 +85,11 @@
   "brief_html": "Constructs the BaseAssignPatch.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BaseAssignPatch",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BaseAssignPatch"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/BaseAssignPatch/BaseAssignPatch",
+  "parent_links": [
+    {
+      "text_html": "BaseAssignPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/BaseAssignPatch"
+    }
+  ]
 }

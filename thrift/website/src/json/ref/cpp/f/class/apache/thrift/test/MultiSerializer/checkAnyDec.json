@@ -15,10 +15,11 @@
       "definition_html": "void apache::thrift::test::MultiSerializer::checkAnyDec",
       "argsstring_html": "() const",
       "name_html": "checkAnyDec",
+      "qualifiedname_html": "apache::thrift::test::MultiSerializer::checkAnyDec",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "261",
-        "column": "1",
+        "line": "260",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.cpp",
         "bodystart": "142",
         "bodyend": "145"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAnyDec",
-  "refid": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAnyDec"
+  "refid": "/ref/cpp/f/class/apache/thrift/test/MultiSerializer/checkAnyDec",
+  "parent_links": [
+    {
+      "text_html": "MultiSerializer",
+      "href": "/ref/cpp/class/apache/thrift/test/MultiSerializer"
+    }
+  ]
 }

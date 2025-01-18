@@ -27,9 +27,7 @@
 
 using namespace std;
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * Top level program generation function. Calls the generator subclass methods
@@ -58,13 +56,6 @@ void t_concat_generator::generate_program() {
   // Generate typedefs
   for (const auto* ttypedef : program_->typedefs()) {
     generate_typedef(ttypedef);
-  }
-
-  // Validate unions
-  for (const t_structured* object : structured_definitions) {
-    if (object->is_union()) {
-      validate_union_members(dynamic_cast<const t_union&>(*object));
-    }
   }
 
   // Generate constants
@@ -171,17 +162,4 @@ std::string t_concat_generator::generate_structural_id(
   return structural_id;
 }
 
-void t_concat_generator::validate_union_members(const t_union& union_node) {
-  for (const auto& field : union_node.fields()) {
-    if (field.get_req() == t_field::e_req::required ||
-        field.get_req() == t_field::e_req::optional) {
-      throw std::runtime_error(
-          "compiler error: Union field " + union_node.get_name() + "." +
-          field.name() + " cannot be required or optional");
-    }
-  }
-}
-
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

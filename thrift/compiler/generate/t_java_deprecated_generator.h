@@ -27,9 +27,7 @@
 
 #include <thrift/compiler/generate/t_concat_generator.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 struct StructGenParams {
   bool is_exception = false;
@@ -235,7 +233,7 @@ class t_java_deprecated_generator : public t_concat_generator {
   std::string java_suppress_warnings_union();
   std::string java_suppress_warnings_struct();
   std::string java_suppress_warnings_service();
-  virtual boost::optional<std::string> java_struct_parent_class(
+  virtual std::optional<std::string> java_struct_parent_class(
       const t_structured* tstruct, StructGenParams params);
 
   virtual std::string type_name(
@@ -243,7 +241,8 @@ class t_java_deprecated_generator : public t_concat_generator {
       bool in_container = false,
       bool in_init = false,
       bool skip_generic = false);
-  std::string base_type_name(t_base_type* tbase, bool in_container = false);
+  std::string base_type_name(
+      t_primitive_type* tbase, bool in_container = false);
   std::string declare_field(const t_field* tfield, bool init = false);
   std::string function_signature(
       const t_function* tfunction, std::string prefix = "");
@@ -320,8 +319,6 @@ class t_java_deprecated_generator : public t_concat_generator {
       std::ofstream& out, std::string contents);
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler
 
 #endif

@@ -17,6 +17,7 @@
 #include <thrift/lib/cpp2/transport/core/RpcMetadataUtil.h>
 
 #include <folly/portability/GTest.h>
+#include <thrift/lib/cpp/protocol/TProtocolTypes.h>
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/cpp2/async/RpcOptions.h>
 #include <thrift/lib/cpp2/transport/core/RpcMetadataPlugins.h>
@@ -38,14 +39,23 @@ THRIFT_PLUGGABLE_FUNC_SET(
 TEST(RpcMetadataUtil, frameworkMetadata) {
   RpcOptions rpcOptions;
   auto kind = RpcKind::SINGLE_REQUEST_SINGLE_RESPONSE;
-  auto protocolId = ProtocolId::COMPACT;
   std::string methodName = "foo";
   std::chrono::milliseconds timeout(100);
+  std::variant<InteractionCreate, int64_t, std::monostate> interactionHandle =
+      std::monostate{};
   transport::THeader header;
+  header.setProtocolId(protocol::T_COMPACT_PROTOCOL);
 
   rpcOptions.setShardId("123");
   auto requestRpcMetadata = makeRequestRpcMetadata(
-      rpcOptions, kind, protocolId, methodName, timeout, header);
+      rpcOptions,
+      kind,
+      methodName,
+      timeout,
+      interactionHandle,
+      false,
+      3000,
+      header);
   const auto& buf = **requestRpcMetadata.frameworkMetadata_ref();
   std::string content(reinterpret_cast<const char*>(buf.data()), buf.length());
   EXPECT_EQ(content, "linked");

@@ -26,16 +26,17 @@
 #include <thrift/lib/cpp/server/TServerObserver.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
+#include <thrift/lib/cpp2/server/Overload.h>
 #include <thrift/lib/cpp2/server/RequestsRegistry.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerHandler.h>
 #include <thrift/lib/cpp2/transport/rocket/server/SetupFrameHandler.h>
+#include <thrift/lib/cpp2/transport/rocket/server/SetupFrameInterceptor.h>
 
 namespace folly {
 class AsyncTransport;
 } // namespace folly
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class AsyncProcessor;
 class Cpp2ConnContext;
@@ -69,7 +70,8 @@ class ThriftRocketServerHandler : public RocketServerHandler {
       std::shared_ptr<Cpp2Worker> worker,
       const folly::SocketAddress& clientAddress,
       folly::AsyncTransport* transport,
-      const std::vector<std::unique_ptr<SetupFrameHandler>>& handlers);
+      const std::vector<std::unique_ptr<SetupFrameHandler>>& handlers,
+      const std::vector<std::unique_ptr<SetupFrameInterceptor>>& interceptors);
 
   ~ThriftRocketServerHandler() override;
 
@@ -109,6 +111,8 @@ class ThriftRocketServerHandler : public RocketServerHandler {
       transport_; // connContext_ exposes this only as `const`
   Cpp2ConnContext connContext_;
   const std::vector<std::unique_ptr<SetupFrameHandler>>& setupFrameHandlers_;
+  const std::vector<std::unique_ptr<SetupFrameInterceptor>>&
+      setupFrameInterceptors_;
   AsyncProcessorFactory* processorFactory_ = nullptr;
   std::shared_ptr<AsyncProcessorFactory> processorFactoryStorage_;
   Cpp2Worker::PerServiceMetadata* serviceMetadata_ = nullptr;
@@ -126,27 +130,43 @@ class ThriftRocketServerHandler : public RocketServerHandler {
 
   folly::once_flag setupLoggingFlag_;
 
+  bool didExecuteServiceInterceptorsOnConnection_ = false;
+  void invokeServiceInterceptorsOnConnection(RocketServerConnection&) noexcept;
+  void invokeServiceInterceptorsOnConnectionClosed() noexcept;
+
   template <class F>
   void handleRequestCommon(
-      Payload&& payload, F&& makeRequest, RpcKind expectedKind);
+      Payload&& payload,
+      F&& makeRequest,
+      RpcKind expectedKind,
+      bool decodeMetadataUsingBinary);
 
+  FOLLY_NOINLINE void handlePreprocessResult(
+      ThriftRequestCoreUniquePtr request,
+      PreprocessResult&& preprocessResult,
+      bool isInteractionCreatePresent,
+      std::optional<int64_t>& interactionId);
   FOLLY_NOINLINE void handleRequestWithBadMetadata(
       ThriftRequestCoreUniquePtr request);
   FOLLY_NOINLINE void handleRequestWithBadChecksum(
       ThriftRequestCoreUniquePtr request);
   FOLLY_NOINLINE void handleRequestOverloadedServer(
+      ThriftRequestCoreUniquePtr request, OverloadResult&& overloadResult);
+  FOLLY_NOINLINE void handleQuotaExceededException(
       ThriftRequestCoreUniquePtr request,
       const std::string& errorCode,
       const std::string& errorMessage);
   FOLLY_NOINLINE void handleAppError(
       ThriftRequestCoreUniquePtr request,
-      const std::string& name,
-      const std::string& message,
-      bool isClientError);
+      const PreprocessResult& appErrorResult);
+  FOLLY_NOINLINE void handleRequestWithFdsExtractionFailure(
+      ThriftRequestCoreUniquePtr request, std::string&& errorMessage);
   FOLLY_NOINLINE void handleDecompressionFailure(
       ThriftRequestCoreUniquePtr request, std::string&& reason);
   FOLLY_NOINLINE void handleServerNotReady(ThriftRequestCoreUniquePtr request);
   FOLLY_NOINLINE void handleServerShutdown(ThriftRequestCoreUniquePtr request);
+  FOLLY_NOINLINE void handleInteractionLoadshedded(
+      ThriftRequestCoreUniquePtr request);
 
   enum class InjectedFault { ERROR, DROP, DISCONNECT };
   FOLLY_NOINLINE void handleInjectedFault(
@@ -154,5 +174,4 @@ class ThriftRocketServerHandler : public RocketServerHandler {
 };
 
 } // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

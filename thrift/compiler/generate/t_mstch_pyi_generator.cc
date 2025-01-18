@@ -15,24 +15,23 @@
  */
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
 
-#include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <fmt/format.h>
 
 #include <thrift/compiler/ast/t_program.h>
 #include <thrift/compiler/ast/t_type.h>
 #include <thrift/compiler/generate/common.h>
 #include <thrift/compiler/generate/mstch_objects.h>
+#include <thrift/compiler/generate/python/util.h>
 #include <thrift/compiler/generate/t_mstch_generator.h>
-#include <thrift/compiler/lib/py3/util.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 
@@ -182,8 +181,9 @@ std::vector<std::string> gather_import_modules(
     }
 
     if (has_types(prog)) {
-      import_modules.push_back(boost::algorithm::join(
-          get_py_namespaces_raw(prog, is_asyncio, "ttypes"), "."));
+      import_modules.push_back(fmt::format(
+          "{}",
+          fmt::join(get_py_namespaces_raw(prog, is_asyncio, "ttypes"), ".")));
     }
   }
 
@@ -554,12 +554,21 @@ class t_mstch_pyi_generator : public t_mstch_generator {
  public:
   using t_mstch_generator::t_mstch_generator;
 
+  whisker_options render_options() const override {
+    whisker_options opts;
+    opts.allowed_undefined_variables = {
+        "service:autogen_path",
+        "program:autogen_path",
+    };
+    return opts;
+  }
+
   std::string template_prefix() const override { return "pyi"; }
 
   void generate_program() override;
 
  private:
-  boost::filesystem::path root_path_;
+  std::filesystem::path root_path_;
 
   bool should_resolve_typedefs() const override { return true; }
 
@@ -570,9 +579,9 @@ class t_mstch_pyi_generator : public t_mstch_generator {
   void generate_services();
   void render_file(
       const std::string& template_name,
-      const boost::filesystem::path& path,
+      const std::filesystem::path& path,
       const t_service* service = nullptr);
-  boost::filesystem::path get_root_path() const;
+  std::filesystem::path get_root_path() const;
 };
 
 void t_mstch_pyi_generator::generate_program() {
@@ -596,7 +605,7 @@ void t_mstch_pyi_generator::create_factories() {
 }
 
 void t_mstch_pyi_generator::generate_init_files() {
-  boost::filesystem::path directory;
+  std::filesystem::path directory;
   for (const auto& part : this->root_path_) {
     directory /= part;
 
@@ -625,7 +634,7 @@ void t_mstch_pyi_generator::generate_services() {
 
 void t_mstch_pyi_generator::render_file(
     const std::string& template_name,
-    const boost::filesystem::path& path,
+    const std::filesystem::path& path,
     const t_service* service) {
   auto mstchObject = (service == nullptr)
       ? make_mstch_program_cached(
@@ -636,15 +645,15 @@ void t_mstch_pyi_generator::render_file(
   t_mstch_generator::render_to_file(mstchObject, template_name, path);
 }
 
-boost::filesystem::path t_mstch_pyi_generator::get_root_path() const {
-  boost::filesystem::path path;
+std::filesystem::path t_mstch_pyi_generator::get_root_path() const {
+  std::filesystem::path path;
 
   auto namespaces = get_py_namespaces_raw(
       this->get_program(), t_mstch_generator::has_option("asyncio"));
   for (const auto& ns : namespaces) {
     path /= ns;
   }
-  path += boost::filesystem::path::preferred_separator;
+  path += std::filesystem::path::preferred_separator;
 
   return path;
 }
@@ -654,6 +663,4 @@ boost::filesystem::path t_mstch_pyi_generator::get_root_path() const {
 THRIFT_REGISTER_GENERATOR(
     mstch_pyi, "Legacy Python type information", "    no arguments\n");
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
+#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 #include <thrift/lib/cpp2/transport/core/RpcMetadataPlugins.h>
 
-namespace apache {
-namespace thrift {
+THRIFT_FLAG_DEFINE_int64(thrift_client_checksum_sampling_rate, 0);
+
+namespace apache::thrift {
+
+RequestChannel::RequestChannel() {
+  setChecksumSamplingRate(THRIFT_FLAG(thrift_client_checksum_sampling_rate));
+}
 
 void RequestChannel::sendRequestResponse(
     const RpcOptions& rpcOptions,
@@ -179,9 +185,6 @@ class RequestClientCallbackWrapper
     auto tHeader = std::make_unique<transport::THeader>();
     tHeader->setClientType(THRIFT_ROCKET_CLIENT_TYPE);
     tHeader->fds = std::move(firstResponse.fds.dcheckReceivedOrEmpty());
-    if (auto tfmr = firstResponse.metadata.frameworkMetadata_ref()) {
-      detail::ingestFrameworkMetadataFromResponse(std::move(*tfmr));
-    }
     detail::fillTHeaderFromResponseRpcMetadata(
         firstResponse.metadata, *tHeader);
     requestCallback_.release()->onResponse(ClientReceiveState::create(
@@ -232,5 +235,4 @@ template class ClientBatonCallback<true, false>;
 template class ClientBatonCallback<false, true>;
 template class ClientBatonCallback<false, false>;
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

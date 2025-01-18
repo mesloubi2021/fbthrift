@@ -15,10 +15,11 @@
       "definition_html": "apache::thrift::op::detail::BaseEnsurePatch&lt; Patch, Derived &gt;::~BaseEnsurePatch",
       "argsstring_html": "()=default",
       "name_html": "~BaseEnsurePatch",
+      "qualifiedname_html": "apache::thrift::op::detail::BaseEnsurePatch::~BaseEnsurePatch",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/StructPatch.h",
-        "line": "256",
-        "column": "1"
+        "line": "398",
+        "column": "3"
       },
       "definition": {
         "simple_html": "~BaseEnsurePatch()",
@@ -40,5 +41,11 @@
   "brief_html": "Destructs the BaseEnsurePatch.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/BaseEnsurePatch.dtor",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/BaseEnsurePatch.dtor"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/UnionPatch/BaseEnsurePatch.dtor",
+  "parent_links": [
+    {
+      "text_html": "UnionPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/UnionPatch"
+    }
+  ]
 }

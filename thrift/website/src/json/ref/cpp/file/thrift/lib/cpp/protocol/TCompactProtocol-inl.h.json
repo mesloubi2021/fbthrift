@@ -56,10 +56,11 @@
       "definition_html": "typedef TCompactProtocolT&lt;TTransport&gt; apache::thrift::protocol::TCompactProtocol",
       "argsstring_html": "",
       "name_html": "TCompactProtocol",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocol",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "264",
-        "column": "1",
+        "column": "27",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "264",
         "bodyend": "-1"
@@ -72,10 +73,11 @@
       "definition_html": "typedef TCompactProtocolFactoryT&lt;TTransport&gt; apache::thrift::protocol::TCompactProtocolFactory",
       "argsstring_html": "",
       "name_html": "TCompactProtocolFactory",
+      "qualifiedname_html": "apache::thrift::protocol::TCompactProtocolFactory",
       "location": {
         "file": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "line": "307",
-        "column": "1",
+        "column": "34",
         "bodyfile": "fbcode/thrift/lib/cpp/protocol/TCompactProtocol.h",
         "bodystart": "307",
         "bodyend": "-1"

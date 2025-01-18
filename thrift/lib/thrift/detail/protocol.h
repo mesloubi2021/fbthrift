@@ -16,9 +16,10 @@
 
 #pragma once
 
+#include <optional>
+
 #include <folly/Utility.h>
 #include <thrift/lib/cpp2/Thrift.h>
-#include <thrift/lib/cpp2/op/Hash.h>
 
 namespace apache::thrift::protocol::detail {
 
@@ -56,10 +57,6 @@ class ObjectWrapper : public Base {
   // www.boost.org/doc/libs/release/libs/json/doc/html/json/ref/boost__json__object.html
 
   Value& operator[](FieldId i) { return (*members())[folly::to_underlying(i)]; }
-
-  const Value& operator[](FieldId i) const {
-    return (*members())[folly::to_underlying(i)];
-  }
 
   Value& at(FieldId i) { return members()->at(folly::to_underlying(i)); }
   const Value& at(FieldId i) const {
@@ -173,21 +170,14 @@ struct ValueAdapter {
   }
 };
 
+size_t hash_value(const Value& s);
+
 } // namespace apache::thrift::protocol::detail
 
 template <>
 struct std::hash<apache::thrift::protocol::detail::Value> {
   std::size_t operator()(
       const apache::thrift::protocol::detail::Value& s) const noexcept {
-    // TODO(dokwon): Remove specifying op::StdHasher and use default op::hash
-    // after op::StdHasherDeprecated migration.
-    auto accumulator = apache::thrift::op::makeDeterministicAccumulator<
-        apache::thrift::op::StdHasher>();
-    apache::thrift::op::hash<apache::thrift::type::union_t<
-        apache::thrift::protocol::detail::detail::Value>>(
-
-        apache::thrift::protocol::detail::ValueAdapter::toThrift(s),
-        accumulator);
-    return std::move(accumulator.result()).getResult();
+    return apache::thrift::protocol::detail::hash_value(s);
   }
 };

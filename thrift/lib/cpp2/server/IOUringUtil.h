@@ -16,16 +16,15 @@
 
 #pragma once
 
-#if __linux__ && !FOLLY_MOBILE && __has_include(<liburing.h>)
+#if __has_include(<folly/experimental/io/IoUringBackend.h>)
+#include <folly/experimental/io/IoUringBackend.h>
+#endif
 
-#define HAS_IO_URING 1
+#if FOLLY_HAS_LIBURING
 
 #include <folly/executors/IOThreadPoolExecutor.h>
-#include <folly/experimental/io/IoUringBackend.h>
 
-namespace apache {
-namespace thrift {
-namespace io_uring_util {
+namespace apache::thrift::io_uring_util {
 
 std::unique_ptr<folly::EventBaseBackendBase> getIOUringEventbaseBackendFunc();
 
@@ -37,8 +36,6 @@ std::shared_ptr<folly::IOThreadPoolExecutorBase> getDefaultIOUringExecutor(
 bool validateExecutorSupportsIOUring(
     const std::shared_ptr<folly::IOThreadPoolExecutorBase>& executor);
 
-} // namespace io_uring_util
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::io_uring_util
 
 #endif

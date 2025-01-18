@@ -18,9 +18,7 @@
 
 #include <thrift/compiler/ast/t_program.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 const std::string* t_typedef::get_first_annotation_or_null(
     const t_type* type, const std::vector<std::string_view>& names) {
@@ -61,7 +59,7 @@ std::unique_ptr<t_typedef> t_typedef::make_unnamed(
 bool t_placeholder_typedef::resolve() {
   if (type_.empty()) {
     type_ = t_type_ref::from_ptr(
-        program()->scope()->find_type(name()), src_range());
+        program()->scope()->find<t_type>(name()), src_range());
     if (!type_.empty()) {
       // Update the type to mirror the underlying one.
       // TODO(afuller): Update codegen to always skip over placeholders via
@@ -74,6 +72,4 @@ bool t_placeholder_typedef::resolve() {
   return !type_.empty();
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

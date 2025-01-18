@@ -16,15 +16,16 @@
 
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/net/NetworkSocket.h>
-#include <thrift/lib/cpp/async/TAsyncSSLSocket.h>
+#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/security/FizzPeeker.h>
 #include <thrift/lib/cpp2/security/SSLUtil.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 #include <wangle/acceptor/FizzAcceptorHandshakeHelper.h>
 #include <wangle/acceptor/SSLAcceptorHandshakeHelper.h>
 
-namespace apache {
-namespace thrift {
+THRIFT_FLAG_DEFINE_int64(thrift_key_update_threshold, 0);
+
+namespace apache::thrift {
 
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_REGISTER(
@@ -65,6 +66,14 @@ void ThriftFizzAcceptorHandshakeHelper::fizzHandshakeSuccess(
         std::make_shared<std::string>(*handshakeLogging->clientSni);
   }
 
+  // TODO(T173985721) We intend on enabling automatic rekeying for all Fizz
+  // connections regardless of ciphersuite
+  auto negotiatedCipher = transport->getCipher();
+  if (negotiatedCipher == fizz::CipherSuite::TLS_AEGIS_128L_SHA256 ||
+      negotiatedCipher == fizz::CipherSuite::TLS_AEGIS_256_SHA512) {
+    transport->setRekeyAfterWriting(keyUpdateThreshold_);
+  }
+
   auto appProto = transport->getApplicationProtocol();
 
   if (loggingCallback_) {
@@ -93,6 +102,8 @@ void ThriftFizzAcceptorHandshakeHelper::stopTLSSuccess(
     std::unique_ptr<folly::IOBuf> endOfData) {
   auto appProto = transport_->getApplicationProtocol();
   auto plaintextTransport = moveToPlaintext(transport_.get());
+  tinfo_.securityType = plaintextTransport->getSecurityProtocol();
+
   detail::setSockOptStopTLS(*plaintextTransport);
   // The server initiates the close, which means the client will be the first
   // to successfully terminate tls and return the socket back to the caller.
@@ -130,6 +141,7 @@ FizzPeeker::getThriftHelper(
     return nullptr;
   }
   auto optionsCopy = options_;
+  optionsCopy.setkeyUpdateThreshold(THRIFT_FLAG(thrift_key_update_threshold));
   return folly::DelayedDestructionUniquePtr<ThriftFizzAcceptorHandshakeHelper>(
       new ThriftFizzAcceptorHandshakeHelper(
           context_,
@@ -140,5 +152,4 @@ FizzPeeker::getThriftHelper(
           std::move(optionsCopy),
           transportOptions_));
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

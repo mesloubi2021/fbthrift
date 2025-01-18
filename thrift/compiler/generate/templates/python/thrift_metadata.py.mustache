@@ -18,11 +18,16 @@
 Metadata for Thrift types
 }}
 {{> common/auto_generated_py}}
+
 import apache.thrift.metadata.thrift_types as _fbthrift_metadata
+
+import {{program:module_path}}.thrift_enums as _fbthrift_current_module_enums
+import {{program:module_path}}.thrift_enums
 
 {{#program:include_namespaces}}
 {{#has_types?}}
 
+import {{included_module_path}}.thrift_enums
 import {{included_module_path}}.thrift_metadata
 {{/has_types?}}
 {{/program:include_namespaces}}
@@ -38,7 +43,7 @@ def _fbthrift_gen_metadata_{{#struct:exception?}}exception{{/struct:exception?}}
         return metadata_struct
     fields = [
         {{#struct:fields_ordered_by_id}}
-        _fbthrift_metadata.ThriftField(id={{field:key}}, type={{#field:type}}{{> metadata/thrift_type }}{{/field:type}}, name="{{field:name}}", is_optional=False, structured_annotations=[
+        _fbthrift_metadata.ThriftField(id={{field:key}}, type={{#field:type}}{{> metadata/thrift_type }}{{/field:type}}, name="{{field:name}}", is_optional={{#field:optional?}}True{{/field:optional?}}{{^field:optional?}}False{{/field:optional?}}, structured_annotations=[
             {{#field:structured_annotations}}
             {{#structured_annotation:const_struct?}}{{#structured_annotation:const}}{{#constant:value}}
             {{> metadata/const_struct }},
@@ -63,7 +68,10 @@ def _fbthrift_gen_metadata_{{#struct:exception?}}exception{{/struct:exception?}}
     new_struct = metadata_struct({{#struct:exception?}}exceptions{{/struct:exception?}}{{^struct:exception?}}structs{{/struct:exception?}}=struct_dict)
 
     {{#struct:fields}}
-    {{#field:type}}{{> metadata/recursive_call }}{{/field:type}} # {{field:name}}
+    {{#field:type}}
+    # {{field:name}}
+    {{> metadata/recursive_call }}
+    {{/field:type}}
     {{/struct:fields}}
 
     return new_struct
@@ -100,32 +108,10 @@ def _fbthrift_metadata_service_response_{{service:name}}() -> _fbthrift_metadata
 
 {{/program:services}}
 
-{{#program:enums}}
-def _fbthrift_gen_metadata_enum_{{enum:name}}({{!
-}}metadata_struct: _fbthrift_metadata.ThriftMetadata) -> _fbthrift_metadata.ThriftMetadata:
-    qualified_name = "{{program:name}}.{{enum:name}}"
-
-    if qualified_name in metadata_struct.enums:
-        return metadata_struct
-    elements = {
-        {{#enum:values}}
-        {{enum_value:value}}: "{{enum_value:name}}",
-        {{/enum:values}}
-    }
-    enum_dict = dict(metadata_struct.enums)
-    enum_dict[qualified_name] = _fbthrift_metadata.ThriftEnum(name=qualified_name, elements=elements, structured_annotations=[])
-    new_struct = metadata_struct(enums=enum_dict)
-
-    return new_struct
-
-def gen_metadata_enum_{{enum:name}}() -> _fbthrift_metadata.ThriftMetadata:
-    return _fbthrift_gen_metadata_enum_{{enum:name}}(_fbthrift_metadata.ThriftMetadata(structs={}, enums={}, exceptions={}, services={}))
-{{/program:enums}}
-
 def getThriftModuleMetadata() -> _fbthrift_metadata.ThriftMetadata:
     meta = _fbthrift_metadata.ThriftMetadata(structs={}, enums={}, exceptions={}, services={})
     {{#program:enums}}
-    meta = _fbthrift_gen_metadata_enum_{{enum:name}}(meta)
+    meta = _fbthrift_current_module_enums._fbthrift_gen_metadata_enum_{{enum:name}}(meta)
     {{/program:enums}}
     {{#program:structs}}
     {{#struct:exception?}}

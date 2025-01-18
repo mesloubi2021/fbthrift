@@ -13,7 +13,10 @@
 # limitations under the License.
 
 add_executable(compiler_generate_build_templates build_templates.cc)
-target_link_libraries(compiler_generate_build_templates Boost::filesystem)
+target_link_libraries(
+  compiler_generate_build_templates
+  ${FBTHRIFT_COMPILER_LINK_CXXFS}
+)
 
 file(
   GLOB_RECURSE
@@ -40,12 +43,14 @@ list(REMOVE_ITEM GENERATOR_FILES t_ast_generator.cc)
 
 add_library(compiler_generators STATIC ${GENERATOR_FILES}
             ${CMAKE_CURRENT_BINARY_DIR}/templates.cc)
+set_target_properties(compiler_generators PROPERTIES
+                      POSITION_INDEPENDENT_CODE "${BUILD_SHARED_LIBS}")
 target_link_libraries(
   compiler_generators
   compiler_ast
   compiler_base
+  compiler_lib
   compiler
-  mustache
-  Boost::filesystem
+  whisker
   ${OPENSSL_LIBRARIES}
 )

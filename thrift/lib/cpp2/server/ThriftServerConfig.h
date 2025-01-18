@@ -17,8 +17,8 @@
 #pragma once
 #include <chrono>
 #include <folly/Portability.h>
-#include <folly/experimental/observer/Observer.h>
 #include <folly/io/SocketOptionMap.h>
+#include <folly/observer/Observer.h>
 #include <folly/sorted_vector_types.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/Flags.h>
@@ -31,14 +31,11 @@ THRIFT_FLAG_DECLARE_int64(
     server_ingress_memory_limit_enforcement_payload_size_min_bytes);
 
 namespace apache::thrift {
-class ThriftServerInitialConfig;
 
 class ThriftServerConfig {
  public:
   ThriftServerConfig() = default;
   ~ThriftServerConfig() = default;
-
-  explicit ThriftServerConfig(const ThriftServerInitialConfig& initialConfig);
 
   /**
    * Get the prefix for naming the CPU (pool) threads.
@@ -49,6 +46,15 @@ class ThriftServerConfig {
 
   // get value read from configerator
   std::optional<std::string> getBaselineCPUWorkerThreadName() const;
+
+  /**
+   * Get whether to use in memory ticket seeds.
+   * @return true if ticket seeds are stored in memory; false if ticket seeds
+   * are read from a file
+   */
+  bool getUseInMemoryTicketSeeds() const;
+
+  std::optional<bool> getBaselineUseInMemoryTicketSeeds() const;
 
   /**
    * Get the timeout for joining workers.
@@ -277,6 +283,13 @@ class ThriftServerConfig {
       AttributeSource source = AttributeSource::OVERRIDE);
 
   void resetCPUWorkerThreadName(
+      AttributeSource source = AttributeSource::OVERRIDE);
+
+  void setUseInMemoryTicketSeeds(
+      bool cpuWorkerThreadName,
+      AttributeSource source = AttributeSource::OVERRIDE);
+
+  void resetUseInMemoryTicketSeeds(
       AttributeSource source = AttributeSource::OVERRIDE);
 
   /**
@@ -641,6 +654,17 @@ class ThriftServerConfig {
   ServerAttributeStatic<std::chrono::milliseconds> connectionAgeTimeout_{
       DEFAULT_TIMEOUT};
 
+  // This struct contains static server configs that are related to TLS
+  struct StaticTLSConfig {
+    /**
+     * When set to true, the ticket seeds will be stored in memory. By default
+     * this is disabled, and ticket seeds will be read from a file.
+     */
+    ServerAttributeStatic<bool> useInMemoryTicketSeeds_{false};
+  };
+
+  StaticTLSConfig tlsConfig_;
+
   /**
    * The time in milliseconds before an unperformed task expires
    * (0 == infinite)
@@ -844,62 +868,5 @@ class ThriftServerConfig {
   // Flag indicating whether it is safe to mutate the server config through
   // its setters.
   std::atomic<bool> frozen_{false};
-};
-
-class ThriftServerInitialConfig {
- public:
-  FOLLY_CONSTEVAL ThriftServerInitialConfig() = default;
-
-  // to fix oss for now we'll have this as a pair<T, bool> to mimick the
-  // behavior of optional
-#define THRIFT_SERVER_INITIAL_CONFIG_DEFINE(TYPE, NAME, INIT_VALUE) \
- private:                                                           \
-  std::pair<TYPE, bool> NAME##_ = {INIT_VALUE, false};              \
-                                                                    \
- public:                                                            \
-  FOLLY_CONSTEVAL ThriftServerInitialConfig NAME(TYPE value) {      \
-    auto initialConfig(*this);                                      \
-    initialConfig.NAME##_.first = value;                            \
-    initialConfig.NAME##_.second = true;                            \
-    return initialConfig;                                           \
-  }
-
-  // replace with thrift struct if/when it becomes constexpr friendly
-
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(uint32_t, maxRequests, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(uint32_t, maxConnections, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(uint64_t, maxResponseSize, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(bool, useClientTimeout, true)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      std::chrono::milliseconds, taskExpireTimeout, {})
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      std::chrono::milliseconds, streamExpireTimeout, {})
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      std::chrono::milliseconds, queueTimeout, {})
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      std::chrono::nanoseconds, socketQueueTimeout, {})
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(size_t, egressMemoryLimit, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      size_t, egressBufferBackpressureThreshold, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(size_t, ingressMemoryLimit, 0)
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      size_t, minPayloadSizeToEnforceIngressMemoryLimit, 0)
-
-  /*
-   * Running UBSan causes some tests to FATAL. The current theory is that this
-   * is caused by the compiler not generating proper code for FOLLY_CONSTEVAL.
-   * For now, we're adding a dummy field at the end as a hack to workaround this
-   * issue, until its fixed. All new fields should be added before this last
-   * dummy field
-   */
-
-  THRIFT_SERVER_INITIAL_CONFIG_DEFINE(
-      std::chrono::milliseconds,
-      lastUnusedField,
-      {}) // DO NOT ADD FIELDS AFTER THIS
-#undef THRIFT_SERVER_INITIAL_CONFIG_DEFINE
-
- private:
-  friend class ThriftServerConfig;
 };
 } // namespace apache::thrift

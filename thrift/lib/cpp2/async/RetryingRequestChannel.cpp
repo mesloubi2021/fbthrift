@@ -18,8 +18,7 @@
 
 #include <folly/io/async/AsyncSocketException.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class RetryingRequestChannel::RequestCallbackBase {
  protected:
@@ -141,7 +140,9 @@ class RetryingRequestChannel::StreamCallback
       FirstResponsePayload&& pload,
       folly::EventBase* evb,
       StreamServerCallback* serverCallback) noexcept override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     serverCallback->resetClientCallback(clientCallback_);
     return clientCallback_.onFirstResponse(
         std::move(pload), evb, serverCallback);
@@ -210,7 +211,9 @@ class RetryingRequestChannel::SinkCallback
       FirstResponsePayload&& pload,
       folly::EventBase* evb,
       SinkServerCallback* serverCallback) noexcept override {
-    SCOPE_EXIT { delete this; };
+    SCOPE_EXIT {
+      delete this;
+    };
     serverCallback->resetClientCallback(clientCallback_);
     return clientCallback_.onFirstResponse(
         std::move(pload), evb, serverCallback);
@@ -323,5 +326,4 @@ void RetryingRequestChannel::sendRequestResponse(
       std::move(header),
       std::move(cob));
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

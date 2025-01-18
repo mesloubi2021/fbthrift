@@ -23,11 +23,12 @@
 #include <folly/Utility.h>
 #include <thrift/lib/cpp2/protocol/FieldMaskRef.h>
 #include <thrift/lib/cpp2/protocol/detail/FieldMask.h>
+#include <thrift/lib/cpp2/protocol/detail/Object.h>
 #include <thrift/lib/thrift/gen-cpp2/field_mask_constants.h>
 #include <thrift/lib/thrift/gen-cpp2/field_mask_types.h>
 #include <thrift/lib/thrift/gen-cpp2/protocol_types.h>
 
-using apache::thrift::protocol::field_mask_constants;
+using namespace apache::thrift::protocol::field_mask_constants;
 
 namespace apache::thrift::protocol {
 
@@ -38,20 +39,6 @@ bool containsId(const T& t, Id id) {
   } else {
     return t.find(id) != t.end();
   }
-}
-
-// call clear based on the type of the value.
-void clear(MaskRef ref, Value& value) {
-  if (value.is_object()) {
-    ref.clear(value.as_object());
-    return;
-  }
-  if (value.is_map()) {
-    ref.clear(value.as_map());
-    return;
-  }
-  folly::throw_exception<std::runtime_error>(
-      "The mask and object are incompatible.");
 }
 
 template <typename T, typename Id>
@@ -65,69 +52,34 @@ void clear_impl(MaskRef ref, T& obj, Id id, Value& value) {
     obj.erase(id);
     return;
   }
-  clear(ref, value);
-}
-
-// call copy based on the type of the value.
-void copy(MaskRef ref, const Value& src, Value& dst) {
-  if (src.is_object() && dst.is_object()) {
-    ref.copy(src.as_object(), dst.as_object());
-    return;
-  }
-  if (src.is_map() && dst.is_map()) {
-    ref.copy(src.as_map(), dst.as_map());
-    return;
-  }
-  folly::throw_exception<std::runtime_error>(
-      "The mask and object are incompatible.");
+  ref.clear(value);
 }
 
 template <typename T, typename Id>
-void copy_impl(MaskRef ref, const T& src, T& dst, Id id) {
+void filter_impl(MaskRef ref, const T& src, T& ret, Id id) {
   // Id doesn't exist in field mask, skip.
   if (ref.isNoneMask()) {
     return;
   }
-  bool srcContainsId = containsId(src, id);
-  bool dstContainsId = containsId(dst, id);
-
-  // Id that we want to copy.
+  // If field is not in src, skip.
+  if (!containsId(src, id)) {
+    return;
+  }
   if (ref.isAllMask()) {
-    if (srcContainsId) {
-      dst[id] = src.at(id);
-    } else {
-      dst.erase(id);
-    }
+    ret[id] = src.at(id);
     return;
   }
-  if (!srcContainsId && !dstContainsId) { // skip
-    return;
-  }
-  // Field doesn't exist in src, so just clear dst with the mask.
-  if (!srcContainsId) {
-    clear(ref, dst.at(id));
-    return;
-  }
-  // Field exists in both src and dst, so call copy recursively.
-  if (dstContainsId) {
-    copy(ref, src.at(id), dst.at(id));
-    return;
-  }
-  // Field only exists in src. Need to construct object/ map only if there's
-  // a field to add.
   if (src.at(id).is_object()) {
-    Object newObject;
-    ref.copy(src.at(id).as_object(), newObject);
-    if (!newObject.empty()) {
-      dst[id].ensure_object() = std::move(newObject);
+    auto recurse = ref.filter(src.at(id).as_object());
+    if (!recurse.empty()) {
+      ret[id].emplace_object(std::move(recurse));
     }
     return;
   }
   if (src.at(id).is_map()) {
-    folly::F14FastMap<Value, Value> newMap;
-    ref.copy(src.at(id).as_map(), newMap);
-    if (!newMap.empty()) {
-      dst[id].ensure_map() = std::move(newMap);
+    auto recurse = ref.filter(src.at(id).as_map());
+    if (!recurse.empty()) {
+      ret[id].emplace_map(std::move(recurse));
     }
     return;
   }
@@ -155,6 +107,12 @@ const Mask& getMask(const MapStringToMask& map, const std::string& key) {
   return folly::get_ref_default(map, key, field_mask_constants::noneMask());
 }
 
+// Gets the mask of the given type if it exists in the type map, otherwise,
+// returns noneMask.
+const Mask& getMask(const MapTypeToMask& map, const type::Type& type) {
+  return folly::get_ref_default(map, type, field_mask_constants::noneMask());
+}
+
 void MaskRef::throwIfNotFieldMask() const {
   if (!isFieldMask()) {
     folly::throw_exception<std::runtime_error>("not a field mask");
@@ -176,6 +134,12 @@ void MaskRef::throwIfNotIntegerMapMask() const {
 void MaskRef::throwIfNotStringMapMask() const {
   if (!isStringMapMask()) {
     folly::throw_exception<std::runtime_error>("not a string map mask");
+  }
+}
+
+void MaskRef::throwIfNotTypeMask() const {
+  if (!isTypeMask()) {
+    folly::throw_exception<std::runtime_error>("not a type mask");
   }
 }
 
@@ -211,6 +175,50 @@ MaskRef MaskRef::get(const std::string& key) const {
       getMask(mask.excludes_string_map_ref().value(), key), !is_exclusion};
 }
 
+MaskRef MaskRef::get(const type::Type& type) const {
+  if (isAllMask() || isNoneMask()) { // All types included or excluded.
+    return *this;
+  }
+  throwIfNotTypeMask();
+  if (mask.includes_type_ref()) {
+    return MaskRef{
+        getMask(mask.includes_type_ref().value(), type), is_exclusion};
+  } else {
+    return MaskRef{
+        getMask(mask.excludes_type_ref().value(), type), !is_exclusion};
+  }
+}
+
+// Uses type::identicalType to look up the nested MaskRef for the given type
+// Use this if type can possibly be a hashed URI
+MaskRef MaskRef::getViaIdenticalType_INTERNAL_DO_NOT_USE(
+    const type::Type& type) const {
+  if (type.isFull()) {
+    // Optimize for the common case of a full type.
+    return get(type);
+  }
+  if (isAllMask() || isNoneMask()) { // All types included or excluded.
+    return *this;
+  }
+  throwIfNotTypeMask();
+  auto findViaIdenticalType = [&](const auto& map) -> const Mask& {
+    for (auto it = map.begin(); it != map.end(); ++it) {
+      if (type::identicalType(it->first, type)) {
+        return it->second;
+      }
+    }
+    return field_mask_constants::noneMask();
+  };
+
+  if (mask.includes_type_ref()) {
+    return MaskRef{
+        findViaIdenticalType(mask.includes_type_ref().value()), is_exclusion};
+  } else {
+    return MaskRef{
+        findViaIdenticalType(mask.excludes_type_ref().value()), !is_exclusion};
+  }
+}
+
 bool MaskRef::isAllMask() const {
   return (is_exclusion &&
           ::apache::thrift::protocol::detail::isNoneMask(mask)) ||
@@ -242,7 +250,9 @@ bool MaskRef::isExclusive() const {
       (mask.includes_map_ref() && is_exclusion) ||
       (mask.excludes_map_ref() && !is_exclusion) ||
       (mask.includes_string_map_ref() && is_exclusion) ||
-      (mask.excludes_string_map_ref() && !is_exclusion);
+      (mask.excludes_string_map_ref() && !is_exclusion) ||
+      (mask.includes_type_ref() && is_exclusion) ||
+      (mask.excludes_type_ref() && !is_exclusion);
 }
 
 bool MaskRef::isFieldMask() const {
@@ -261,7 +271,50 @@ bool MaskRef::isStringMapMask() const {
   return mask.includes_string_map_ref() || mask.excludes_string_map_ref();
 }
 
+bool MaskRef::isTypeMask() const {
+  return mask.includes_type_ref() || mask.excludes_type_ref();
+}
+
+void MaskRef::clear(protocol::Value& value) const {
+  if (isAllMask()) {
+    clearValueInner(value);
+    return;
+  }
+  if (value.is_object()) {
+    this->clear(value.as_object());
+    return;
+  }
+  if (value.is_map()) {
+    this->clear(value.as_map());
+    return;
+  }
+  folly::throw_exception<std::runtime_error>(
+      "The mask and object are incompatible.");
+}
+
 void MaskRef::clear(protocol::Object& obj) const {
+  if (isTypeMask()) {
+    // obj -> thrift.Any!
+    type::AnyData any;
+    if (!detail::ProtocolValueToThriftValue<type::infer_tag<type::AnyData>>{}(
+            obj, any)) {
+      folly::throw_exception<std::runtime_error>(
+          "Incompatible mask and data: expected Any for type-mask");
+    };
+
+    // The type of Any could be a hashed-URI so use getViaIdenticalType
+    auto nestedMask = getViaIdenticalType_INTERNAL_DO_NOT_USE(any.type());
+    if (!nestedMask.isNoneMask()) {
+      // recurse
+      auto value = detail::parseValueFromAny(any);
+      nestedMask.clear(value);
+      any = detail::toAny(value, any.type(), any.protocol());
+      obj =
+          detail::asValueStruct<type::infer_tag<type::AnyData>>(std::move(any))
+              .as_object();
+    }
+    return;
+  }
   throwIfNotFieldMask();
   for (auto& [id, value] : obj) {
     MaskRef ref = get(FieldId{id});
@@ -280,81 +333,83 @@ void MaskRef::clear(folly::F14FastMap<Value, Value>& map) const {
   }
 }
 
-void MaskRef::copy(const protocol::Object& src, protocol::Object& dst) const {
-  throwIfNotFieldMask();
-  // Get all field ids that are possibly masked.
-  for (FieldId fieldId : getFieldsToCopy(src, dst)) {
-    MaskRef ref = get(fieldId);
-    copy_impl(ref, src, dst, fieldId);
-  }
-}
-
-void MaskRef::copy(
-    const folly::F14FastMap<Value, Value>& src,
-    folly::F14FastMap<Value, Value>& dst) const {
-  throwIfNotMapMask();
-  // Get all map keys that are possibly masked.
-  auto keys = getKeysToCopy(src, dst);
-
-  if (keys.empty()) {
-    return;
-  }
-
-  if (detail::getArrayKeyFromValue(*keys.begin()) ==
-      detail::ArrayKey::Integer) {
-    for (Value key : keys) {
-      MaskRef ref = get(detail::getMapIdFromValue(key));
-      copy_impl(ref, src, dst, key);
-    }
+protocol::Value MaskRef::filter(const Value& src) const {
+  protocol::Value ret;
+  if (isAllMask()) {
+    ret = src;
+  } else if (src.is_object()) {
+    ret.emplace_object(filter(src.as_object()));
+  } else if (src.is_map()) {
+    ret.emplace_map(filter(src.as_map()));
   } else {
-    for (Value key : keys) {
-      MaskRef ref = get(detail::getStringFromValue(key));
-      copy_impl(ref, src, dst, key);
-    }
+    folly::throw_exception<std::runtime_error>(
+        "The mask and object are incompatible.");
   }
+  return ret;
 }
 
-std::unordered_set<FieldId> MaskRef::getFieldsToCopy(
-    const protocol::Object& src, const protocol::Object& dst) const {
-  std::unordered_set<FieldId> fieldIds;
-  if (isExclusive()) {
-    // With exclusive mask, copies fields in either src or dst.
-    fieldIds.reserve(src.size() + dst.size());
-    for (auto& [id, _] : src) {
-      fieldIds.insert(FieldId{id});
+protocol::Object MaskRef::filter(const protocol::Object& src) const {
+  if (isTypeMask()) {
+    // obj -> any
+    type::AnyData any;
+    if (!detail::ProtocolValueToThriftValue<type::infer_tag<type::AnyData>>{}(
+            src, any)) {
+      folly::throw_exception<std::runtime_error>(
+          "Incompatible mask and data: expected Any for type-mask");
+    };
+
+    // The type of Any could be a hashed-URI so use getViaIdenticalType
+    auto nestedMask = getViaIdenticalType_INTERNAL_DO_NOT_USE(any.type());
+    if (nestedMask.isNoneMask()) {
+      // Filter failed, return empty object
+      return {};
+    } else {
+      // Recurse
+      any = detail::toAny(
+          nestedMask.filter(detail::parseValueFromAny(any)),
+          any.type(),
+          any.protocol());
     }
-    for (auto& [id, _] : dst) {
-      fieldIds.insert(FieldId{id});
-    }
-    return fieldIds;
+
+    return detail::asValueStruct<type::infer_tag<type::AnyData>>(std::move(any))
+        .as_object();
   }
 
-  // With inclusive mask, just copies fields in the mask.
-  const FieldIdToMask& map =
-      is_exclusion ? mask.excludes_ref().value() : mask.includes_ref().value();
-  fieldIds.reserve(map.size());
-  for (auto& [fieldId, _] : map) {
-    if (src.contains(FieldId{fieldId}) || dst.contains(FieldId{fieldId})) {
-      fieldIds.insert(FieldId{fieldId});
-    }
+  throwIfNotFieldMask();
+  protocol::Object ret;
+  for (auto& [fieldId, _] : src) {
+    MaskRef ref = get(FieldId{fieldId});
+    filter_impl(ref, src, ret, FieldId{fieldId});
   }
-  return fieldIds;
+  return ret;
 }
 
-std::set<std::reference_wrapper<const Value>, std::less<Value>>
-MaskRef::getKeysToCopy(
-    const folly::F14FastMap<Value, Value>& src,
-    const folly::F14FastMap<Value, Value>& dst) const {
-  // cannot use unordered_set as Value doesn't have hash function.
-  // TODO: check if all keys have the same type
+folly::F14FastMap<Value, Value> MaskRef::filter(
+    const folly::F14FastMap<Value, Value>& src) const {
+  throwIfNotMapMask();
+  folly::F14FastMap<Value, Value> ret;
+
   std::set<std::reference_wrapper<const Value>, std::less<Value>> keys;
   for (const auto& [id, _] : src) {
     keys.insert(id);
   }
-  for (const auto& [id, _] : dst) {
-    keys.insert(id);
+  if (keys.empty()) {
+    return ret;
   }
-  return keys;
+
+  if (detail::getArrayKeyFromValue(*keys.begin()) ==
+      detail::ArrayKey::Integer) {
+    for (const Value& key : keys) {
+      MaskRef ref = get(detail::getMapIdFromValue(key));
+      filter_impl(ref, src, ret, key);
+    }
+  } else {
+    for (Value key : keys) {
+      MaskRef ref = get(detail::getStringFromValue(key));
+      filter_impl(ref, src, ret, key);
+    }
+  }
+  return ret;
 }
 
 } // namespace apache::thrift::protocol

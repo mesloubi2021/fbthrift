@@ -17,6 +17,7 @@
 include "thrift/annotation/thrift.thrift"
 include "thrift/lib/thrift/id.thrift"
 include "thrift/lib/thrift/standard.thrift"
+include "thrift/annotation/python.thrift"
 
 /**
  * The **underlying representations** for well-known Thrift types.
@@ -45,9 +46,10 @@ union ProtocolUnion {
   /** A standard protocol, known by all Thrift implementations. */
   1: standard.StandardProtocol standard;
   /** A custom protocol. */
-  2: standard.Uri custom;
+  2: string custom;
   /** An externally stored protocol. */
-  3: id.ProtocolId id (py3.hidden);
+  @python.Py3Hidden
+  3: id.ProtocolId id;
 } (thrift.uri = "facebook.com/thrift/type/Protocol")
 
 /** A concrete Thrift type. */

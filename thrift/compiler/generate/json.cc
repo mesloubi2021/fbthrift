@@ -24,18 +24,14 @@
 #include <ostream>
 #include <sstream>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 namespace {
 // Trim all white spaces and commas from end (in place).
 void rtrim(std::string& s) {
   s.erase(
       std::find_if(
-          s.rbegin(),
-          s.rend(),
-          [](int ch) { return !(ch == ' ' || ch == ','); })
+          s.rbegin(), s.rend(), [](int ch) { return ch != ' ' && ch != ','; })
           .base(),
       s.end());
 }
@@ -55,7 +51,7 @@ std::string to_json(const t_const_value* value) {
     std::string result;
     for (const auto& v : value) {
       auto key = to_json(v.first);
-      if (v.first->get_type() != t_const_value::CV_STRING) {
+      if (v.first->kind() != t_const_value::CV_STRING) {
         // map keys must be strings
         key = json_quote_ascii(key);
       }
@@ -65,7 +61,7 @@ std::string to_json(const t_const_value* value) {
     return "{" + result + "}";
   };
 
-  switch (value->get_type()) {
+  switch (value->kind()) {
     case t_const_value::CV_BOOL:
       return value->get_bool() ? "true" : "false";
     case t_const_value::CV_INTEGER:
@@ -78,6 +74,8 @@ std::string to_json(const t_const_value* value) {
       return stringify_list(value->get_list());
     case t_const_value::CV_MAP:
       return stringify_map(value->get_map());
+    case t_const_value::CV_IDENTIFIER:
+      break;
   }
   return "";
 }
@@ -102,7 +100,7 @@ std::ostream& json_quote_ascii(std::ostream& o, const std::string& s) {
       // clang-format on
       default: {
         uint8_t b = static_cast<uint8_t>(c);
-        if (!(b >= 0x20 && b < 0x80)) {
+        if (b < 0x20 || b >= 0x80) {
           constexpr auto hex = "0123456789abcdef";
           auto c1 = static_cast<char>(hex[(b >> 4) & 0x0f]);
           auto c0 = static_cast<char>(hex[(b >> 0) & 0x0f]);
@@ -117,6 +115,4 @@ std::ostream& json_quote_ascii(std::ostream& o, const std::string& s) {
   return o;
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

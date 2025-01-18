@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 
 from __future__ import annotations
 
@@ -20,9 +22,14 @@ import typing
 
 from unittest import IsolatedAsyncioTestCase
 
+from thrift.lib.python.client.test.client_event_handler.helper import (
+    TestHelper as ClientEventHandlerTestHelper,
+)
+
 from thrift.lib.python.client.test.event_handler_helper import (
     client_handler_that_throws,
 )
+from thrift.lib.python.client.test.test_server import server_in_event_loop
 
 from thrift.python.client import (
     ClientType,
@@ -40,7 +47,6 @@ from thrift.python.exceptions import (
 )
 from thrift.python.leaf.thrift_clients import LeafService
 from thrift.python.serializer import Protocol
-from thrift.python.test.test_server import server_in_event_loop
 from thrift.python.test.thrift_clients import EchoService, TestService
 from thrift.python.test.thrift_types import (
     ArithmeticException,
@@ -64,6 +70,9 @@ class ThriftClientTestProxy:
 
 def test_proxy_factory(
     client_class: typing.Type[AsyncClient],
+    # pyre-fixme[31]: Expression
+    #  `typing.Callable[([thrift.python.client.async_client.AsyncClient], ...)]` is not a
+    #  valid type.
 ) -> typing.Callable[[AsyncClient], ...]:
     return ThriftClientTestProxy
 
@@ -83,6 +92,18 @@ class AsyncClientTests(IsolatedAsyncioTestCase):
                 port=addr.port,
                 client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
                 protocol=Protocol.BINARY,
+            ) as client:
+                sum = await client.add(1, 2)
+                self.assertEqual(3, sum)
+
+    async def test_http2_client(self) -> None:
+        async with server_in_event_loop() as addr:
+            async with get_client(
+                TestService,
+                host=addr.ip,
+                port=addr.port,
+                path="/",
+                client_type=ClientType.THRIFT_HTTP2_CLIENT_TYPE,
             ) as client:
                 sum = await client.add(1, 2)
                 self.assertEqual(3, sum)
@@ -153,7 +174,7 @@ class AsyncClientTests(IsolatedAsyncioTestCase):
                 self.assertEqual(3, sum)
 
     async def test_transport_error(self) -> None:
-        async with get_client(TestService, path="/no/where") as client:
+        async with get_client(TestService, host="localhost", port=1) as client:
             with self.assertRaises(TransportError) as ex:
                 await client.add(1, 2)
             self.assertEqual(TransportErrorType.UNKNOWN, ex.exception.type)
@@ -291,7 +312,7 @@ class AsyncClientTests(IsolatedAsyncioTestCase):
         self,
     ) -> None:
         with HijackTestHelper():
-            async with get_client(TestService, path="/no/where") as client:
+            async with get_client(TestService, host="localhost", port=1) as client:
                 with self.assertRaises(HijackTestException) as context:
                     options = RpcOptions()
                     options.timeout = 12.5
@@ -302,7 +323,7 @@ class AsyncClientTests(IsolatedAsyncioTestCase):
         self,
     ) -> None:
         with HijackTestHelper():
-            async with get_client(TestService, path="/no/where") as client:
+            async with get_client(TestService, host="localhost", port=1) as client:
                 with self.assertRaises(HijackTestException) as context:
                     await client.add(1, 2)
                 self.assertEqual(context.exception.timeout, 0.0)
@@ -328,6 +349,16 @@ class AsyncClientTests(IsolatedAsyncioTestCase):
 
         self.assertTrue(cb1.triggered)
         self.assertTrue(cb2.triggered)
+
+    async def test_client_event_handler(self) -> None:
+        test_helper: ClientEventHandlerTestHelper = ClientEventHandlerTestHelper()
+        self.assertFalse(test_helper.is_handler_called())
+        async with test_helper.get_async_client(TestService, port=1) as cli:
+            try:
+                await cli.noop()
+            except TransportError:
+                pass
+            self.assertTrue(test_helper.is_handler_called())
 
     async def test_exception_in_client_event_handler(self) -> None:
         async with server_in_event_loop() as addr:

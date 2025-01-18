@@ -20,10 +20,11 @@
       "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeDeterministicAccumulator",
       "argsstring_html": "()",
       "name_html": "makeDeterministicAccumulator",
+      "qualifiedname_html": "apache::thrift::op::makeDeterministicAccumulator",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "162",
-        "column": "1",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "162",
         "bodyend": "166"
@@ -47,5 +48,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/assoc/class/apache/thrift/op/DeterministicAccumulator/makeDeterministicAccumulator",
-  "refid": "/ref/cpp/f/assoc/class/apache/thrift/op/DeterministicAccumulator/makeDeterministicAccumulator"
+  "refid": "/ref/cpp/f/assoc/class/apache/thrift/op/DeterministicAccumulator/makeDeterministicAccumulator",
+  "parent_links": [
+    {
+      "text_html": "DeterministicAccumulator",
+      "href": "/ref/cpp/class/apache/thrift/op/DeterministicAccumulator"
+    }
+  ]
 }

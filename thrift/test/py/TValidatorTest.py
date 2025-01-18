@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -174,7 +176,7 @@ class ValidationTest(unittest.TestCase):
     def testAnnotations(self):
         self.assertTrue(hasattr(WithAnnotations, "thrift_field_annotations"))
         self.assertTrue(hasattr(WithAnnotations, "thrift_struct_annotations"))
-        self.assertEquals(
+        self.assertEqual(
             WithAnnotations.thrift_field_annotations,
             {
                 1: {
@@ -186,7 +188,7 @@ class ValidationTest(unittest.TestCase):
                 },
             },
         )
-        self.assertEquals(
+        self.assertEqual(
             WithAnnotations.thrift_struct_annotations,
             {
                 "test.struct_annotation": "ok",

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import asyncio
 
 from thrift.conformance.conformance.thrift_services import ConformanceServiceInterface
@@ -21,7 +23,7 @@ from thrift.conformance.serialization.thrift_types import (
     RoundTripResponse,
 )
 from thrift.conformance.test_suite.thrift_types import TestCase
-from thrift.python.conformance.omni_registry import OmniAnyRegistry
+from thrift.facebook.python.conformance.omni_registry import OmniAnyRegistry
 from thrift.python.server import ThriftServer
 
 
@@ -56,5 +58,9 @@ async def main():
         server.stop()
 
 
-if __name__ == "__main__":
+def invoke_main() -> None:
     asyncio.get_event_loop().run_until_complete(main())
+
+
+if __name__ == "__main__":
+    invoke_main()  # pragma: no cover

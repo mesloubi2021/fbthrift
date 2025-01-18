@@ -20,6 +20,9 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+
+	"thrift/lib/go/thrift"
+	"thrift/test/go/if/reflecttest"
 	"thrift/test/go/if/thrifttest"
 )
 
@@ -46,8 +49,16 @@ func TestStructMapKey(t *testing.T) {
 	}
 }
 
+func getValues[K comparable, V any](m map[K]V) []V {
+	values := []V{}
+	for _, v := range m {
+		values = append(values, v)
+	}
+	return values
+}
+
 func TestEnumValues(t *testing.T) {
-	generatedValues := thrifttest.NumberzValues
+	generatedValues := getValues(thrifttest.NumberzToValue)
 	sort.Slice(generatedValues, func(i, j int) bool { return generatedValues[i] < generatedValues[j] })
 
 	values := []thrifttest.Numberz{}
@@ -62,7 +73,7 @@ func TestEnumValues(t *testing.T) {
 }
 
 func TestEnumNames(t *testing.T) {
-	generatedNames := thrifttest.NumberzNames
+	generatedNames := getValues(thrifttest.NumberzToName)
 	sort.Strings(generatedNames)
 
 	names := []string{}
@@ -73,80 +84,6 @@ func TestEnumNames(t *testing.T) {
 
 	if !reflect.DeepEqual(generatedNames, names) {
 		t.Fatalf("names slices are not equal (should be equal)")
-	}
-}
-
-func TestBuilder(t *testing.T) {
-	bonk1 := thrifttest.NewBonk()
-	bonk1.Message = "exampleMessage"
-	bonk1.Type = 3
-
-	bonkBuilder := thrifttest.NewBonkBuilder()
-	bonk2 := bonkBuilder.
-		Message("exampleMessage").
-		Type(3).
-		Emit()
-	bonk3 := bonkBuilder.
-		Message("anotherMessage").
-		Emit()
-
-	wn1 := thrifttest.NewWeirdNames()
-	wn1.Me = true
-	wn1.SetMe = true
-	wn1.SetMe_ = true
-	wn1.P = true
-	wn1.B = true
-
-	wn2 := thrifttest.NewWeirdNamesBuilder().
-		Me(true).
-		SetMe(true).
-		SetMe_(true).
-		P(true).
-		B(true).
-		Emit()
-
-	if !reflect.DeepEqual(wn1, wn2) {
-		t.Fatalf("structs are not equal (should be equal)")
-	}
-
-	if !reflect.DeepEqual(bonk1, bonk2) {
-		t.Fatalf("structs are not equal (should be equal)")
-	}
-	if bonk2.Type != bonk3.Type {
-		t.Fatalf("types are not equal (should be equal)")
-	}
-	if bonk2.Message == bonk3.Message {
-		t.Fatalf("messages are equal (should not be equal)")
-	}
-
-	xt1 := thrifttest.NewXtruct4()
-	xt1.IntThing = 0
-
-	xt2 := thrifttest.NewXtruct4Builder().
-		IntThing(0).
-		Emit()
-
-	if !reflect.DeepEqual(xt1, xt2) {
-		t.Fatalf("structs are not equal (should be equal)")
-	}
-
-	xt3 := thrifttest.NewXtruct4()
-	xt3.Xtruct2 = thrifttest.NewXtruct2()
-	xt3.Xtruct2.StructThing = thrifttest.NewXtruct()
-	xt3.Xtruct2.StructThing.StringThing = "exampleString"
-
-	xt4 := thrifttest.NewXtruct4Builder().
-		Xtruct2(thrifttest.NewXtruct2Builder().
-			StructThing(thrifttest.NewXtructBuilder().
-				StringThing("exampleString").
-				Emit(),
-			).
-			Emit(),
-		).
-		Emit()
-
-	if !reflect.DeepEqual(xt3, xt4) {
-		t.Fatalf("structs are not equal (should be equal)")
 	}
 }
 
@@ -209,5 +146,64 @@ func TestSetters(t *testing.T) {
 
 	if !reflect.DeepEqual(xt3, xt4) {
 		t.Fatalf("structs are not equal (should be equal)")
+	}
+}
+
+func TestFieldSerializationOrderDeterminism(t *testing.T) {
+	// This test ensures that field serialization order is deterministic.
+	// (Fields are supposed to be serialized by their ID, ascending.)
+	value := &thrifttest.StructWithManyFields{
+		Field01: 1,
+		Field02: 2,
+		Field03: 3,
+		Field04: 4,
+		Field05: 5,
+		Field06: 6,
+		Field07: 7,
+		Field08: 8,
+		Field09: 9,
+		Field10: 10,
+		Field11: 11,
+		Field12: 12,
+		Field13: 13,
+		Field14: 14,
+		Field15: 15,
+		Field16: 16,
+		Field17: 17,
+		Field18: 18,
+		Field19: 19,
+	}
+
+	serializer := thrift.NewCompactJSONSerializer()
+	buf, err := serializer.Write(value)
+	if err != nil {
+		t.Fatalf("failed to serialize struct: %v", err)
+	}
+
+	expectedJSON := `{"142":{"i64":13},"191":{"i64":5},"219":{"i64":2},"270":{"i64":9},"316":{"i64":7},"327":{"i64":16},"351":{"i64":11},"467":{"i64":3},"489":{"i64":8},"569":{"i64":17},"628":{"i64":10},"654":{"i64":15},"753":{"i64":6},"789":{"i64":14},"812":{"i64":18},"843":{"i64":1},"917":{"i64":12},"932":{"i64":4},"945":{"i64":19}}`
+	actualJSON := string(buf)
+	if actualJSON != expectedJSON {
+		t.Fatalf("actual json is not as expected: %s", actualJSON)
+	}
+}
+
+func TestSimpleJSONSerialization(t *testing.T) {
+	writeTarget := reflecttest.VariousFieldsStructConst1
+
+	serializer := thrift.NewSimpleJSONSerializer()
+	data, err := serializer.Write(writeTarget)
+	if err != nil {
+		t.Fatalf("failed to serialize struct: %v", err)
+	}
+
+	readTarget := &reflecttest.VariousFieldsStruct{}
+	deserializer := thrift.NewSimpleJSONDeserializer()
+	err = deserializer.Read(readTarget, data)
+	if err != nil {
+		t.Fatalf("failed to deserialize struct: %v", err)
+	}
+
+	if writeTarget.String() != readTarget.String() {
+		t.Fatalf("values are not equal")
 	}
 }

@@ -17,13 +17,12 @@
 #include <chrono>
 #include <string_view>
 
-#include <folly/experimental/TestUtil.h>
-#include <folly/experimental/coro/Baton.h>
+#include <folly/coro/Baton.h>
 #include <folly/portability/GMock.h>
+#include <folly/testing/TestUtil.h>
 
 #include <thrift/lib/cpp2/async/AsyncProcessor.h>
 #include <thrift/lib/cpp2/async/PooledRequestChannel.h>
-#include <thrift/lib/cpp2/server/BaseThriftServer.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/test/gen-cpp2/TestServiceAsyncClient.h>
@@ -41,9 +40,8 @@ struct ServerResponseEnqueuedInterface : public TestInterface {
       : sendQueue_(sendQueue), responseEnqueuedBaton_(responseEnqueuedBaton) {}
 
   void async_eb_eventBaseAsync(
-      std::unique_ptr<
-          apache::thrift::HandlerCallback<std::unique_ptr<std::string>>>
-          callback) override {
+      apache::thrift::HandlerCallbackPtr<std::unique_ptr<std::string>> callback)
+      override {
     MessagePair resPair;
     CHECK(sendQueue_->read(resPair));
     auto& [outData, outFds] = resPair;
@@ -163,7 +161,7 @@ class FdWriteBatchingTest : public testing::TestWithParam<bool> {
     folly::SocketAddress sockAddr;
     sockAddr.setFromPath((tempDir_.path() / "fd-test-socket").string());
 
-    runner_ = folly::make_unique<ScopedServerInterfaceThread>(
+    runner_ = std::make_unique<ScopedServerInterfaceThread>(
         std::make_shared<ServerResponseEnqueuedInterface>(&sendQueue_, baton_),
         sockAddr,
         [this](ThriftServer& server) {

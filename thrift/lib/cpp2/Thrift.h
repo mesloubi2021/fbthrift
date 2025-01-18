@@ -31,10 +31,7 @@
 #include <memory>
 #include <type_traits>
 
-static_assert(FOLLY_CPLUSPLUS >= 201703L, "__cplusplus >= 201703L");
-
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace detail {
 template <typename Tag>
@@ -44,7 +41,7 @@ struct invoke_reffer;
 template <typename Tag>
 using access_field_fn = detail::invoke_reffer<Tag>;
 template <typename Tag>
-FOLLY_INLINE_VARIABLE constexpr access_field_fn<Tag> access_field{};
+inline constexpr access_field_fn<Tag> access_field{};
 
 enum FragileConstructor {
   FRAGILE,
@@ -74,8 +71,7 @@ enum class ExceptionSafety {
             // RPC.
 };
 
-namespace detail {
-namespace st {
+namespace detail::st {
 
 //  (struct_)private_access
 //
@@ -88,8 +84,16 @@ struct struct_private_access {
   //  members of the type to which it is a friend. Making these function
   //  templates is a workaround.
   template <typename T>
-  static folly::bool_constant<T::__fbthrift_cpp2_gen_json> //
+  static std::bool_constant<T::__fbthrift_cpp2_gen_json> //
   __fbthrift_cpp2_gen_json();
+
+  template <typename T>
+  static std::bool_constant<T::__fbthrift_cpp2_uses_op_encode> //
+  __fbthrift_cpp2_uses_op_encode();
+
+  template <typename T>
+  static std::bool_constant<T::__fbthrift_cpp2_is_runtime_annotation> //
+  __fbthrift_cpp2_is_runtime_annotation();
 
   template <typename T>
   static const char* __fbthrift_thrift_uri() {
@@ -153,11 +157,10 @@ struct struct_private_access {
   template <typename T>
   static constexpr auto __fbthrift_field_size_v = T::__fbthrift_field_size_v;
 
-  template <typename T>
-  static typename T::__fbthrift_patch_struct __fbthrift_patch_struct();
-
-  template <typename T>
-  using patch_struct = decltype(__fbthrift_patch_struct<T>());
+  template <typename T, typename... Args>
+  static constexpr std::string_view __fbthrift_get_module_name() {
+    return T::template __fbthrift_get_module_name<Args...>();
+  }
 };
 //  TODO(dokwon): Remove all usage of struct_private_access and standardize on
 //  private_access.
@@ -175,23 +178,21 @@ struct IsThriftUnion : std::false_type {};
 
 template <typename T>
 struct IsThriftUnion<T, folly::void_t<typename T::__fbthrift_cpp2_type>>
-    : folly::bool_constant<T::__fbthrift_cpp2_is_union> {};
+    : std::bool_constant<T::__fbthrift_cpp2_is_union> {};
 
 // __fbthrift_clear_terse_fields should be called for a terse struct field
 // before deserialization so that it only clears out terse fields in a terse
 // struct.
 using clear_terse_fields_fn = private_access::clear_terse_fields_fn;
-FOLLY_INLINE_VARIABLE static constexpr clear_terse_fields_fn
-    clear_terse_fields{};
+inline static constexpr clear_terse_fields_fn clear_terse_fields{};
 
-} // namespace st
-} // namespace detail
+} // namespace detail::st
 
 using clear_fn = detail::st::private_access::clear_fn;
-FOLLY_INLINE_VARIABLE constexpr clear_fn clear{};
+inline constexpr clear_fn clear{};
 
 using empty_fn = detail::st::private_access::empty_fn;
-FOLLY_INLINE_VARIABLE static constexpr empty_fn empty{};
+inline static constexpr empty_fn empty{};
 
 // TODO(dokwon): Add apache::thrift::uri support for generated enum types.
 template <typename T>
@@ -210,8 +211,8 @@ constexpr bool is_thrift_union_v =
     apache::thrift::detail::st::IsThriftUnion<T>::value;
 
 template <typename T>
-constexpr bool is_thrift_exception_v = is_thrift_class_v<T>&&
-    std::is_base_of<apache::thrift::TException, T>::value;
+constexpr bool is_thrift_exception_v =
+    is_thrift_class_v<T> && std::is_base_of_v<apache::thrift::TException, T>;
 
 template <typename T>
 constexpr bool is_thrift_struct_v =
@@ -230,7 +231,7 @@ using type_class_of_thrift_class_or_t = //
 template <typename T, typename Fallback>
 using type_class_of_thrift_class_enum_or_t = //
     folly::conditional_t<
-        std::is_enum<T>::value,
+        std::is_enum_v<T>,
         type_class::enumeration,
         type_class_of_thrift_class_or_t<T, Fallback>>;
 
@@ -246,7 +247,7 @@ namespace detail {
 template <typename T>
 struct enum_hash {
   size_t operator()(T t) const {
-    using underlying_t = typename std::underlying_type<T>::type;
+    using underlying_t = std::underlying_type_t<T>;
     return std::hash<underlying_t>()(underlying_t(t));
   }
 };
@@ -267,21 +268,16 @@ template <typename Class, typename T>
 struct is_safe_overload<Class, T> {
   using type = std::integral_constant<
       bool,
-      !std::is_same<
-          Class,
-          typename std::remove_cv<
-              typename std::remove_reference<T>::type>::type>::value>;
+      !std::is_same_v<Class, std::remove_cv_t<std::remove_reference_t<T>>>>;
 };
 
 } // namespace detail
 
 template <typename Class, typename... Args>
-using safe_overload_t = typename std::enable_if<
-    apache::thrift::detail::is_safe_overload<Class, Args...>::type::value>::
-    type;
+using safe_overload_t = std::enable_if_t<
+    apache::thrift::detail::is_safe_overload<Class, Args...>::type::value>;
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #define FBTHRIFT_CPP_DEFINE_MEMBER_INDIRECTION_FN(...)                       \
   struct __fbthrift_cpp2_indirection_fn {                                    \
@@ -295,8 +291,7 @@ using safe_overload_t = typename std::enable_if<
     }                                                                        \
   }
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 template <typename T>
 using detect_indirection_fn_t = typename T::__fbthrift_cpp2_indirection_fn;
@@ -321,7 +316,7 @@ struct apply_indirection_fn {
 };
 } // namespace detail
 
-FOLLY_INLINE_VARIABLE constexpr detail::apply_indirection_fn apply_indirection;
+inline constexpr detail::apply_indirection_fn apply_indirection;
 
 class ExceptionMetadataOverrideBase {
  public:
@@ -445,9 +440,21 @@ void swap_allocators(Alloc& a, Alloc& b) {
   swap_allocators_impl(pocs{}, a, b);
 }
 
+// We identify field quailfier using different types of C++ field_ref. For
+// cpp.ref fields, we can not deduce the field qualifier information.
+namespace qualifier {
+template <class Struct, class Id>
+struct is_cpp_ref_field_optional : std::false_type {
+  static_assert(sizeof(Struct), "Struct must be a complete type.");
+};
+template <class Struct, class Id>
+struct is_cpp_ref_field_terse : std::false_type {
+  static_assert(sizeof(Struct), "Struct must be a complete type.");
+};
+} // namespace qualifier
+
 } // namespace detail
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // #ifndef THRIFT_CPP2_H_

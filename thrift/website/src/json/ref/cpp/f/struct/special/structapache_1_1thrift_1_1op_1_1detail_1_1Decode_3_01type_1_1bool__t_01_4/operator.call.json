@@ -20,6 +20,7 @@
       "definition_html": "void apache::thrift::op::detail::Decode&lt; type::bool_t &gt;::operator()",
       "argsstring_html": "(Protocol &amp;prot, bool &amp;b) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::Decode&lt; type::bool_t &gt;::operator()",
       "param": [
         {
           "type_html": "Protocol &amp;",
@@ -32,11 +33,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "562",
-        "column": "1",
+        "line": "694",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "562",
-        "bodyend": "564"
+        "bodystart": "694",
+        "bodyend": "696"
       },
       "definition": {
         "simple_html": "template &lt;typename Protocol&gt;\nvoid operator()(Protocol&amp; prot, bool&amp; b) const",
@@ -68,6 +69,7 @@
       "definition_html": "void apache::thrift::op::detail::Decode&lt; type::bool_t &gt;::operator()",
       "argsstring_html": "(Protocol &amp;prot, std::vector&lt; bool &gt;::reference t) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::Decode&lt; type::bool_t &gt;::operator()",
       "param": [
         {
           "type_html": "Protocol &amp;",
@@ -80,11 +82,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "567",
-        "column": "1",
+        "line": "699",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "567",
-        "bodyend": "571"
+        "bodystart": "699",
+        "bodyend": "703"
       },
       "definition": {
         "simple_html": "template &lt;typename Protocol&gt;\nvoid operator()(Protocol&amp; prot, std::vector&lt;bool&gt;::reference t) const",
@@ -106,5 +108,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1bool__t_01_4/operator.call",
-  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1bool__t_01_4/operator.call"
+  "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1bool__t_01_4/operator.call",
+  "parent_links": [
+    {
+      "text_html": "Decode&lt; type::bool_t &gt;",
+      "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1bool__t_01_4"
+    }
+  ]
 }

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 import unittest
 from unittest.mock import patch
 
@@ -74,7 +76,7 @@ class AdapterTest(unittest.TestCase):
             ),
         }
         for protocol in PROTOCOLS:
-            for (name, (foo, foo_without_adapters)) in INPUTS.items():
+            for name, (foo, foo_without_adapters) in INPUTS.items():
                 with self.subTest(case=name, protocol=type(protocol).__name__):
                     serialized = Serializer.serialize(protocol, foo)
                     deserialized = Serializer.deserialize(protocol, serialized, Foo())

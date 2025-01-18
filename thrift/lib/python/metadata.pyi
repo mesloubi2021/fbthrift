@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-strict
+
 from enum import Enum
 from typing import (
     Iterator,
@@ -49,6 +51,8 @@ from apache.thrift.metadata.thrift_types import (
 )
 from thrift.python.client import Client
 from thrift.python.exceptions import GeneratedError
+
+# pyre-fixme[21]: Could not find module `thrift.python.server`.
 from thrift.python.server import ServiceInterface
 from thrift.python.types import Enum as ThriftEnumClass, StructOrUnion
 
@@ -204,15 +208,17 @@ class ThriftServiceProxy(Protocol):
 def gen_metadata(cls: Metadata) -> ThriftMetadata: ...
 @overload
 def gen_metadata(
-    cls: Union[StructOrUnion, Type[StructOrUnion]]
+    cls: Union[StructOrUnion, Type[StructOrUnion]],
 ) -> ThriftStructProxy: ...
 @overload
 def gen_metadata(
-    cls: Union[GeneratedError, Type[GeneratedError]]
+    cls: Union[GeneratedError, Type[GeneratedError]],
 ) -> ThriftExceptionProxy: ...
 @overload
 def gen_metadata(
-    cls: Union[ServiceInterface, Type[ServiceInterface], Client, Type[Client]]
+    # pyre-fixme[11]: Annotation `ServiceInterface` is not defined as a type.
+    cls: Union[ServiceInterface, Type[ServiceInterface], Client, Type[Client]],
 ) -> ThriftServiceProxy: ...
 @overload
+# pyre-fixme[43]: Signature of overloaded function `gen_metadata` will never be matched.
 def gen_metadata(cls: Union[ThriftEnumClass, Type[ThriftEnumClass]]) -> ThriftEnum: ...

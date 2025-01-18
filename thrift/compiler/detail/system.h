@@ -16,14 +16,11 @@
 
 #pragma once
 
+#include <filesystem>
 #include <string>
+#include <string_view>
 
-#include <boost/filesystem.hpp>
-
-namespace apache {
-namespace thrift {
-namespace compiler {
-namespace detail {
+namespace apache::thrift::compiler::detail {
 
 // Returns true on a Windows platform, false elsewhere.
 constexpr bool platform_is_windows() {
@@ -41,20 +38,16 @@ constexpr bool platform_is_windows() {
  * @param path The path to append to the `base_path`.
  * @return The absolute path created by appending `path` to `base_path`.
  */
-boost::filesystem::path make_abs_path(
-    const boost::filesystem::path& base_path,
-    const boost::filesystem::path& path);
+std::filesystem::path make_abs_path(
+    const std::filesystem::path& base_path, const std::filesystem::path& path);
 
 /**
  * Formats `path` to include extended length prefix on windows
  *
  * @param path The path to prepend the prefix to (must be an absolute path)
- * @return On Windows, the boost::filesystem::path created by prepending "\\?\"
- * to `path` if not already so. Otherwise, `boost::filesystem::path{path}`.
+ * @return On Windows, the std::filesystem::path created by prepending "\\?\"
+ * to `path` if not already so. Otherwise, `std::filesystem::path{path}`.
  */
-boost::filesystem::path format_abs_path(const std::string& path);
+std::filesystem::path format_abs_path(std::string_view path);
 
-} // namespace detail
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler::detail

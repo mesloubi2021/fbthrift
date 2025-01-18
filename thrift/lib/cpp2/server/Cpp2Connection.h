@@ -31,6 +31,7 @@
 #include <thrift/lib/cpp2/server/Cpp2ConnContext.h>
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
 #include <thrift/lib/cpp2/server/LoggingEvent.h>
+#include <thrift/lib/cpp2/server/Overload.h>
 #include <thrift/lib/cpp2/server/RequestsRegistry.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <thrift/lib/cpp2/transport/core/RequestStateMachine.h>
@@ -38,11 +39,7 @@
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 #include <wangle/acceptor/ManagedConnection.h>
 
-namespace apache {
-namespace thrift {
-
-constexpr folly::StringPiece kQueueLatencyHeader("queue_latency_us");
-constexpr folly::StringPiece kProcessLatencyHeader("process_latency_us");
+namespace apache::thrift {
 
 /**
  * Represents a connection that is handled via libevent. This connection
@@ -99,11 +96,18 @@ class Cpp2Connection : public HeaderServerChannel::Callback,
     this_ = conn;
     if (tinfo) {
       if (auto* observer = worker_->getServer()->getObserver()) {
-        observer->connAccepted(*tinfo);
+        observer->connAccepted(
+            *tinfo,
+            server::TServerObserver::ConnectionInfo(
+                reinterpret_cast<uint64_t>(transport_.get()),
+                context_.getSecurityProtocol()));
         connectionAdded_ = true;
       }
     }
   }
+
+  Cpp2ConnContext& getContext() noexcept { return context_; }
+  const Cpp2ConnContext& getContext() const noexcept { return context_; }
 
   const folly::SocketAddress& getPeerAddress() const noexcept override {
     return *(context_.getPeerAddress());
@@ -161,8 +165,32 @@ class Cpp2Connection : public HeaderServerChannel::Callback,
     friend class QueueTimeout;
     friend class TaskTimeout;
 
+    using ServiceInterceptorsStorage =
+        apache::thrift::detail::ServiceInterceptorRequestStorageContext;
+    using ColocatedConstructionParams =
+        RequestsRegistry::ColocatedData<ServiceInterceptorsStorage>;
+
+    template <typename... Args>
+    static auto colocateWithDebugStub(
+        RequestsRegistry::DebugStubColocator& alloc,
+        server::ServerConfigs& server,
+        Args&...) {
+      auto numServiceInterceptors = server.getServiceInterceptors().size();
+      using RequestStorage =
+          apache::thrift::detail::ServiceInterceptorOnRequestStorage;
+      return [numServiceInterceptors,
+              onRequest = alloc.array<RequestStorage>(numServiceInterceptors)](
+                 auto make) mutable {
+        return ServiceInterceptorsStorage{
+            numServiceInterceptors,
+            make(std::move(onRequest), [] { return RequestStorage(); }),
+        };
+      };
+    }
+
     Cpp2Request(
-        RequestsRegistry::DebugStub& debugStubToInit,
+        ColocatedConstructionParams colocationParams,
+        apache::thrift::ThriftServer& server,
         std::unique_ptr<HeaderServerChannel::HeaderRequest> req,
         std::shared_ptr<folly::RequestContext> rctx,
         std::shared_ptr<Cpp2Connection> con,
@@ -190,7 +218,8 @@ class Cpp2Connection : public HeaderServerChannel::Callback,
         MessageChannel::SendCallback* notUsed = nullptr) override;
     void sendErrorWrapped(
         folly::exception_wrapper ew, std::string exCode) override;
-    void sendQueueTimeoutResponse() override;
+    void sendQueueTimeoutResponse(
+        bool interactionIsTerminated = false) override;
     void sendTimeoutResponse(
         apache::thrift::HeaderServerChannel::HeaderRequest::TimeoutResponseType
             responseType);
@@ -237,11 +266,7 @@ class Cpp2Connection : public HeaderServerChannel::Callback,
       queueTimeout_.cancelTimeout();
       taskTimeout_.cancelTimeout();
     }
-    void markProcessEnd(
-        transport::THeader::StringToStringMap* newHeaders = nullptr);
-    void setLatencyHeaders(
-        const apache::thrift::server::TServerObserver::CallTimestamps&,
-        transport::THeader::StringToStringMap* newHeaders = nullptr) const;
+    void markProcessEnd();
     void setLatencyHeader(
         const std::string& key,
         const std::string& value,
@@ -282,19 +307,24 @@ class Cpp2Connection : public HeaderServerChannel::Callback,
       TApplicationException::TApplicationExceptionType reason,
       const std::string& errorCode,
       const char* comment);
+  void killRequestServerOverloaded(
+      std::unique_ptr<HeaderServerChannel::HeaderRequest> req,
+      OverloadResult&& overloadResult);
   void disconnect(const char* comment) noexcept;
 
   void setServerHeaders(transport::THeader::StringToStringMap& writeHeaders);
   void setServerHeaders(HeaderServerChannel::HeaderRequest& request);
+
+  void invokeServiceInterceptorsOnConnectionClosed() noexcept;
 
   friend class Cpp2Request;
 
   std::shared_ptr<Cpp2Connection> this_;
 
   bool connectionAdded_{false};
+  std::unique_ptr<MessageChannel::SendCallback> upgradeToRocketCallback_{};
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // #ifndef THRIFT_ASYNC_CPP2CONNECTION_H_

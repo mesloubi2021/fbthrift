@@ -29,6 +29,7 @@
 #include <folly/Range.h>
 #include <folly/Traits.h>
 #include <folly/Utility.h>
+#include <folly/container/Reserve.h>
 #include <folly/container/View.h>
 #include <thrift/lib/cpp/protocol/TType.h>
 #include <thrift/lib/cpp2/FieldRefTraits.h>
@@ -37,9 +38,7 @@
 #include <thrift/lib/cpp2/protocol/TableBasedForwardTypes.h>
 #include <thrift/lib/cpp2/protocol/detail/protocol_methods.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 using FieldID = std::int16_t;
 
@@ -89,7 +88,7 @@ enum class FieldQualifier {
   Terse,
 };
 
-struct FieldInfo {
+struct FieldInfo final {
   // Field id in thrift definition.
   FieldID id;
 
@@ -102,28 +101,89 @@ struct FieldInfo {
   // Offset into the data member of the field in the struct.
   ptrdiff_t memberOffset;
 
-  // 0 means that the field does not have __isset.
+  /**
+   * If the owning `StructInfo` specifies a `getIsset` and/or `setIsset`
+   * function(s), then this value will be passed as the `offset` argument.
+   *
+   * For either operation, if the owning `StructInfo` does not have a function
+   * pointer set, then this field should hold the offset (in bytes) from the
+   * beginning of the corresponding struct object, of memory that can be
+   * reintepreted as a `bool` holding the "isset" information for this field.
+   *
+   * If the owning `StructInfo` is a union, this field is set to 0 (and, in
+   * practice, never used).
+   */
   ptrdiff_t issetOffset;
 
   const TypeInfo* typeInfo;
 };
 
-struct UnionExt {
-  // Clear union before setting a field.
+struct UnionExt final {
+  /**
+   * Clears the given union data object.
+   *
+   * Should be called prior to setting any field.
+   */
   VoidFuncPtr clear;
 
+  /**
+   * Offset (in bytes) from the start of the corresponding union data object to
+   * the `int` memory holding the ID of the currently active (i.e., present)
+   * field.
+   *
+   * This is used (and should be non-zero) iff `getActiveId` or `setActiveId`
+   * below are nullptr, in which case the value of the active field ID will be
+   * written and read directly into that memory.
+   */
   ptrdiff_t unionTypeOffset;
-  int (*getActiveId)(const void*);
-  void (*setActiveId)(void*, int);
 
-  // Value initializes using placement new into the member.
-  // Generated code should order this list by fields key order.
+  /**
+   * Returns the ID of the currently active field for the given union data
+   * object, or 0 if none.
+   *
+   * If this (or `setActiveId`) are non-nullptr, `unionTypeOffset` is not used.
+   */
+  int (*getActiveId)(const void* /* object */);
+
+  /**
+   * Sets the active field ID of the union data `object` to the given value.
+   *
+   * If this (or `getActiveId`) are non-nullptr, `unionTypeOffset` is not used.
+   */
+  void (*setActiveId)(void* /* object */, int /* fieldId */);
+
+  FOLLY_PUSH_WARNING
+  FOLLY_CLANG_DISABLE_WARNING("-Wc99-extensions")
+
+  /**
+   * Optional field member initialization methods.
+   *
+   * This array can be empty (i.e., `initMember[0] == nullptr`), in which case
+   * it is ignored.
+   *
+   * If not empty, this array must have exactly one (function pointer) value for
+   * each field in the union, ordered by field id (i.e., the index of the
+   * function for a given field in this array is the same as in the
+   * corresponding `StructInfo.fieldInfos`).  These functions will be called
+   * when deserializing a Thrift union (whose `StructInfo.unionExt` points to
+   * this), with a single argument: a (type-erased, i.e. `void*`) pointer to the
+   * value for this field.
+   *
+   * In practice, when this array is populated, it is done so by leveraging the
+   * `placementNewUnionValue()` template methods, to default-create new values
+   * directly in the given (allocated) memory (via placement-new).
+   */
   VoidFuncPtr initMember[];
+
+  FOLLY_POP_WARNING
 };
 
-// Templatized version to const initialize with the exact array length.
+/**
+ * Convenience template class, to initialize a `UnionExt` with the correct
+ * layout for the number of specified fields.
+ */
 template <std::int16_t NumFields>
-struct UnionExtN {
+struct UnionExtN final {
   VoidFuncPtr clear;
   ptrdiff_t unionTypeOffset;
   int (*getActiveId)(const void*);
@@ -131,26 +191,111 @@ struct UnionExtN {
   VoidFuncPtr initMember[NumFields];
 };
 
-struct StructInfo {
+/**
+ * Holds all information and operations required to (de)serialize a type-erased
+ * "target object" corresponding to a structured Thrift type (i.e., a Thrift
+ * struct, union or exception).
+ *
+ * Instances of this type are core to the "Table-Based" serialization logic, as
+ * they bridge the gap between the generic (de)serialization logic and the
+ * type-specific API that is unknown to the former (since the "target object"
+ * is a type-erased `void*`).
+ */
+struct StructInfo final {
+  /**
+   * Number of fields in `fieldInfos`.
+   */
   std::int16_t numFields;
+
+  /**
+   * Name of this structured type.
+   */
   const char* name;
-  // This should be set to nullptr when not a union.
+
+  /**
+   * Information and operations specific to Thrift unions, if and only if the
+   * type of the target object for this `StructInfo` is a Thrift union.
+   *
+   * Otherwise (i.e., if the target object type is not a Thrift union), this
+   * field must be `nullptr`.
+   */
   const UnionExt* unionExt = nullptr;
-  bool (*getIsset)(const void*, ptrdiff_t);
-  void (*setIsset)(void*, ptrdiff_t, bool);
+
+  /**
+   * Returns the value of the "isset" flag at the given `offset` for the given
+   * `targetObject`.
+   *
+   * This function can only be present (i.e., not nullptr) if this StructInfo
+   * does NOT correspond to a Thrift union (i.e., `unionExt` is null).
+   *
+   * @param object A (type-erased) target object whose actual type corresponds
+   *        to this `StructInfo`.
+   *
+   * @param offset of the isset flag to check for a given field, corresponding
+   *        to the value of `FieldInfo::issetOffset` for that field.
+   */
+  bool (*getIsset)(const void* /* targetObject */, ptrdiff_t /* offset */);
+
+  /**
+   * Analoguous to `getIsset`, but sets the flag to the given value.
+   */
+  void (*setIsset)(
+      void* /* targetObject */, ptrdiff_t /* offset */, bool /* set */);
+
+  /**
+   * If set, this function returns the base address of a contiguous area of
+   * memory from which the values of the fields for the given Thrift struct
+   * `targetObject` can be retrieved (see below).
+   *
+   * If not set, this is equivalent to returning the address of the input
+   * argument itself (i.e., `targetObject`).
+   *
+   * The value of a specific field for a given target object is accessed as
+   * follows:
+   *   1. Compute the "field values base pointer" by calling the method below
+   *      (i.e., `StructInfo.getFieldValuesBasePtr()`) with the target object
+   *      as argument.
+   *   2. Compute the specific "field value pointer" by adding the value of
+   *      `FieldInfo.memberOffset` (where `FieldInfo` corresponds to the desired
+   *      field from this `StructInfo.fieldInfos[]`) to the previously obtained
+   *      "base pointer", i.e.:
+   *      ```
+   *      fieldValuePtr = fieldValuesBasePtr + fieldInfo.memberOffset
+   *      ```
+   *   3. Finally, call the `get` or `set` methods of the corresponding
+   *      `TypeInfo`, passing the previously obtained `fieldValuePtr` as
+   *      argument, i.e.:
+   *      ```
+   *      fieldInfo.typeInfo->get(fieldValuePtr, *fieldInfo.typeInfo);
+   *      ```
+   */
+  const void* (*getFieldValuesBasePtr)(const void* /* targetObject */) =
+      nullptr;
+
   // Use for other languages to pass in additional information.
   const void* customExt;
+
+  FOLLY_PUSH_WARNING
+  FOLLY_CLANG_DISABLE_WARNING("-Wc99-extensions")
+  /**
+   * Holds `numFields` entries.
+   *
+   * The memory for these entries is sequentially allocated with instances of
+   * `StructInfo`, so this field MUST be the last in this struct.
+   */
   FieldInfo fieldInfos[];
+  FOLLY_POP_WARNING
 };
 
 // Templatized version to const initialize with the exact array length.
 template <std::int16_t NumFields>
-struct StructInfoN {
+struct StructInfoN final {
   std::int16_t numFields = NumFields;
   const char* name;
   const void* unionExt = nullptr;
   bool (*getIsset)(const void*, ptrdiff_t);
   void (*setIsset)(void*, ptrdiff_t, bool);
+  const void* (*getFieldValuesBasePtr)(const void*);
   const void* customExt;
   FieldInfo fieldInfos[NumFields];
 };
@@ -161,7 +306,7 @@ FOLLY_ERASE const StructInfo& toStructInfo(
   return reinterpret_cast<const StructInfo&>(templatizedInfo);
 }
 
-struct ListFieldExt {
+struct ListFieldExt final {
   const TypeInfo* valInfo;
   std::uint32_t (*size)(const void* object);
   void (*clear)(void* object);
@@ -180,7 +325,7 @@ struct ListFieldExt {
       size_t (*writer)(const void* context, const void* val));
 };
 
-struct SetFieldExt {
+struct SetFieldExt final {
   const TypeInfo* valInfo;
   std::uint32_t (*size)(const void* object);
   void (*clear)(void* object);
@@ -200,7 +345,7 @@ struct SetFieldExt {
       size_t (*writer)(const void* context, const void* val));
 };
 
-struct MapFieldExt {
+struct MapFieldExt final {
   const TypeInfo* keyInfo;
   const TypeInfo* valInfo;
   std::uint32_t (*size)(const void* object);
@@ -229,6 +374,9 @@ void clearUnion(void* object) {
   apache::thrift::clear(*reinterpret_cast<ThriftUnion*>(object));
 }
 
+/**
+ * Holds a thrift value in its default target type for cpp2.
+ */
 union ThriftValue {
   explicit ThriftValue(bool value) : boolValue(value) {}
   explicit ThriftValue(std::int8_t value) : int8Value(value) {}
@@ -456,7 +604,7 @@ void readMap(
     void (*keyReader)(const void* /*context*/, void* /*key*/),
     void (*valueReader)(const void* /*context*/, void* /*val*/)) {
   Map& out = *static_cast<Map*>(object);
-  ::apache::thrift::detail::pm::reserve_if_possible(&out, mapSize);
+  folly::reserve_if_available(out, mapSize);
 
   for (auto i = mapSize; i--;) {
     typename Map::key_type key;
@@ -492,8 +640,8 @@ void readKnownLengthSet(
     void* object,
     std::uint32_t setSize,
     void (*reader)(const void* /*context*/, void* /*val*/)) {
-  ::apache::thrift::detail::pm::reserve_if_possible(
-      static_cast<Set*>(object), setSize);
+  Set& out = *static_cast<Set*>(object);
+  folly::reserve_if_available(out, setSize);
 
   while (setSize--) {
     consumeSetElem<Set>(context, object, reader);
@@ -509,8 +657,8 @@ void readList(
   List& out = *static_cast<List*>(object);
   using traits = std::iterator_traits<typename List::iterator>;
   using cat = typename traits::iterator_category;
-  if (::apache::thrift::detail::pm::reserve_if_possible(&out, listSize) ||
-      std::is_same<cat, std::bidirectional_iterator_tag>::value) {
+  if (folly::reserve_if_available(out, listSize) ||
+      std::is_same_v<cat, std::bidirectional_iterator_tag>) {
     while (listSize--) {
       consumeListElem<List>(context, object, reader);
     }
@@ -712,13 +860,11 @@ constexpr ptrdiff_t issetOffset(std::int16_t fieldIndex);
 template <class ThriftUnion>
 constexpr ptrdiff_t unionTypeOffset();
 
-template <class Protocol_>
-void read(Protocol_* iprot, const StructInfo& structInfo, void* object);
+template <class TProtocol>
+void read(TProtocol* iprot, const StructInfo& structInfo, void* targetObject);
 
-template <class Protocol_>
+template <class TProtocol>
 size_t write(
-    Protocol_* iprot, const StructInfo& structInfo, const void* object);
+    TProtocol* iprot, const StructInfo& structInfo, const void* targetObject);
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

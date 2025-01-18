@@ -19,9 +19,7 @@
 #include <folly/Traits.h>
 #include <thrift/lib/cpp2/op/detail/Copy.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
+namespace apache::thrift::op {
 
 // TODO: move to Create.h
 /// Copies from the src field to the dst field.
@@ -34,8 +32,6 @@ namespace op {
 /// * copy(src.shared_ptr_ref(), dst.shared_ptr_ref())
 ///   // If src is nullptr, it sets dst to nullptr, otherwise shares the
 ///   pointer.
-FOLLY_INLINE_VARIABLE constexpr detail::Copy copy{};
+inline constexpr detail::Copy copy{};
 
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op

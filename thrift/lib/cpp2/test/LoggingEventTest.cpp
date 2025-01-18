@@ -51,6 +51,10 @@ constexpr std::string_view kNewConnectionRocket = "new_connection.rocket";
 constexpr std::string_view kNewConnectionHeader = "new_connection.header";
 constexpr std::string_view kRocketSetup = "rocket.setup";
 constexpr std::string_view kTransportMetadata = "transport.metadata";
+constexpr std::string_view kEnqueuedForAcceptorCallback =
+    "connection_enqueued_acceptor";
+constexpr std::string_view kDequeuedForAcceptorCallback =
+    "connection_dequeued_acceptor";
 
 using namespace apache::thrift;
 
@@ -91,6 +95,10 @@ class TestEventRegistry : public LoggingEventRegistry {
     connectionEventMap_[kRocketSetup] =
         makeHandler<TestConnectionEventHandler>();
     connectionEventMap_[kTransportMetadata] =
+        makeHandler<TestConnectionEventHandler>();
+    connectionEventMap_[kEnqueuedForAcceptorCallback] =
+        makeHandler<TestConnectionEventHandler>();
+    connectionEventMap_[kDequeuedForAcceptorCallback] =
         makeHandler<TestConnectionEventHandler>();
     serverTrackerMap_
         [apache::thrift::instrumentation::kThriftServerTrackerKey] =
@@ -163,7 +171,8 @@ class HeaderOrRocketTest {
   auto makeClient(ScopedServerInterfaceThread& runner) {
     if (transport == TransportType::Header) {
       return runner.newClient<ClientT>(nullptr, [&](auto socket) mutable {
-        return HeaderClientChannel::newChannel(std::move(socket));
+        return HeaderClientChannel::newChannel(
+            HeaderClientChannel::WithoutRocketUpgrade{}, std::move(socket));
       });
     } else {
       return runner.newClient<ClientT>(nullptr, [&](auto socket) mutable {
@@ -176,8 +185,6 @@ class HeaderOrRocketTest {
 template <typename T>
 class LoggingEventTest : public testing::Test {
  protected:
-  void SetUp() override { apache::thrift::useMockLoggingEventRegistry(); }
-
   template <typename H>
   T& fetchHandler(
       H& (LoggingEventRegistry::*method)(std::string_view) const,
@@ -191,8 +198,8 @@ class LoggingEventTest : public testing::Test {
   }
 
   void TearDown() override {
-    for (auto& h : handlers_) {
-      ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(h.second));
+    for (auto& [_, handler] : handlers_) {
+      ASSERT_TRUE(testing::Mock::VerifyAndClearExpectations(handler));
     }
   }
 

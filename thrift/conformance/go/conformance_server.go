@@ -25,11 +25,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/golang/glog"
-
-	"libfb/go/thriftbase"
 
 	thrift_any "thrift/conformance/any"
 	"thrift/conformance/conformance"
@@ -135,37 +132,36 @@ func main() {
 	// Startup thrift server
 	handler := &dataConformanceServiceHandler{registry}
 	proc := conformance.NewConformanceServiceProcessor(handler)
-	ts, err := thriftbase.ServerContext(
+	ts, addr, err := newServer(
 		proc,
-		thriftbase.ServerSSLPolicy(thriftbase.SSLPolicyDisabled),
 		// Ports must be dynamically allocated to prevent any conflicts.
 		// Allocating a free port is usually done by setting the port number as zero.
 		// Operating system should assign a free port to the application.
-		thriftbase.BindAddr("[::]:0"),
+		"[::]:0",
 	)
 	if err != nil {
 		glog.Fatalf("failed to start server: %v", err)
 	}
+	fmt.Println(addr.(*net.TCPAddr).Port)
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		err := ts.Serve()
+		err := ts.ServeContext(ctx)
 		if err != nil {
 			glog.Fatalf("failed to start server")
 		}
 	}()
 
-	// When server is started, it must print the listening port to the standard output console.
-	for i := 1; i < 10; i++ {
-		// Unfortunately there is currently no way to tell
-		// if the server has started listening :(
-		time.Sleep(1 * time.Second)
-		addr := ts.ServerTransport().Addr()
-		if addr != nil {
-			fmt.Println(addr.(*net.TCPAddr).Port)
-			break
-		}
-	}
 	<-sigc
+	cancel()
 	os.Exit(0)
+}
+
+func newServer(processor thrift.Processor, addr string) (thrift.Server, net.Addr, error) {
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	return thrift.NewServer(processor, listener, thrift.TransportIDUpgradeToRocket), listener.Addr(), nil
 }
 
 type dataConformanceServiceHandler struct {
@@ -191,19 +187,19 @@ func (h *dataConformanceServiceHandler) RoundTrip(ctx context.Context, roundTrip
 
 // newRoundTripResponse wraps the response thrift.Any inside a RoundTripResponse.
 func newRoundTripResponse(response *thrift_any.Any) *serialization.RoundTripResponse {
-	resp := serialization.NewRoundTripResponseBuilder()
-	resp.Value(response)
-	return resp.Emit()
+	resp := serialization.NewRoundTripResponse().
+		SetValue(response)
+	return resp
 }
 
 // newResponse creates a new response Any from the request Any using new serialized data.
 func newResponse(request *thrift_any.Any, data []byte) *thrift_any.Any {
-	respAny := thrift_any.NewAnyBuilder()
-	respAny.Data(data)
-	respAny.CustomProtocol(request.CustomProtocol)
-	respAny.Protocol(request.Protocol)
-	respAny.Type(request.Type)
-	return respAny.Emit()
+	respAny := thrift_any.NewAny().
+		SetData(data).
+		SetCustomProtocol(request.CustomProtocol).
+		SetProtocol(request.Protocol).
+		SetType(request.Type)
+	return respAny
 }
 
 // serialize serializes a thrift.Struct with a target protocol to be stored inside a thrift.Any.
@@ -261,41 +257,36 @@ func deserialize(registry *typeRegistry, value *thrift_any.Any) (thrift.Struct, 
 
 // newSerializer initializes the appropriate serializer for the specific protocol.
 func newSerializer(protoc *protocol.ProtocolStruct) (*thrift.Serializer, error) {
-	factory, err := getProtocolFactory(protoc)
-	if err != nil {
-		return nil, err
+	switch protoc.GetStandard() {
+	case protocol.StandardProtocol_Custom:
+	case protocol.StandardProtocol_Binary:
+		return thrift.NewBinarySerializer(), nil
+	case protocol.StandardProtocol_Compact:
+		return thrift.NewCompactSerializer(), nil
+	case protocol.StandardProtocol_Json:
+		return thrift.NewSimpleJSONSerializer(), nil
+	case protocol.StandardProtocol_SimpleJson:
+		return thrift.NewCompactJSONSerializer(), nil
 	}
-	s := thrift.NewSerializer()
-	s.Protocol = factory.GetProtocol(s.Transport)
-	return s, nil
+	// default value in case the protocol is unknown, as seen in the java implementation of conformance tests.
+	return thrift.NewCompactSerializer(), nil
 }
 
 // newDeserializer initializes the appropriate deserializer for the specific protocol.
 func newDeserializer(protoc *protocol.ProtocolStruct) (*thrift.Deserializer, error) {
-	factory, err := getProtocolFactory(protoc)
-	if err != nil {
-		return nil, err
-	}
-	d := thrift.NewDeserializer()
-	d.Protocol = factory.GetProtocol(d.Transport)
-	return d, nil
-}
-
-// getProtocolFactory is given a target protocol, which it uses to return a protocol factory that is used to initialise a Serializer or Deserializer.
-func getProtocolFactory(protoc *protocol.ProtocolStruct) (thrift.ProtocolFactory, error) {
 	switch protoc.GetStandard() {
 	case protocol.StandardProtocol_Custom:
 	case protocol.StandardProtocol_Binary:
-		return thrift.NewBinaryProtocolFactoryDefault(), nil
+		return thrift.NewBinaryDeserializer(), nil
 	case protocol.StandardProtocol_Compact:
-		return thrift.NewCompactProtocolFactory(), nil
+		return thrift.NewCompactDeserializer(), nil
 	case protocol.StandardProtocol_Json:
-		return thrift.NewSimpleJSONProtocolFactory(), nil
+		return thrift.NewSimpleJSONDeserializer(), nil
 	case protocol.StandardProtocol_SimpleJson:
-		return thrift.NewJSONProtocolFactory(), nil
+		return thrift.NewCompactJSONDeserializer(), nil
 	}
 	// default value in case the protocol is unknown, as seen in the java implementation of conformance tests.
-	return thrift.NewCompactProtocolFactory(), nil
+	return thrift.NewCompactDeserializer(), nil
 }
 
 // getTargetProtocol returns a consistent target protocol in the ProtocolStruct, whether the target protocol was set or not.

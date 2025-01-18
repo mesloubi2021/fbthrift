@@ -17,9 +17,53 @@
 package thrift
 
 import (
+	"context"
+	"errors"
+	"net"
 	"testing"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/dummy"
 )
 
-func TestNothing(t *testing.T) {
+func TestServerCancellation(t *testing.T) {
+	runCancellationTestFunc := func(t *testing.T, serverTransport TransportID) {
+		listener, err := net.Listen("tcp", "[::]:0")
+		if err != nil {
+			t.Fatalf("could not create listener: %s", err)
+		}
+		addr := listener.Addr()
+		t.Logf("Server listening on %v", addr)
 
+		processor := dummy.NewDummyProcessor(&dummy.DummyHandler{})
+		server := NewServer(processor, listener, serverTransport)
+
+		serverCtx, serverCancel := context.WithCancel(context.Background())
+		var serverEG errgroup.Group
+		serverEG.Go(func() error {
+			return server.ServeContext(serverCtx)
+		})
+
+		// Let the server start up and get to the accept loop.
+		time.Sleep(time.Second)
+
+		// Shut down server.
+		serverCancel()
+		err = serverEG.Wait()
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("unexpected error in ServeContext: %v", err)
+		}
+	}
+
+	t.Run("NewServer/Header", func(t *testing.T) {
+		runCancellationTestFunc(t, TransportIDHeader)
+	})
+	t.Run("NewServer/UpgradeToRocket", func(t *testing.T) {
+		runCancellationTestFunc(t, TransportIDUpgradeToRocket)
+	})
+	t.Run("NewServer/Rocket", func(t *testing.T) {
+		runCancellationTestFunc(t, TransportIDRocket)
+	})
 }

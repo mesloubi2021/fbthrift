@@ -21,6 +21,7 @@
       "definition_html": "void apache::thrift::op::detail::ListPatch&lt; Patch &gt;::push_back",
       "argsstring_html": "(U &amp;&amp;val)",
       "name_html": "push_back",
+      "qualifiedname_html": "apache::thrift::op::detail::ListPatch::push_back",
       "param": [
         {
           "type_html": "U &amp;&amp;",
@@ -30,7 +31,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
         "line": "94",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
         "bodystart": "94",
         "bodyend": "96"
@@ -58,5 +59,11 @@
   "brief_html": "<p>Appends the given element value. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/push_back",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/push_back"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/ListPatch/push_back",
+  "parent_links": [
+    {
+      "text_html": "ListPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/ListPatch"
+    }
+  ]
 }

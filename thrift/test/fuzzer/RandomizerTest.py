@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import itertools
 import math
 import unittest
 
-import six
-import six.moves as sm
 import thrift.util.randomizer as randomizer
 from fuzz import ttypes
 from thrift import Thrift
@@ -39,7 +39,7 @@ class TestBoolRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"p_true": 1.0}
         gen = self.get_randomizer(Thrift.TType.BOOL, None, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertTrue(gen.generate())
 
     def test_always_false(self):
@@ -47,7 +47,7 @@ class TestBoolRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"p_true": 0.0}
         gen = self.get_randomizer(Thrift.TType.BOOL, None, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertFalse(gen.generate())
 
     def test_seeded(self):
@@ -55,7 +55,7 @@ class TestBoolRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"seeds": [True], "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(Thrift.TType.BOOL, None, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertTrue(gen.generate())
 
     def test_int_seeded(self):
@@ -63,7 +63,7 @@ class TestBoolRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"seeds": [1], "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(Thrift.TType.BOOL, None, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertTrue(gen.generate())
 
 
@@ -73,7 +73,7 @@ class TestEnumRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"p_invalid": 0}
         gen = self.get_randomizer(Thrift.TType.I32, ttypes.Color, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertIn(gen.generate(), ttypes.Color._VALUES_TO_NAMES)
 
     def test_never_valid(self):
@@ -81,7 +81,7 @@ class TestEnumRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"p_invalid": 1}
         gen = self.get_randomizer(Thrift.TType.I32, ttypes.Color, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             self.assertNotIn(gen.generate(), ttypes.Color._VALUES_TO_NAMES)
 
     def test_choices(self):
@@ -90,7 +90,7 @@ class TestEnumRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"choices": choices}
         gen = self.get_randomizer(Thrift.TType.I32, ttypes.Color, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             name = ttypes.Color._VALUES_TO_NAMES[val]
             self.assertIn(name, choices)
@@ -101,7 +101,7 @@ class TestEnumRandomizer(unittest.TestCase, TestRandomizer):
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(Thrift.TType.I32, ttypes.Color, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             name = ttypes.Color._VALUES_TO_NAMES[val]
             self.assertIn(name, seeds)
@@ -157,7 +157,7 @@ class TestIntRandomizer(TestRandomizer):
         min_ = self.min
         max_ = self.max
         gen = self.get_randomizer(ttype, None, {})
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertGreaterEqual(val, min_)
             self.assertLessEqual(val, max_)
@@ -171,9 +171,9 @@ class TestIntRandomizer(TestRandomizer):
         constraints = {"choices": [constant]}
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            self.assertEquals(val, constant)
+            self.assertEqual(val, constant)
 
     def testChoices(self):
         cls = self.__class__
@@ -184,7 +184,7 @@ class TestIntRandomizer(TestRandomizer):
         constraints = {"choices": choices}
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, choices)
 
@@ -197,7 +197,7 @@ class TestIntRandomizer(TestRandomizer):
         constraints = {"range": range_}
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertGreaterEqual(val, range_[0])
             self.assertLessEqual(val, range_[1])
@@ -212,7 +212,7 @@ class TestIntRandomizer(TestRandomizer):
         constraints = {"range": range_, "choices": choices}
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, choices)
 
@@ -225,7 +225,7 @@ class TestIntRandomizer(TestRandomizer):
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 0}
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -246,7 +246,7 @@ class TestIntRandomizer(TestRandomizer):
         }
 
         gen = self.get_randomizer(ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertGreaterEqual(val, min_)
             self.assertLessEqual(val, max_)
@@ -282,7 +282,7 @@ class TestFloatRandomizer(TestRandomizer):
         cls = self.__class__
         constraints = {"p_zero": 1, "p_unreal": 0}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertEqual(val, 0.0)
 
@@ -292,7 +292,7 @@ class TestFloatRandomizer(TestRandomizer):
             "p_zero": 0,
         }
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertNotEqual(val, 0.0)
 
@@ -300,7 +300,7 @@ class TestFloatRandomizer(TestRandomizer):
         cls = self.__class__
         constraints = {"p_unreal": 1}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertTrue(math.isnan(val) or math.isinf(val))
 
@@ -308,7 +308,7 @@ class TestFloatRandomizer(TestRandomizer):
         cls = self.__class__
         constraints = {"p_unreal": 0}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertFalse(math.isnan(val) or math.isinf(val))
 
@@ -317,16 +317,16 @@ class TestFloatRandomizer(TestRandomizer):
         constant = 77.2
         constraints = {"mean": constant, "std_deviation": 0, "p_unreal": 0, "p_zero": 0}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            self.assertEquals(val, constant)
+            self.assertEqual(val, constant)
 
     def testChoices(self):
         cls = self.__class__
         choices = [float("-inf"), 0.0, 13.37]
         constraints = {"choices": choices}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, choices)
 
@@ -335,7 +335,7 @@ class TestFloatRandomizer(TestRandomizer):
         seeds = [float("-inf"), 0.0, 13.37]
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -344,7 +344,7 @@ class TestFloatRandomizer(TestRandomizer):
         seeds = [1, 2, 3]
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(self.randomizer_cls.ttype, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -365,7 +365,7 @@ class TestStringRandomizer(TestRandomizer, unittest.TestCase):
         ascii_min, ascii_max = randomizer.StringRandomizer.ascii_range
 
         gen = self.get_randomizer(Thrift.TType.STRING, None, {})
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             for char in val:
                 self.assertTrue(ascii_min <= ord(char) <= ascii_max)
@@ -375,10 +375,10 @@ class TestStringRandomizer(TestRandomizer, unittest.TestCase):
 
         constraints = {"mean_length": 0}
         gen = self.get_randomizer(Thrift.TType.STRING, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             for _char in val:
-                self.assertEquals(0, len(val))
+                self.assertEqual(0, len(val))
 
     def testChoices(self):
         cls = self.__class__
@@ -386,7 +386,7 @@ class TestStringRandomizer(TestRandomizer, unittest.TestCase):
         choices = ["foo", "bar"]
         constraints = {"choices": choices}
         gen = self.get_randomizer(Thrift.TType.STRING, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, choices)
 
@@ -396,7 +396,7 @@ class TestStringRandomizer(TestRandomizer, unittest.TestCase):
         seeds = ["foo", "bar"]
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 0}
         gen = self.get_randomizer(Thrift.TType.STRING, None, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -469,9 +469,9 @@ class TestListRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            self.assertEquals(len(val), 0)
+            self.assertEqual(len(val), 0)
 
     def testMaxLength(self):
         cls = self.__class__
@@ -485,7 +485,7 @@ class TestListRandomizer(TestRandomizer, unittest.TestCase):
         # Test to make sure that max length is enforced.
         #
         # Generate a lot of lists that should never be over 99 long
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertLessEqual(len(val), 99)
 
@@ -498,7 +498,7 @@ class TestListRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             for elem in val:
                 self.assertFalse(elem)
@@ -514,7 +514,7 @@ class TestListRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -534,7 +534,7 @@ class TestListRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertTrue(
                 cls.is_fuzzed(seeds, val), msg="val %s not generated by fuzzing" % val
@@ -551,9 +551,9 @@ class TestSetRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            self.assertEquals(len(val), 0)
+            self.assertEqual(len(val), 0)
 
     def testElementConstraints(self):
         cls = self.__class__
@@ -564,7 +564,7 @@ class TestSetRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             for elem in val:
                 self.assertFalse(elem)
@@ -580,7 +580,7 @@ class TestSetRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -595,9 +595,9 @@ class TestMapRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            self.assertEquals(len(val), 0)
+            self.assertEqual(len(val), 0)
 
     def testKeyConstraints(self):
         cls = self.__class__
@@ -608,7 +608,7 @@ class TestMapRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             for elem in val:
                 self.assertFalse(elem)
@@ -622,9 +622,9 @@ class TestMapRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
-            for elem in six.itervalues(val):
+            for elem in val.values():
                 self.assertIn(elem, ttypes.Color._VALUES_TO_NAMES)
 
     def testSeeded(self):
@@ -638,7 +638,7 @@ class TestMapRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.get_randomizer(ttype, spec_args, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIn(val, seeds)
 
@@ -665,7 +665,7 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(ttypes.StructWithOptionals, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNone(val.a)
@@ -682,7 +682,7 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(ttypes.StructWithOptionals, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertTrue(val.a)
@@ -703,7 +703,7 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
             },
         }
         gen = self.struct_randomizer(ttypes.NestedStructs, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
 
@@ -722,7 +722,7 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(ttypes.StructWithOptionals, constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertTrue(val.a)
@@ -734,7 +734,7 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
         cls = self.__class__
         constraints = {}
         gen = self.struct_randomizer(ttypes.EmptyUnion, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             # Because the enum has no valid fields it's hard to generate
             # a reasonable value. So returning None from the
@@ -745,12 +745,11 @@ class TestStructRandomizer(TestRandomizer, unittest.TestCase):
         cls = self.__class__
         constraints = {}
         gen = self.struct_randomizer(ttypes.NumberUnionStruct, constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
 
     def testSubRanomizersHaveDefaults(self):
-
         # Have constraints with a field that is never
         # used and won't come from the existing defaults.
         # Then make sure that constraint for StructWithOptionals
@@ -779,7 +778,7 @@ class TestUnionRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             # Check that field is nonzero, indicating a field is set
             self.assertNotEqual(val.field, 0)
@@ -790,7 +789,7 @@ class TestUnionRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             # Check that field is zero, indicating no fields are set
             self.assertIsNone(
@@ -806,7 +805,7 @@ class TestUnionRandomizer(TestStructRandomizer, unittest.TestCase):
         seeds = [ttypes.IntUnion(a=20), ttypes.IntUnion(b=40)]
         constraints = {"seeds": seeds, "p_random": 0}
         gen = self.struct_randomizer(constraints=constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(
                 val,
@@ -838,7 +837,7 @@ class TestUnionRandomizer(TestStructRandomizer, unittest.TestCase):
                 return val.value == 4
             return False
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertTrue(
                 is_seed(val), msg="Not a seed: %s (%s)" % (val, val.__dict__)
@@ -884,7 +883,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
         if val.d is not None:
             self.assertIsInstance(val.d, list)
             for elem in val.d:
-                self.assertIsInstance(elem, six.string_types)
+                self.assertIsInstance(elem, str)
 
         if val.e is not None:
             self.assertIsInstance(val.e, list)
@@ -897,7 +896,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
             self.assertIsInstance(val.f, list)
             for elem in val.f:
                 self.assertIsInstance(elem, dict)
-                for k, v in six.iteritems(elem):
+                for k, v in elem.items():
                     self.assertIsInstance(k, int)
                     self.assertIsInstance(v, int)
 
@@ -906,7 +905,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
             for elem in val.g:
                 self.assertIsInstance(elem, set)
                 for sub_elem in elem:
-                    self.assertIsInstance(sub_elem, six.string_types)
+                    self.assertIsInstance(sub_elem, str)
 
     def testFieldConstraints(self):
         cls = self.__class__
@@ -921,7 +920,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNotNone(val.a)
@@ -935,13 +934,13 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
             for elem in val.a:
                 self.assertTrue(elem)
 
-            self.assertEquals(len(val.b), 0)
+            self.assertEqual(len(val.b), 0)
 
             for elem in val.d:
-                self.assertEquals(len(elem), 0)
+                self.assertEqual(len(elem), 0)
 
             for elem in val.e:
-                self.assertEquals(len(elem), 0)
+                self.assertEqual(len(elem), 0)
 
     def testSeeded(self):
         seeds = [
@@ -960,7 +959,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
         val = gen.generate()
-        for key, expected in six.iteritems(seeds[0]):
+        for key, expected in seeds[0].items():
             self.assertEqual(
                 expected, getattr(val, key, None), msg="%s, %s" % (val, dir(val))
             )
@@ -983,10 +982,10 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
         constraints = {"seeds": seeds, "p_random": 0, "p_fuzz": 1}
 
         gen = self.struct_randomizer(constraints=constraints)
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             n_different = 0
-            for key, expected in six.iteritems(seeds[0]):
+            for key, expected in seeds[0].items():
                 if expected != getattr(val, key, None):
                     n_different += 1
             self.assertLessEqual(n_different, 1)
@@ -998,7 +997,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNotNone(val.a)
@@ -1021,12 +1020,12 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNotNone(val.c)
             for elem in val.c:
-                self.assertEquals(elem, constant)
+                self.assertEqual(elem, constant)
 
     def testListTypeConstraints(self):
         """
@@ -1046,7 +1045,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNotNone(val.e)
@@ -1077,7 +1076,7 @@ class TestListStructRandomizer(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertIsNotNone(val)
             self.assertIsNotNone(val.f)
@@ -1122,7 +1121,7 @@ class TestNestedStruct(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
 
             # To check the generated value against the seed,
@@ -1137,7 +1136,7 @@ class TestNestedStruct(TestStructRandomizer, unittest.TestCase):
             # Compare actual (generated) struct to expected structs
             for struct_name in {"ls", "rainbow"}:
                 actual_struct = getattr(val, struct_name)
-                for key, expected_field in six.iteritems(seed[struct_name]):
+                for key, expected_field in seed[struct_name].items():
                     actual_field = getattr(actual_struct, key, None)
                     if expected_field != actual_field:
                         n_different += 1
@@ -1189,7 +1188,7 @@ class TestStructRecursion(TestStructRandomizer, unittest.TestCase):
 
         val = gen.generate()
 
-        self.assertEquals(self.max_depth(val), 0)
+        self.assertEqual(self.max_depth(val), 0)
 
     def testDepthOne(self):
         cls = self.__class__
@@ -1197,7 +1196,7 @@ class TestStructRecursion(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertLessEqual(self.max_depth(val), 1)
 
@@ -1207,7 +1206,7 @@ class TestStructRecursion(TestStructRandomizer, unittest.TestCase):
 
         gen = self.struct_randomizer(constraints=constraints)
 
-        for _ in sm.xrange(cls.iterations):
+        for _ in range(cls.iterations):
             val = gen.generate()
             self.assertLessEqual(self.max_depth(val), 2)
 

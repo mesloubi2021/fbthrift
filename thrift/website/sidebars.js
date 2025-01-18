@@ -80,13 +80,7 @@ module.exports = {
         type: 'doc',
         id: 'idl/index',
       },
-      items: [
-        'idl/field-qualifiers',
-        'idl/annotations',
-        'idl/structured-annotations',
-        'idl/standard-thrift-annotation-library',
-        'idl/mixins',
-      ],
+      items: ['idl/field-qualifiers', 'idl/annotations', 'idl/mixins'],
     },
     {
       type: 'category',
@@ -108,7 +102,10 @@ module.exports = {
             type: 'doc',
             id: 'features/serialization/index',
           },
-          items: ['features/serialization/protocols'],
+          items: [
+            'features/serialization/protocols',
+            'features/serialization/cursor',
+          ],
         },
         'features/operators',
         'features/universal-name',
@@ -125,7 +122,18 @@ module.exports = {
             'fb/features/streaming/multicasting',
           ],
         },
-        'fb/features/interactions',
+        {
+          type: 'category',
+          label: 'Interactions',
+          link: {
+            type: 'doc',
+            id: 'fb/features/interactions/index',
+          },
+          items: [
+            'fb/features/interactions/terminal-errors',
+          ],
+
+        },
         'features/adapters',
         'features/exception',
         'features/compatibility',
@@ -138,9 +146,16 @@ module.exports = {
         // Experimental features:
         {
           Experimental: [
-            'features/patch',
+            {
+              type: 'category',
+              label: 'Patch',
+              link: {
+                type: 'doc',
+                id: 'fb/features/patch',
+              },
+              items: [...fbInternalOnly(['fb/features/patch-compat'])],
+            },
             'features/schema',
-            'features/yaml',
             ...fbInternalOnly(['fb/features/metadata']),
           ],
         },
@@ -256,6 +271,7 @@ module.exports = {
               'fb/languages/java/netty4_background',
               'fb/languages/java/netty4',
               'fb/languages/java/serde',
+              'fb/languages/java/legacy_api',
             ],
           },
           {
@@ -268,6 +284,7 @@ module.exports = {
             items: [
               'fb/languages/python/code-frameworks',
               'fb/languages/python/python-capi',
+              'fb/languages/python/api/exceptions',
             ],
           },
         ]),
@@ -305,6 +322,9 @@ module.exports = {
         },
         items: [
           'fb/server/server-lifecycle',
+          'fb/server/server-modules',
+          'fb/server/service-interceptors',
+          'fb/server/client-interceptors',
           'fb/server/background-tasks',
           'fb/server/flavors-of-main',
           'fb/server/components',
@@ -316,7 +336,10 @@ module.exports = {
               type: 'doc',
               id: 'fb/server/interface/index',
             },
-            items: ['fb/server/interface/rocket'],
+            items: [
+              'fb/server/interface/rocket',
+              'fb/server/interface/server-transport-exception-contract',
+            ],
           },
           'fb/server/channels',
           'fb/server/threading-models',
@@ -354,6 +377,16 @@ module.exports = {
                   'fb/server/overload-protection/cpuconcurrencycontroller/rollout',
                 ],
               },
+              {
+                type: 'category',
+                label: 'DLS',
+                link: {
+                  type: 'doc',
+                  id: 'fb/server/overload-protection/dls/index',
+                },
+                items: [],
+              },
+              // 'fb/server/overload-protection/dls/index',
               'fb/server/overload-protection/adaptive-concurrency',
               'fb/server/overload-protection/queue-timeout',
             ],
@@ -366,6 +399,28 @@ module.exports = {
               id: 'fb/server/resource-pools/index',
             },
             items: ['fb/server/resource-pools/api'],
+          },
+          {
+            type: 'category',
+            label: 'Quota Management',
+            link: {
+              type: 'doc',
+              id: 'fb/server/quota-management/index',
+            },
+            items: [],
+          },
+          'fb/server/stream-graceful-shutdown',
+          {
+            type: 'category',
+            label: 'thrift-python Servers',
+            link: {
+              type: 'doc',
+              id: 'fb/server/thrift-python/index',
+            },
+            items: [
+              'fb/server/thrift-python/create',
+              'fb/server/thrift-python/requests',
+            ],
           },
         ],
       },
@@ -413,7 +468,6 @@ module.exports = {
               'fb/best-practices/you-dont-need-facebookbase2/facebookbase2-deprecation-migration',
             ],
           },
-          'fb/best-practices/migrating-javadeprecated-to-java-swift',
         ],
       },
       {
@@ -436,7 +490,18 @@ module.exports = {
               'fb/troubleshooting/exception-handling/error-classification',
             ],
           },
-          'fb/troubleshooting/debugging-tools',
+          {
+            type: 'category',
+            label: 'Debugging Tools',
+            link: {
+              type: 'doc',
+              id: 'fb/troubleshooting/debugging-tools',
+            },
+            items: [
+              'fb/troubleshooting/debuggingtools/thriftdbg-info',
+              'fb/troubleshooting/debuggingtools/thriftdbg-sendRequest',
+            ],
+          },
           'fb/troubleshooting/fuzzer',
           {
             type: 'category',
@@ -447,23 +512,24 @@ module.exports = {
             },
             items: [
               'fb/troubleshooting/dogpiles/index',
+              'fb/troubleshooting/dogpiles/io',
               'fb/troubleshooting/dogpiles/server_overload',
               'fb/troubleshooting/dogpiles/development',
             ],
           },
-          'fb/troubleshooting/fb303-counters',
+          {
+            type: 'category',
+            label: 'FB303 Counters',
+            link: {
+              type: 'doc',
+              id: 'fb/troubleshooting/fb303-counters/index',
+            },
+            items: ['fb/troubleshooting/fb303-counters/streaming'],
+          },
+          'fb/troubleshooting/overload',
         ],
       },
     ]),
-    {
-      type: 'category',
-      label: 'Releases',
-      link: {
-        type: 'doc',
-        id: 'releases/index',
-      },
-      items: ['releases/release-notes-v1'],
-    },
 
     // Documentation for the Thrift team and contributors.
     {
@@ -526,6 +592,7 @@ module.exports = {
             ],
           },
           'fb/contributions/linter',
+          'fb/contributions/bots',
           'fb/contributions/oss',
           'fb/contributions/troubleshooting',
           'fb/contributions/xplat',
@@ -559,6 +626,7 @@ module.exports = {
         'contributions/adapter',
         'contributions/fd-passing',
         'contributions/patch',
+        'contributions/whisker',
         {
           type: 'category',
           label: 'Documentation',
@@ -573,7 +641,14 @@ module.exports = {
         },
       ],
     },
-
-    'glossary',
+    {
+      type: 'category',
+      label: 'Glossary',
+      link: {
+        type: 'doc',
+        id: 'glossary/index',
+      },
+      items: ['glossary/kinds-of-types'],
+    },
   ],
 };

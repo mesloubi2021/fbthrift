@@ -10,18 +10,20 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE <code>reference_type</code>",
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::required_field_ref&lt; T &gt;::operator*",
       "argsstring_html": "() const noexcept",
       "name_html": "operator*",
+      "qualifiedname_html": "apache::thrift::required_field_ref::operator*",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1810",
-        "column": "1",
+        "line": "1862",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1810",
-        "bodyend": "1812"
+        "bodystart": "1862",
+        "bodyend": "1864"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type operator*() const",
@@ -43,5 +45,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/required_field_ref/operator.mul",
-  "refid": "/ref/cpp/f/class/apache/thrift/required_field_ref/operator.mul"
+  "refid": "/ref/cpp/f/class/apache/thrift/required_field_ref/operator.mul",
+  "parent_links": [
+    {
+      "text_html": "required_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/required_field_ref"
+    }
+  ]
 }

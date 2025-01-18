@@ -22,6 +22,7 @@
 #include <boost/operators.hpp>
 
 #include <folly/CPortability.h>
+#include <folly/ConstexprMath.h>
 #include <thrift/lib/cpp2/Thrift.h>
 #include <thrift/lib/cpp2/type/AlignedPtr.h>
 
@@ -31,9 +32,7 @@
 #define THRIFT_CONSTEXPR_IF_NOT_MSVC constexpr
 #endif
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 // boxed_value_ptr will soon be replaced with boxed_value (defined below).
 template <typename T>
@@ -215,14 +214,21 @@ class boxed_ptr {
   FOLLY_ERASE constexpr T* get() const noexcept { return ptr_.get(); }
 
  private:
-  static constexpr int kModeBits = 3;
-  using aligned_pointer_type =
-      type::detail::AlignedPtr<T, kModeBits, kModeBits>;
-
   enum Mode : std::uintptr_t {
     MutOwned = 0, // Unique ownership
     ConstUnowned = 1,
+    _NUM_MODE_VALUES, // Keep last, to ensure static checks below are correct.
   };
+
+  // Number of bits to reserve (in the AlignedPtr below) for enum Mode values.
+  static constexpr int kModeBits = 1;
+  using aligned_pointer_type = type::detail::
+      AlignedPtr<T, /*TagBits=*/kModeBits, /*MaxTagBits=*/kModeBits>;
+
+  static_assert(
+      folly::constexpr_log2_ceil(
+          static_cast<std::uintptr_t>(_NUM_MODE_VALUES)) <= kModeBits,
+      "The number of tag bits is insufficient to hold all Mode values.");
 
   FOLLY_ERASE constexpr explicit boxed_ptr(const T* p) noexcept
       : ptr_(
@@ -386,8 +392,6 @@ class boxed_value : public boost::totally_ordered<boxed_value<T>>,
   boxed_ptr<T> ptr_;
 };
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail
 
 #undef THRIFT_CONSTEXPR_IF_NOT_MSVC

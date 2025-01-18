@@ -22,9 +22,12 @@
     The workaround is to create slice literals (one with keys, one with values),
     create an empty map during runtime and populate that map from the two slices.
 
-}}{{> common/header}}
+}}
+{{> common/header}}
 
 import (
+    "maps"
+
     {{#program:thrift_imports}}
     {{program:go_package_alias}} "{{program:go_import_path}}"
     {{/program:thrift_imports}}
@@ -37,130 +40,271 @@ import (
 {{> common/unused_imports_protection}}
 // (needed to ensure safety because of naive import list construction)
 var _ = thrift.ZERO
+var _ = maps.Copy[map[int]int, map[int]int]
 {{#program:import_metadata_package?}}
 var _ = metadata.GoUnusedProtection__
 {{/program:import_metadata_package?}}
 
-var structMetadatas = []*{{program:metadata_qualifier}}ThriftStruct{
-    {{#program:structs}}
-    {{^struct:exception?}}
-    {{> metadata/struct_metadata}},
-    {{/struct:exception?}}
-    {{/program:structs}}
+// Premade Thrift types
+var (
+    {{#program:thrift_metadata_types}}
+    {{type:metadata_name}} = func() *{{program:metadata_qualifier}}ThriftType {
+        return {{program:metadata_qualifier}}NewThriftType().{{> metadata/thrift_type_setter}}(
+            {{> metadata/thrift_type_instance}}
+        )
+    }()
+    {{/program:thrift_metadata_types}}
+)
+
+// Helper type to allow us to store Thrift types in a slice at compile time,
+// and put them in a map at runtime. See comment at the top of template
+// about a compilation limitation that affects map literals.
+type thriftTypeWithFullName struct {
+    fullName   string
+    thriftType *{{program:metadata_qualifier}}ThriftType
 }
 
-var exceptionMetadatas = []*{{program:metadata_qualifier}}ThriftException{
-    {{#program:structs}}
-    {{#struct:exception?}}
-    {{> metadata/exception_metadata}},
-    {{/struct:exception?}}
-    {{/program:structs}}
-}
+var premadeThriftTypesMap = func() map[string]*{{program:metadata_qualifier}}ThriftType {
+    thriftTypesWithFullName := make([]thriftTypeWithFullName, 0)
+    {{#program:thrift_metadata_types}}
+    {{#type:named?}}
+    thriftTypesWithFullName = append(thriftTypesWithFullName, thriftTypeWithFullName{ "{{type:full_name}}", {{type:metadata_name}} })
+    {{/type:named?}}
+    {{/program:thrift_metadata_types}}
 
-var enumMetadatas = []*{{program:metadata_qualifier}}ThriftEnum{
+    fbthriftThriftTypesMap := make(map[string]*{{program:metadata_qualifier}}ThriftType, len(thriftTypesWithFullName))
+    for _, value := range thriftTypesWithFullName {
+        fbthriftThriftTypesMap[value.fullName] = value.thriftType
+    }
+    return fbthriftThriftTypesMap
+}()
+
+var structMetadatas = func() []*{{program:metadata_qualifier}}ThriftStruct {
+    fbthriftResults := make([]*{{program:metadata_qualifier}}ThriftStruct, 0)
+    for _, fbthriftStructSpec := range premadeStructSpecs {
+        if !fbthriftStructSpec.IsException {
+            fbthriftResults = append(fbthriftResults, getMetadataThriftStruct(fbthriftStructSpec))
+        }
+    }
+    return fbthriftResults
+}()
+
+var exceptionMetadatas = func() []*{{program:metadata_qualifier}}ThriftException {
+    fbthriftResults := make([]*{{program:metadata_qualifier}}ThriftException, 0)
+    for _, fbthriftStructSpec := range premadeStructSpecs {
+        if fbthriftStructSpec.IsException {
+            fbthriftResults = append(fbthriftResults, getMetadataThriftException(fbthriftStructSpec))
+        }
+    }
+    return fbthriftResults
+}()
+
+var enumMetadatas = func() []*{{program:metadata_qualifier}}ThriftEnum {
+    fbthriftResults := make([]*{{program:metadata_qualifier}}ThriftEnum, 0)
     {{#program:enums}}
-    {{> metadata/enum_metadata}},
+    fbthriftResults = append(fbthriftResults, {{> metadata/thrift_metadata_enum}})
     {{/program:enums}}
-}
+    return fbthriftResults
+}()
 
-var serviceMetadatas = []*{{program:metadata_qualifier}}ThriftService{
+var serviceMetadatas = func() []*{{program:metadata_qualifier}}ThriftService {
+    fbthriftResults := make([]*{{program:metadata_qualifier}}ThriftService, 0)
     {{#program:services}}
-    {{> metadata/service_metadata}},
+    fbthriftResults = append(fbthriftResults, {{> metadata/thrift_metadata_service}})
     {{/program:services}}
+    return fbthriftResults
+}()
+
+// GetMetadataThriftType (INTERNAL USE ONLY).
+// Returns metadata ThriftType for a given full type name.
+func GetMetadataThriftType(fullName string) *{{program:metadata_qualifier}}ThriftType {
+    return premadeThriftTypesMap[fullName]
 }
 
 // GetThriftMetadata returns complete Thrift metadata for current and imported packages.
 func GetThriftMetadata() *{{program:metadata_qualifier}}ThriftMetadata {
-    includedEnumsMetadatas := []map[string]*{{program:metadata_qualifier}}ThriftEnum{
-        GetEnumsMetadata(),
-        {{#program:thrift_imports}}
-        {{program:go_package_alias}}.GetEnumsMetadata(),
-        {{/program:thrift_imports}}
+    allEnumsMap := make(map[string]*{{program:metadata_qualifier}}ThriftEnum)
+    allStructsMap := make(map[string]*{{program:metadata_qualifier}}ThriftStruct)
+    allExceptionsMap := make(map[string]*{{program:metadata_qualifier}}ThriftException)
+    allServicesMap := make(map[string]*{{program:metadata_qualifier}}ThriftService)
+
+    // Add enum metadatas from the current program...
+    for _, enumMetadata := range enumMetadatas {
+        allEnumsMap[enumMetadata.GetName()] = enumMetadata
     }
-    includedStructsMetadatas := []map[string]*{{program:metadata_qualifier}}ThriftStruct{
-        GetStructsMetadata(),
-        {{#program:thrift_imports}}
-        {{program:go_package_alias}}.GetStructsMetadata(),
-        {{/program:thrift_imports}}
+    // Add struct metadatas from the current program...
+    for _, structMetadata := range structMetadatas {
+        allStructsMap[structMetadata.GetName()] = structMetadata
     }
-    includedExceptionsMetadatas := []map[string]*{{program:metadata_qualifier}}ThriftException{
-        GetExceptionsMetadata(),
-        {{#program:thrift_imports}}
-        {{program:go_package_alias}}.GetExceptionsMetadata(),
-        {{/program:thrift_imports}}
+    // Add exception metadatas from the current program...
+    for _, exceptionMetadata := range exceptionMetadatas {
+        allExceptionsMap[exceptionMetadata.GetName()] = exceptionMetadata
     }
-    includedServicesMetadatas := []map[string]*{{program:metadata_qualifier}}ThriftService{
-        GetServicesMetadata(),
-        {{#program:thrift_imports}}
-        {{program:go_package_alias}}.GetServicesMetadata(),
-        {{/program:thrift_imports}}
+    // Add service metadatas from the current program...
+    for _, serviceMetadata := range serviceMetadatas {
+        allServicesMap[serviceMetadata.GetName()] = serviceMetadata
     }
 
-	allEnums := make(map[string]*{{program:metadata_qualifier}}ThriftEnum)
-	allStructs := make(map[string]*{{program:metadata_qualifier}}ThriftStruct)
-	allExceptions := make(map[string]*{{program:metadata_qualifier}}ThriftException)
-    allServices := make(map[string]*{{program:metadata_qualifier}}ThriftService)
+    // Obtain Thrift metadatas from recursively included programs...
+    var recursiveThriftMetadatas []*{{program:metadata_qualifier}}ThriftMetadata
+    {{#program:thrift_imports}}
+    recursiveThriftMetadatas = append(recursiveThriftMetadatas, {{program:go_package_alias}}.GetThriftMetadata())
+    {{/program:thrift_imports}}
 
-    for _, includedEnumsMetadata := range includedEnumsMetadatas {
-        for enumName, thriftEnum := range includedEnumsMetadata {
-            allEnums[enumName] = thriftEnum
-        }
-    }
-    for _, includedStructsMetadata := range includedStructsMetadatas {
-        for structName, thriftStruct := range includedStructsMetadata {
-            allStructs[structName] = thriftStruct
-        }
-    }
-    for _, includedExceptionsMetadata := range includedExceptionsMetadatas {
-        for exceptionName, thriftException := range includedExceptionsMetadata {
-            allExceptions[exceptionName] = thriftException
-        }
-    }
-    for _, includedServicesMetadata := range includedServicesMetadatas {
-        for serviceName, thriftService := range includedServicesMetadata {
-            allServices[serviceName] = thriftService
-        }
+    // ...now merge metadatas from recursively included programs.
+    for _, thriftMetadata := range recursiveThriftMetadatas {
+        maps.Copy(allEnumsMap, thriftMetadata.GetEnums())
+        maps.Copy(allStructsMap, thriftMetadata.GetStructs())
+        maps.Copy(allExceptionsMap, thriftMetadata.GetExceptions())
+        maps.Copy(allServicesMap, thriftMetadata.GetServices())
     }
 
     return {{program:metadata_qualifier}}NewThriftMetadata().
-        SetEnums(allEnums).
-        SetStructs(allStructs).
-        SetExceptions(allExceptions).
-        SetServices(allServices)
+        SetEnums(allEnumsMap).
+        SetStructs(allStructsMap).
+        SetExceptions(allExceptionsMap).
+        SetServices(allServicesMap)
 }
 
-// GetStructsMetadata returns Thrift metadata for enums in the current package.
-func GetEnumsMetadata() map[string]*{{program:metadata_qualifier}}ThriftEnum {
-    result := make(map[string]*{{program:metadata_qualifier}}ThriftEnum)
-    for _, enumMetadata := range enumMetadatas {
-        result[enumMetadata.GetName()] = enumMetadata
+// GetThriftMetadataForService returns Thrift metadata for the given service.
+func GetThriftMetadataForService(scopedServiceName string) *{{program:metadata_qualifier}}ThriftMetadata {
+    thriftMetadata := GetThriftMetadata()
+
+    allServicesMap := thriftMetadata.GetServices()
+    relevantServicesMap := make(map[string]*{{program:metadata_qualifier}}ThriftService)
+
+    serviceMetadata := allServicesMap[scopedServiceName]
+    // Visit and record all recursive parents of the target service.
+    for serviceMetadata != nil {
+        relevantServicesMap[serviceMetadata.GetName()] = serviceMetadata
+        if serviceMetadata.IsSetParent() {
+            serviceMetadata = allServicesMap[serviceMetadata.GetParent()]
+        } else {
+            serviceMetadata = nil
+        }
     }
-    return result
+
+    thriftMetadata.SetServices(relevantServicesMap)
+
+    return thriftMetadata
 }
 
-// GetStructsMetadata returns Thrift metadata for structs in the current package.
-func GetStructsMetadata() map[string]*{{program:metadata_qualifier}}ThriftStruct {
-    result := make(map[string]*{{program:metadata_qualifier}}ThriftStruct)
-    for _, structMetadata := range structMetadatas {
-        result[structMetadata.GetName()] = structMetadata
-    }
-    return result
+func getMetadataThriftPrimitiveType(s *thrift.CodecPrimitiveSpec) *{{program:metadata_qualifier}}ThriftPrimitiveType {
+	var value {{program:metadata_qualifier}}ThriftPrimitiveType
+
+	switch s.PrimitiveType {
+	case thrift.CODEC_PRIMITIVE_TYPE_BYTE:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_BYTE_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_BOOL:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_BOOL_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_I16:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_I16_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_I32:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_I32_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_I64:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_I64_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_FLOAT:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_FLOAT_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_DOUBLE:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_DOUBLE_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_BINARY:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_BINARY_TYPE
+	case thrift.CODEC_PRIMITIVE_TYPE_STRING:
+		value = {{program:metadata_qualifier}}ThriftPrimitiveType_THRIFT_STRING_TYPE
+	}
+
+	return value.Ptr()
 }
 
-// GetStructsMetadata returns Thrift metadata for exceptions in the current package.
-func GetExceptionsMetadata() map[string]*{{program:metadata_qualifier}}ThriftException {
-    result := make(map[string]*{{program:metadata_qualifier}}ThriftException)
-    for _, exceptionMetadata := range exceptionMetadatas {
-        result[exceptionMetadata.GetName()] = exceptionMetadata
-    }
-    return result
+func getMetadataThriftEnumType(s *thrift.CodecEnumSpec) *{{program:metadata_qualifier}}ThriftEnumType {
+	return {{program:metadata_qualifier}}NewThriftEnumType().
+		SetName(s.ScopedName)
 }
 
-// GetStructsMetadata returns Thrift metadata for services in the current package.
-func GetServicesMetadata() map[string]*{{program:metadata_qualifier}}ThriftService {
-    result := make(map[string]*{{program:metadata_qualifier}}ThriftService)
-    for _, serviceMetadata := range serviceMetadatas {
-        result[serviceMetadata.GetName()] = serviceMetadata
-    }
-    return result
+func getMetadataThriftSetType(s *thrift.CodecSetSpec) *{{program:metadata_qualifier}}ThriftSetType {
+	return {{program:metadata_qualifier}}NewThriftSetType().
+		SetValueType(getMetadataThriftType(s.ElementTypeSpec))
+}
+
+func getMetadataThriftListType(s *thrift.CodecListSpec) *{{program:metadata_qualifier}}ThriftListType {
+	return {{program:metadata_qualifier}}NewThriftListType().
+		SetValueType(getMetadataThriftType(s.ElementTypeSpec))
+}
+
+func getMetadataThriftMapType(s *thrift.CodecMapSpec) *{{program:metadata_qualifier}}ThriftMapType {
+	return {{program:metadata_qualifier}}NewThriftMapType().
+		SetKeyType(getMetadataThriftType(s.KeyTypeSpec)).
+		SetValueType(getMetadataThriftType(s.ValueTypeSpec))
+}
+
+func getMetadataThriftTypedefType(s *thrift.CodecTypedefSpec) *{{program:metadata_qualifier}}ThriftTypedefType {
+	return {{program:metadata_qualifier}}NewThriftTypedefType().
+		SetName(s.ScopedName).
+		SetUnderlyingType(getMetadataThriftType(s.UnderlyingTypeSpec))
+}
+
+func getMetadataThriftStructType(s *thrift.CodecStructSpec) *{{program:metadata_qualifier}}ThriftStructType {
+	return {{program:metadata_qualifier}}NewThriftStructType().
+		SetName(s.ScopedName)
+}
+
+func getMetadataThriftUnionType(s *thrift.CodecStructSpec) *{{program:metadata_qualifier}}ThriftUnionType {
+	return {{program:metadata_qualifier}}NewThriftUnionType().
+		SetName(s.ScopedName)
+}
+
+func getMetadataThriftType(s *thrift.TypeSpec) *{{program:metadata_qualifier}}ThriftType {
+	thriftType := {{program:metadata_qualifier}}NewThriftType()
+	switch {
+	case s.CodecPrimitiveSpec != nil:
+		thriftType.SetTPrimitive(getMetadataThriftPrimitiveType(s.CodecPrimitiveSpec))
+	case s.CodecEnumSpec != nil:
+		thriftType.SetTEnum(getMetadataThriftEnumType(s.CodecEnumSpec))
+	case s.CodecSetSpec != nil:
+		thriftType.SetTSet(getMetadataThriftSetType(s.CodecSetSpec))
+	case s.CodecListSpec != nil:
+		thriftType.SetTList(getMetadataThriftListType(s.CodecListSpec))
+	case s.CodecMapSpec != nil:
+		thriftType.SetTMap(getMetadataThriftMapType(s.CodecMapSpec))
+	case s.CodecTypedefSpec != nil:
+		thriftType.SetTTypedef(getMetadataThriftTypedefType(s.CodecTypedefSpec))
+	case s.CodecStructSpec != nil:
+		if s.CodecStructSpec.IsUnion {
+			thriftType.SetTUnion(getMetadataThriftUnionType(s.CodecStructSpec))
+		} else {
+			thriftType.SetTStruct(getMetadataThriftStructType(s.CodecStructSpec))
+		}
+	}
+	return thriftType
+}
+
+func getMetadataThriftField(s *thrift.FieldSpec) *{{program:metadata_qualifier}}ThriftField {
+	return {{program:metadata_qualifier}}NewThriftField().
+		SetId(int32(s.ID)).
+		SetName(s.Name).
+		SetIsOptional(s.IsOptional).
+		SetType(getMetadataThriftType(s.ValueTypeSpec))
+}
+
+func getMetadataThriftStruct(s *thrift.StructSpec) *{{program:metadata_qualifier}}ThriftStruct {
+	metadataThriftFields := make([]*{{program:metadata_qualifier}}ThriftField, len(s.FieldSpecs), len(s.FieldSpecs))
+	for i, fieldSpec := range s.FieldSpecs {
+		metadataThriftFields[i] = getMetadataThriftField(&fieldSpec)
+	}
+
+	return {{program:metadata_qualifier}}NewThriftStruct().
+		SetName(s.ScopedName).
+		SetIsUnion(s.IsUnion).
+		SetFields(metadataThriftFields)
+}
+
+func getMetadataThriftException(s *thrift.StructSpec) *{{program:metadata_qualifier}}ThriftException {
+	metadataThriftFields := make([]*{{program:metadata_qualifier}}ThriftField, len(s.FieldSpecs), len(s.FieldSpecs))
+	for i, fieldSpec := range s.FieldSpecs {
+		metadataThriftFields[i] = getMetadataThriftField(&fieldSpec)
+	}
+
+	return {{program:metadata_qualifier}}NewThriftException().
+		SetName(s.ScopedName).
+		SetFields(metadataThriftFields)
 }

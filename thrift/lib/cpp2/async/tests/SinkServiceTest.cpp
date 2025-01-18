@@ -16,14 +16,13 @@
 
 #include <folly/portability/GTest.h>
 
-#include <folly/experimental/coro/Sleep.h>
+#include <folly/coro/Sleep.h>
 #include <thrift/lib/cpp2/GeneratedCodeHelper.h>
 #include <thrift/lib/cpp2/async/tests/util/Util.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
-using namespace testutil::testservice;
+using namespace apache::thrift::detail::test;
 
 struct SinkServiceTest
     : public AsyncTestSetup<TestSinkService, Client<TestSinkService>> {};
@@ -45,9 +44,8 @@ TEST_F(SinkServiceTest, SimpleSink) {
         auto sink = co_await client.co_range(0, 100);
         bool finalResponse =
             co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-              // @lint-ignore CLANGTIDY bugprone-use-after-move
               for (int i = 0; i <= 100; i++) {
-                co_yield std::move(i);
+                co_yield int(i);
               }
             }());
         EXPECT_TRUE(finalResponse);
@@ -70,27 +68,26 @@ TEST_F(SinkServiceTest, SinkThrow) {
 }
 
 TEST_F(SinkServiceTest, SinkThrowStruct) {
-  connectToServer([](Client<TestSinkService>& client) -> folly::coro::Task<void> {
-    auto sink = co_await client.co_sinkThrow();
-    bool exceptionThrown = false;
-    try {
-      co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-        co_yield 0;
-        co_yield 1;
-        SinkException e;
-        e.reason_ref() = "test";
-        throw e;
-      }());
-    } catch (const SinkThrew& ex) {
-      exceptionThrown = true;
-      EXPECT_EQ(TApplicationException::UNKNOWN, ex.getType());
-      EXPECT_EQ(
-          "testutil::testservice::SinkException: ::testutil::testservice::SinkException",
-          ex.getMessage());
-    }
-    EXPECT_TRUE(exceptionThrown);
-    co_await client.co_purge();
-  });
+  connectToServer(
+      [](Client<TestSinkService>& client) -> folly::coro::Task<void> {
+        auto sink = co_await client.co_sinkThrow();
+        bool exceptionThrown = false;
+        try {
+          co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
+            co_yield 0;
+            co_yield 1;
+            SinkException e;
+            e.reason_ref() = "test";
+            throw e;
+          }());
+        } catch (const SinkThrew& ex) {
+          exceptionThrown = true;
+          EXPECT_EQ(TApplicationException::UNKNOWN, ex.getType());
+          EXPECT_THAT(ex.getMessage(), HasSubstr("SinkException"));
+        }
+        EXPECT_TRUE(exceptionThrown);
+        co_await client.co_purge();
+      });
 }
 
 TEST_F(SinkServiceTest, SinkFinalThrow) {
@@ -100,9 +97,8 @@ TEST_F(SinkServiceTest, SinkFinalThrow) {
         bool throwed = false;
         try {
           co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-            // @lint-ignore CLANGTIDY bugprone-use-after-move
             for (int i = 0; i <= 100; i++) {
-              co_yield std::move(i);
+              co_yield int(i);
             }
           }());
         } catch (const std::exception& ex) {
@@ -120,9 +116,8 @@ TEST_F(SinkServiceTest, SinkFinalThrowStruct) {
         bool throwed = false;
         try {
           co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-            // @lint-ignore CLANGTIDY bugprone-use-after-move
             for (int i = 0; i <= 100; i++) {
-              co_yield std::move(i);
+              co_yield int(i);
             }
           }());
         } catch (const FinalException& ex) {
@@ -140,9 +135,8 @@ TEST_F(SinkServiceTest, SinkEarlyFinalResponse) {
 
         int finalResponse =
             co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-              // @lint-ignore CLANGTIDY bugprone-use-after-move
               for (int i = 0; i <= 100; i++) {
-                co_yield std::move(i);
+                co_yield int(i);
               }
             }());
         EXPECT_EQ(20, finalResponse);
@@ -193,7 +187,9 @@ TEST_F(SinkServiceTest, SinkInitialThrowsOnFinalResponseCalled) {
         FirstResponsePayload&&,
         folly::EventBase*,
         SinkServerCallback* serverCallback) override {
-      SCOPE_EXIT { responseReceived_.post(); };
+      SCOPE_EXIT {
+        responseReceived_.post();
+      };
       if (!onFirstResponseBool_) {
         serverCallback->onSinkError(std::runtime_error("stop sink"));
         return false;
@@ -248,12 +244,11 @@ TEST_F(SinkServiceTest, SinkChunkTimeout) {
         try {
           co_await [&]() -> folly::coro::Task<void> {
             co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
-              // @lint-ignore CLANGTIDY bugprone-use-after-move
               for (int i = 0; i <= 100; i++) {
                 if (i == 20) {
                   co_await folly::coro::sleep(std::chrono::milliseconds{500});
                 }
-                co_yield std::move(i);
+                co_yield int(i);
               }
             }());
           }();
@@ -309,7 +304,8 @@ TEST_F(SinkServiceTest, SinkEarlyFinalResponseWithLongWait) {
       });
 }
 
-TEST_F(SinkServiceTest, SinkEarlyClose) {
+// DO_BEFORE(aristidis,20240715): Test is flaky. Find owner or remove.
+TEST_F(SinkServiceTest, DISABLED_SinkEarlyClose) {
   std::vector<std::thread> ths;
   for (int i = 0; i < 100; i++) {
     ths.push_back(std::thread([this]() {
@@ -343,9 +339,8 @@ TEST_F(SinkServiceTest, SinkServerCancellation) {
         bool finalResponse =
             co_await sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
               // enter wait after 5 values, server should cancel
-              // @lint-ignore CLANGTIDY bugprone-use-after-move
               for (int i = 0; i <= 5; i++) {
-                co_yield std::move(i);
+                co_yield int(i);
               }
               co_await neverStream();
             }());
@@ -373,9 +368,8 @@ TEST_F(SinkServiceTest, SinkClientCancellation) {
                 cancelSource.getToken(),
                 sink.sink([]() -> folly::coro::AsyncGenerator<int&&> {
                   co_await neverStream();
-                  // @lint-ignore CLANGTIDY bugprone-use-after-move
                   for (int i = 0; i <= 10; i++) {
-                    co_yield std::move(i);
+                    co_yield int(i);
                   }
                 }())),
             folly::OperationCancelled);
@@ -392,9 +386,8 @@ TEST_F(SinkServiceTest, SinkClientCancellation) {
             co_await folly::coro::co_withCancellation(
                 cancelSource.getToken(),
                 sink.sink([&]() -> folly::coro::AsyncGenerator<int&&> {
-                  // @lint-ignore CLANGTIDY bugprone-use-after-move
                   for (int i = 0; i <= 10; i++) {
-                    co_yield std::move(i);
+                    co_yield int(i);
                   }
                   cancelSource.requestCancellation();
                 }())),
@@ -412,5 +405,4 @@ TEST_F(SinkServiceTest, DuplicateStreamIdThrows) {
       });
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

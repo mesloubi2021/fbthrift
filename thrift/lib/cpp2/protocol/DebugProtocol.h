@@ -29,15 +29,12 @@
 FOLLY_GFLAGS_DECLARE_bool(thrift_cpp2_debug_skip_list_indices);
 FOLLY_GFLAGS_DECLARE_int64(thrift_cpp2_debug_string_limit);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
-namespace op {
-namespace detail {
+namespace op::detail {
 template <class T>
 struct Encode;
 }
-} // namespace op
 
 class DebugProtocolWriter {
  public:
@@ -182,7 +179,7 @@ class DebugProtocolWriter {
   folly::io::QueueAppender out_;
   std::string indent_;
   std::vector<WriteState> writeState_;
-  const Options options_;
+  Options options_;
 };
 
 template <class T>
@@ -194,9 +191,9 @@ std::string debugString(
       options);
   proto.setOutput(&queue);
   Cpp2Ops<T>::write(&proto, &obj);
-  auto buf = queue.move();
-  auto br = buf->coalesce();
-  return std::string(reinterpret_cast<const char*>(br.data()), br.size());
+  std::string ret;
+  queue.appendToString(ret);
+  return ret;
 }
 
 // TODO: Replace `debugString()` with this function
@@ -209,12 +206,11 @@ std::string debugStringViaEncode(
       options);
   proto.setOutput(&queue);
   Encode<type::infer_tag<T>>{}(proto, obj);
-  auto buf = queue.move();
-  auto br = buf->coalesce();
-  return std::string(reinterpret_cast<const char*>(br.data()), br.size());
+  std::string ret;
+  queue.appendToString(ret);
+  return ret;
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif /* CPP2_PROTOCOL_DEBUGPROTOCOL_H_ */

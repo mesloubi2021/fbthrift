@@ -20,63 +20,7 @@
 
 #include <thrift/lib/cpp2/op/detail/BasePatch.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
-namespace detail {
-
-/// A patch adapter that only supports 'assign',
-/// which is the minimum any patch should support.
-///
-/// The `Patch` template parameter must be a Thrift struct with the following
-/// fields:
-/// * `optional T assign`
-template <typename Patch>
-class AssignPatch : public BaseAssignPatch<Patch, AssignPatch<Patch>> {
-  using Base = BaseAssignPatch<Patch, AssignPatch>;
-  using T = typename Base::value_type;
-
- public:
-  using Base::apply;
-  using Base::Base;
-  using Base::operator=;
-
-  /// @brief This API uses the Visitor pattern to describe how Patch is applied.
-  /// For each operation that will be performed by the patch, the corresponding
-  /// method (that matches the write API) will be invoked.
-  ///
-  /// Users should provide a visitor with the following methods
-  ///
-  ///     struct Visitor {
-  ///       void assign(const MyClass&);
-  ///     }
-  ///
-  /// For example:
-  ///
-  ///     MyClassPatch patch;
-  ///     patch = myClass;
-  ///
-  /// `patch.customVisit(v)` will invoke the following methods
-  ///
-  ///     v.assign(myClass);
-  template <typename Visitor>
-  void customVisit(Visitor&& v) const {
-    if (auto p = data_.assign()) {
-      std::forward<Visitor>(v).assign(*p);
-    }
-  }
-
-  void apply(T& val) const {
-    struct Visitor {
-      T& v;
-      void assign(const T& t) { v = t; }
-    };
-    return customVisit(Visitor{val});
-  }
-
- private:
-  using Base::data_;
-};
+namespace apache::thrift::op::detail {
 
 /// Patch for a Thrift bool.
 ///
@@ -287,6 +231,7 @@ class BaseStringPatch : public BaseContainerPatch<Patch, Derived> {
     return derived();
   }
 
+ private:
   /// @copybrief AssignPatch::customVisit
   ///
   /// Users should provide a visitor with the following methods
@@ -307,8 +252,8 @@ class BaseStringPatch : public BaseContainerPatch<Patch, Derived> {
   ///
   ///     v.prepend("(");
   ///     v.append(")");
-  template <class Visitor>
-  void customVisit(Visitor&& v) const {
+  template <class Self, class Visitor>
+  static void customVisitImpl(Self&& self, Visitor&& v) {
     if (false) {
       // Test whether the required methods exist in Visitor
       v.assign(T{});
@@ -316,11 +261,17 @@ class BaseStringPatch : public BaseContainerPatch<Patch, Derived> {
       v.prepend(T{});
       v.append(T{});
     }
-    if (!Base::template customVisitAssignAndClear(std::forward<Visitor>(v))) {
-      std::forward<Visitor>(v).prepend(*data_.prepend());
-      std::forward<Visitor>(v).append(*data_.append());
+    if (!std::forward<Self>(self).customVisitAssignAndClear(
+            std::forward<Visitor>(v))) {
+      std::forward<Visitor>(v).prepend(
+          *std::forward<Self>(self).data_.prepend());
+      std::forward<Visitor>(v).append(*std::forward<Self>(self).data_.append());
     }
   }
+
+ public:
+  FOLLY_FOR_EACH_THIS_OVERLOAD_IN_CLASS_BODY_DELEGATE(
+      customVisit, customVisitImpl);
 
  protected:
   using Base::assignOr;
@@ -372,18 +323,25 @@ class StringPatch : public BaseStringPatch<Patch, StringPatch<Patch>> {
     cur = std::forward<U>(val) + std::move(cur);
   }
 
-  void apply(T& val) const {
+ private:
+  template <class Self>
+  static void applyImpl(Self&& self, T& val) {
     struct Visitor {
       T& v;
       void assign(const T& t) { v = t; }
-      void clear() { v = ""; }
-      // TODO: Optimize this
+      void assign(T&& t) { v = std::move(t); }
+      void clear() { v.clear(); }
       void prepend(const T& t) { v = t + v; }
+      void prepend(T&& t) { v = std::move(t) + v; }
       void append(const T& t) { v += t; }
+      void append(T&& t) { v += std::move(t); }
     };
 
-    return Base::customVisit(Visitor{val});
+    return std::forward<Self>(self).customVisit(Visitor{val});
   }
+
+ public:
+  FOLLY_FOR_EACH_THIS_OVERLOAD_IN_CLASS_BODY_DELEGATE(apply, applyImpl);
 
  private:
   using Base::assignOr;
@@ -411,8 +369,17 @@ class BinaryPatch : public BaseStringPatch<Patch, BinaryPatch<Patch>> {
 
  public:
   using Base::apply;
+  using Base::assign;
   using Base::Base;
-  using Base::operator=;
+
+  void assign(std::string s) {
+    assign(*folly::IOBuf::fromString(std::move(s)));
+  }
+
+  template <typename T>
+  BinaryPatch& operator=(T&& other) {
+    return assign(std::forward<T>(other)), *this;
+  }
 
   /// Appends a binary string.
   template <typename... Args>
@@ -454,12 +421,15 @@ class BinaryPatch : public BaseStringPatch<Patch, BinaryPatch<Patch>> {
     return Base::customVisit(Visitor{val});
   }
 
+  void apply(std::string& val) const {
+    auto buf = folly::IOBuf::fromString(std::move(val));
+    apply(*buf);
+    val = buf->toString();
+  }
+
  private:
   using Base::assignOr;
   using Base::data_;
 };
 
-} // namespace detail
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op::detail

@@ -19,25 +19,21 @@
 #include <thrift/lib/cpp/transport/THeader.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
-namespace thrift {
-namespace py3 {
-namespace test {
+namespace thrift::py3::test {
 
 bool isOverloaded(
-    const apache::thrift::transport::THeader::StringToStringMap* headers,
-    const std::string* method_name) {
-  return *method_name == "overloaded_method";
+    const apache::thrift::transport::THeader::StringToStringMap& /* headers */,
+    const std::string& method_name) {
+  return method_name == "overloaded_method";
 }
 
 bool checkOverload(
     const std::shared_ptr<apache::thrift::ThriftServer> server,
     const std::string method_name) {
   // dummy test doesn't use the headers, so pass nullptr
-  auto ret = server->checkOverload(nullptr, &method_name);
+  auto ret = server->checkOverload({}, method_name);
   // ret will contain the error code if there is an overload
   // otherwise, it will return no value
   return ret.hasValue();
 }
-} // namespace test
-} // namespace py3
-} // namespace thrift
+} // namespace thrift::py3::test

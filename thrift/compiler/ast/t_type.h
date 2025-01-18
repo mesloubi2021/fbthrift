@@ -24,20 +24,26 @@
 
 #include <thrift/compiler/ast/t_named.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 class t_program;
 class t_placeholder_typedef;
+class t_type;
+
+namespace detail {
+
+template <typename... Visitors>
+extern decltype(auto) visit_type(const t_type& ty, Visitors&&... visitors);
+
+}
 
 /**
  * Generic representation of a thrift type.
  *
- * These objects are used by the parser module to build up a tree of object that
- * are all explicitly typed. The generic t_type class exports a variety of
- * useful methods that are used by the code generator to branch based upon
- * different handling for the various types.
+ * These objects are used by the parser module to build up a tree of object
+ * that are all explicitly typed. The generic t_type class exports a variety
+ * of useful methods that are used by the code generator to branch based
+ * upon different handling for the various types.
  */
 class t_type : public t_named {
  public:
@@ -113,9 +119,25 @@ class t_type : public t_named {
     t_enum = 8,
     t_structured = 12,
     t_service = 13,
-    t_stream = 17,
-    t_program = 14,
   };
+
+  // Valid types within a ProtocolObject
+  enum class value_type {
+    BOOL,
+    BYTE,
+    I16,
+    I32,
+    I64,
+    FLOAT,
+    DOUBLE,
+    STRING,
+    BINARY,
+    OBJECT,
+    LIST,
+    SET,
+    MAP,
+  };
+
   static constexpr size_t kTypeCount = 19;
   // TODO: add description
   static constexpr size_t kTypeBits = 5;
@@ -128,11 +150,14 @@ class t_type : public t_named {
   // TODO: Rename function.
   virtual type get_type_value() const = 0;
 
+  // Convert a t_type to the appropriate `t_type::value_type`.
+  std::optional<value_type> as_value_type() const;
+
   /**
    * Default returns for every thrift type
    */
   virtual bool is_void() const { return false; }
-  virtual bool is_base_type() const { return false; }
+  virtual bool is_primitive_type() const { return false; }
   virtual bool is_string() const { return false; }
   virtual bool is_bool() const { return false; }
   virtual bool is_byte() const { return false; }
@@ -150,7 +175,6 @@ class t_type : public t_named {
   virtual bool is_list() const { return false; }
   virtual bool is_set() const { return false; }
   virtual bool is_map() const { return false; }
-  virtual bool is_streamresponse() const { return false; }
   virtual bool is_service() const { return false; }
   virtual bool is_binary() const { return false; }
   virtual bool is_paramlist() const { return false; }
@@ -162,6 +186,7 @@ class t_type : public t_named {
     return is_enum() || is_any_int() || is_byte() || is_bool() ||
         is_floating_point();
   }
+  bool is_int_or_enum() const { return is_any_int() || is_enum(); }
 
   /**
    * Create a unique hash number based on t_type's properties.
@@ -174,6 +199,14 @@ class t_type : public t_named {
   }
 
   const t_program* get_program() const { return program(); }
+
+  // Visitor API
+  // Note: this requires including the `type_visitor.h` header to prevent a
+  // circular dependency.
+  template <typename... Visitors>
+  decltype(auto) visit(Visitors&&... visitors) const {
+    return detail::visit_type(*this, std::forward<Visitors>(visitors)...);
+  }
 };
 
 /**
@@ -258,6 +291,4 @@ class t_type_ref final {
   t_placeholder_typedef* get_unresolved_type() { return unresolved_type_; }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -27,9 +28,7 @@
 #include <thrift/lib/cpp/util/EnumUtils.h>
 #include <thrift/lib/cpp2/op/Get.h>
 
-namespace facebook {
-namespace thrift {
-namespace detail {
+namespace facebook::thrift::detail {
 
 struct debug_thrift_data_difference_missing {
   template <typename Tag, typename Iter, typename Callback>
@@ -37,8 +36,8 @@ struct debug_thrift_data_difference_missing {
       Tag tag,
       Callback&& callback,
       Iter iterLhs,
-      folly::StringPiece path,
-      folly::StringPiece message) {
+      std::string_view path,
+      std::string_view message) {
     using value_type = std::remove_reference_t<decltype(*iterLhs)>;
     callback(tag, &*iterLhs, static_cast<value_type*>(nullptr), path, message);
   }
@@ -48,8 +47,8 @@ struct debug_thrift_data_difference_missing {
       Tag tag,
       Callback&& callback,
       std::vector<bool>::const_iterator iterLhs,
-      folly::StringPiece path,
-      folly::StringPiece message) {
+      std::string_view path,
+      std::string_view message) {
     const bool value = *iterLhs;
     callback(tag, &value, static_cast<bool*>(nullptr), path, message);
   }
@@ -61,8 +60,8 @@ struct debug_thrift_data_difference_extra {
       Tag tag,
       Callback&& callback,
       Iter iterRhs,
-      folly::StringPiece path,
-      folly::StringPiece message) {
+      std::string_view path,
+      std::string_view message) {
     using value_type = std::remove_reference_t<decltype(*iterRhs)>;
     callback(tag, static_cast<value_type*>(nullptr), &*iterRhs, path, message);
   }
@@ -72,8 +71,8 @@ struct debug_thrift_data_difference_extra {
       Tag tag,
       Callback&& callback,
       std::vector<bool>::const_iterator iterRhs,
-      folly::StringPiece path,
-      folly::StringPiece message) {
+      std::string_view path,
+      std::string_view message) {
     const bool value = *iterRhs;
     callback(tag, static_cast<const bool*>(nullptr), &value, path, message);
   }
@@ -96,7 +95,7 @@ struct scoped_path {
     path_.resize(size_);
   }
 
-  static scoped_path member(std::string& path, folly::StringPiece member) {
+  static scoped_path member(std::string& path, std::string_view member) {
     return scoped_path(path, '.', member);
   }
 
@@ -564,6 +563,4 @@ struct debug_thrift_data_difference_impl<
   }
 };
 
-} // namespace detail
-} // namespace thrift
-} // namespace facebook
+} // namespace facebook::thrift::detail

@@ -19,15 +19,19 @@ include "thrift/annotation/scope.thrift"
 package "facebook.com/thrift/annotation"
 
 namespace java com.facebook.thrift.annotation_deprecated
+namespace android com.facebook.thrift.annotation_deprecated
 namespace js thrift.annotation.thrift
 namespace py.asyncio facebook_thrift_asyncio.annotation.thrift
 namespace go thrift.annotation.thrift
 namespace py thrift.annotation.thrift
 
+// start
+
 /**
  * Indicates a definition/feature should only be used with permission, may
  * only work in specific contexts, and may change in incompatible ways without
- * notice.
+ * notice. Note that this is primarily intended to annotate features by the Thrift Team
+ * and isn't recommended for general use.
  */
 @scope.Program
 @scope.Definition
@@ -99,22 +103,55 @@ struct RequiresBackwardCompatibility {
 @scope.Struct
 @scope.Exception
 @scope.Field
-@Experimental
 struct TerseWrite {}
 
-/** Indicates that a field's value should never be stored on the stack. */
+/** Indicates that an optional field's value should never be stored on the stack,
+i.e. the subobject should be allocated separately (e.g. because it is large and infrequently set).
+
+NOTE: The APIs and initialization behavior are same as normal field, but different from `@cpp.Ref`. e.g.
+
+```
+struct Foo {
+  1: optional i32 normal;
+  @thrift.Box
+  2: optional i32 boxed;
+  @cpp.Ref
+  3: optional i32 referred;
+}
+```
+in C++
+
+```
+Foo foo;
+EXPECT_FALSE(foo.normal().has_value()); // okay
+EXPECT_FALSE(foo.boxed().has_value()); // okay
+EXPECT_FALSE(foo.referred().has_value()); // build failure: std::unique_ptr doesn't have has_value method
+
+EXPECT_EQ(*foo.normal(), 0); // throw bad_field_access exception
+EXPECT_EQ(*foo.boxed(), 0); // throw bad_field_access exception
+EXPECT_EQ(*foo.referred(), 0); // okay, field has value by default
+```
+
+Affects C++ and Rust.
+TODO: replace with @cpp.Box + @rust.Box
+*/
 @scope.Field
 struct Box {}
 
-// TODO(ytj): Document.
+/**
+ * Indicates whether the nested fields are accessible directly.
+ * https://github.com/facebook/fbthrift/blob/v2023.11.20.00/thrift/doc/idl/mixins.md
+ */
 @scope.Field
 struct Mixin {}
 
 /**
- * Option to serialize thrift struct in ascending field id order.
+ * Option to serialize thrift struct in ascending field id order instead of field declaration order.
  *
  * This can potentially make serialized data size smaller in compact protocol,
- * since compact protocol can write deltas between subsequent field ids.
+ * since compact protocol can write deltas between subsequent field ids instead of full ids.
+ *
+ * NOTE: This annotation won't reduce payload size for other protocols.
  */
 @scope.Struct
 @Experimental // TODO(ytj): Release to Beta.
@@ -122,38 +159,35 @@ struct SerializeInFieldIdOrder {}
 
 /**
  * Indicates an enum is a bitmask and should support bit-wise operators.
+ * Currently generates additional code in C++ and Hack.
  */
 @scope.Enum
-@Experimental // TODO: Support in C++, Python, Java.
 struct BitmaskEnum {}
 
 /**
- * Specifies the field where the exception message is stored. The field
- * is used to generate an additional method to get it.
+ * Specifies the field where the exception message is stored.
+ *
+ * The "exception message" is typically a human-readable description of the
+ * exception. It is made available to the exception-handling code via standard,
+ * language-dependent APIs of the generated code, such as:
+ *   - [`std::exception::what()`](https://en.cppreference.com/w/cpp/error/exception/what)
+ *      in C++.
+ *   - [`Throwable.getMessage()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Throwable.html#getMessage--)
+ *     in Java.
+ *   - etc.
+ *
+ * This annotation can be specified on at most one field of an
+ * [exception definition](https://github.com/facebook/fbthrift/blob/main/thrift/doc/idl/index.md#exceptions),
+ * whose type must be `string`. The thrift compiler will generate an error
+ * if this annotation is specified on a field in any other structured definition,
+ * like a [struct definition](https://github.com/facebook/fbthrift/blob/main/thrift/doc/idl/index.md#structs)
+ * or an [union definition](https://github.com/facebook/fbthrift/blob/main/thrift/doc/idl/index.md#unions)
+ *
+ * If an exception definition does not specify this annotation for any field, the
+ * exception message returned by the aforementioned APIs is unspecified.
  */
-// TODO(afuller): Consider allowing this annotation to be placed on the field
-// itself, so the annotation can be used (transitively), without specifying an
-// explicit name. Also, maybe move to api.thrift.
-@scope.Exception
-@Experimental // TODO: Support in C++, Python, Java.
-struct ExceptionMessage {
-  1: string field;
-}
-
-/**
- * Generates a const of type schema. Struct containing the schema of the
- * annotated type. Optionally specify name to override default
- * schema<structName>.
- */
-@scope.Structured
-@scope.Service
-@scope.Const
-@scope.Enum
-@scope.Typedef
-@Experimental
-struct GenerateRuntimeSchema {
-  1: string name;
-}
+@scope.Field
+struct ExceptionMessage {}
 
 /**
  * Indicates that a field's value should never be stored on the stack, and that
@@ -162,3 +196,56 @@ struct GenerateRuntimeSchema {
 @scope.Field
 @Experimental
 struct InternBox {}
+
+/**
+ * Indicates that an interaction's methods should be processed sequentially.
+ */
+@scope.Interaction
+struct Serial {}
+
+/**
+ * Changes the URI of this definition away from the default-generated one.
+ */
+@scope.Definition
+struct Uri {
+  1: string value;
+}
+
+/**
+ * Changes the priority of this function (default NORMAL).
+ */
+@scope.Function
+struct Priority {
+  1: RpcPriority level;
+}
+enum RpcPriority {
+  HIGH_IMPORTANT = 0,
+  HIGH = 1,
+  IMPORTANT = 2,
+  NORMAL = 3,
+  BEST_EFFORT = 4,
+}
+
+/**
+* Applies unstructured annotations to a definition.
+*/
+@scope.Definition
+struct DeprecatedUnvalidatedAnnotations {
+  1: map<string, string> items;
+}
+
+/**
+* In addition to reserved words, Thrift reserves all identifiers
+* that contain the case-insensitive substring fbthrift preceded
+* by one or more underscores.
+* The use of such identifiers requires users to explicitly annotate
+* the usage with
+*   `@thrift.AllowReservedFilename` for filenames
+*   `@thrift.AllowReservedIdentifier` for all other identifiers
+* and may result in undefined behavior.
+*/
+@scope.Definition
+struct AllowReservedIdentifier {}
+
+@scope.Program
+struct AllowReservedFilename {}

@@ -26,27 +26,25 @@ RoundRobinRequestPile::Options::getDefaultPileSelectionFunc(
     unsigned defaultPriority) {
   DCHECK(numBucketsPerPriority.size());
   unsigned priorityLimit = numBucketsPerPriority.size() - 1;
-  PileSelectionFunction pileSelectionFunction{
-      [defaultPriority, priorityLimit](
-          const ServerRequest& request) -> std::pair<unsigned, unsigned> {
-        unsigned priority =
-            static_cast<unsigned>(request.requestContext()->getCallPriority());
-        if (priority <= priorityLimit) {
-          return std::make_pair(static_cast<uint64_t>(priority), 0);
-        }
-        if (request.methodMetadata()) {
-          if (auto prio = request.methodMetadata()->priority) {
-            priority = static_cast<unsigned>(*prio);
-          } else {
-            priority = defaultPriority;
-          }
+  return [defaultPriority, priorityLimit](
+             const ServerRequest& request) -> std::pair<unsigned, unsigned> {
+    unsigned priority =
+        static_cast<unsigned>(request.requestContext()->getCallPriority());
+    if (priority <= priorityLimit) {
+      return std::make_pair(static_cast<uint64_t>(priority), 0);
+    }
+    if (request.methodMetadata()) {
+      if (auto prio = request.methodMetadata()->priority) {
+        priority = static_cast<unsigned>(*prio);
+      } else {
+        priority = defaultPriority;
+      }
 
-        } else {
-          priority = defaultPriority;
-        }
-        return std::make_pair(static_cast<uint64_t>(priority), 0);
-      }};
-  return pileSelectionFunction;
+    } else {
+      priority = defaultPriority;
+    }
+    return std::make_pair(static_cast<uint64_t>(priority), 0);
+  };
 }
 
 void RoundRobinRequestPile::Consumer::operator()(
@@ -132,7 +130,7 @@ std::optional<ServerRequestRejection> RoundRobinRequestPile::enqueue(
   }
   DCHECK_LT(pri, opts_.numBucketsPerPriority.size());
   DCHECK_LT(bucket, opts_.numBucketsPerPriority[pri]);
-
+  request.requestData().bucket = {pri, bucket};
   RequestPileBase::onEnqueued(request);
 
   // TODO(yichengfb): enforcing limit on single bucket queue
@@ -213,6 +211,100 @@ std::string RoundRobinRequestPile::describe() const {
         fmt::format(" Pri:{} Buckets:{}", i, opts_.numBucketsPerPriority[i]);
   }
   return result;
+}
+
+serverdbginfo::RequestPileDbgInfo RoundRobinRequestPile::getDbgInfo() const {
+  serverdbginfo::RequestPileDbgInfo info;
+  info.name() = folly::demangle(typeid(*this));
+  info.prioritiesCount() = opts_.numBucketsPerPriority.size();
+
+  for (size_t i = 0; i < opts_.numBucketsPerPriority.size(); ++i) {
+    info.bucketsPerPriority()->push_back(opts_.numBucketsPerPriority[i]);
+  }
+
+  info.perBucketRequestLimit() = opts_.numMaxRequests;
+  info.queuedRequestsCount() = requestCount();
+
+  return info;
+}
+
+std::vector<std::vector<uint64_t>> RoundRobinRequestPile::getRequestCounts()
+    const {
+  std::vector<std::vector<uint64_t>> res;
+  res.reserve(opts_.numBucketsPerPriority.size());
+  for (size_t i = 0; i < opts_.numBucketsPerPriority.size(); ++i) {
+    if (!retrievalIndexQueues_[i]) {
+      res.emplace_back(1, singleBucketRequestQueues_[i]->size());
+    } else {
+      std::vector<uint64_t> subRes;
+      if (!retrievalIndexQueues_[i]->empty()) {
+        subRes.reserve(opts_.numBucketsPerPriority[i]);
+        for (size_t j = 0; j < opts_.numBucketsPerPriority[i]; ++j) {
+          subRes.emplace_back(requestQueues_[i][j].size());
+        }
+      } else {
+        subRes.resize(opts_.numBucketsPerPriority[i]);
+      }
+      res.push_back(std::move(subRes));
+    }
+  }
+
+  return res;
+}
+
+namespace {
+/*
+ * augmentWithInternalPriorities takes a PileSelectionFunction and updates it to
+ * work with internal priorities. The updated PileSelectionFunction will return
+ * a priority that is twice as large as the original priority, and will add 1 to
+ * the priority if the internal priority is LO_PRI.
+ *
+ * The updated function will return the same bucket as the original.
+ */
+RoundRobinRequestPile::PileSelectionFunction augmentWithInternalPriorities(
+    RoundRobinRequestPile::PileSelectionFunction&& func) {
+  return [originalFunc = std::move(func)](const ServerRequest& req)
+             -> std::pair<
+                 RoundRobinRequestPile::Priority,
+                 RoundRobinRequestPile::Bucket> {
+    unsigned pri = 0, bucket = 0;
+    if (originalFunc) {
+      std::tie(pri, bucket) = originalFunc(req);
+    }
+    pri *= 2;
+    if (detail::ServerRequestHelper::internalPriority(req) ==
+        folly::Executor::LO_PRI) {
+      pri += 1;
+    }
+    return {pri, bucket};
+  };
+}
+} // namespace
+
+/*static*/ RoundRobinRequestPile::Options
+RoundRobinRequestPile::addInternalPriorities(
+    RoundRobinRequestPile::Options opts) {
+  if (opts.numBucketsPerPriority.size() >
+      std::numeric_limits<RoundRobinRequestPile::Priority>::max() / 2) {
+    LOG(WARNING) << "Too many priorities, additional internal priorities "
+                 << "will not be added.";
+    return opts;
+  }
+
+  // Double the number of priorities
+  std::vector<unsigned int> numBucketsPerPriority;
+  numBucketsPerPriority.reserve(opts.numBucketsPerPriority.size() * 2);
+  for (auto numBuckets : opts.numBucketsPerPriority) {
+    // See comment on addInternalPriorities declaration for why we do this
+    numBucketsPerPriority.push_back(numBuckets);
+    numBucketsPerPriority.push_back(numBuckets);
+  }
+  opts.numBucketsPerPriority = std::move(numBucketsPerPriority);
+
+  // Update pileSelectionFunction
+  opts.pileSelectionFunction =
+      augmentWithInternalPriorities(std::move(opts.pileSelectionFunction));
+  return opts;
 }
 
 } // namespace apache::thrift

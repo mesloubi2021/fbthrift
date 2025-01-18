@@ -36,8 +36,7 @@ namespace {
 const uint32_t kMaxConcurrentIncomingStreams = 100000;
 } // namespace
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using std::chrono::milliseconds;
 
@@ -49,12 +48,14 @@ class HTTP2RoutingSessionManager : public proxygen::HTTPSession::InfoCallback,
   explicit HTTP2RoutingSessionManager(
       ThriftProcessor* processor,
       const server::ServerConfigs& serverConfigs,
-      std::shared_ptr<Cpp2Worker> worker)
+      std::shared_ptr<Cpp2Worker> worker,
+      const server::TServerObserver::ConnectionInfo& connInfo)
       : proxygen::HTTPSession::InfoCallback(),
         proxygen::SimpleController(/*acceptor=*/nullptr),
         processor_(processor),
         serverConfigs_(serverConfigs),
-        worker_(std::move(worker)) {}
+        worker_(std::move(worker)),
+        connInfo_(connInfo) {}
 
   ~HTTP2RoutingSessionManager() override = default;
 
@@ -109,7 +110,7 @@ class HTTP2RoutingSessionManager : public proxygen::HTTPSession::InfoCallback,
   void detachSession(const proxygen::HTTPSessionBase*) override {
     VLOG(4) << "HTTP2RoutingSessionManager::detachSession";
     if (auto* observer = serverConfigs_.getObserver()) {
-      observer->connClosed();
+      observer->connClosed(connInfo_);
     }
     // Session destroyed, so self destroy.
     delete this;
@@ -121,6 +122,7 @@ class HTTP2RoutingSessionManager : public proxygen::HTTPSession::InfoCallback,
   ThriftProcessor* processor_;
   const server::ServerConfigs& serverConfigs_;
   std::shared_ptr<Cpp2Worker> worker_;
+  const server::TServerObserver::ConnectionInfo connInfo_;
 };
 
 } // anonymous namespace
@@ -173,14 +175,17 @@ void HTTP2RoutingHandler::handleConnection(
         nullptr /* manager */,
         nullptr /* peerCert */,
         nullptr /* clientIdentityHook */,
-        worker.get() /* worker */);
+        worker.get() /* worker */,
+        worker->getServer()->getServiceInterceptors().size());
     connContext.setTransportType(Cpp2ConnContext::TransportType::HTTP2);
     logSetupConnectionEventsOnce(logConnectionOnce, connContext);
   }
+  auto connInfo = server::TServerObserver::ConnectionInfo(
+      reinterpret_cast<uint64_t>(sock.get()), sock->getSecurityProtocol());
 
   // Create the DownstreamSession manager.
   auto sessionManager = new HTTP2RoutingSessionManager(
-      processor_, serverConfigs_, std::move(worker));
+      processor_, serverConfigs_, std::move(worker), connInfo);
   // Create the DownstreamSession
   // A const_cast is needed to match wangle and proxygen APIs
   auto h2codec = std::make_unique<proxygen::HTTP2Codec>(
@@ -213,12 +218,11 @@ void HTTP2RoutingHandler::handleConnection(
 
   auto observer = serverConfigs_.getObserver();
   if (observer) {
-    observer->connAccepted(tinfo);
+    observer->connAccepted(tinfo, connInfo);
     observer->activeConnections(
         connectionManager->getNumConnections() *
         serverConfigs_.getNumIOWorkerThreads());
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

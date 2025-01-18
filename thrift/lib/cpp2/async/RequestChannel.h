@@ -36,6 +36,7 @@
 #include <thrift/lib/cpp/Thrift.h>
 #include <thrift/lib/cpp/concurrency/Thread.h>
 
+#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/async/Interaction.h>
 #include <thrift/lib/cpp2/async/MessageChannel.h>
 #include <thrift/lib/cpp2/async/RequestCallback.h>
@@ -47,12 +48,13 @@
 #include <thrift/lib/cpp2/util/MethodMetadata.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
+THRIFT_FLAG_DECLARE_int64(thrift_client_checksum_sampling_rate);
+
 namespace folly {
 class IOBuf;
 }
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class StreamClientCallback;
 class SinkClientCallback;
@@ -99,6 +101,7 @@ using ChannelSendFunc = void (RequestChannel::*)(
  */
 class RequestChannel : virtual public folly::DelayedDestruction {
  protected:
+  RequestChannel();
   ~RequestChannel() override {}
 
  public:
@@ -224,7 +227,7 @@ class RequestChannel : virtual public folly::DelayedDestruction {
   uint64_t checksumSamplingRate_{0};
 };
 
-template <bool oneWay, bool sync>
+template <bool IsOneway, bool IsSync>
 class ClientBatonCallback : public RequestClientCallback {
  public:
   explicit ClientBatonCallback(
@@ -258,8 +261,8 @@ class ClientBatonCallback : public RequestClientCallback {
   folly::fibers::Baton& co_waitUntilDone() { return doneBaton_; }
 
   void onResponse(ClientReceiveState&& rs) noexcept override {
-    if (!oneWay) {
-      assert(rs.hasResponseBuffer());
+    if constexpr (!IsOneway) {
+      DCHECK(rs.hasResponseBuffer());
       *rs_ = std::move(rs);
     }
     doneBaton_.post();
@@ -271,7 +274,7 @@ class ClientBatonCallback : public RequestClientCallback {
 
   bool isInlineSafe() const override { return true; }
 
-  bool isSync() const override { return sync; }
+  bool isSync() const override { return IsSync; }
 
   folly::Executor::KeepAlive<> getExecutor() const override {
     return executor_;
@@ -283,11 +286,11 @@ class ClientBatonCallback : public RequestClientCallback {
   folly::Executor* executor_{};
 };
 
-template <bool oneWay>
-using ClientSyncCallback = ClientBatonCallback<oneWay, true>;
+template <bool IsOneWay>
+using ClientSyncCallback = ClientBatonCallback<IsOneWay, true>;
 
-template <bool oneWay>
-using ClientCoroCallback = ClientBatonCallback<oneWay, false>;
+template <bool IsOneWay>
+using ClientCoroCallback = ClientBatonCallback<IsOneWay, false>;
 
 StreamClientCallback* createStreamClientCallback(
     RequestClientCallback::Ptr requestCallback,
@@ -335,7 +338,7 @@ SerializedRequest preprocessSendT(
     } catch (const apache::thrift::TException&) {
       if (ctx) {
         ctx->handlerErrorWrapped(
-            folly::exception_wrapper(std::current_exception()));
+            folly::exception_wrapper(folly::current_exception()));
       }
       throw;
     }
@@ -402,37 +405,23 @@ void RequestChannel::sendRequestAsync(
   }
 }
 
-template <RpcKind Kind, class Protocol, typename RpcOptions>
+template <RpcKind Kind, typename RpcOptions>
 void clientSendT(
-    Protocol* prot,
+    apache::thrift::SerializedRequest&& serializedRequest,
     RpcOptions&& rpcOptions,
     typename apache::thrift::detail::RequestClientCallbackType<Kind>::Ptr
         callback,
-    apache::thrift::ContextStack* ctx,
     std::shared_ptr<apache::thrift::transport::THeader>&& header,
     RequestChannel* channel,
-    apache::thrift::MethodMetadata&& methodMetadata,
-    folly::FunctionRef<void(Protocol*)> writefunc,
-    folly::FunctionRef<size_t(Protocol*)> sizefunc) {
-  auto request = preprocessSendT(
-      prot,
-      rpcOptions,
-      ctx,
-      *header,
-      methodMetadata.name_view(),
-      writefunc,
-      sizefunc,
-      channel->getChecksumSamplingRate());
-
+    apache::thrift::MethodMetadata&& methodMetadata) {
   channel->sendRequestAsync<Kind>(
       std::forward<RpcOptions>(rpcOptions),
       std::move(methodMetadata),
-      std::move(request),
+      std::move(serializedRequest),
       std::move(header),
       std::move(callback));
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // #ifndef THRIFT_ASYNC_REQUESTCHANNEL_H_

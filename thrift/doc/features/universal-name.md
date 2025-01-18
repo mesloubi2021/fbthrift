@@ -1,59 +1,71 @@
 # Universal Names
 
-A Universal Name uniquely identifies a Thrift [definition](../idl/#type-definitions), regardless of which program it is defined in. It **must** be a valid [URI](https://tools.ietf.org/html/rfc3986) that meets the following criteria:
+A universal name uniquely identifies a Thrift [definition](/idl/index.md#definitions) at runtime, regardless of which Thrift file it is defined in. It looks like a partial URI (`"fbthrift://"` is implied) and has the following format:
 
-- **Must not** have a scheme; "fbthrift://" is implied.
-- **Must** include a domain name as the 'authority', with at least 2 domain labels.
-- **Must** include a path (with at least 2 path segments for a definition).
-- **Must not** have a query or a fragment.
-- **Must** be in the following canonical/normalized form:
-  - Domain name labels **must** be lowercase ASCII letters, numbers, -, or _.
-  - Path segments **must** be ASCII letters, numbers, -, or _.
+```grammar
+universal_name ::=  domain_path '/' identifier
+```
 
-It can be defined either with `package` declaration or using `thrift.uri` annotation.
+where `domain_path` is defined in [Package Declaration](/idl/index.md#package-declaration).
+
+A universal name is either [generated automatically](#package) based on the package name or [specified manually](#annotation) using the `@thrift.Uri` annotation.
+
+You should ensure that universal names for your definitions are unique. For generated universal names, follow the recommendations on [naming packages](/idl/index.md#package-declaration). For `@thrift.Uri`, combine a domain name that belongs to you or your organization with a path, possibly consisting of multiple components, that uniquely identifies this definition within the domain/organization.
+
+:::caution
+Universal name conflicts can be difficult to resolve, so choose these names carefully and prefer longer, more specific names to shorter, generic ones.
+:::
 
 ## Package
-Universal names are generated for each thrift [definition](../idl/#type-definitions) using a package `{package}/{identifier}`. In the example below, `Foo` has universal name `meta.com/test/Foo` and `MyException` has a universal name `meta.com/test/MyException`.
+
+Universal names are generated for each Thrift [definition](/idl/index.md#definitions) by combining the package name with the definition name. In the example below, `SearchRequest` has the universal name `meta.com/search/SearchRequest`, and `SearchException` has the universal name `meta.com/search/SearchException`.
 
 ```thrift
-package "meta.com/test"
+package "meta.com/search"
 
-struct Foo {
-  1: i32 field;
+struct SearchRequest {
+  1: string query;
+  2: i32 numResults;
 }
 
-exception MyException {
-  1: string message;
+exception SearchException {
+  1: string errorMessage;
+  2: i64 errorCode;
 }
-
 ```
 
 ## Annotation
-Universal names can also be defined or overridden with an unstructured annotation `thrift.uri`.
+
+Universal names can also be defined or overridden with the `@thrift.Uri` annotation.
 
 ```thrift
-struct Foo {
-  1: i32 field;
-} (thrift.uri = "meta.com/test/MyStruct")
+@thrift.Uri{value = "meta.com/search/NewSearchRequest"}
+struct SearchRequest {
+  1: string query;
+  2: i32 numResults;
+}
 ```
 
 ```thrift
-package "meta.com/test"
+package "meta.com/search"
 
-struct Foo {
-  1: i32 field;
-} (thrift.uri = "meta.com/test/MyStruct")
+@thrift.Uri{value = "meta.com/search/NewSearchRequest"}
+struct SearchRequest {
+  1: string query;
+  2: i32 numResults;
+}
 ```
 
 ## Hashing
-While a universal name (URI) is great for discovery and enforcing global uniqueness, its length is not fixed and can become large. Instead of URI, a hash of the URI is usually preferred. Conformance Any, Thrift Any and SemiAny are examples where hash **may** be used. The hash is calculated as SHA2-256 prefixing the URI with `fbthrift://` scheme. The output is 32 byte length data, but the prefix of the hash can be used to uniquely identify a universal name. Default length of the hash is 16 bytes and minimum is defined as 8 bytes.
 
-The table below shows an example of the universal name, hash and 8 bytes prefixes.
+While a universal name is great for discovery and enforcing global uniqueness, its length is not fixed and can become large. Instead, a hash of the URI is usually preferred. Thrift Any and SemiAny are examples where a hash **may** be used. The hash is calculated as SHA2-256, prefixing the universal name with `"fbthrift://"`. The output is 32 bytes in length, but the prefix of the hash can be used to uniquely identify a universal name. The default length of the hash is 16 bytes, and the minimum is defined as 8 bytes.
 
-| Universal Name | SHA2-256 Hash | Prefix (8 bytes) |
-| ----------- | ----------- | --------- |
-| meta.com/conformance/foo | 09d3e751c86fde6ecdf9cd195a1f60f8dd326b0b2c85b68830dfee4698ebe938 | 09d3e751c86fde6e|
-| meta.com/conformance/bar | 5b3919ca705489d9291cb7dcf8ed504acda4c2f5e28ac4ea1213cfc208a550e2 | 5b3919ca705489d9|
-| meta.com/conformance/baz | 0d80a6583b14f2e2e3f38309621a4992ed7b93d3a7850d825a67c1b7f7206d27 | 0d80a6583b14f2e2|
+The table below shows an example of the universal name, hash, and 8-byte prefixes.
 
-8 byte prefix allows 2^64 unique values before a collision occurs.
+| Universal Name | Prefix (8 bytes) | Full SHA2-256 Hash |
+| -------------- | ---------------- | ------------------ |
+| meta.com/conformance/foo | 09d3e751c86fde6e | 09d3e751c86fde6ecdf9cd195a1f60f8dd326b0b2c85b68830dfee4698ebe938 |
+| meta.com/conformance/bar | 5b3919ca705489d9 | 5b3919ca705489d9291cb7dcf8ed504acda4c2f5e28ac4ea1213cfc208a550e2 |
+| meta.com/conformance/baz | 0d80a6583b14f2e2 | 0d80a6583b14f2e2e3f38309621a4992ed7b93d3a7850d825a67c1b7f7206d27|
+
+An 8-byte prefix allows 2<sup>64</sup> unique values before a collision occurs.

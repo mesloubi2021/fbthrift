@@ -15,10 +15,11 @@
       "definition_html": "void apache::thrift::op::Sha256Hasher::finalize",
       "argsstring_html": "()",
       "name_html": "finalize",
+      "qualifiedname_html": "apache::thrift::op::Sha256Hasher::finalize",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Sha256Hasher.h",
         "line": "59",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Sha256Hasher.h",
         "bodystart": "59",
         "bodyend": "63"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/Sha256Hasher/finalize",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/Sha256Hasher/finalize"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/Sha256Hasher/finalize",
+  "parent_links": [
+    {
+      "text_html": "Sha256Hasher",
+      "href": "/ref/cpp/class/apache/thrift/op/Sha256Hasher"
+    }
+  ]
 }

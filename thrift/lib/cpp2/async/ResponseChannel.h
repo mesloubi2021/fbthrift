@@ -56,9 +56,13 @@ extern const std::string kRequestParsingErrorCode;
 extern const std::string kChecksumMismatchErrorCode;
 extern const std::string kUnimplementedMethodErrorCode;
 extern const std::string kTenantQuotaExceededErrorCode;
+extern const std::string kTenantBlocklistedErrorCode;
+extern const std::string kInteractionLoadsheddedErrorCode;
+extern const std::string kInteractionLoadsheddedQueueTimeoutErrorCode;
+extern const std::string kInteractionLoadsheddedOverloadErrorCode;
+extern const std::string kInteractionLoadsheddedAppOverloadErrorCode;
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 class ResponseChannelRequest {
  public:
@@ -149,9 +153,16 @@ class ResponseChannelRequest {
   virtual void sendErrorWrapped(
       folly::exception_wrapper ex, std::string exCode) = 0;
 
-  virtual void sendQueueTimeoutResponse() {}
+  virtual void sendQueueTimeoutResponse(
+      bool /*interactionIsTerminated*/ = false) {}
 
   virtual ~ResponseChannelRequest() = default;
+
+  // Get queue timeout for this request. So any owner who wants to enqueue this
+  // request before processing can schedule timeout.
+  virtual std::chrono::milliseconds getQueueTimeoutMs() const {
+    return std::chrono::milliseconds(0);
+  }
 
   bool getShouldStartProcessing() {
     if (!tryStartProcessing()) {
@@ -216,7 +227,6 @@ class ResponseChannel : virtual public folly::DelayedDestruction {
   ~ResponseChannel() override {}
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif // #ifndef THRIFT_ASYNC_RESPONSECHANNEL_H_

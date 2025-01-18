@@ -20,6 +20,9 @@
 #define THRIFT_UTIL_ENUMUTILS_H_ 1
 
 #include <cstring>
+#include <optional>
+#include <string_view>
+#include <fmt/format.h>
 
 #include <folly/Conv.h>
 #include <folly/Portability.h>
@@ -34,31 +37,36 @@ namespace util {
 
 /// Return whether EnumType is a thrift defined enum type
 template <typename EnumType, typename = void>
-FOLLY_INLINE_VARIABLE constexpr bool is_thrift_enum_v = false;
+inline constexpr bool is_thrift_enum_v = false;
 
 template <typename EnumType>
-FOLLY_INLINE_VARIABLE constexpr bool is_thrift_enum_v<
+inline constexpr bool is_thrift_enum_v<
     EnumType,
     folly::void_t<decltype(TEnumTraits<EnumType>::size)>> = true;
+
+template <>
+inline constexpr bool is_thrift_enum_v<void> = false;
 
 /**
  * Parses an enum name to the enum type
  */
 template <typename EnumType>
-bool tryParseEnum(folly::StringPiece name, EnumType* out) {
+bool tryParseEnum(std::string_view name, EnumType* out) {
   return TEnumTraits<EnumType>::findValue(name, out);
 }
 
-/*
+/**
  * Same as tryParseEnum but throw an exception if the given name is not found in
  * enum
  */
-
 template <typename EnumType>
-EnumType enumValueOrThrow(folly::StringPiece name) {
+EnumType enumValueOrThrow(std::string_view name) {
   EnumType out;
   if (!tryParseEnum(name, &out)) {
-    folly::throw_exception<std::out_of_range>("name not found in enum");
+    folly::throw_exception<std::out_of_range>(fmt::format(
+        "name '{}' not found in enum '{}'",
+        name,
+        folly::pretty_name<EnumType>()));
   }
   return out;
 }
@@ -75,13 +83,26 @@ const char* enumName(EnumType value, const char* defaultName = nullptr) {
 }
 
 /**
+ * Same as enumName but returns a string_view if the value is in the enum, and
+ * std::nullopt otherwise.
+ */
+template <typename EnumType>
+std::optional<std::string_view> tryGetEnumName(EnumType value) {
+  std::string_view name;
+  if (TEnumTraits<EnumType>::findName(value, &name)) {
+    return name;
+  }
+  return std::nullopt;
+}
+
+/**
  * Same as enumName but returns the integer value converted to string
  * if it is not in enum, to avoid returning nullptr.
  */
 template <typename EnumType>
 std::string enumNameSafe(EnumType value) {
   auto under = folly::to_underlying(value);
-  folly::StringPiece name;
+  std::string_view name;
   bool found = TEnumTraits<EnumType>::findName(value, &name);
   return found ? std::string(name) : folly::to<std::string>(under);
 }

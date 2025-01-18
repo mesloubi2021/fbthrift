@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import difflib
 import os
 import shutil
@@ -39,7 +41,6 @@ def gen_find_recursive_files(path):
 
 
 class GoldenTest(unittest.TestCase):
-
     MSG = """One or more testset outputs are out of sync with the generator.
 To sync them, run:
   thrift/test/testset/generator.py --install_dir ./thrift/test/testset/golden

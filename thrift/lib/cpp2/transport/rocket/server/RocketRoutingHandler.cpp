@@ -29,14 +29,14 @@
 #include <folly/io/async/AsyncTransport.h>
 
 #include <thrift/lib/cpp2/server/Cpp2Worker.h>
+#include <thrift/lib/cpp2/server/ThriftServerInternals.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/FrameType.h>
 #include <thrift/lib/cpp2/transport/rocket/server/RocketServerConnection.h>
 #include <thrift/lib/cpp2/transport/rocket/server/ThriftRocketServerHandler.h>
 
 THRIFT_FLAG_DEFINE_bool(rocket_set_idle_connection_timeout, true);
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace detail {
 
 #define THRIFT_DETAIL_REGISTER_SERVER_EXTENSION_DEFAULT(FUNC)     \
@@ -56,9 +56,17 @@ THRIFT_DETAIL_REGISTER_SERVER_EXTENSION_DEFAULT(
 
 #undef THRIFT_DETAIL_REGISTER_SERVER_EXTENSION_DEFAULT
 
+THRIFT_PLUGGABLE_FUNC_REGISTER(
+    std::unique_ptr<apache::thrift::rocket::SetupFrameInterceptor>,
+    createSecuritySetupFrameInterceptor,
+    apache::thrift::ThriftServer&) {
+  return {};
+}
 } // namespace detail
 
-RocketRoutingHandler::RocketRoutingHandler(ThriftServer& server) {
+RocketRoutingHandler::RocketRoutingHandler(ThriftServer& server)
+    : streamMetricCallback_(
+          detail::ThriftServerInternals(server).getStreamMetricCallback()) {
   auto addSetupFramehandler = [&](auto&& handlerFactory) {
     if (auto handler = handlerFactory(server)) {
       setupFrameHandlers_.push_back(std::move(handler));
@@ -67,6 +75,13 @@ RocketRoutingHandler::RocketRoutingHandler(ThriftServer& server) {
   addSetupFramehandler(detail::createRocketDebugSetupFrameHandler);
   addSetupFramehandler(detail::createRocketMonitoringSetupFrameHandler);
   addSetupFramehandler(detail::createRocketProfilingSetupFrameHandler);
+
+  auto addSetupFrameInterceptor = [&](auto&& handlerFactory) {
+    if (auto handler = handlerFactory(server)) {
+      setupFrameInterceptors_.push_back(std::move(handler));
+    }
+  };
+  addSetupFrameInterceptor(detail::createSecuritySetupFrameInterceptor);
 }
 
 RocketRoutingHandler::~RocketRoutingHandler() {
@@ -137,14 +152,21 @@ void RocketRoutingHandler::handleConnection(
   cfg.egressBufferBackpressureRecoveryFactor =
       server->getEgressBufferRecoveryFactor();
   cfg.socketOptions = &server->getPerConnectionSocketOptions();
+  cfg.parserAllocator = server->getCustomAllocatorForParser();
+  const std::string& securotyProtocol = sock->getSecurityProtocol();
 
   auto* const sockPtr = sock.get();
   auto* const connection = new rocket::RocketServerConnection(
       std::move(sock),
       std::make_unique<rocket::ThriftRocketServerHandler>(
-          worker, *address, sockPtr, setupFrameHandlers_),
+          worker,
+          *address,
+          sockPtr,
+          setupFrameHandlers_,
+          setupFrameInterceptors_),
       worker->getIngressMemoryTracker(),
       worker->getEgressMemoryTracker(),
+      streamMetricCallback_,
       cfg);
   onConnection(*connection);
   connectionManager->addConnection(
@@ -153,12 +175,14 @@ void RocketRoutingHandler::handleConnection(
       /* connectionAgeTimeout */ true);
 
   if (auto* observer = server->getObserver()) {
-    observer->connAccepted(tinfo);
+    observer->connAccepted(
+        tinfo,
+        server::TServerObserver::ConnectionInfo(
+            reinterpret_cast<uint64_t>(sockPtr), securotyProtocol));
     observer->activeConnections(
         connectionManager->getNumConnections() *
         server->getNumIOWorkerThreads());
   }
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

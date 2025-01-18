@@ -10,18 +10,20 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE bool",
       "definition_html": "FOLLY_ERASE bool apache::thrift::intern_boxed_field_ref&lt; T &gt;::is_set",
       "argsstring_html": "() const noexcept",
       "name_html": "is_set",
+      "qualifiedname_html": "apache::thrift::intern_boxed_field_ref::is_set",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "1237",
-        "column": "1",
+        "line": "1245",
+        "column": "20",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "1237",
-        "bodyend": "1237"
+        "bodystart": "1245",
+        "bodyend": "1247"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE bool is_set() const",
@@ -43,5 +45,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/is_set",
-  "refid": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/is_set"
+  "refid": "/ref/cpp/f/class/apache/thrift/intern_boxed_field_ref/is_set",
+  "parent_links": [
+    {
+      "text_html": "intern_boxed_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/intern_boxed_field_ref"
+    }
+  ]
 }

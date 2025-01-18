@@ -18,7 +18,15 @@ namespace cpp2 apache.thrift.test
 
 cpp_include "thrift/test/ProtocolMethodsTestCustomTypes.h"
 
+include "thrift/annotation/cpp.thrift"
+
 struct MyStruct {
-  1: i32 (cpp.type = 'MyInt') num;
-  2: string (cpp.type = 'MyString') str;
+  1: i32_7453 num;
+  2: string_9131 str;
 } (no_default_comparators)
+
+// The following were automatically generated and may benefit from renaming.
+@cpp.Type{name = "MyInt"}
+typedef i32 i32_7453
+@cpp.Type{name = "MyString"}
+typedef string string_9131

@@ -41,12 +41,16 @@
     {
       "refid": "classapache_1_1thrift_1_1op_1_1DeterministicAccumulator",
       "prot": "public",
-      "text_html": "apache::thrift::op::DeterministicAccumulator"
+      "text_html": "apache::thrift::op::DeterministicAccumulator",
+      "href": "/ref/cpp/class/apache/thrift/op/DeterministicAccumulator",
+      "is_transitive_innerclass": false
     },
     {
       "refid": "structapache_1_1thrift_1_1op_1_1DeterministicAccumulator_1_1Context",
       "prot": "private",
-      "text_html": "apache::thrift::op::DeterministicAccumulator::Context"
+      "text_html": "apache::thrift::op::DeterministicAccumulator::Context",
+      "href": "/ref/cpp/struct/apache/thrift/op/DeterministicAccumulator/Context",
+      "is_transitive_innerclass": true
     }
   ],
   "innernamespace": [
@@ -86,10 +90,11 @@
       "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeDeterministicAccumulator",
       "argsstring_html": "()",
       "name_html": "makeDeterministicAccumulator",
+      "qualifiedname_html": "apache::thrift::op::makeDeterministicAccumulator",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "162",
-        "column": "1",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "162",
         "bodyend": "166"
@@ -122,6 +127,7 @@
       "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeOrderedHashGuard",
       "argsstring_html": "(Accumulator &amp;accumulator)",
       "name_html": "makeOrderedHashGuard",
+      "qualifiedname_html": "apache::thrift::op::makeOrderedHashGuard",
       "param": [
         {
           "type_html": "Accumulator &amp;",
@@ -131,7 +137,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "169",
-        "column": "1",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "169",
         "bodyend": "172"
@@ -164,6 +170,7 @@
       "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeUnorderedHashGuard",
       "argsstring_html": "(Accumulator &amp;accumulator)",
       "name_html": "makeUnorderedHashGuard",
+      "qualifiedname_html": "apache::thrift::op::makeUnorderedHashGuard",
       "param": [
         {
           "type_html": "Accumulator &amp;",
@@ -173,7 +180,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "line": "175",
-        "column": "1",
+        "column": "22",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
         "bodystart": "175",
         "bodyend": "178"
@@ -216,10 +223,11 @@
               "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeDeterministicAccumulator",
               "argsstring_html": "()",
               "name_html": "makeDeterministicAccumulator",
+              "qualifiedname_html": "apache::thrift::op::makeDeterministicAccumulator",
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "line": "162",
-                "column": "1",
+                "column": "22",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "bodystart": "162",
                 "bodyend": "166"
@@ -267,6 +275,7 @@
               "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeOrderedHashGuard",
               "argsstring_html": "(Accumulator &amp;accumulator)",
               "name_html": "makeOrderedHashGuard",
+              "qualifiedname_html": "apache::thrift::op::makeOrderedHashGuard",
               "param": [
                 {
                   "type_html": "Accumulator &amp;",
@@ -276,7 +285,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "line": "169",
-                "column": "1",
+                "column": "22",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "bodystart": "169",
                 "bodyend": "172"
@@ -324,6 +333,7 @@
               "definition_html": "FOLLY_NODISCARD auto apache::thrift::op::makeUnorderedHashGuard",
               "argsstring_html": "(Accumulator &amp;accumulator)",
               "name_html": "makeUnorderedHashGuard",
+              "qualifiedname_html": "apache::thrift::op::makeUnorderedHashGuard",
               "param": [
                 {
                   "type_html": "Accumulator &amp;",
@@ -333,7 +343,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "line": "175",
-                "column": "1",
+                "column": "22",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/DeterministicAccumulator.h",
                 "bodystart": "175",
                 "bodyend": "178"

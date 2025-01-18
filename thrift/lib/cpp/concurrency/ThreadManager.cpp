@@ -35,12 +35,12 @@
 #include <folly/IntrusiveList.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
-#include <folly/VirtualExecutor.h>
 #include <folly/concurrency/PriorityUnboundedQueueSet.h>
 #include <folly/executors/Codel.h>
 #include <folly/executors/InlineExecutor.h>
 #include <folly/executors/MeteredExecutor.h>
 #include <folly/executors/QueueObserver.h>
+#include <folly/executors/VirtualExecutor.h>
 #include <folly/io/async/Request.h>
 #include <folly/portability/GFlags.h>
 #include <folly/synchronization/LifoSem.h>
@@ -414,8 +414,7 @@ class ThreadManager::Impl : public ThreadManager,
       list<WorkerBaseHook, boost::intrusive::constant_time_size<false>>
           liveWorkers_;
 
-  folly::ThreadLocal<bool> isThreadManagerThread_{
-      [] { return new bool(false); }};
+  folly::ThreadLocal<bool> isThreadManagerThread_;
   std::string namePrefix_;
   uint32_t namePrefixCounter_;
 
@@ -999,8 +998,8 @@ void ThreadManager::Impl::reportTaskStats(
     const std::chrono::steady_clock::time_point& workBegin,
     const std::chrono::steady_clock::time_point& workEnd) {
   auto queueBegin = task.getQueueBeginTime();
-  FOLLY_MAYBE_UNUSED auto waitTime = workBegin - queueBegin;
-  FOLLY_MAYBE_UNUSED auto runTime = workEnd - workBegin;
+  [[maybe_unused]] auto waitTime = workBegin - queueBegin;
+  [[maybe_unused]] auto runTime = workEnd - workBegin;
 
   // Times in this USDT use granularity of std::chrono::steady_clock::duration,
   // which is platform dependent. On Facebook servers, the granularity is
@@ -1475,6 +1474,8 @@ void forEachThreadManager(
 
 } // namespace
 
+ThreadManagerExecutorAdapter::Options::Options() = default;
+
 ThreadManagerExecutorAdapter::ThreadManagerExecutorAdapter(
     std::shared_ptr<folly::Executor> exe, Options opts)
     : ThreadManagerExecutorAdapter(
@@ -1520,11 +1521,13 @@ ThreadManagerExecutorAdapter::ThreadManagerExecutorAdapter(
           << "InlineExecutor cannot be used as a ThreadManager. "
           << "If you wish to process requests inline you should instead use the "
           << "`thread='eb'` annotation in your IDL file.";
+      fromGenericExecutor_ = true;
       executors_[idxFromPriSrc(i, 0)] = executor.get();
       std::unique_ptr<folly::MeteredExecutor> adapter;
       for (int j = 1; j < N_SOURCES; j++) {
         folly::MeteredExecutor::Options opt;
         opt.name = opts_.wrappedExecutorName;
+        opt.maxInQueue = opts_.meteredExecutorMaxInQueue;
         if (!adapter) {
           adapter = std::make_unique<folly::MeteredExecutor>(
               executor.get(), std::move(opt));

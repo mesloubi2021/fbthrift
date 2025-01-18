@@ -21,15 +21,13 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-#include <thrift/compiler/ast/name_index.h>
 #include <thrift/compiler/ast/t_field.h>
 #include <thrift/compiler/ast/t_type.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 // Forward declare that puppy
 class t_program;
@@ -68,15 +66,18 @@ class t_structured : public t_type {
   }
 
   // Access the field by id or name.
-  const t_field* get_field_by_id(int32_t id) const;
-  const t_field* get_field_by_name(const std::string& name) const {
-    return fields_by_name_.find(name);
+  const t_field* get_field_by_id(t_field_id id) const;
+  const t_field* get_field_by_name(std::string_view name) const {
+    auto it = fields_by_name_.find(name);
+    return it != fields_by_name_.end() ? it->second : nullptr;
   }
+
+  ~t_structured() override;
 
  protected:
   t_field_list fields_;
   std::vector<const t_field*> fields_id_order_;
-  name_index<t_field> fields_by_name_;
+  std::unordered_map<std::string_view, const t_field*> fields_by_name_;
 
   t_structured(const t_program* program, std::string name)
       : t_type(program, std::move(name)) {}
@@ -99,7 +100,7 @@ class t_structured : public t_type {
   // Tries to append the gieven field, throwing an exception on failure.
   void append(std::unique_ptr<t_field> elem);
 
-  const t_field* get_field_named(const std::string& name) const {
+  const t_field* get_field_named(std::string_view name) const {
     const auto* result = get_field_by_name(name);
     assert(result != nullptr);
     return result;
@@ -116,11 +117,11 @@ class t_structured : public t_type {
     return fields_raw_id_order_;
   }
 
-  const t_field* get_member(const std::string& name) const {
+  const t_field* get_member(std::string_view name) const {
     return get_field_by_name(name);
   }
 
-  bool has_field_named(const std::string& name) const {
+  bool has_field_named(std::string_view name) const {
     return get_field_by_name(name) != nullptr;
   }
 
@@ -139,6 +140,4 @@ class t_structured : public t_type {
   }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

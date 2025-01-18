@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%>
-<%#fatal_strings:items%>
-    using <%fatal_string:name%> = __fbthrift_strings::<%fatal_string:name%>;
-<%/fatal_strings:items%>
+}}
+{{#fatal_strings:items}}
+using {{fatal_string:name}} = __fbthrift_strings::{{fatal_string:name}};
+{{/fatal_strings:items}}

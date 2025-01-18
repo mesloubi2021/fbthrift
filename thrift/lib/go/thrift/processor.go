@@ -20,88 +20,25 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/facebook/fbthrift/thrift/lib/go/thrift/types"
+	"github.com/facebook/fbthrift/thrift/lib/thrift/metadata"
 )
 
 // Processor exposes access to processor functions which
 // manage I/O and processing of a input message for a specific
 // server function
 type Processor interface {
-	// GetProcessorFunction is given the name of a thrift function and
-	// the type of the inbound thrift message.  It is expected to return
-	// a non-nil ProcessorFunction when the function can be successfully
+	// GetProcessorFunctionMap is given the name of a thrift function
+	// of the inbound thrift message.  It is expected to return
+	// a non-nil GetProcessorFunction when the function can be successfully
 	// found.
 	//
-	// If an error is returned, it will be wrapped in an application level
-	// thrift exception and returned.
-	//
-	// If ProcessorFunction and error are both nil, a generic error will be
+	// If GetProcessorFunctionMap is nil or a value in the map is nil, a generic error will be
 	// sent which explains that no processor function exists with the specified
 	// name on this server.
-	GetProcessorFunction(name string) (ProcessorFunction, error)
-}
-
-// ProcessorFunction is the interface that must be implemented in
-// order to perform io and message processing
-type ProcessorFunction interface {
-	// Read a serializable message from the input protocol.
-	Read(iprot Protocol) (Struct, Exception)
-	// Process a message handing it to the client handler.
-	Run(args Struct) (WritableStruct, ApplicationException)
-	// Write a serializable responsne
-	Write(seqID int32, result WritableStruct, oprot Protocol) Exception
-}
-
-// Process is a utility function to take a processor and an input and output
-// protocol, and fully process a message.  It understands the thrift protocol.
-// A framework could be written outside of the thrift library but would need to
-// duplicate this logic.
-func Process(processor Processor, iprot, oprot Protocol) (keepOpen bool, exc Exception) {
-	return ProcessContext(context.Background(), NewProcessorContextAdapter(processor), iprot, oprot)
-}
-
-// ProcessorContext is a Processor that supports contexts.
-type ProcessorContext interface {
-	GetProcessorFunctionContext(name string) (ProcessorFunctionContext, error)
-}
-
-// NewProcessorContextAdapter creates a ProcessorContext from a regular Processor.
-func NewProcessorContextAdapter(p Processor) ProcessorContext {
-	return &ctxProcessorAdapter{p}
-}
-
-type ctxProcessorAdapter struct {
-	Processor
-}
-
-func (p ctxProcessorAdapter) GetProcessorFunctionContext(name string) (ProcessorFunctionContext, error) {
-	f, err := p.Processor.GetProcessorFunction(name)
-	if err != nil {
-		return nil, err
-	}
-	if f == nil {
-		return nil, nil
-	}
-	return NewProcessorFunctionContextAdapter(f), nil
-}
-
-// ProcessorFunctionContext is a ProcessorFunction that supports contexts.
-type ProcessorFunctionContext interface {
-	Read(iprot Protocol) (Struct, Exception)
-	RunContext(ctx context.Context, args Struct) (WritableStruct, ApplicationException)
-	Write(seqID int32, result WritableStruct, oprot Protocol) Exception
-}
-
-// NewProcessorFunctionContextAdapter creates a ProcessorFunctionContext from a regular ProcessorFunction.
-func NewProcessorFunctionContextAdapter(p ProcessorFunction) ProcessorFunctionContext {
-	return &ctxProcessorFunctionAdapter{p}
-}
-
-type ctxProcessorFunctionAdapter struct {
-	ProcessorFunction
-}
-
-func (p ctxProcessorFunctionAdapter) RunContext(ctx context.Context, args Struct) (WritableStruct, ApplicationException) {
-	return p.ProcessorFunction.Run(args)
+	ProcessorFunctionMap() map[string]types.ProcessorFunction
+	GetThriftMetadata() *metadata.ThriftMetadata
 }
 
 func errorType(err error) string {
@@ -111,102 +48,120 @@ func errorType(err error) string {
 	return et[len(et)-1]
 }
 
-// ProcessContext is a Process that supports contexts.
-func ProcessContext(ctx context.Context, processor ProcessorContext, iprot, oprot Protocol) (keepOpen bool, ext Exception) {
-	name, messageType, seqID, rerr := iprot.ReadMessageBegin()
-	if rerr != nil {
-		if err, ok := rerr.(TransportException); ok && err.TypeID() == END_OF_FILE {
-			// connection terminated because client closed connection
-			return false, nil
-		}
-		return false, rerr
-	}
-	var err ApplicationException
-	var pfunc ProcessorFunctionContext
-	if messageType != CALL && messageType != ONEWAY {
+func getProcessorFunction(processor Processor, messageType types.MessageType, name string) (types.ProcessorFunction, types.ApplicationException) {
+	if messageType != types.CALL && messageType != types.ONEWAY {
 		// case one: invalid message type
-		err = NewApplicationException(UNKNOWN_METHOD, fmt.Sprintf("unexpected message type: %d", messageType))
-		// error should be sent, connection should stay open if successful
+		return nil, types.NewApplicationException(types.UNKNOWN_METHOD, fmt.Sprintf("unexpected message type: %d", messageType))
 	}
-	if err == nil {
-		pf, e2 := processor.GetProcessorFunctionContext(name)
-		if pf == nil {
-			if e2 == nil {
-				err = NewApplicationException(UNKNOWN_METHOD, fmt.Sprintf("no such function: %q", name))
-			} else {
-				err = NewApplicationException(UNKNOWN_METHOD, e2.Error())
-			}
-		} else {
-			pfunc = pf
+	pmap := processor.ProcessorFunctionMap()
+	if pmap != nil {
+		if pf := pmap[name]; pf != nil {
+			return pf, nil
 		}
 	}
+	return nil, types.NewApplicationException(types.UNKNOWN_METHOD, fmt.Sprintf("no such function: %q", name))
+}
 
-	// if there was an error before we could find the Processor function, attempt to skip the
-	// rest of the invalid message but keep the connection open.
-	if err != nil {
-		if e2 := iprot.Skip(STRUCT); e2 != nil {
-			return false, e2
-		} else if e2 := iprot.ReadMessageEnd(); e2 != nil {
-			return false, e2
-		}
-		// for ONEWAY, we have no way to report that the processing failed.
-		if messageType != ONEWAY {
-			if e2 := sendException(oprot, name, seqID, err); e2 != nil {
-				return false, e2
-			}
-		}
-		return true, nil
+func skipMessage(protocol types.Protocol) error {
+	if err := protocol.Skip(types.STRUCT); err != nil {
+		return err
 	}
+	return protocol.ReadMessageEnd()
+}
 
-	if pfunc == nil {
-		panic("logic error in thrift.Process() handler.  processor function may not be nil")
-	}
+func setRequestHeadersForError(protocol types.Protocol, err types.ApplicationException) {
+	protocol.SetRequestHeader("uex", errorType(err))
+	protocol.SetRequestHeader("uexw", err.Error())
+}
 
-	argStruct, e2 := pfunc.Read(iprot)
-	if e2 != nil {
-		// close connection on read failure
-		return false, e2
-	}
-	var result WritableStruct
-	result, err = pfunc.RunContext(ctx, argStruct)
-
-	// for ONEWAY messages, never send a response
-	if messageType == CALL {
-		// protect message writing
-		if err != nil {
-			switch oprotHeader := oprot.(type) {
-			case *HeaderProtocol:
-				// set header for ServiceRouter
-				oprotHeader.SetHeader("uex", errorType(err))
-				oprotHeader.SetHeader("uexw", err.Error())
-			}
-			// it's an application generated error, so serialize it
-			// to the client
-			result = err
-		}
-
+func setRequestHeadersForResult(protocol types.Protocol, result types.WritableStruct) {
+	if rr, ok := result.(types.WritableResult); ok && rr.Exception() != nil {
 		// If we got a structured exception back, write metadata about it into headers
-		if rr, ok := result.(WritableResult); ok && rr.Exception() != nil {
-			switch oprotHeader := oprot.(type) {
-			case *HeaderProtocol:
-				terr := rr.Exception()
-				oprotHeader.SetHeader("uex", errorType(terr))
-				oprotHeader.SetHeader("uexw", terr.Error())
-			}
-		}
+		terr := rr.Exception()
+		protocol.SetRequestHeader("uex", errorType(terr))
+		protocol.SetRequestHeader("uexw", terr.Error())
+	}
+}
 
-		// if result was nil, call was oneway
-		// often times oneway calls do not even have msgType ONEWAY
-		if result != nil {
-			if e2 := pfunc.Write(seqID, result, oprot); e2 != nil {
-				// close connection on write failure
-				return false, err
-			}
+// process is a utility function to take a processor and a protocol, and fully process a message.
+// It is broken up into 3 steps:
+// 1. Read the message from the protocol.
+// 2. Process the message.
+// 3. Write the message to the protocol.
+func process(ctx context.Context, processor Processor, prot types.Protocol) (ext types.Exception) {
+	// Step 1: Decode message only using Decoder interface and GetResponseHeaders method on the protocol.
+
+	// Step 1a: find the processor function for the message.
+	name, messageType, seqID, readErr := prot.ReadMessageBegin()
+	if readErr != nil {
+		// close connection on read failure
+		return readErr
+	}
+	var argStruct types.Struct
+	pfunc, appException := getProcessorFunction(processor, messageType, name)
+
+	// Step 1b: finish reading the message.
+	if pfunc == nil {
+		// attempt to skip the rest of the invalid message but keep the connection open.
+		readErr = skipMessage(prot)
+		if readErr != nil {
+			// close connection on read failure
+			return readErr
+		}
+	} else {
+		argStruct, readErr = pfunc.Read(prot)
+		if readErr != nil {
+			// close connection on read failure
+			return readErr
 		}
 	}
 
-	// keep the connection open and ignore errors
-	// if type was CALL, error has already been serialized to client
-	// if type was ONEWAY, no exception is to be thrown
-	return true, nil
+	// Step 1c: Use Protocol interface to retrieve headers.
+	ctx = WithHeaders(ctx, prot.GetResponseHeaders())
+
+	// Step 2: Processing the message without using the Protocol.
+	var result types.WritableStruct
+	if pfunc != nil {
+		result, appException = pfunc.RunContext(ctx, argStruct)
+	}
+
+	// Often times oneway calls do not even have msgType ONEWAY.
+	// Then we detect a oneway call with a result that is nil.
+	isOneWay := messageType == types.ONEWAY || (appException == nil && result == nil)
+	if isOneWay {
+		// for ONEWAY messages, never send a response and never throw an exception.
+		return nil
+	}
+
+	// Step 3: Write the message using only the Encoder interface and SetRequestHeader method.
+
+	// Step 3a: Write the headers to the protocol.
+	if appException != nil {
+		setRequestHeadersForError(prot, appException)
+	} else {
+		setRequestHeadersForResult(prot, result)
+	}
+
+	// Step 3b: Write the message using only the Decoder interface on the protocol.
+	if pfunc == nil {
+		if writeErr := sendException(prot, name, seqID, appException); writeErr != nil {
+			// close connection on write failure
+			return writeErr
+		}
+		return nil
+	}
+	if appException != nil {
+		// it's an application generated error, so serialize it to the client
+		if writeErr := pfunc.Write(seqID, appException, prot); writeErr != nil {
+			// close connection on write failure
+			return writeErr
+		}
+	} else {
+		if writeErr := pfunc.Write(seqID, result, prot); writeErr != nil {
+			// close connection on write failure
+			return writeErr
+		}
+	}
+	// if we got here, we successfully processed the message
+	return nil
 }

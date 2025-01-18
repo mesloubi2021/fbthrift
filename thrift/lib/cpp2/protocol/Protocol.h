@@ -29,12 +29,15 @@
 
 #include <folly/io/IOBuf.h>
 #include <folly/io/IOBufQueue.h>
+#include <folly/portability/GFlags.h>
 #include <thrift/lib/cpp/Thrift.h>
 #include <thrift/lib/cpp/protocol/TProtocol.h>
 #include <thrift/lib/cpp/protocol/TProtocolException.h>
 #include <thrift/lib/cpp/protocol/TProtocolTypes.h>
 #include <thrift/lib/cpp2/CloneableIOBuf.h>
 #include <thrift/lib/cpp2/protocol/ProtocolReaderWireTypeInfo.h>
+
+FOLLY_GFLAGS_DECLARE_int32(thrift_protocol_max_depth);
 
 /**
  * Protocol Readers and Writers are ducktyped in cpp2.
@@ -46,8 +49,10 @@
  * use the VirtualReader / VitualWriter in VirtualProtocol.h
  */
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
+
+class BinaryProtocolReader;
+
 namespace detail {
 
 class ProtocolBase {
@@ -117,6 +122,13 @@ struct SkipNoopString {
 // Checks if bool hold a valid value (true or false) and throws exception
 // otherwise. Without the check we may produce undeserializable data.
 inline bool validate_bool(uint8_t value) {
+  static constexpr char kUndefinedBehaviorMsg[] =
+      "Undefined behavior detected! Thrift code has detected an invalid bool "
+      "value that almost certainly indicates ongoing memory corruption in this "
+      "process. This issue is most likely not related to Thrift, but is "
+      "detected here in a best-effort attempt at early detection of undefined "
+      "behavior. The process is terminated to prevent further corruption and "
+      "raise awareness of the ongoing issue.";
 #if defined(__x86_64__) && defined(__GNUC__) && \
     (!defined(__clang_major__) || __clang_major__ >= 9)
   // An optimized version that avoid extra load/store.
@@ -135,7 +147,7 @@ inline bool validate_bool(uint8_t value) {
       : invalid);
   return value;
 invalid:
-  LOG(FATAL) << "invalid bool value";
+  LOG(FATAL) << kUndefinedBehaviorMsg;
   return false;
 #else
   // Store in a volatile variable to prevent the compiler from optimizing the
@@ -143,7 +155,7 @@ invalid:
   volatile uint8_t volatileByte = value;
   uint8_t byte = volatileByte;
   if (!(byte == 0 || byte == 1)) {
-    LOG(FATAL) << "invalid bool value";
+    LOG(FATAL) << kUndefinedBehaviorMsg;
   }
   return byte != 0;
 #endif
@@ -152,7 +164,11 @@ invalid:
 
 /* forward declaration */
 template <class Protocol_, class WireType>
-void skip_n(Protocol_& prot, uint32_t n, std::initializer_list<WireType> types);
+void skip_n(
+    Protocol_& prot,
+    uint32_t n,
+    std::initializer_list<WireType> types,
+    int depth = 0);
 
 /**
  * Helper template for implementing Protocol::skip().
@@ -160,9 +176,19 @@ void skip_n(Protocol_& prot, uint32_t n, std::initializer_list<WireType> types);
  * Templatized to avoid having to make virtual function calls. Protocols with
  * their own opinions about skipping implementation can specialize, although
  * currently none do.
+ *
+ * depth (int): Current depth of the nested fields.
+ *
+ * It first checks if the current depth exceeds a predefined maximum depth
+ * (FLAGS_thrift_protocol_max_depth). If the depth is exceeded, it throws a
+ * `TProtocolException` to prevent stack overflow.
  */
 template <class Protocol_, class WireType>
-void skip(Protocol_& prot, WireType arg_type) {
+void skip(Protocol_& prot, WireType arg_type, int depth = 0) {
+  if (depth >= FLAGS_thrift_protocol_max_depth) {
+    protocol::TProtocolException::throwExceededDepthLimit();
+  }
+
   switch (arg_type) {
     case TType::T_BOOL: {
       bool boolv;
@@ -219,7 +245,7 @@ void skip(Protocol_& prot, WireType arg_type) {
         if (ftype == TType::T_STOP) {
           break;
         }
-        apache::thrift::skip(prot, ftype);
+        prot.skip(ftype, depth + 1);
         prot.readFieldEnd();
       }
       prot.readStructEnd();
@@ -230,7 +256,7 @@ void skip(Protocol_& prot, WireType arg_type) {
       TType valType;
       uint32_t size;
       prot.readMapBegin(keyType, valType, size);
-      skip_n(prot, size, {keyType, valType});
+      skip_n(prot, size, {keyType, valType}, depth + 1);
       prot.readMapEnd();
       return;
     }
@@ -238,7 +264,7 @@ void skip(Protocol_& prot, WireType arg_type) {
       TType elemType;
       uint32_t size;
       prot.readSetBegin(elemType, size);
-      skip_n(prot, size, {elemType});
+      skip_n(prot, size, {elemType}, depth + 1);
       prot.readSetEnd();
       return;
     }
@@ -246,7 +272,7 @@ void skip(Protocol_& prot, WireType arg_type) {
       TType elemType;
       uint32_t size;
       prot.readListBegin(elemType, size);
-      skip_n(prot, size, {elemType});
+      skip_n(prot, size, {elemType}, depth + 1);
       prot.readListEnd();
       return;
     }
@@ -281,10 +307,22 @@ inline bool canReadNElements(
  * Skip n tuples - used for skipping lists, sets, maps.
  *
  * As with skip(), protocols can specialize.
+ *
+ * depth (int): Current depth of the nested fields.
+ *
+ * It first checks if the current depth exceeds a predefined maximum depth
+ * (FLAGS_thrift_protocol_max_depth). If the depth is exceeded, it throws a
+ * `TProtocolException` to prevent stack overflow.
  */
 template <class Protocol_, class WireType>
 void skip_n(
-    Protocol_& prot, uint32_t n, std::initializer_list<WireType> types) {
+    Protocol_& prot,
+    uint32_t n,
+    std::initializer_list<WireType> types,
+    int depth) {
+  if (depth >= FLAGS_thrift_protocol_max_depth) {
+    protocol::TProtocolException::throwExceededDepthLimit();
+  }
   size_t sum = 0;
   bool allFixedSizes = true;
   for (auto type : types) {
@@ -299,7 +337,7 @@ void skip_n(
 
   for (uint32_t i = 0; i < n; i++) {
     for (auto type : types) {
-      apache::thrift::skip(prot, type);
+      prot.skip(type, depth + 1);
     }
   }
 }
@@ -362,7 +400,6 @@ struct StringTraits<std::unique_ptr<folly::IOBuf>> {
   }
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
 
 #endif

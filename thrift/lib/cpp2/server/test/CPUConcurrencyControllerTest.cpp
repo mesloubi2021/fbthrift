@@ -19,8 +19,8 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <folly/experimental/observer/Observer.h>
-#include <folly/experimental/observer/SimpleObservable.h>
+#include <folly/observer/Observer.h>
+#include <folly/observer/SimpleObservable.h>
 #include <folly/synchronization/Baton.h>
 
 #include <thrift/lib/cpp2/PluggableFunction.h>
@@ -60,6 +60,10 @@ class CPUConcurrencyControllerTest : public ::testing::Test {
 
   CPUConcurrencyController& getCPUConcurrencyController() {
     return cpuConcurrencyController_;
+  }
+
+  apache::thrift::ThriftServerConfig& getThriftServerConfig() {
+    return thriftServerConfig_;
   }
 
  private:
@@ -131,4 +135,113 @@ TEST_F(CPUConcurrencyControllerTest, testEventHandler) {
   ASSERT_TRUE(baton3.try_wait_for(1s));
   setConfig(CPUConcurrencyController::Config{
       .mode = CPUConcurrencyController::Mode::DISABLED});
+}
+
+TEST_F(CPUConcurrencyControllerTest, getDbgInfo) {
+  using namespace apache::thrift;
+  server::test::MockServerConfigs serverConfigs{};
+  ThriftServerConfig thriftServerConfig{};
+  folly::observer::SimpleObservable<CPUConcurrencyController::Config>
+      configObservable;
+
+  configObservable.setValue(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::ENABLED,
+      .method = CPUConcurrencyController::Method::MAX_QPS,
+      .cpuTarget = 99,
+      .cpuLoadSource = apache::thrift::CPULoadSource::CONTAINER_AND_HOST,
+      .refreshPeriodMs = std::chrono::milliseconds(100),
+      .additiveMultiplier = 0.01,
+      .decreaseMultiplier = 0.02,
+      .increaseDistanceRatio = 0.03,
+      .bumpOnError = true,
+      .refractoryPeriodMs = std::chrono::milliseconds(200),
+      .initialEstimatePercentile = 0.04,
+      .collectionSampleSize = 11,
+      .concurrencyUpperBound = 1002,
+      .concurrencyLowerBound = 1001,
+  });
+
+  CPUConcurrencyController cpuConcurrencyController{
+      configObservable.getObserver(), serverConfigs, thriftServerConfig};
+
+  // Act
+  auto dbgInfo = cpuConcurrencyController.getDbgInfo();
+
+  // Assert
+  ASSERT_EQ("ENABLED", dbgInfo.mode().value());
+  ASSERT_EQ(*dbgInfo.method(), "MAX_QPS");
+  ASSERT_EQ(*dbgInfo.cpuTarget(), 99);
+  ASSERT_EQ(*dbgInfo.cpuLoadSource(), "CONTAINER_AND_HOST");
+  ASSERT_EQ(*dbgInfo.refreshPeriodMs(), 100);
+  ASSERT_EQ(*dbgInfo.additiveMultiplier(), 0.01);
+  ASSERT_EQ(*dbgInfo.decreaseMultiplier(), 0.02);
+  ASSERT_EQ(*dbgInfo.increaseDistanceRatio(), 0.03);
+  ASSERT_TRUE(*dbgInfo.bumpOnError());
+  ASSERT_EQ(*dbgInfo.refractoryPeriodMs(), 200);
+  ASSERT_EQ(*dbgInfo.initialEstimatePercentile(), 0.04);
+  ASSERT_EQ(*dbgInfo.collectionSampleSize(), 11);
+  ASSERT_EQ(*dbgInfo.concurrencyLowerBound(), 1001);
+  ASSERT_EQ(*dbgInfo.concurrencyUpperBound(), 1002);
+}
+
+TEST_F(CPUConcurrencyControllerTest, testConcurrencyUpperBound) {
+  // Test concurrencyUpperBound with positive value
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::ENABLED,
+      .method = CPUConcurrencyController::Method::MAX_QPS,
+      .concurrencyUpperBound = 100,
+  });
+
+  folly::observer_detail::ObserverManager::waitForAllUpdates();
+
+  EXPECT_EQ(getCPUConcurrencyController().getConcurrencyUpperBound(), 100);
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::DISABLED});
+
+  // Test concurrencyUpperBound with kConcurrencyUpperBoundUseStaticLimit
+  // MAX_REQUESTS method
+  getThriftServerConfig().setMaxRequests(
+      folly::observer::makeStaticObserver<std::optional<uint32_t>>(200));
+
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::ENABLED,
+      .method = CPUConcurrencyController::Method::MAX_REQUESTS,
+      .concurrencyUpperBound =
+          CPUConcurrencyController::Config::UseStaticLimit{},
+  });
+
+  folly::observer_detail::ObserverManager::waitForAllUpdates();
+
+  EXPECT_EQ(getCPUConcurrencyController().getConcurrencyUpperBound(), 200);
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::DISABLED});
+
+  // Test concurrencyUpperBound with kConcurrencyUpperBoundUseStaticLimit
+  // TOKEN_BUCKET method
+  getThriftServerConfig().setMaxQps(
+      folly::observer::makeStaticObserver<std::optional<uint32_t>>(300));
+
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::ENABLED,
+      .method = CPUConcurrencyController::Method::MAX_QPS,
+      .concurrencyUpperBound =
+          CPUConcurrencyController::Config::UseStaticLimit{},
+  });
+
+  folly::observer_detail::ObserverManager::waitForAllUpdates();
+
+  EXPECT_EQ(getCPUConcurrencyController().getConcurrencyUpperBound(), 300);
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::DISABLED});
+
+  // Test concurrencyUpperBound with negative value
+  setConfig(CPUConcurrencyController::Config{
+      .mode = CPUConcurrencyController::Mode::ENABLED,
+      .method = CPUConcurrencyController::Method::MAX_QPS,
+      .concurrencyUpperBound = -2,
+  });
+
+  folly::observer_detail::ObserverManager::waitForAllUpdates();
+
+  EXPECT_EQ(getCPUConcurrencyController().getConcurrencyUpperBound(), 0);
 }

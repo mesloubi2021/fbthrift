@@ -38,7 +38,7 @@ public interface RpcClientFactory {
    * Builder to create an RpcClientFactory. By default it creates an RpcClientFactory with RSocket
    * disabled, stats enabled, reconnecting client enabled, and simple load balancing enabled.
    */
-  class Builder {
+  final class Builder {
     private boolean disableRSocket = true;
     private boolean disableStats = false;
     private boolean disableReconnectingClient = false;
@@ -47,6 +47,7 @@ public interface RpcClientFactory {
     private List<ThriftClientEventHandler> clientEventHandlers;
     private int connectionPoolSize = RpcResources.getNumEventLoopThreads();
     private boolean handleHeaderResponse = false;
+    private boolean cacheClient = true;
 
     private ThriftClientConfig thriftClientConfig;
     private ThriftClientStats thriftClientStats = ThriftClientStatsHolder.getThriftClientStats();
@@ -131,6 +132,10 @@ public interface RpcClientFactory {
         } else {
           rpcClientFactory = new RSocketRpcClientFactory(thriftClientConfig);
           ClientInfo.addTransport(ClientInfo.Transport.ROCKET);
+        }
+        // If cache is enabled, wrap it with CachedRpcClientFactory
+        if (cacheClient) {
+          rpcClientFactory = new CachedRpcClientFactory(rpcClientFactory);
         }
       }
 

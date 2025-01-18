@@ -8,7 +8,7 @@
     {
       "prot": "public",
       "virtual": "non-virtual",
-      "text_html": "IOBufCompare"
+      "text_html": "folly::IOBufCompare"
     }
   ],
   "includes": {
@@ -29,6 +29,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(fmt::string_view lhs, fmt::string_view rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "fmt::string_view",
@@ -42,7 +43,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "126",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "126",
         "bodyend": "128"
@@ -70,6 +71,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(fmt::string_view lhs, const folly::IOBuf &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "fmt::string_view",
@@ -83,7 +85,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "129",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "129",
         "bodyend": "133"
@@ -111,6 +113,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(fmt::string_view lhs, const IOBufPtr &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "fmt::string_view",
@@ -124,7 +127,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "134",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "134",
         "bodyend": "137"
@@ -152,6 +155,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(const folly::IOBuf &amp;lhs, fmt::string_view rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "const folly::IOBuf &amp;",
@@ -165,7 +169,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "138",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "138",
         "bodyend": "142"
@@ -193,6 +197,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(const folly::IOBuf &amp;lhs, const IOBufPtr &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "const folly::IOBuf &amp;",
@@ -206,7 +211,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "143",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "143",
         "bodyend": "146"
@@ -234,6 +239,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(const IOBufPtr &amp;lhs, fmt::string_view rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -247,7 +253,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "147",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "147",
         "bodyend": "150"
@@ -275,6 +281,7 @@
       "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
       "argsstring_html": "(const IOBufPtr &amp;lhs, const folly::IOBuf &amp;rhs) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
       "param": [
         {
           "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -288,7 +295,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "line": "151",
-        "column": "1",
+        "column": "19",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
         "bodystart": "151",
         "bodyend": "154"
@@ -349,6 +356,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(fmt::string_view lhs, fmt::string_view rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "fmt::string_view",
@@ -362,7 +370,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "126",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "126",
                 "bodyend": "128"
@@ -392,6 +400,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(fmt::string_view lhs, const folly::IOBuf &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "fmt::string_view",
@@ -405,7 +414,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "129",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "129",
                 "bodyend": "133"
@@ -435,6 +444,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(fmt::string_view lhs, const IOBufPtr &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "fmt::string_view",
@@ -448,7 +458,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "134",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "134",
                 "bodyend": "137"
@@ -478,6 +488,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(const folly::IOBuf &amp;lhs, fmt::string_view rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "const folly::IOBuf &amp;",
@@ -491,7 +502,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "138",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "138",
                 "bodyend": "142"
@@ -521,6 +532,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(const folly::IOBuf &amp;lhs, const IOBufPtr &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "const folly::IOBuf &amp;",
@@ -534,7 +546,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "143",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "143",
                 "bodyend": "146"
@@ -564,6 +576,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(const IOBufPtr &amp;lhs, fmt::string_view rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -577,7 +590,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "147",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "147",
                 "bodyend": "150"
@@ -607,6 +620,7 @@
               "definition_html": "folly::ordering apache::thrift::op::detail::StringCompare::operator()",
               "argsstring_html": "(const IOBufPtr &amp;lhs, const folly::IOBuf &amp;rhs) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::StringCompare::operator()",
               "param": [
                 {
                   "type_html": "const <code>IOBufPtr</code> &amp;",
@@ -620,7 +634,7 @@
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "line": "151",
-                "column": "1",
+                "column": "19",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ValueOp.h",
                 "bodystart": "151",
                 "bodyend": "154"
@@ -645,7 +659,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/apache/thrift/op/detail/StringCompare/operator.call",
-          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringCompare/operator.call"
+          "refid": "/ref/cpp/f/struct/apache/thrift/op/detail/StringCompare/operator.call",
+          "parent_links": [
+            {
+              "text_html": "StringCompare",
+              "href": "/ref/cpp/struct/apache/thrift/op/detail/StringCompare"
+            }
+          ]
         }
       ]
     }

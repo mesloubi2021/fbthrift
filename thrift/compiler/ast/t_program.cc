@@ -24,9 +24,7 @@
 #include <utility>
 #include <vector>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 void t_program::add_definition(std::unique_ptr<t_named> definition) {
   assert(definition != nullptr);
@@ -35,7 +33,10 @@ void t_program::add_definition(std::unique_ptr<t_named> definition) {
 
   if (!definition->explicit_uri()) {
     // Resolve Thrift URI.
-    if (auto* uri = definition->find_annotation_or_null("thrift.uri")) {
+    if (auto* cnst = definition->find_structured_annotation_or_null(kUriUri)) {
+      auto* val = cnst->get_value_from_structured_annotation_or_null("value");
+      definition->set_uri(val ? val->get_string() : "");
+    } else if (auto* uri = definition->find_annotation_or_null("thrift.uri")) {
       definition->set_uri(*uri); // Explicit from annotation.
     } else { // Inherit from package.
       definition->set_uri(
@@ -43,34 +44,29 @@ void t_program::add_definition(std::unique_ptr<t_named> definition) {
     }
   }
 
-  // Add to scope
-  if (const t_named* existing = scope_->add_def(*definition)) {
-    // TODO(afuller): Propagate the existing diff up, and
-    // report a diagnostic immediately, instead of doing it after
-    // in `validate_uri_uniqueness`.
-    // return existing; // Confliciting definition!.
-  }
+  scope_->add_def(*definition);
 
   // Index the node.
-  if (auto* node = dynamic_cast<t_exception*>(definition.get())) {
-    structured_definitions_.push_back(node);
-    exceptions_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_union*>(definition.get())) {
-    structured_definitions_.push_back(node);
-    structs_and_unions_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_struct*>(definition.get())) {
-    structured_definitions_.push_back(node);
-    structs_and_unions_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_interaction*>(definition.get())) {
-    interactions_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_service*>(definition.get())) {
-    services_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_enum*>(definition.get())) {
-    enums_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_typedef*>(definition.get())) {
-    typedefs_.push_back(node);
-  } else if (auto* node = dynamic_cast<t_const*>(definition.get())) {
-    consts_.push_back(node);
+  auto* ptr = definition.get();
+  if (auto* exception_type = dynamic_cast<t_exception*>(ptr)) {
+    structured_definitions_.push_back(exception_type);
+    exceptions_.push_back(exception_type);
+  } else if (auto* union_type = dynamic_cast<t_union*>(ptr)) {
+    structured_definitions_.push_back(union_type);
+    structs_and_unions_.push_back(union_type);
+  } else if (auto* struct_type = dynamic_cast<t_struct*>(ptr)) {
+    structured_definitions_.push_back(struct_type);
+    structs_and_unions_.push_back(struct_type);
+  } else if (auto* interaction_type = dynamic_cast<t_interaction*>(ptr)) {
+    interactions_.push_back(interaction_type);
+  } else if (auto* service_type = dynamic_cast<t_service*>(ptr)) {
+    services_.push_back(service_type);
+  } else if (auto* enum_type = dynamic_cast<t_enum*>(ptr)) {
+    enums_.push_back(enum_type);
+  } else if (auto* typedef_type = dynamic_cast<t_typedef*>(ptr)) {
+    typedefs_.push_back(typedef_type);
+  } else if (auto* const_type = dynamic_cast<t_const*>(ptr)) {
+    consts_.push_back(const_type);
   }
 
   // Transfer ownership of the definition.
@@ -124,7 +120,7 @@ std::vector<std::string> t_program::gen_namespace_or_default(
 void t_program::set_include_prefix(std::string include_prefix) {
   include_prefix_ = std::move(include_prefix);
 
-  int len = include_prefix_.size();
+  const auto len = include_prefix_.size();
   if (len > 0 && include_prefix_[len - 1] != '/') {
     include_prefix_ += '/';
   }
@@ -142,6 +138,4 @@ std::string t_program::compute_name_from_file_path(std::string path) {
   return path;
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

@@ -18,7 +18,9 @@
 #include <thrift/lib/cpp2/server/ServerAttribute.h>
 
 #include <algorithm>
+#include <chrono>
 #include <fmt/core.h>
+#include <folly/Overload.h>
 #include <folly/lang/Assume.h>
 
 namespace apache::thrift {
@@ -27,7 +29,7 @@ namespace detail {
 THRIFT_PLUGGABLE_FUNC_REGISTER(
     folly::observer::Observer<CPUConcurrencyController::Config>,
     makeCPUConcurrencyControllerConfig,
-    BaseThriftServer*) {
+    ThriftServer*) {
   return folly::observer::makeStaticObserver(
       CPUConcurrencyController::Config{});
 }
@@ -41,11 +43,14 @@ THRIFT_PLUGGABLE_FUNC_REGISTER(
 CPUConcurrencyController::CPUConcurrencyController(
     folly::observer::Observer<Config> config,
     apache::thrift::server::ServerConfigs& serverConfigs,
-    apache::thrift::ThriftServerConfig& thriftServerConfig)
+    apache::thrift::ThriftServerConfig& thriftServerConfig,
+    std::optional<LoadFunc> loadFunc)
     : config_{(*config).getShared()},
       enabled_{(*config_.rlock())->enabled()},
+      method_{(*config_.rlock())->method},
       serverConfigs_(serverConfigs),
-      thriftServerConfig_(thriftServerConfig) {
+      thriftServerConfig_(thriftServerConfig),
+      loadFunc_(std::move(loadFunc)) {
   scheduler_.setThreadName("CPUConcurrencyController-loop");
   scheduler_.start();
   configSchedulerCallback_ = config.addCallback(
@@ -54,6 +59,7 @@ CPUConcurrencyController::CPUConcurrencyController(
         this->config_.withWLock([&newConfig, this](auto& config) {
           config = newConfig;
           this->enabled_.store(config->enabled(), std::memory_order_relaxed);
+          this->method_.store(config->method, std::memory_order_relaxed);
         });
         this->eventHandler_.withRLock([&newConfig](const auto& eventHandler) {
           if (eventHandler) {
@@ -92,12 +98,16 @@ void CPUConcurrencyController::requestStarted() {
   totalRequestCount_ += 1;
 }
 
-void CPUConcurrencyController::requestShed() {
+bool CPUConcurrencyController::requestShed(std::optional<Method> method) {
   if (!enabled_fast()) {
-    return;
+    return false;
+  }
+  if (method && *method != method_.load(std::memory_order_relaxed)) {
+    return false;
   }
 
   recentShedRequest_.store(true);
+  return true;
 }
 
 void CPUConcurrencyController::cycleOnce() {
@@ -156,7 +166,9 @@ void CPUConcurrencyController::cycleOnce() {
             pct,
             stableConcurrencySamples_.end());
         auto result = std::clamp<uint32_t>(
-            *pct, config->concurrencyLowerBound, config->concurrencyUpperBound);
+            *pct,
+            config->concurrencyLowerBound,
+            getConcurrencyUpperBoundInternal(config));
         stableEstimate_.store(result, std::memory_order_relaxed);
         this->setLimit(config, result);
         if (eventHandler) {
@@ -191,7 +203,8 @@ void CPUConcurrencyController::cycleOnce() {
           std::max<uint32_t>(
               static_cast<uint32_t>(limit * config->additiveMultiplier), 1);
       this->setLimit(
-          config, std::min<uint32_t>(config->concurrencyUpperBound, newLim));
+          config,
+          std::min<uint32_t>(getConcurrencyUpperBoundInternal(config), newLim));
       if (eventHandler) {
         eventHandler->limitIncreased();
       }
@@ -213,7 +226,7 @@ void CPUConcurrencyController::schedule(std::shared_ptr<const Config> config) {
       qpsLimit_.getObserver(),
       apache::thrift::AttributeSource::OVERRIDE_INTERNAL);
 
-  this->setLimit(config, config->concurrencyUpperBound);
+  this->setLimit(config, getConcurrencyUpperBoundInternal(config));
   scheduler_.addFunctionGenericNextRunTimeFunctor(
       [this] { this->cycleOnce(); },
       [config](time_point, time_point now) {
@@ -244,12 +257,12 @@ uint32_t CPUConcurrencyController::getLimit(
     limit = dryRunLimit_;
   } else {
     switch (config->method) {
-      case Method::CONCURRENCY_LIMITS:
+      case Method::MAX_REQUESTS:
         // Using ServiceConfigs instead of ThriftServerConfig, because the value
         // may come from AdaptiveConcurrencyController
         limit = serverConfigs_.getMaxRequests();
         break;
-      case Method::TOKEN_BUCKET:
+      case Method::MAX_QPS:
         limit = thriftServerConfig_.getMaxQps().get();
         break;
       default:
@@ -260,7 +273,7 @@ uint32_t CPUConcurrencyController::getLimit(
   // Fallback to concurrency upper bound if no limit is set yet.
   // This is most sensible value until we collect enough samples
   // to estimate a better upper bound;
-  return limit ? limit : config->concurrencyUpperBound;
+  return limit ? limit : getConcurrencyUpperBoundInternal(config);
 }
 
 void CPUConcurrencyController::setLimit(
@@ -269,10 +282,10 @@ void CPUConcurrencyController::setLimit(
     dryRunLimit_ = newLimit;
   } else if (config->mode == Mode::ENABLED) {
     switch (config->method) {
-      case Method::CONCURRENCY_LIMITS:
+      case Method::MAX_REQUESTS:
         activeRequestsLimit_.setValue(newLimit);
         break;
-      case Method::TOKEN_BUCKET:
+      case Method::MAX_QPS:
         qpsLimit_.setValue(newLimit);
         break;
       default:
@@ -285,14 +298,14 @@ uint32_t CPUConcurrencyController::getLimitUsage(
     const std::shared_ptr<const Config>& config) {
   using namespace std::chrono;
   switch (config->method) {
-    case Method::CONCURRENCY_LIMITS:
+    case Method::MAX_REQUESTS:
       // Note: estimating concurrency from this is fairly lossy as it's a
       // gauge metric and we can't use techniques to measure it over a duration.
       // We may be able to get much better estimates if we switch to use QPS
       // and a token bucket for rate limiting.
       // TODO: We should exclude fb303 methods.
       return serverConfigs_.getActiveRequests();
-    case Method::TOKEN_BUCKET: {
+    case Method::MAX_QPS: {
       auto now = steady_clock::now();
       auto milliSince =
           duration_cast<milliseconds>(now - lastTotalRequestReset_).count();
@@ -312,16 +325,33 @@ uint32_t CPUConcurrencyController::getLimitUsage(
 
 bool CPUConcurrencyController::isRefractoryPeriodInternal(
     const std::shared_ptr<const Config>& config) const {
-  return (std::chrono::steady_clock::now() - lastOverloadStart_) <=
+  return (std::chrono::steady_clock::now() - lastOverloadStart_.load()) <=
       std::chrono::milliseconds(config->refractoryPeriodMs);
 }
 
 int64_t CPUConcurrencyController::getLoadInternal(
     const std::shared_ptr<const Config>& config) const {
+  auto& refreshPeriodMs = config->refreshPeriodMs;
+  auto& cpuLoadSource = config->cpuLoadSource;
+
+  if (loadFunc_) {
+    return std::clamp<int64_t>(
+        (*loadFunc_)(refreshPeriodMs, cpuLoadSource), 0, 100);
+  }
   return std::clamp<int64_t>(
-      detail::getCPULoadCounter(config->refreshPeriodMs, config->cpuLoadSource),
-      0,
-      100);
+      detail::getCPULoadCounter(refreshPeriodMs, cpuLoadSource), 0, 100);
+}
+
+uint32_t CPUConcurrencyController::getConcurrencyUpperBoundInternal(
+    const std::shared_ptr<const Config>& config) const {
+  if (std::holds_alternative<Config::UseStaticLimit>(
+          config->concurrencyUpperBound)) {
+    // Use static limit as concurrencyUpperBound
+    return config->method == Method::MAX_REQUESTS
+        ? thriftServerConfig_.getMaxRequests().get()
+        : thriftServerConfig_.getMaxQps().get();
+  }
+  return std::max(std::get<int32_t>(config->concurrencyUpperBound), 0);
 }
 
 /**
@@ -345,22 +375,44 @@ std::string_view CPUConcurrencyController::Config::modeName() const {
 
 std::string_view CPUConcurrencyController::Config::methodName() const {
   switch (method) {
-    case Method::CONCURRENCY_LIMITS:
-      return "CONCURRENCY_LIMITS";
-    case Method::TOKEN_BUCKET:
-      return "TOKEN_BUCKET";
+    // TODO(sazonovk): What's the effect of changing these strings?
+    case Method::MAX_REQUESTS:
+      return "MAX_REQUESTS";
+    case Method::MAX_QPS:
+      return "MAX_QPS";
+  }
+  folly::assume_unreachable();
+}
+
+std::string_view CPUConcurrencyController::Config::cpuLoadSourceName() const {
+  switch (cpuLoadSource) {
+    case CPULoadSource::CONTAINER_AND_HOST:
+      return "CONTAINER_AND_HOST";
+    case CPULoadSource::CONTAINER_ONLY:
+      return "CONTAINER_ONLY";
+    case CPULoadSource::HOST_ONLY:
+      return "HOST_ONLY";
   }
   folly::assume_unreachable();
 }
 
 std::string_view CPUConcurrencyController::Config::concurrencyUnit() const {
   switch (method) {
-    case Method::CONCURRENCY_LIMITS:
-      return "Active Requests";
-    case Method::TOKEN_BUCKET:
-      return "QPS";
+    // TODO(sazonovk): What's the effect of changing these strings?
+    case Method::MAX_REQUESTS:
+      return "maxRequests";
+    case Method::MAX_QPS:
+      return "maxQps";
   }
   folly::assume_unreachable();
+}
+
+std::string CPUConcurrencyController::Config::concurrencyUpperBoundName()
+    const {
+  return folly::variant_match(
+      concurrencyUpperBound,
+      [](const UseStaticLimit&) { return std::string{"UseStaticLimit"}; },
+      [](const int32_t& i) { return fmt::format("{}", i); });
 }
 
 std::string CPUConcurrencyController::Config::describe() const {
@@ -376,7 +428,44 @@ std::string CPUConcurrencyController::Config::describe() const {
       cpuTarget,
       refreshPeriodMs.count(),
       concurrencyUnit(),
-      concurrencyUpperBound);
+      concurrencyUpperBoundName());
 }
 
+serverdbginfo::CPUConcurrencyControllerDbgInfo
+CPUConcurrencyController::getDbgInfo() const {
+  serverdbginfo::CPUConcurrencyControllerDbgInfo info;
+  auto configLocal = config();
+
+  info.mode() = configLocal->modeName();
+  info.method() = configLocal->methodName();
+  info.cpuTarget() = configLocal->cpuTarget;
+  info.cpuLoadSource() = configLocal->cpuLoadSourceName();
+
+  info.refreshPeriodMs() =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          configLocal->refreshPeriodMs)
+          .count();
+  info.additiveMultiplier() = configLocal->additiveMultiplier;
+  info.decreaseMultiplier() = configLocal->decreaseMultiplier;
+  info.increaseDistanceRatio() = configLocal->increaseDistanceRatio;
+  info.bumpOnError() = configLocal->bumpOnError;
+  info.refractoryPeriodMs() =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          configLocal->refractoryPeriodMs)
+          .count();
+  info.initialEstimateFactor() = configLocal->initialEstimateFactor;
+  info.initialEstimatePercentile() = configLocal->initialEstimatePercentile;
+  info.collectionSampleSize() = configLocal->collectionSampleSize;
+  info.concurrencyUpperBound() = folly::variant_match(
+      configLocal->concurrencyUpperBound,
+      [](const CPUConcurrencyController::Config::UseStaticLimit&) {
+        return -1;
+      },
+      [](const int32_t& i) { return i; });
+  info.concurrencyLowerBound() = configLocal->concurrencyLowerBound;
+
+  info.cpuLoad() = getLoadInternal(configLocal);
+
+  return info;
+}
 } // namespace apache::thrift

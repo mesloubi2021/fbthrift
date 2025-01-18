@@ -34,11 +34,10 @@
 #include <thrift/lib/cpp2/async/RpcTypes.h>
 #include <thrift/lib/cpp2/protocol/Protocol.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
-struct RpcSizeStats {
-  RpcSizeStats() = default;
+struct RpcTransportStats {
+  RpcTransportStats() = default;
 
   uint32_t requestSerializedSizeBytes{
       0}; // size of serialized payload without meta data (uncompressed)
@@ -72,11 +71,11 @@ class ClientReceiveState {
       std::unique_ptr<folly::IOBuf> _buf,
       std::unique_ptr<apache::thrift::transport::THeader> _header,
       apache::thrift::ContextStack::UniquePtr _ctx,
-      const RpcSizeStats& _rpcWireSizeStats)
+      const RpcTransportStats& _rpcTransportStats)
       : protocolId_(_protocolId),
         ctx_(std::move(_ctx)),
         header_(std::move(_header)),
-        rpcSizeStats_(_rpcWireSizeStats) {
+        rpcTransportStats_(_rpcTransportStats) {
     initFromLegacyFormat(std::move(_buf));
   }
   ClientReceiveState(
@@ -118,13 +117,13 @@ class ClientReceiveState {
       SerializedResponse response,
       std::unique_ptr<apache::thrift::transport::THeader> _header,
       apache::thrift::ContextStack::UniquePtr _ctx,
-      const RpcSizeStats& _rpcWireSizeStats)
+      const RpcTransportStats& _rpcTransportStats)
       : protocolId_(_protocolId),
         messageType_(mtype),
         ctx_(std::move(_ctx)),
         response_(std::move(response)),
         header_(std::move(_header)),
-        rpcSizeStats_(_rpcWireSizeStats) {}
+        rpcTransportStats_(_rpcTransportStats) {}
 
   bool isException() const { return excw_ ? true : false; }
 
@@ -173,7 +172,9 @@ class ClientReceiveState {
     ctx_ = std::move(_ctx);
   }
 
-  const RpcSizeStats& getRpcSizeStats() const { return rpcSizeStats_; }
+  const RpcTransportStats& getRpcTransportStats() const {
+    return rpcTransportStats_;
+  }
 
   static ClientReceiveState create(
       std::unique_ptr<folly::IOBuf> buf,
@@ -214,7 +215,7 @@ class ClientReceiveState {
   apache::thrift::detail::ClientStreamBridge::ClientPtr streamBridge_;
   apache::thrift::detail::ClientSinkBridge::ClientPtr sink_;
   BufferOptions bufferOptions_;
-  RpcSizeStats rpcSizeStats_;
+  RpcTransportStats rpcTransportStats_;
 
   void initFromLegacyFormat(std::unique_ptr<folly::IOBuf> buffer);
 };
@@ -266,7 +267,8 @@ class RequestCallback : public RequestClientCallback {
         } catch (...) {
           LOG(DFATAL)
               << "Exception thrown while executing replyReceived() callback. "
-              << "Exception: " << folly::exceptionStr(std::current_exception());
+              << "Exception: "
+              << folly::exceptionStr(folly::current_exception());
         }
       }
     }
@@ -293,7 +295,7 @@ class RequestCallback : public RequestClientCallback {
       } catch (...) {
         LOG(DFATAL)
             << "Exception thrown while executing requestError() callback. "
-            << "Exception: " << folly::exceptionStr(std::current_exception());
+            << "Exception: " << folly::exceptionStr(folly::current_exception());
       }
     }
     if (unmanaged_) {
@@ -316,7 +318,7 @@ class RequestCallback : public RequestClientCallback {
     } catch (...) {
       LOG(DFATAL) << "Exception thrown while executing requestSent() callback. "
                   << "Exception: "
-                  << folly::exceptionStr(std::current_exception());
+                  << folly::exceptionStr(folly::current_exception());
     }
   }
 
@@ -404,7 +406,7 @@ class CloseCallback {
 
 struct RpcResponseContext {
   transport::THeader::StringToStringMap headers;
-  RpcSizeStats rpcSizeStats;
+  RpcTransportStats rpcTransportStats;
   std::optional<int64_t> serverLoad;
 };
 
@@ -416,5 +418,4 @@ struct RpcResponseComplete {
   RpcResponseContext responseContext;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

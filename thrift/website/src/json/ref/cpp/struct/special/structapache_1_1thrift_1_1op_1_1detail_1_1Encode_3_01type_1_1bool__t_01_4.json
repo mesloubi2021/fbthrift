@@ -28,6 +28,7 @@
       "definition_html": "uint32_t apache::thrift::op::detail::Encode&lt; type::bool_t &gt;::operator()",
       "argsstring_html": "(Protocol &amp;prot, bool t) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::Encode&lt; type::bool_t &gt;::operator()",
       "param": [
         {
           "type_html": "Protocol &amp;",
@@ -40,11 +41,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "359",
-        "column": "1",
+        "line": "392",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "359",
-        "bodyend": "361"
+        "bodystart": "392",
+        "bodyend": "394"
       },
       "definition": {
         "simple_html": "template &lt;typename Protocol&gt;\nuint32_t operator()(Protocol&amp; prot, bool t) const",
@@ -60,11 +61,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "line": "357",
+    "line": "390",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "bodystart": "357",
-    "bodyend": "362"
+    "bodystart": "390",
+    "bodyend": "395"
   },
   "namespacednames_html": [
     "apache",
@@ -81,7 +82,6 @@
   "declaration_html": "template &lt;&gt; struct Encode&lt; type::bool_t &gt;;",
   "filepath": "struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4",
   "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4",
-  "specializes": "structapache_1_1thrift_1_1op_1_1detail_1_1Encode",
   "overloadgroups": [
     {
       "groupname_html": "",
@@ -108,6 +108,7 @@
               "definition_html": "uint32_t apache::thrift::op::detail::Encode&lt; type::bool_t &gt;::operator()",
               "argsstring_html": "(Protocol &amp;prot, bool t) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::Encode&lt; type::bool_t &gt;::operator()",
               "param": [
                 {
                   "type_html": "Protocol &amp;",
@@ -120,11 +121,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "line": "359",
-                "column": "1",
+                "line": "392",
+                "column": "12",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "bodystart": "359",
-                "bodyend": "361"
+                "bodystart": "392",
+                "bodyend": "394"
               },
               "definition": {
                 "simple_html": "template &lt;typename Protocol&gt;\nuint32_t operator()(Protocol&amp; prot, bool t) const",
@@ -146,7 +147,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4/operator.call",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4/operator.call"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4/operator.call",
+          "parent_links": [
+            {
+              "text_html": "Encode&lt; type::bool_t &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Encode_3_01type_1_1bool__t_01_4"
+            }
+          ]
         }
       ]
     }

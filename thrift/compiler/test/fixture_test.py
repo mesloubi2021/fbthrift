@@ -13,78 +13,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import difflib
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
 import traceback
+import typing
 import unittest
+from pathlib import Path
 
-import pkg_resources
-
-FIXTURE_ROOT = "."
-
-
-def ascend_find_exe(path, target):
-    if not os.path.isdir(path):
-        path = os.path.dirname(path)
-    while True:
-        test = os.path.join(path, target)
-        if os.access(test, os.X_OK):
-            return test
-        parent = os.path.dirname(path)
-        if os.path.samefile(parent, path):
-            return None
-        path = parent
+from thrift.compiler.test import fixture_utils
 
 
-exe = os.path.join(os.getcwd(), sys.argv[0])
-thrift = pkg_resources.resource_filename(__name__, "thrift")
-assert thrift
-fixtures_root_dir = os.path.join(FIXTURE_ROOT, "thrift/compiler/test/fixtures")
+_THRIFT_BIN_PATH = fixture_utils.get_thrift_binary_path(thrift_bin_arg=None)
+_THRIFT2AST_BIN_PATH = fixture_utils.get_thrift2ast_binary_path()
+assert _THRIFT_BIN_PATH
+
+_FIXTURES_ROOT_DIR_RELPATH = Path("thrift/compiler/test/fixtures")
 
 
-def read_file(path):
-    with open(path, "r") as f:
-        return f.read()
+def _gen_find_recursive_files(top: Path) -> typing.Generator[Path, None, None]:
+    """Yields a Path for every file under `top`, relative to it."""
 
-
-def read_lines(path):
-    with open(path, "r") as f:
-        return f.readlines()
-
-
-def read_directory_filenames(path):
-    files = []
-    for filename in os.listdir(path):
-        files.append(filename)
-    return files
-
-
-def gen_find_recursive_files(path):
-    for root, _, files in os.walk(path):
-        for f in files:
-            yield os.path.relpath(os.path.join(root, f), path)
-
-
-def cp_dir(source_dir, dest_dir):
-    for src in gen_find_recursive_files(source_dir):
-        source_full_path = os.path.join(source_dir, src)
-        dest_full_path = os.path.join(dest_dir, src)
-
-        dest_full_dir = os.path.dirname(dest_full_path)
-        if not os.path.isdir(dest_full_dir):
-            os.makedirs(dest_full_dir, 0o700)
-
-        shutil.copy2(source_full_path, dest_full_path)
+    for root, _, filenames in os.walk(top):
+        root_path = Path(root)
+        for filename in filenames:
+            yield (root_path / filename).relative_to(top)
 
 
 class FixtureTest(unittest.TestCase):
-
     MSG = " ".join(
         [
             "One or more fixtures are out of sync with the thrift compiler.",
@@ -95,26 +57,40 @@ class FixtureTest(unittest.TestCase):
         ]
     )
 
-    def compare_code(self, path1, path2, cmd):
-        gens = list(gen_find_recursive_files(path1))
-        fixt = list(gen_find_recursive_files(path2))
+    def _compare_code(
+        self,
+        gen_code_path: Path,
+        fixture_code_path: Path,
+        cmd: typing.List[str],
+    ) -> None:
+        """
+        Checks that the contents of the files under the two given paths are
+        identical, and fails this test if that is not the case.
+        """
+        gen_file_relpaths: list[Path] = sorted(_gen_find_recursive_files(gen_code_path))
+
+        fixture_file_relpaths: list[Path] = sorted(
+            _gen_find_recursive_files(fixture_code_path)
+        )
+
         try:
             # Compare that the generated files are the same
-            self.assertEqual(sorted(gens), sorted(fixt))
-            for gen in gens:
-                geng_path = os.path.join(path1, gen)
-                genf_path = os.path.join(path2, gen)
-                geng = read_file(geng_path)
-                genf = read_file(genf_path)
-                if geng == genf:
+            self.assertEqual(gen_file_relpaths, fixture_file_relpaths)
+
+            for gen_file_relpath in gen_file_relpaths:
+                gen_file_path = gen_code_path / gen_file_relpath
+                fixture_file_path = fixture_code_path / gen_file_relpath
+                gen_file_contents = gen_file_path.read_text()
+                fixture_file_contents = fixture_file_path.read_text()
+                if gen_file_contents == fixture_file_contents:
                     continue
 
-                msg = ["Difference found in " + gen + ":"]
+                msg = [f"Difference found in {gen_file_relpath}:"]
                 for line in difflib.unified_diff(
-                    genf.splitlines(),
-                    geng.splitlines(),
-                    genf_path,
-                    geng_path,
+                    fixture_file_contents.splitlines(),
+                    gen_file_contents.splitlines(),
+                    str(fixture_file_path),
+                    str(gen_file_path),
                     lineterm="",
                 ):
                     msg.append(line)
@@ -125,103 +101,57 @@ class FixtureTest(unittest.TestCase):
             traceback.print_exc(file=sys.stderr)
             raise
 
-    def setUp(self):
+    def setUp(self) -> None:
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp, True)
-        self.tmp = tmp
+        self.tmp_dir_abspath = Path(tmp).resolve(strict=True)
         self.maxDiff = None
 
-    def runTest(self, name):
-        fixture_dir = os.path.join(fixtures_root_dir, name)
-
-        # Copy source *.thrift files to temporary folder for relative code gen
-        cp_dir(
-            os.path.join(fixture_dir, "src"), os.path.join(self.tmp, fixture_dir, "src")
+    def runTest(self, fixture_name: str) -> None:
+        repo_root_dir_abspath = Path.cwd()
+        fixture_dir_abspath = (
+            repo_root_dir_abspath / _FIXTURES_ROOT_DIR_RELPATH / fixture_name
         )
-        # Copy thrift/annotation/ folder to temporary folder
-        cp_dir(
-            os.path.join(FIXTURE_ROOT, "thrift/annotation"),
-            os.path.join(self.tmp, "thrift/annotation"),
+
+        fixture_output_root_dir_abspath = self.tmp_dir_abspath / "out"
+        fixture_output_root_dir_abspath.mkdir()
+
+        fixture_cmds = fixture_utils.parse_fixture_cmds(
+            repo_root_dir_abspath,
+            fixture_name,
+            fixture_dir_abspath,
+            fixture_output_root_dir_abspath,
+            _THRIFT_BIN_PATH,
+            _THRIFT2AST_BIN_PATH,
         )
-        # Copy thrift/lib/thrift/ folder to temporary folder
-        cp_dir(
-            os.path.join(FIXTURE_ROOT, "thrift/lib/thrift/"),
-            os.path.join(self.tmp, "thrift/lib/thrift/"),
-        )
-        languages = set()
-        for cmd in read_lines(os.path.join(fixture_dir, "cmd")):
-            # Skip commented out commands
-            if cmd[0] == "#":
-                continue
 
-            args = shlex.split(cmd.strip())
-            args[1] = os.path.relpath(os.path.join(fixture_dir, args[1]), FIXTURE_ROOT)
-            # Get cmd language
-            lang = args[0].rsplit(":", 1)[0] if ":" in args[0] else args[0]
+        # Run thrift compiler and generate files
+        for fixture_cmd in fixture_cmds:
+            os.mkdir(fixture_output_root_dir_abspath / fixture_cmd.unique_name)
 
-            # Add to list of generated languages
-            languages.add(lang)
-
-            # Fix cpp args
-            if "cpp" in lang:
-                # Don't use os.path.join to avoid system-specific path separators.
-                path = "thrift/compiler/test/fixtures/" + name
-                extra = "include_prefix=" + path
-                join = "," if ":" in args[0] else ":"
-                args[0] = args[0] + join + extra
-
-            # Generate arguments to run binary
-            args = [
-                thrift,
-                "-r",
-                "-I",
-                self.tmp,
-                "-o",
-                os.path.join(self.tmp, fixture_dir),
-                "--gen",
-                args[0],
-                *args[1:],
-            ]
-
-            # Do not recurse in py generators due to a bug in the py generator
-            # Remove once migration to mustache is done
-            if (
-                ("cpp2" == lang)
-                or ("schema" == lang)
-                or ("mstch_cpp2" == lang)
-                or ("mstch_java" == lang)
-                or ("mstch_python" == lang)
-            ):
-                args.remove("-r")
-
-            # Run thrift compiler and generate files
             subprocess.check_call(
-                args, cwd=os.path.join(self.tmp, FIXTURE_ROOT), close_fds=True
+                fixture_cmd.build_command_args,
+                close_fds=True,
             )
 
         # Compare generated code to fixture code
-        for lang in languages:
-            # Edit lang to find correct directory
-            lang = lang.rsplit("_", 1)[0] if "android_lite" in lang else lang
-            lang = lang.rsplit("_", 1)[1] if "mstch_" in lang else lang
-            lang = "py" if lang == "pyi" else lang
-
-            gen_code = os.path.join(self.tmp, fixture_dir, "gen-" + lang)
-            fixture_code = os.path.join(fixture_dir, "gen-" + lang)
-            self.compare_code(gen_code, fixture_code, args)
+        self._compare_code(
+            fixture_output_root_dir_abspath,
+            fixture_dir_abspath / "out",
+            fixture_cmd.build_command_args,
+        )
 
 
-def add_fixture(klazz, name):
+def _add_fixture(klazz, fixture_name: str) -> None:
     def test_method(self):
-        self.runTest(name)
+        self.runTest(fixture_name)
 
-    test_method.__name__ = str("test_" + re.sub("[^0-9a-zA-Z]", "_", name))
+    test_method.__name__ = str("test_" + re.sub("[^0-9a-zA-Z]", "_", fixture_name))
     setattr(klazz, test_method.__name__, test_method)
 
 
-fixtureNames = read_directory_filenames(fixtures_root_dir)
-for name in fixtureNames:
-    add_fixture(FixtureTest, name)
+for fixture_name in fixture_utils.get_all_fixture_names(_FIXTURES_ROOT_DIR_RELPATH):
+    _add_fixture(FixtureTest, fixture_name)
 
 if __name__ == "__main__":
     unittest.main()

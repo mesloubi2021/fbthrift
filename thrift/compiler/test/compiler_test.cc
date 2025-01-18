@@ -14,13 +14,28 @@
  * limitations under the License.
  */
 
+#include <filesystem>
 #include <string>
 #include <thrift/compiler/test/compiler.h>
 
 #include <gtest/gtest.h>
 
 using apache::thrift::compiler::test::check_compile;
+using apache::thrift::compiler::test::check_compile_options;
 
+namespace {
+
+// Change the current directory to a subdirectory to avoid relative annotations
+// being found via relative includes. The exact directory doesn't matter so
+// pick "thrift" since we know it exists.
+void disable_relative_includes() {
+  std::filesystem::current_path("thrift");
+}
+
+} // namespace
+
+// Note: To see a reference on the expected lint message format: see the regex
+// in thrift/compiler/test/compiler.cc
 TEST(CompilerTest, diagnostic_in_last_line) {
   check_compile(R"(
     struct S {
@@ -68,18 +83,20 @@ TEST(CompilerTest, redefinition) {
 TEST(CompilerTest, zero_as_field_id) {
   check_compile(R"(
     struct Foo {
-      0: i32 field; # expected-warning: Nonpositive field id (0) differs from what is auto-assigned by thrift. The id must be positive or -1.
-                    # expected-warning@-1:  No field id specified for `field`, resulting protocol may have conflicts or not be backwards compatible!
+        0: i32 field; # expected-warning: Nonpositive field id (0) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
+                      # expected-error@-1: Zero value (0) not allowed as a field id for `field`
       1: list<i32> other;
     }
   )");
 }
 
+// NOTE: As of Nov 2024, allow-neg-keys is ignored, so this should be identical
+// to the "zero_as_field_id" case above.
 TEST(CompilerTest, zero_as_field_id_neg_keys) {
   check_compile(
       R"(
       struct Foo {
-        0: i32 field; # expected-warning: Nonpositive field id (0) differs from what would be auto-assigned by thrift (-1).
+        0: i32 field; # expected-warning: Nonpositive field id (0) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
                       # expected-error@-1: Zero value (0) not allowed as a field id for `field`
         1: list<i32> other;
       }
@@ -88,42 +105,28 @@ TEST(CompilerTest, zero_as_field_id_neg_keys) {
 }
 
 TEST(CompilerTest, no_field_id) {
-  check_compile(R"(
-    struct Experimental {} (thrift.uri = "facebook.com/thrift/annotation/Experimental")
+  check_compile(
+      R"(
+    struct Experimental {} (thrift.uri = "facebook.com/thrift/annotation/Experimental") # expected-warning: The annotation thrift.uri is deprecated. Please use @thrift.Uri instead.
     struct Foo {
       @Experimental
-      i32 field2; # expected-warning@-1: No field id specified for `field2`, resulting protocol may have conflicts or not be backwards compatible!
+      i32 field2; # expected-error@-1: No field id specified for `field2`
     }
 
     struct Bar {
-      i32 field4; # expected-warning: No field id specified for `field4`, resulting protocol may have conflicts or not be backwards compatible!
-    }
-  )");
+      i32 field4; # expected-error: No field id specified for `field4`
+    })");
 }
 
 TEST(CompilerTest, zero_as_field_id_annotation) {
   check_compile(R"(
     struct Foo {
       0: i32 field (cpp.deprecated_allow_zero_as_field_id);
-        # expected-warning@-1: Nonpositive field id (0) differs from what is auto-assigned by thrift. The id must be positive or -1.
-        # expected-warning@-2: No field id specified for `field`, resulting protocol may have conflicts or not be backwards compatible!
+        # expected-warning@-1: Nonpositive field id (0) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
 
       1: list<i32> other;
     }
   )");
-}
-
-TEST(CompilerTest, zero_as_field_id_allow_neg_keys) {
-  check_compile(
-      R"(
-      struct Foo {
-        0: i32 field (cpp.deprecated_allow_zero_as_field_id);
-          # expected-warning@-1: Nonpositive field id (0) differs from what would be auto-assigned by thrift (-1).
-
-        1: list<i32> other;
-      }
-      )",
-      {"--allow-neg-keys"});
 }
 
 TEST(CompilerTest, neg_field_ids) {
@@ -131,17 +134,16 @@ TEST(CompilerTest, neg_field_ids) {
       R"(
       struct Foo {
         i32 f1;  // auto id = -1
-          # expected-warning@-1: No field id specified for `f1`, resulting protocol may have conflicts or not be backwards compatible!
+          # expected-error@-1: No field id specified for `f1`
 
         -2: i32 f2; // auto and manual id = -2
         -32: i32 f3; // min value.
-          # expected-warning@-1: Nonpositive field id (-32) differs from what would be auto-assigned by thrift (-3).
+          # expected-warning@-1: Nonpositive field id (-32) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -3
 
         -33: i32 f4; // min value - 1.
           # expected-error@-1: Reserved field id (-33) cannot be used for `f4`.
       }
-      )",
-      {"--allow-neg-keys"});
+      )");
 }
 
 TEST(CompilerTest, exhausted_neg_field_ids) {
@@ -149,13 +151,12 @@ TEST(CompilerTest, exhausted_neg_field_ids) {
       R"(
       struct Foo {
         -32: i32 f1; // min value.
-          # expected-warning@-1: Nonpositive field id (-32) differs from what would be auto-assigned by thrift (-1).
+          # expected-warning@-1: Nonpositive field id (-32) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
 
         i32 f2; // auto id = -2 or min value - 1
           # expected-error@-1: Cannot allocate an id for `f2`. Automatic field ids are exhausted.
       }
-      )",
-      {"--allow-neg-keys"});
+      )");
 }
 
 TEST(CompilerTest, exhausted_pos_field_ids) {
@@ -174,10 +175,11 @@ TEST(CompilerTest, exhausted_pos_field_ids) {
 TEST(CompilerTest, out_of_range_field_ids_overflow) {
   check_compile(R"(
     struct Foo {
-      -32768: i32 f1; # expected-warning: Nonpositive field id (-32768) differs from what is auto-assigned by thrift. The id must be positive or -1.
+      -32768: i32 f1; # expected-warning: Nonpositive field id (-32768) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
       32767: i32 f2;
       32768: i32 f3; # expected-error: Integer constant 32768 outside the range of field ids ([-32768, 32767]).
-                     # expected-warning@-1: Nonpositive field id (-32768) differs from what is auto-assigned by thrift. The id must be positive or -2.
+        # expected-error@-1: Field id -32768 for `f3` has already been used.
+        # expected-warning@-2: Nonpositive field id (-32768) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): 32767
     }
   )");
 }
@@ -185,7 +187,7 @@ TEST(CompilerTest, out_of_range_field_ids_overflow) {
 TEST(CompilerTest, out_of_range_field_ids_underflow) {
   check_compile(R"(
     struct Foo {
-      -32768: i32 f1; # expected-warning: Nonpositive field id (-32768) differs from what is auto-assigned by thrift. The id must be positive or -1.
+      -32768: i32 f1; # expected-warning: Nonpositive field id (-32768) differs from what would be auto-assigned by thrift (if 'allow-neg-keys' was disabled): -1
       32767: i32 f2;
 
       -32769: i32 f3; # expected-error: Integer constant -32769 outside the range of field ids ([-32768, 32767]).
@@ -270,6 +272,16 @@ TEST(CompilerTest, void_as_initial_response_type) {
   )");
 }
 
+TEST(CompilerTest, enum) {
+  check_compile(R"(
+    enum Color {
+      RED = 1,
+      GREEN = 2; # expected-warning: unexpected ';'
+      BLUE = 3,
+    }
+  )");
+}
+
 TEST(CompilerTest, enum_wrong_default_value) {
   check_compile(R"(
     enum Color {
@@ -279,7 +291,7 @@ TEST(CompilerTest, enum_wrong_default_value) {
     }
 
     struct MyS {
-      1: Color color = -1; # expected-warning: type error: const `color` was declared as enum `Color` with a value not of that enum.
+      1: Color color = -1; # expected-warning: const `color` is defined as enum `Color` with a value not of that enum
     }
   )");
 }
@@ -332,150 +344,256 @@ TEST(CompilerTest, enum_underflow) {
 
 TEST(CompilerTest, integer_overflow_underflow) {
   check_compile(R"(
-    const i64 overflowInt = 9223372036854775808;  # max int64 + 1
-      # expected-error@-1: integer constant 9223372036854775808 is too large
-      # expected-warning@-2: 64-bit constant -9223372036854775808 may not work in all languages
-  )");
-  check_compile(R"(
-    const i64 underflowInt = -9223372036854775809; # min int64 - 1
-      # expected-error@-1: integer constant -9223372036854775809 is too small
-      # expected-warning@-2: 64-bit constant 9223372036854775807 may not work in all languages
-  )");
-  check_compile(R"(
     # Unsigned Ints
     const i64 overflowUint = 18446744073709551615;  # max uint64
-      # expected-error@-1: integer constant 18446744073709551615 is too large
+    # expected-error@-1: integer constant 18446744073709551615 is too large
   )");
   check_compile(R"(
     const i64 overflowUint2 = 18446744073709551616;  # max uint64 + 1
-      # expected-error@-1: integer constant 18446744073709551616 is too large
+    # expected-error@-1: integer constant 18446744073709551616 is too large
   )");
 }
 
 TEST(CompilerTest, double_overflow_underflow) {
   check_compile(R"(
     const double overflowConst = 1.7976931348623159e+308;
-      # expected-error@-1: floating-point constant 1.7976931348623159e+308 is out of range
+    # expected-error@-1: floating-point constant 1.7976931348623159e+308 is out of range
   )");
   check_compile(R"(
     const double overflowConst = 1.7976931348623159e+309;
-      # expected-error@-1: floating-point constant 1.7976931348623159e+309 is out of range
+    # expected-error@-1: floating-point constant 1.7976931348623159e+309 is out of range
   )");
   check_compile(R"(
     const double overflowConst = 4.9406564584124654e-325;
-      # expected-error@-1: magnitude of floating-point constant 4.9406564584124654e-325 is too small
+    # expected-error@-1: magnitude of floating-point constant 4.9406564584124654e-325 is too small
   )");
   check_compile(R"(
     const double overflowConst = 1e-324;
-      # expected-error@-1: magnitude of floating-point constant 1e-324 is too small
+    # expected-error@-1: magnitude of floating-point constant 1e-324 is too small
   )");
 }
 
-TEST(CompilerTest, const_wrong_type) {
+TEST(CompilerTest, void_data) {
   check_compile(R"(
-    const i32 wrongInt = "stringVal"; # expected-error: type error: const `wrongInt` was declared as i32.
-    const set<string> wrongSet = {1: 2};
-      # expected-warning@-1: type error: const `wrongSet` was declared as set. This will become an error in future versions of thrift.
-    const map<i32, i32> wrongMap = [1,32,3];
-      # expected-warning@-1: type error: const `wrongMap` was declared as map. This will become an error in future versions of thrift.
-    const map<i32, i32> weirdMap = [];
-      # expected-warning@-1: type error: map `weirdMap` initialized with empty list.
-    const set<i32> weirdSet = {};
-      # expected-warning@-1: type error: set `weirdSet` initialized with empty map.
-    const list<i32> weirdList = {};
-      # expected-warning@-1: type error: list `weirdList` initialized with empty map.
-    const list<string> badValList = [1];
-      # expected-error@-1: type error: const `badValList<elem>` was declared as string.
-    const set<string> badValSet = [2];
-      # expected-error@-1: type error: const `badValSet<elem>` was declared as string.
-    const map<string, i32> badValMap = {1: "str"};
-      # expected-error@-1: type error: const `badValMap<key>` was declared as string.
-      # expected-error@-2: type error: const `badValMap<val>` was declared as i32.
+    const void v = 42; # expected-error: `void` cannot be used as a data type
+    struct S {
+      1: void v; # expected-error: `void` cannot be used as a data type
+    }
   )");
 }
 
-TEST(CompilerTest, const_byte_value) {
+TEST(CompilerTest, byte_initializer) {
   check_compile(R"(
     const byte c1 = 127;
     const byte c2 = 128;
-    # expected-error@-1: value error: const `c2` has an invalid custom default value.
+    # expected-error@-1: 128 is out of range for `byte` in initialization of `c2`
 
     const byte c3 = -128;
     const byte c4 = -129;
-    # expected-error@-1: value error: const `c4` has an invalid custom default value.
+    # expected-error@-1: -129 is out of range for `byte` in initialization of `c4`
   )");
 }
 
-TEST(CompilerTest, const_i16_value) {
+TEST(CompilerTest, i16_initializer) {
   check_compile(R"(
     const i16 c1 = 32767;
     const i16 c2 = 32768;
-    # expected-error@-1: value error: const `c2` has an invalid custom default value.
+    # expected-error@-1: 32768 is out of range for `i16` in initialization of `c2`
 
     const i16 c3 = -32768;
     const i16 c4 = -32769;
-    # expected-error@-1: value error: const `c4` has an invalid custom default value.
+    # expected-error@-1: -32769 is out of range for `i16` in initialization of `c4`
   )");
 }
 
-TEST(CompilerTest, const_i32_value) {
+TEST(CompilerTest, i32_initializer) {
   check_compile(R"(
-    const i32 c1 = 2147483647;
-    const i32 c2 = 2147483648;
-    # expected-warning@-1: 64-bit constant 2147483648 may not work in all languages
-    # expected-error@-2: value error: const `c2` has an invalid custom default value.
+    const i32 c0 = 42;
 
-    const i32 c3 = -2147483648;
-    const i32 c4 = -2147483649;
-    # expected-warning@-1: 64-bit constant -2147483649 may not work in all languages
-    # expected-error@-2: value error: const `c4` has an invalid custom default value.
+    const i32 c1 = 4.2;
+    # expected-error@-1: cannot convert floating-point number to `i32` in initialization of `c1`
+
+    const i32 c2 = "string typing";
+    # expected-error@-1: cannot convert string to `i32` in initialization of `c2`
+
+    const i32 c3 = 2147483647;
+    const i32 c4 = 2147483648;
+    # expected-error@-1: 2147483648 is out of range for `i32` in initialization of `c4`
+
+    const i32 c5 = -2147483648;
+    const i32 c6 = -2147483649;
+    # expected-error@-1: -2147483649 is out of range for `i32` in initialization of `c6`
   )");
 }
 
-TEST(CompilerTest, const_float_value) {
+TEST(CompilerTest, float_initializer) {
   check_compile(R"(
     const float c0 = 1e8;
 
     const float c1 = 3.4028234663852886e+38;
     const float c2 = 3.402823466385289e+38; // max float + 1 double ulp
-    # expected-error@-1: value error: const `c2` has an invalid custom default value.
+    # expected-error@-1: 3.402823466385289e+38 is out of range for `float` in initialization of `c2`
 
     const float c3 = -3.4028234663852886e+38;
     const float c4 = -3.402823466385289e+38; // min float - 1 double ulp
-    # expected-error@-1: value error: const `c4` has an invalid custom default value.
+    # expected-error@-1: -3.402823466385289e+38 is out of range for `float` in initialization of `c4`
 
     const float c5 = 100000001;
-    # expected-error@-1: value error: const `c5` cannot be represented precisely as `float` or `double`.
+    # expected-error@-1: cannot convert 100000001 to `float` in initialization of `c5`
     const float c6 = -100000001;
-    # expected-error@-1: value error: const `c6` cannot be represented precisely as `float` or `double`.
+    # expected-error@-1: cannot convert -100000001 to `float` in initialization of `c6`
   )");
 }
 
-TEST(CompilerTest, const_double_value) {
+TEST(CompilerTest, double_initializer) {
   check_compile(R"(
     const double c0 = 1e8;
     const double c1 = 1.7976931348623157e+308;
     const double c2 = -1.7976931348623157e+308;
 
-    const float c3 = 10000000000000001;
-    # expected-warning@-1: 64-bit constant 10000000000000001 may not work in all languages
-    # expected-error@-2: value error: const `c3` cannot be represented precisely as `float` or `double`.
+    const double c3 = 10000000000000001;
+    # expected-error@-1: cannot convert 10000000000000001 to `double` in initialization of `c3`
 
-    const float c4 = -10000000000000001;
-    # expected-warning@-1: 64-bit constant -10000000000000001 may not work in all languages
-    # expected-error@-2: value error: const `c4` cannot be represented precisely as `float` or `double`.
+    const double c4 = -10000000000000001;
+    # expected-error@-1: cannot convert -10000000000000001 to `double` in initialization of `c4`
+  )");
+}
+
+TEST(CompilerTest, binary_initializer) {
+  check_compile(R"(
+    const binary b0 = "foo";
+
+    const binary b1 = 42;
+    # expected-error@-1: cannot convert integer to `binary` in initialization of `b1`
   )");
 }
 
 TEST(CompilerTest, struct_initializer) {
   check_compile(R"(
     struct S {}
-    const S s1 = {};   # OK
-    const S s2 = 42;   # expected-error: integer is incompatible with `S`
-    const S s3 = 4.2;  # expected-error: floating-point number is incompatible with `S`
-    const S s4 = "";   # expected-error: string is incompatible with `S`
-    const S s5 = true; # expected-error: bool is incompatible with `S`
-    const S s6 = [];   # expected-error: list is incompatible with `S`
+    const S s1 = {}; # OK
+
+    const S s2 = 42;
+    # expected-error@-1: cannot convert integer to `S` in initialization of `s2`
+
+    const S s3 = 4.2;
+    # expected-error@-1: cannot convert floating-point number to `S` in initialization of `s3`
+
+    const S s4 = "";
+    # expected-error@-1: cannot convert string to `S` in initialization of `s4`
+
+    const S s5 = true;
+    # expected-error@-1: cannot convert bool to `S` in initialization of `s5`
+
+    const S s6 = [];
+    # expected-error@-1: cannot convert list to `S` in initialization of `s6`
+
+    struct A {}
+    struct B {}
+    const A a = B{};
+    # expected-error@-1: type mismatch: expected test.A, got test.B
+  )");
+}
+
+TEST(CompilerTest, union_initializer) {
+  check_compile(R"(
+    union U {
+      1: i32 a;
+      2: i32 b;
+    }
+
+    const U u1 = {}; # OK
+
+    const U u2 = 42;
+    # expected-error@-1: cannot convert integer to `U` in initialization of `u2`
+
+    const U u3 = 4.2;
+    # expected-error@-1: cannot convert floating-point number to `U` in initialization of `u3`
+
+    const U u4 = "";
+    # expected-error@-1: cannot convert string to `U` in initialization of `u4`
+
+    const U u5 = true;
+    # expected-error@-1: cannot convert bool to `U` in initialization of `u5`
+
+    const U u6 = [];
+    # expected-error@-1: cannot convert list to `U` in initialization of `u6`
+
+    const U u7 = {"a": 1, "b": 2};
+    # expected-error@-1: cannot initialize more than one field in union `U`
+  )");
+}
+
+TEST(CompilerTest, enum_initializer) {
+  check_compile(R"(
+    enum E {A = 1}
+
+    const E e1 = E.A; # OK
+
+    const E e2 = 42;
+    # expected-warning@-1: const `e2` is defined as enum `E` with a value not of that enum
+
+    const E e3 = 4.2;
+    # expected-error@-1: cannot convert floating-point number to `E` in initialization of `e3`
+
+    const E e4 = "";
+    # expected-error@-1: cannot convert string to `E` in initialization of `e4`
+
+    const E e5 = "E.A";
+    # expected-error@-1: cannot convert string to `E` in initialization of `e5`
+
+    const E e6 = true;
+    # expected-error@-1: cannot convert bool to `E` in initialization of `e6`
+
+    const E e7 = [];
+    # expected-error@-1: cannot convert list to `E` in initialization of `e7`
+  )");
+}
+
+TEST(CompilerTest, list_initializer) {
+  check_compile(R"(
+    const list<i32> weirdList = {};
+    # expected-warning@-1: converting empty map to `list` in initialization of `weirdList`
+
+    const list<string> badValList = [1];
+    # expected-error@-1: cannot convert integer to `string` in initialization of `badValList`
+  )");
+}
+
+TEST(CompilerTest, set_initializer) {
+  check_compile(R"(
+    const set<string> wrongSet = {1: 2};
+    # expected-error@-1: cannot convert map to `set` in initialization of `wrongSet`
+
+    const set<i32> weirdSet = {};
+    # expected-warning@-1: converting empty map to `set` in initialization of `weirdSet`
+
+    const set<string> badValSet = [2];
+    # expected-error@-1: cannot convert integer to `string` in initialization of `badValSet`
+  )");
+}
+
+TEST(CompilerTest, map_initializer) {
+  check_compile(R"(
+    const map<i32, i32> wrongMap = [1, 32, 3];
+    # expected-error@-1: cannot convert list to `map` in initialization of `wrongMap`
+
+    const map<i32, i32> weirdMap = [];
+    # expected-warning@-1: converting empty list to `map` in initialization of `weirdMap`
+
+    const map<string, i32> badValMap = {1: "str"};
+    # expected-error@-1: cannot convert integer to `string` in initialization of `badValMap`
+    # expected-error@-2: cannot convert string to `i32` in initialization of `badValMap`
+  )");
+}
+
+TEST(CompilerTest, map_item_separator) {
+  check_compile(R"(
+    const map<i32, i32> m = {
+      1: 2,
+      3: 4; # expected-error: expected }
+      5: 6
+    };
   )");
 }
 
@@ -484,13 +602,20 @@ TEST(CompilerTest, struct_fields_wrong_type) {
     struct Annot {
       1: i32 val;
       2: list<string> otherVal;
+      3: F structField;
     }
+    struct F {}
+    struct G {}
 
-    @Annot{val="hi", otherVal=5}
-      # expected-error@-1: type error: const `.val` was declared as i32.
-      # expected-warning@-2: type error: const `.otherVal` was declared as list. This will become an error in future versions of thrift.
+    @Annot{val="hi", otherVal=5, structField=G{}}
+      # expected-error@-1: cannot convert string to `i32` in initialization of `val`
+      # expected-error@-2: cannot convert integer to `list` in initialization of `otherVal`
+      # expected-error@-3: type mismatch: expected test.F, got test.G
     struct BadFields {
-      1: i32 badInt = "str"; # expected-error: type error: const `badInt` was declared as i32.
+      1: i32 badInt = "str";
+        # expected-error@-1: cannot convert string to `i32` in initialization of `badInt`
+      2: F badStruct = G{}; # expected-error: type mismatch: expected test.F, got test.G
+        # expected-warning@-1: Explicit default value is redundant for field: `badStruct` (in `BadFields`).
     }
   )");
 }
@@ -512,11 +637,27 @@ TEST(CompilerTest, undefined_type) {
   )");
 }
 
+TEST(CompilerTest, undefined_const) {
+  check_compile(R"(
+    const Type c = 42; # expected-error: Type `test.Type` not defined.
+  )");
+}
+
+TEST(CompilerTest, undefined_const_external) {
+  check_compile(R"(
+    const bad.Type d = 42; # expected-error: Type `bad.Type` not defined.
+  )");
+}
+
 TEST(CompilerTest, undefined_annotation) {
   check_compile(R"(
     @BadAnnotation # expected-error: Type `test.BadAnnotation` not defined.
     struct S {}
+  )");
+}
 
+TEST(CompilerTest, undefined_annotation_external) {
+  check_compile(R"(
     @bad.Annotation # expected-error: Type `bad.Annotation` not defined.
     struct T {}
   )");
@@ -537,15 +678,15 @@ TEST(CompilerTest, mixin_field_name_uniqueness) {
     struct A { 1: i32 i; }
     struct B { 2: i64 i; }
     struct C {
-      1: A a (cpp.mixin);
+      1: A a (cpp.mixin); # expected-warning: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
       2: B b (cpp.mixin); # expected-error: Field `B.i` and `A.i` can not have same name in `C`.
-    }
+    } # expected-warning@-1: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
   )");
   check_compile(R"(
     struct A { 1: i32 i; }
 
     struct C {
-      1: A a (cpp.mixin);
+      1: A a (cpp.mixin); # expected-warning: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
       2: i64 i; # expected-error: Field `C.i` and `A.i` can not have same name in `C`.
     }
   )");
@@ -553,13 +694,31 @@ TEST(CompilerTest, mixin_field_name_uniqueness) {
 
 TEST(CompilerTest, annotation_positions) {
   check_compile(R"(
+    struct Type {1: string name} (thrift.uri = "facebook.com/thrift/annotation/Type") # expected-warning: The annotation thrift.uri is deprecated. Please use @thrift.Uri instead.
     typedef set<set<i32> (annot)> T # expected-error: Annotations are not allowed in this position. Extract the type into a named typedef instead.
     const i32 (annot) C = 42 # expected-error: Annotations are not allowed in this position. Extract the type into a named typedef instead.
     service S {
       i32 (annot) foo() # expected-error: Annotations are not allowed in this position. Extract the type into a named typedef instead.
       void bar(1: i32 (annot) p) # expected-error: Annotations are not allowed in this position. Extract the type into a named typedef instead.
     }
+    struct Foo {
+      1: i32 (annot) f
+      # expected-error@-1: Annotations are not allowed in this position. Extract the type into a named typedef instead.
+      @Type{name="foo"}
+      2: i32 g
+    }
   )");
+}
+
+TEST(CompilerTest, annotation_positions_field) {
+  check_compile(
+      R"(
+    struct Foo {
+      1: i32 (annot) f # expected-error: Annotations are not allowed in this position. Extract the type into a named typedef instead.
+      2: i32 g
+    }
+  )",
+      {"--extra-validation", "unstructured_annotations_on_field_type"});
 }
 
 TEST(CompilerTest, performs_in_interaction) {
@@ -605,6 +764,1585 @@ TEST(CompilerTest, interactions_as_first_response_type) {
       I, J foo();                 # expected-error: Invalid first response type: test.J
       I, J, stream<i32> bar();    # expected-error: Invalid first response type: test.J
       I, J, sink<i32, i32> baz(); # expected-error: Invalid first response type: test.J
+    }
+  )");
+}
+
+TEST(CompilerTest, deprecated_annotations) {
+  check_compile(R"(
+    include "thrift/annotation/hack.thrift"
+
+    @hack.Attributes{attributes=[]} # expected-error: Duplicate annotations hack.attributes and @hack.Attributes.
+    struct A {
+        1: optional i64 field (cpp.box) # expected-warning: The annotation cpp.box is deprecated. Please use @thrift.Box instead.
+        2: i64 with (py3.name = "w", go.name = "w") # expected-warning: The annotation py3.name is deprecated. Please use @python.Name instead.
+        # expected-warning@-1: The annotation go.name is deprecated. Please use @go.Name instead.
+    } (hack.attributes = "")
+  )");
+}
+
+TEST(CompilerTest, invalid_enum_constant) {
+  check_compile(R"(
+    enum E {}
+    const list<E> c = [nonexistent.Value]; # expected-error: use of undeclared identifier 'nonexistent.Value'
+  )");
+}
+
+TEST(CompilerTest, invalid_struct_constant) {
+  check_compile(R"(
+    struct S {}
+    const list<S> c = [nonexistent.Value]; # expected-error: use of undeclared identifier 'nonexistent.Value'
+  )");
+}
+
+TEST(CompilerTest, cpp_type_compatibility) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+
+    @cpp.Adapter{name="Adapter"} # expected-error: Definition `Bar1` cannot have both cpp.type/cpp.template and @cpp.Adapter annotations
+    typedef i32 Bar1 (cpp.type = "std::uint32_t") # expected-warning@-1: The annotation cpp.type is deprecated. Please use @cpp.Type instead.
+
+    @cpp.Adapter{name="Adapter"} # expected-error: Definition `A` cannot have both cpp.type/cpp.template and @cpp.Adapter annotations
+    struct A {
+      1: i32 field;
+    } (cpp.type = "CustomA") # expected-warning@-3: The annotation cpp.type is deprecated. Please use @cpp.Type instead.
+
+    struct B {
+      @cpp.Adapter{name="Adapter"} # expected-warning: At most one of @cpp.Type/@cpp.Adapter/cpp.type/cpp.template can be specified on a definition.
+      1: i32 (cpp.type = "std::uint32_t") field; # expected-warning@-1: The cpp.type/cpp.template annotations are deprecated, use @cpp.Type instead
+      # expected-error@-2: Annotations are not allowed in this position. Extract the type into a named typedef instead.
+      @cpp.Adapter{name="Adapter"} # expected-warning: At most one of @cpp.Type/@cpp.Adapter/cpp.type/cpp.template can be specified on a definition.
+      @cpp.Type{name="std::uint32_t"}
+      2: i32 field2;
+    }
+  )");
+}
+
+TEST(CompilerTest, duplicate_method_name_base_base) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = R"(
+    service MySBB {
+      void lol();
+    }
+  )";
+
+  name_contents_map["bar.thrift"] = R"(
+    include "foo.thrift"
+
+    service MySB extends foo.MySBB {
+      void meh();
+    }
+  )";
+
+  name_contents_map["baz.thrift"] = R"(
+    include "bar.thrift"
+
+    service MyS extends bar.MySB {
+      void lol(); # expected-error: Function `MyS.lol` redefines `foo.MySBB.lol`.
+      void meh(); # expected-error: Function `MyS.meh` redefines `bar.MySB.meh`.
+    }
+  )";
+
+  check_compile(name_contents_map, "baz.thrift");
+}
+
+TEST(CompilerTest, circular_include_dependencies) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = R"(
+    include "bar.thrift"
+  )";
+  name_contents_map["bar.thrift"] = R"(
+    include "foo.thrift"
+      # expected-error@-1: Circular dependency found: file `foo.thrift` is already parsed.
+  )";
+
+  check_compile(name_contents_map, "foo.thrift");
+}
+
+TEST(CompilerTest, mixins_and_refs) {
+  check_compile(R"(
+    struct C {
+      1: i32 f1 (cpp.mixin); # expected-warning: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
+        # expected-error@-1: Mixin field `f1` type must be a struct or union. Found `i32`.
+    }
+
+    struct D { 1: i32 i }
+    union E {
+      1: D a (cpp.mixin); # expected-warning: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
+        # expected-error@-1: Union `E` cannot contain mixin field `a`.
+    }
+
+    struct F {
+      1: optional D a (cpp.mixin); # expected-warning: The annotation cpp.mixin is deprecated. Please use @thrift.Mixin instead.
+        # expected-error@-1: Mixin field `a` cannot be optional.
+    }
+  )");
+}
+
+TEST(CompilerTest, bitpack_with_tablebased_seriliazation) {
+  check_compile(
+      R"(
+    include "thrift/annotation/cpp.thrift"
+    struct A { 1: i32 i }
+    @cpp.PackIsset
+      # expected-error@-1: Tablebased serialization is incompatible with isset bitpacking for struct `D`  [tablebased-isset-bitpacking-rule]
+    struct D { 1: i32 i }
+  )",
+      {"--gen", "mstch_cpp2:json,tablebased"});
+}
+
+TEST(CompilerTest, structured_annotations_uniqueness) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = R"( struct Foo {} )";
+  name_contents_map["bar.thrift"] = R"(
+    include "foo.thrift"
+    struct Foo {
+        1: i32 count;
+    }
+
+    # TODO(afuller): Fix t_scope to not include the locally defined Foo as
+    # `foo.Foo`, which override the included foo.Foo definition.
+
+    @foo.Foo
+    @Foo{count=1}
+    @Foo{count=2}
+     # expected-error@-1: Structured annotation `Foo` is already defined for `Annotated`.
+    typedef i32 Annotated
+)";
+  check_compile(name_contents_map, "bar.thrift");
+}
+
+TEST(CompilerTest, structured_annotations_type_resolved) {
+  check_compile(R"(
+    struct Annotation {
+        1: i32 count;
+        2: TooForward forward;
+    }
+
+    @Annotation{count=1, forward=TooForward{name="abc"}}
+    struct Annotated {
+        1: string name;
+    }
+
+    struct TooForward {
+      1: string name;
+    }
+)");
+}
+
+TEST(CompilerTest, structured_ref) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+
+    struct Foo {
+      1: optional Foo field1 (cpp.ref);
+        # expected-warning@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field1`.
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+        # expected-warning@-1: @cpp.Ref{type = cpp.RefType.Unique} is deprecated. Please use @thrift.Box annotation instead in `field2`.
+      2: optional Foo field2;
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+        # expected-error@-1: The @cpp.Ref annotation cannot be combined with the `cpp.ref` or `cpp.ref_type` annotations. Remove one of the annotations from `field3`.
+        # expected-warning@-2: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field3`.
+        # expected-warning@-3: @cpp.Ref{type = cpp.RefType.Unique} is deprecated. Please use @thrift.Box annotation instead in `field3`.
+      3: optional Foo field3 (cpp.ref);
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+      @cpp.Ref{type = cpp.RefType.Unique}
+        # expected-warning@-2: @cpp.Ref{type = cpp.RefType.Unique} is deprecated. Please use @thrift.Box annotation instead in `field4`.
+        # expected-error@-2: Structured annotation `Ref` is already defined for `field4`.
+      4: optional Foo field4;
+    }
+  )");
+}
+
+TEST(CompilerTest, unstructured_and_structured_adapter) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/hack.thrift"
+
+    struct MyStruct {
+        @cpp.Adapter{} # expected-error: key `name` not found.
+        @hack.Adapter{name="MyAdapter"}
+        2: i64 my_field2;
+        @cpp.Adapter{name="MyAdapter"}
+          # expected-error@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `my_field3` with @cpp.Adapter.
+        @hack.Adapter{name="MyAdapter"}
+        3: optional i64 my_field3 (cpp.ref);
+        @cpp.Adapter{name="MyAdapter"}
+          # expected-error@-1: cpp.ref_type = `unique`, cpp2.ref_type = `unique` are deprecated. Please use @thrift.Box annotation instead in `my_field4` with @cpp.Adapter.
+        @hack.Adapter{name="MyAdapter"}
+        4: optional i64 my_field4 (cpp.ref_type = "unique");
+        @cpp.Adapter{name="MyAdapter"}
+          # expected-error@-1: @cpp.Ref{type = cpp.RefType.Unique} is deprecated. Please use @thrift.Box annotation instead in `my_field5` with @cpp.Adapter.
+        @hack.Adapter{name="MyAdapter"}
+        @cpp.Ref{type = cpp.RefType.Unique}
+        5: optional i64 my_field5;
+    }
+)");
+}
+
+TEST(CompilerTest, typedef_adapter) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/hack.thrift"
+
+    @cpp.Adapter{}
+      # expected-error@-1: key `name` not found.
+      # expected-error@-2: key `name` not found.
+    @hack.Adapter{}
+    typedef i32 MyI32
+
+    @cpp.Adapter{name="MyAdapter"}
+    @hack.Adapter{name="MyAdapter"}
+    typedef i64 MyI64
+
+    @cpp.Adapter{name="MyAdapter"}
+      # expected-error@-1: The `@cpp.Adapter` annotation cannot be annotated more than once in all typedef levels in `DoubleMyI64`.
+      # expected-error@-2: The `@hack.Adapter` annotation cannot be annotated more than once in all typedef levels in `DoubleMyI64`.
+    @hack.Adapter{name="MyAdapter"}
+    typedef MyI64 DoubleMyI64
+
+    @cpp.Adapter{name="MyAdapter"}
+    struct Adapted {}
+
+    @cpp.Adapter{name="MyAdapter"}
+      # expected-error@-1: The `@cpp.Adapter` annotation cannot be annotated more than once in all typedef levels in `DoubleAdapted`.
+    typedef Adapted DoubleAdapted
+  )");
+}
+
+TEST(CompilerTest, hack_wrapper_adapter) {
+  check_compile(R"(
+    include "thrift/annotation/hack.thrift"
+
+    @hack.Adapter{name = "\MyAdapter1"}
+    typedef i64 i64Adapted
+
+    @hack.Wrapper{name = "\MyTypeIntWrapper"}
+    typedef i64 i64WithWrapper
+
+    @hack.Wrapper{name = "\MyTypeIntWrapper"}
+    @hack.Adapter{name = "\MyAdapter1"}
+    typedef i64 i64Wrapped_andAdapted
+
+    @hack.Wrapper{name = "\MyTypeIntWrapper"}
+    typedef i64Adapted i64Wrapped_andAdapted_2
+
+    typedef list<i64Wrapped_andAdapted> list_of_i64Wrapped_andAdapted
+
+    @hack.Adapter{name = "\MyAdapter1"}
+      # expected-error@-1: `@hack.Adapter` on `adapted_list_of_i64Wrapped_andAdapted` cannot be combined with `@hack.Wrapper` on `i64Wrapped_andAdapted`.
+    typedef list<i64Wrapped_andAdapted> adapted_list_of_i64Wrapped_andAdapted
+
+    typedef StructWithWrapper structWithWrapper_typedf
+
+    @hack.Adapter{name = "\MyAdapter1"}
+      # expected-error@-1: `@hack.Adapter` on `adapted_structWithWrapper_typedf` cannot be combined with `@hack.Wrapper` on `StructWithWrapper`.
+    typedef StructWithWrapper adapted_structWithWrapper_typedf
+
+    @hack.Wrapper{name = "\MyStructWrapper"}
+    struct StructWithWrapper {
+    1: i64 int_field;
+    }
+
+    @hack.Wrapper{name = "\MyStructWrapper"}
+    struct MyNestedStruct {
+    @hack.FieldWrapper{name = "\MyFieldWrapper"}
+    1: i64WithWrapper double_wrapped_field;
+    @hack.FieldWrapper{name = "\MyFieldWrapper"}
+      # expected-error@-1: `@hack.Adapter` on `double_wrapped_and_adapted_field` cannot be combined with `@hack.Wrapper` on `i64WithWrapper`.
+    @hack.Adapter{name = "\MyFieldAdapter"}
+    2: i64WithWrapper double_wrapped_and_adapted_field;
+    @hack.FieldWrapper{name = "\MyFieldWrapper"}
+    3: StructWithWrapper double_wrapped_struct;
+    @hack.FieldWrapper{name = "\MyFieldWrapper"}
+    4: map<string, StructWithWrapper> wrapped_map_of_string_to_StructWithWrapper;
+    @hack.Adapter{name = "\MyFieldAdapter"}
+      # expected-error@-1: `@hack.Adapter` on `adapted_map_of_string_to_StructWithWrapper` cannot be combined with `@hack.Wrapper` on `StructWithWrapper`.
+    5: map<string, StructWithWrapper> adapted_map_of_string_to_StructWithWrapper;
+    @hack.FieldWrapper{name = "\MyFieldWrapper"}
+      # expected-error@-1: `@hack.Adapter` on `adapted_double_wrapped_struct` cannot be combined with `@hack.Wrapper` on `StructWithWrapper`.
+    @hack.Adapter{name = "\MyFieldAdapter"}
+    6: StructWithWrapper adapted_double_wrapped_struct;
+    }
+  )");
+}
+
+TEST(CompilerTest, invalid_and_too_many_splits) {
+  check_compile(
+      R"(
+    struct Foo { 1: i32 field }
+    struct Bar { 1: i32 field }
+    exception Baz { 1: i32 field }
+    enum E { f = 0 }
+    service SumService {
+        i32 sum(1: i32 num1, 2: i32 num2);
+    }
+)",
+      {"--gen", "mstch_cpp2:types_cpp_splits=4"});
+
+  check_compile(
+      R"(
+    # expected-error@-1: `types_cpp_splits=5` is misconfigured: it can not be greater than the number of objects, which is 4. [more-splits-than-objects-rule]
+    struct Foo { 1: i32 field }
+    struct Bar { 1: i32 field }
+    exception Baz { 1: i32 field }
+    enum E { f = 0 }
+    service SumService {
+        i32 sum(1: i32 num1, 2: i32 num2);
+    }
+)",
+      {"--gen", "mstch_cpp2:types_cpp_splits=5"});
+
+  check_compile(
+      R"(
+    # expected-error@-1: Invalid types_cpp_splits value: `3a`
+    struct Foo { 1: i32 field }
+    struct Bar { 1: i32 field }
+    exception Baz { 1: i32 field }
+    enum E { f = 0 }
+    service SumService {
+        i32 sum(1: i32 num1, 2: i32 num2);
+    }
+)",
+      {"--gen", "mstch_cpp2:types_cpp_splits=3a"});
+}
+
+TEST(CompilerTest, invalid_and_too_many_client_splits) {
+  check_compile(
+      R"(
+    service MyService1 {
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+      i32 func3(1: i32 num);
+    }
+    service MyService2 {
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+    }
+  )",
+      {"--gen", "mstch_cpp2:client_cpp_splits={MyService1:3,MyService2:2}"});
+
+  check_compile(
+      R"(
+    service MyService1 {
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+      i32 func3(1: i32 num);
+    }
+    service MyService2 {
+      # expected-error@-1: `client_cpp_splits=3` (For service MyService2) is misconfigured: it can not be greater than the number of functions, which is 2. [more-splits-than-functions-rule]
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+    }
+  )",
+      {"--gen", "mstch_cpp2:client_cpp_splits={MyService1:3,MyService2:3}"});
+  check_compile(
+      R"(
+    # expected-error@-1: Invalid pair `MyService1:3:1` in client_cpp_splits value: `MyService1:3:1,MyService2:2`
+    service MyService1 {
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+      i32 func3(1: i32 num);
+    }
+    service MyService2 {
+      i32 func1(1: i32 num);
+      i32 func2(1: i32 num);
+    }
+  )",
+      {"--gen", "mstch_cpp2:client_cpp_splits={MyService1:3:1,MyService2:2}"});
+}
+
+TEST(CompilerTest, non_beneficial_lazy_fields) {
+  check_compile(
+      R"(
+    typedef double FP
+    struct A {
+      1: i32 field (cpp.experimental.lazy); # expected-warning: The annotation cpp.experimental.lazy is deprecated. Please use @cpp.Lazy instead.
+        # expected-error@-1: Integral field `field` can not be marked as lazy, since doing so won't bring any benefit. [no-lazy-int-float-field-rule]
+      2: FP field2 (cpp.experimental.lazy); # expected-warning: The annotation cpp.experimental.lazy is deprecated. Please use @cpp.Lazy instead.
+        # expected-error@-1: Floating point field `field2` can not be marked as lazy, since doing so won't bring any benefit. [no-lazy-int-float-field-rule]
+    }
+  )");
+}
+
+TEST(CompilerTest, non_exception_type_in_throws) {
+  check_compile(R"(
+    struct A {}
+
+    service B {
+      void foo() throws (1: A ex) # expected-error: Non-exception type, `A`, in throws.
+      stream<i32 throws (1: A ex)> bar() # expected-error: Non-exception type, `A`, in throws.
+      sink<i32 throws (1: A ex), # expected-error: Non-exception type, `A`, in throws.
+            i32 throws (1: A ex)> baz() # expected-error: Non-exception type, `A`, in throws.
+    }
+  )");
+}
+
+TEST(CompilerTest, boxed_ref_and_optional) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    struct A {
+      1: i64 field (cpp.box)
+        # expected-error@-1: The `thrift.box` annotation can only be used with optional fields. Make sure `field` is optional.
+        # expected-warning@-2: The annotation cpp.box is deprecated. Please use @thrift.Box instead.
+      @thrift.Box
+      2: i64 field2
+        # expected-error@-2: The `thrift.box` annotation can only be used with optional fields. Make sure `field2` is optional.
+    }
+  )");
+
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    @thrift.Experimental
+    package "apache.org/thrift/test"
+
+    struct MyStruct {
+        1: i32 field1 = 1;
+    }
+
+    typedef MyStruct MyStruct2
+
+    struct A {
+        1: optional i64 field (cpp.ref, thrift.box);
+          # expected-error@-1: The `@thrift.Box` annotation cannot be combined with the other reference annotations. Only annotate a single reference annotation from `field`.
+          # expected-warning@-2: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+
+        @thrift.Box
+          # expected-error@-1: The `@thrift.InternBox` annotation cannot be combined with the other reference annotations. Only annotate a single reference annotation from `field2`.
+          # expected-error@-2: The `@thrift.InternBox` annotation can only be used with a struct field.
+          # expected-error@-3: The `@thrift.InternBox` annotation can only be used with unqualified or terse fields. Make sure `field2` is unqualified or annotated with `@thrift.TerseWrite`.
+        @thrift.InternBox
+        2: optional i64 field2;
+
+        @thrift.InternBox
+          # expected-error@-1: The `@thrift.InternBox` annotation currently does not support a field with custom default.
+        3: MyStruct field3 = {"field1" : 1};
+
+        @cpp.Ref
+          # expected-error@-1: The `@thrift.InternBox` annotation cannot be combined with the other reference annotations. Only annotate a single reference annotation from `field4`.
+          # expected-error@-2: The `thrift.box` annotation can only be used with optional fields. Make sure `field4` is optional.
+        @thrift.Box
+        @thrift.InternBox
+        @thrift.TerseWrite
+        4: MyStruct field4;
+
+        @thrift.InternBox
+        @thrift.TerseWrite
+        5: MyStruct field5;
+
+        @thrift.InternBox
+        @thrift.TerseWrite
+        6: MyStruct2 field6;
+    }
+  )");
+}
+
+TEST(CompilerTest, unique_ref) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+
+    struct Bar {
+      1: optional Foo field1 (cpp.ref);
+        # expected-warning@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field1`.
+
+      2: optional Foo field2 (cpp2.ref);
+        # expected-warning@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field2`.
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+      3: optional Foo field3;
+        # expected-warning@-2: @cpp.Ref{type = cpp.RefType.Unique} is deprecated. Please use @thrift.Box annotation instead in `field3`.
+
+      @cpp.Ref{type = cpp.RefType.Shared}
+      4: optional Foo field4;
+
+      @cpp.Ref{type = cpp.RefType.SharedMutable}
+      5: optional Foo field5;
+
+      6: optional Foo field6 (cpp.ref_type = "unique");
+        # expected-warning@-1: cpp.ref_type = `unique`, cpp2.ref_type = `unique` are deprecated. Please use @thrift.Box annotation instead in `field6`.
+
+      7: optional Foo field7 (cpp2.ref_type = "unique");
+        # expected-warning@-1: cpp.ref_type = `unique`, cpp2.ref_type = `unique` are deprecated. Please use @thrift.Box annotation instead in `field7`.
+
+      8: optional Foo field8 (cpp.ref_type = "shared");
+
+      9: optional Foo field9 (cpp2.ref_type = "shared");
+
+      10: optional Foo field10 (cpp.ref = "true");
+        # expected-warning@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field10`.
+
+      11: optional Foo field11 (cpp2.ref = "true");
+        # expected-warning@-1: cpp.ref, cpp2.ref are deprecated. Please use @thrift.Box annotation instead in `field11`.
+
+      12: optional Foo field12;
+
+      13: optional Foo field13;
+    }
+
+    struct Foo {}
+  )");
+}
+
+TEST(CompilerTest, non_optional_ref_and_box) {
+  check_compile(
+      R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    struct Bar {
+      1: Foo field1 (cpp.ref);
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field1` (in `Bar`).
+
+      2: Foo field2 (cpp2.ref);
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field2` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+      3: Foo field3;
+        # expected-warning@-2: Field with @cpp.Ref (or similar) annotation should be optional: `field3` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.Shared}
+      4: Foo field4;
+        # expected-warning@-2: Field with @cpp.Ref (or similar) annotation should be optional: `field4` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.SharedMutable}
+      5: Foo field5;
+        # expected-warning@-2: Field with @cpp.Ref (or similar) annotation should be optional: `field5` (in `Bar`).
+
+      6: Foo field6 (cpp.ref_type = "unique");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field6` (in `Bar`).
+
+      7: Foo field7 (cpp2.ref_type = "unique");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field7` (in `Bar`).
+
+      8: Foo field8 (cpp.ref_type = "shared");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field8` (in `Bar`).
+
+      9: Foo field9 (cpp2.ref_type = "shared");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field9` (in `Bar`).
+
+      10: Foo field10 (cpp.ref = "true");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field10` (in `Bar`).
+
+      11: Foo field11 (cpp2.ref = "true");
+        # expected-warning@-1: Field with @cpp.Ref (or similar) annotation should be optional: `field11` (in `Bar`).
+
+      12: Foo field12;
+
+      @thrift.Box
+      13: Foo field13;
+        # expected-error@-2: The `thrift.box` annotation can only be used with optional fields. Make sure `field13` is optional.
+    }
+
+    struct Foo {}
+  )",
+
+      {"--extra-validation", "-forbid_non_optional_cpp_ref_fields"});
+}
+
+TEST(CompilerTest, non_optional_ref_and_box_forbidden) {
+  check_compile(
+      R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    struct Bar {
+      1: Foo field1 (cpp.ref);
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field1` (in `Bar`).
+
+      2: Foo field2 (cpp2.ref);
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field2` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.Unique}
+      3: Foo field3;
+        # expected-error@-2: Field with @cpp.Ref (or similar) annotation must be optional: `field3` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.Shared}
+      4: Foo field4;
+        # expected-error@-2: Field with @cpp.Ref (or similar) annotation must be optional: `field4` (in `Bar`).
+
+      @cpp.Ref{type = cpp.RefType.SharedMutable}
+      5: Foo field5;
+        # expected-error@-2: Field with @cpp.Ref (or similar) annotation must be optional: `field5` (in `Bar`).
+
+      6: Foo field6 (cpp.ref_type = "unique");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field6` (in `Bar`).
+
+      7: Foo field7 (cpp2.ref_type = "unique");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field7` (in `Bar`).
+
+      8: Foo field8 (cpp.ref_type = "shared");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field8` (in `Bar`).
+
+      9: Foo field9 (cpp2.ref_type = "shared");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field9` (in `Bar`).
+
+      10: Foo field10 (cpp.ref = "true");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field10` (in `Bar`).
+
+      11: Foo field11 (cpp2.ref = "true");
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field11` (in `Bar`).
+
+      12: Foo field12;
+
+      @thrift.Box
+      13: Foo field13;
+        # expected-error@-2: The `thrift.box` annotation can only be used with optional fields. Make sure `field13` is optional.
+    }
+
+    struct Foo {}
+  )");
+}
+
+TEST(CompilerTest, non_optional_ref_legacy_allowed_annotation_on_wrong_field) {
+  check_compile(
+      R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    struct Bar {
+      1: Foo field1 (cpp.ref);
+        # expected-error@-1: Field with @cpp.Ref (or similar) annotation must be optional: `field1` (in `Bar`).
+
+      @cpp.AllowLegacyNonOptionalRef
+      2: Foo field2;
+        # expected-error@-2: Cannot annotate field with @cpp.AllowLegacyNonOptionalRef unless it is a reference field (i.e., @cpp.Ref): `field2`.
+    }
+
+    struct Foo {}
+  )");
+}
+
+TEST(CompilerTest, nonexistent_field_name) {
+  check_compile(R"(
+    struct Foo {}
+    typedef list<Foo> List
+    const List l = [{"foo": "bar"}];
+    # expected-error@-1: no field named `foo` in `Foo`
+  )");
+}
+
+TEST(CompilerTest, annotation_scopes) {
+  check_compile(
+      R"(
+    include "thrift/annotation/scope.thrift"
+
+    struct NotAnAnnot {}
+
+    @scope.Struct
+    struct StructAnnot{}
+    @scope.Field
+    struct FieldAnnot{}
+
+    @scope.Struct
+    @scope.Field
+    struct StructOrFieldAnnot {}
+
+    @scope.Enum
+    struct EnumAnnot {}
+
+    @NotAnAnnot
+      # expected-warning@-1: Using `NotAnAnnot` as an annotation, even though it has not been enabled for any annotation scope.
+    @StructAnnot
+    @FieldAnnot
+      # expected-error@-1: `FieldAnnot` cannot annotate `TestStruct`
+    @StructOrFieldAnnot
+    @EnumAnnot
+    # expected-error@-1: `EnumAnnot` cannot annotate `TestStruct`
+    struct TestStruct {
+      @FieldAnnot
+      @StructAnnot
+        # expected-error@-1: `StructAnnot` cannot annotate `test_field`
+      @StructOrFieldAnnot
+      1: bool test_field;
+    }
+
+    @EnumAnnot
+    enum TestEnum { Foo = 0, Bar = 1 }
+
+    typedef StructAnnot AliasedAnnot
+
+    @AliasedAnnot
+      # expected-warning@-1: Using `AliasedAnnot` as an annotation, even though it has not been enabled for any annotation scope.
+    struct AlsoStruct {}
+  )",
+      {"--legacy-strict"});
+}
+
+TEST(CompilerTest, lazy_struct_compatibility) {
+  check_compile(R"(
+    struct Foo { # expected-error: cpp.methods is incompatible with lazy deserialization in struct `Foo`
+      1: list<i32> field (cpp.experimental.lazy) # expected-warning: The annotation cpp.experimental.lazy is deprecated. Please use @cpp.Lazy instead.
+    } (cpp.methods = "")
+  )");
+}
+
+TEST(CompilerTest, duplicate_field_id) {
+  check_compile(R"(
+    struct A {
+      1: i64 field1;
+      1: i64 field2;
+        # expected-error@-1: Field id 1 for `field2` has already been used.
+    }
+  )");
+}
+
+TEST(CompilerTest, thrift_uri_uniqueness) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["file1.thrift"] = R"(
+    struct Foo1 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Foo")
+  )";
+  name_contents_map["file2.thrift"] = R"(
+    struct Foo2 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Foo")
+      # expected-error@-2: Thrift URI `facebook.com/thrift/annotation/Foo` is already defined for `Foo2`.
+    struct Bar1 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Bar")
+  )";
+  name_contents_map["main.thrift"] = R"(
+    include "file1.thrift"
+    include "file2.thrift"
+    struct Bar2 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Bar") # expected-warning@-1: The annotation thrift.uri is deprecated. Please use @thrift.Uri instead.
+      # expected-error@-2: Thrift URI `facebook.com/thrift/annotation/Bar` is already defined for `Bar2`.
+    struct Baz1 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Baz") # expected-warning@-1: The annotation thrift.uri is deprecated. Please use @thrift.Uri instead.
+    struct Baz2 {
+    } (thrift.uri = "facebook.com/thrift/annotation/Baz") # expected-warning@-1: The annotation thrift.uri is deprecated. Please use @thrift.Uri instead.
+      # expected-error@-2: Thrift URI `facebook.com/thrift/annotation/Baz` is already defined for `Baz2`.
+  )";
+  check_compile(name_contents_map, "main.thrift");
+}
+
+TEST(CompilerTest, terse_write_annotation) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    @thrift.Experimental
+    package "apache.org/thrift/test"
+
+    struct TerseFields {
+      @thrift.TerseWrite
+      1: i64 field1;
+      @thrift.TerseWrite
+        # expected-error@-1: `@thrift.TerseWrite` cannot be used with qualified fields
+      2: optional i64 field2;
+      @thrift.TerseWrite
+        # expected-error@-1: `@thrift.TerseWrite` cannot be used with qualified fields
+        # expected-warning@-2: The 'required' qualifier is deprecated and ignored by most language implementations. Leave the field unqualified instead.
+      3: required i64 field3;
+    }
+
+    union TerseUnion {
+      @thrift.TerseWrite
+        # expected-error@-1: `@thrift.TerseWrite` cannot be applied to union fields (in `TerseUnion`).
+      1: i64 field1;
+    }
+  )");
+}
+
+// Time complexity of for_each_transitive_field should be O(1)
+TEST(CompilerTest, time_complexity_of_for_each_transitive_field) {
+  check_compile(R"(
+    struct S_01 { 1: i32 i; }
+    struct S_02 { 1: optional S_01 a (thrift.box); 2: optional S_01 b (thrift.box); }
+    struct S_03 { 1: optional S_02 a (thrift.box); 2: optional S_02 b (thrift.box); }
+    struct S_04 { 1: optional S_03 a (thrift.box); 2: optional S_03 b (thrift.box); }
+    struct S_05 { 1: optional S_04 a (thrift.box); 2: optional S_04 b (thrift.box); }
+    struct S_06 { 1: optional S_05 a (thrift.box); 2: optional S_05 b (thrift.box); }
+    struct S_07 { 1: optional S_06 a (thrift.box); 2: optional S_06 b (thrift.box); }
+    struct S_08 { 1: optional S_07 a (thrift.box); 2: optional S_07 b (thrift.box); }
+    struct S_09 { 1: optional S_08 a (thrift.box); 2: optional S_08 b (thrift.box); }
+    struct S_10 { 1: optional S_09 a (thrift.box); 2: optional S_09 b (thrift.box); }
+    struct S_11 { 1: optional S_10 a (thrift.box); 2: optional S_10 b (thrift.box); }
+    struct S_12 { 1: optional S_11 a (thrift.box); 2: optional S_11 b (thrift.box); }
+    struct S_13 { 1: optional S_12 a (thrift.box); 2: optional S_12 b (thrift.box); }
+    struct S_14 { 1: optional S_13 a (thrift.box); 2: optional S_13 b (thrift.box); }
+    struct S_15 { 1: optional S_14 a (thrift.box); 2: optional S_14 b (thrift.box); }
+    struct S_16 { 1: optional S_15 a (thrift.box); 2: optional S_15 b (thrift.box); }
+    struct S_17 { 1: optional S_16 a (thrift.box); 2: optional S_16 b (thrift.box); }
+    struct S_18 { 1: optional S_17 a (thrift.box); 2: optional S_17 b (thrift.box); }
+    struct S_19 { 1: optional S_18 a (thrift.box); 2: optional S_18 b (thrift.box); }
+    struct S_20 { 1: optional S_19 a (thrift.box); 2: optional S_19 b (thrift.box); }
+    struct S_21 { 1: optional S_20 a (thrift.box); 2: optional S_20 b (thrift.box); }
+    struct S_22 { 1: optional S_21 a (thrift.box); 2: optional S_21 b (thrift.box); }
+    struct S_23 { 1: optional S_22 a (thrift.box); 2: optional S_22 b (thrift.box); }
+    struct S_24 { 1: optional S_23 a (thrift.box); 2: optional S_23 b (thrift.box); }
+    struct S_25 { 1: optional S_24 a (thrift.box); 2: optional S_24 b (thrift.box); }
+    struct S_26 { 1: optional S_25 a (thrift.box); 2: optional S_25 b (thrift.box); }
+    struct S_27 { 1: optional S_26 a (thrift.box); 2: optional S_26 b (thrift.box); }
+    struct S_28 { 1: optional S_27 a (thrift.box); 2: optional S_27 b (thrift.box); }
+    struct S_29 { 1: optional S_28 a (thrift.box); 2: optional S_28 b (thrift.box); }
+    struct S_30 { 1: optional S_29 a (thrift.box); 2: optional S_29 b (thrift.box); }
+    struct S_31 { 1: optional S_30 a (thrift.box); 2: optional S_30 b (thrift.box); }
+    struct S_32 { 1: optional S_31 a (thrift.box); 2: optional S_31 b (thrift.box); }
+    # expected-warning@3: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@3: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@4: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@4: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@5: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@5: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@6: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@6: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@7: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@7: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@8: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@8: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@9: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@9: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@10: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@10: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@11: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@11: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@12: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@12: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@13: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@13: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@14: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@14: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@15: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@15: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@16: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@16: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@17: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@17: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@18: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@18: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@19: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@19: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@20: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@20: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@21: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@21: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@22: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@22: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@23: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@23: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@24: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@24: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@25: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@25: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@26: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@26: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@27: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@27: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@28: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@28: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@29: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@29: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@30: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@30: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@31: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@31: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@32: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@32: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@33: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+		# expected-warning@33: The annotation thrift.box is deprecated. Please use @thrift.Box instead.
+  )");
+}
+
+TEST(CompilerTest, inject_metadata_fields_annotation) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = R"(
+    struct Fields {
+      1: i64 field1;
+      2: optional i64 field2;
+      3: required i64 field3;
+    }
+  )";
+  name_contents_map["bar.thrift"] = R"(
+    include "thrift/annotation/internal.thrift"
+
+    typedef i64 MyI64
+
+    union UnionFields {
+        1: i64 field1;
+        2: i64 field2;
+    }
+
+    struct Fields {
+        1: i64 field1;
+          # expected-error@-1: Field `field1` is already defined for `Injected5`.
+        2: optional i64 field2;
+        3: required i64 field3;
+          # expected-warning@-1: The 'required' qualifier is deprecated and ignored by most language implementations. Leave the field unqualified instead.
+          # expected-warning@-2: The 'required' qualifier is deprecated and ignored by most language implementations. Leave the field unqualified instead.
+    }
+
+    @internal.InjectMetadataFields{type="foo.Fields"}
+      # expected-error@-1: Can not find expected type `foo.Fields` specified in `@internal.InjectMetadataFields` in the current scope. Please check the include.
+    struct Injected1 {}
+
+    @internal.InjectMetadataFields # expected-error: key `type` not found.
+    struct Injected2 {}
+
+    @internal.InjectMetadataFields{type="UnionFields"}
+      # expected-error@-1: `bar.UnionFields` is not a struct type. `@internal.InjectMetadataFields` can be only used with a struct type.
+    struct Injected3 {}
+
+    @internal.InjectMetadataFields{type="MyI64"}
+      # expected-error@-1: `bar.MyI64` is not a struct type. `@internal.InjectMetadataFields` can be only used with a struct type.
+    struct Injected4 {}
+
+    @internal.InjectMetadataFields{type="Fields"}
+    struct Injected5 {
+        1: i64 field1;
+    }
+
+    // If a field is explicitly assigned with field id 0,
+    // the field id gets implicitly converted -1.
+    struct BoundaryFields {
+      -1: i64 underflow;
+      1: i64 lower_boundary;
+      999: i64 upper_boundary;
+      1000: i64 overflow;
+    }
+
+    @internal.InjectMetadataFields{type="BoundaryFields"}
+      # expected-error@-1: Field id `-1` does not mapped to valid internal id.
+      # expected-error@-2: Field id `1000` does not mapped to valid internal id.
+    struct Injected6 {}
+  )";
+  check_compile(name_contents_map, "bar.thrift");
+}
+
+TEST(CompilerTest, invalid_field_type_for_hack_codegen) {
+  check_compile(
+      R"(
+      struct S {
+        1: i32 field;
+
+        2: set<float> set_of_float;
+        # expected-error@-1: `float` cannot be used as a set element in Hack because it is not integer, string, binary or enum
+
+        3: map<float, i32> map_of_float_to_int;
+        # expected-error@-1: `float` cannot be used as a map key in Hack because it is not integer, string, binary or enum
+      }
+      )",
+      {"--gen", "hack"});
+}
+
+TEST(CompilerTest, invalid_return_type_for_hack_codegen) {
+  check_compile(
+      R"(
+      service Foo {
+        set<float> invalid_rpc_return();
+        # expected-error@-1: `float` cannot be used as a set element in Hack because it is not integer, string, binary or enum
+      }
+      )",
+      {"--gen", "hack"});
+}
+
+TEST(CompilerTest, invalid_param_type_for_hack_codegen) {
+  check_compile(
+      R"(
+      service Foo {
+        void invalid_rpc_param(set<float> arg1);
+        # expected-error@-1: `float` cannot be used as a set element in Hack because it is not integer, string, binary or enum
+      }
+      )",
+      {"--gen", "hack"});
+}
+
+TEST(CompilerTest, undefined_type_include) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["header.thrift"] = "";
+  name_contents_map["main.thrift"] = R"(
+    include "header.thrift"
+
+    service Foo {
+      header.Bar func();
+        # expected-error@-1: Failed to resolve return type of `func`.
+        # expected-error@-2: Type `header.Bar` not defined.
+    }
+  )";
+  check_compile(name_contents_map, "main.thrift");
+}
+
+TEST(CompilerTest, adapting_variable) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/scope.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    package "facebook.com/thrift/test"
+
+    @cpp.Adapter{name="MyAdapter"}
+    @scope.Transitive
+    struct Config { 1: string path; }
+
+    @Config{path = "to/my/service"}
+    const i32 Foo = 10;
+      # expected-error@-2: Using adapters on const `Foo` is only allowed in the experimental mode.
+
+    @Config{path = "to/my/service"}
+    const string Bar = "20";
+      # expected-error@-2: Using adapters on const `Bar` is only allowed in the experimental mode.
+
+    struct MyStruct { 1: i32 field; }
+
+    @Config{path = "to/my/service"}
+    const MyStruct Baz = MyStruct{field=30};
+      # expected-error@-2: Using adapters on const `Baz` is only allowed in the experimental mode.
+
+    @cpp.Adapter{name="MyAdapter"}
+    const i32 Foo2 = 10;
+      # expected-error@-2: Using adapters on const `Foo2` is only allowed in the experimental mode.
+
+    @cpp.Adapter{name="MyAdapter"}
+    const string Bar2 = "20";
+      # expected-error@-2: Using adapters on const `Bar2` is only allowed in the experimental mode.
+
+    @cpp.Adapter{name="MyAdapter"}
+    const MyStruct Baz2 = MyStruct{field=30};
+      # expected-error@-2: Using adapters on const `Baz2` is only allowed in the experimental mode.
+  )");
+
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/scope.thrift"
+    include "thrift/annotation/thrift.thrift"
+
+    @thrift.Experimental
+    package "facebook.com/thrift/test"
+
+    @cpp.Adapter{name="MyAdapter"}
+    @scope.Transitive
+    struct Config { 1: string path; }
+
+    @Config{path = "to/my/service"}
+    const i32 Foo = 10;
+
+    @Config{path = "to/my/service"}
+    const string Bar = "20";
+
+    struct MyStruct { 1: i32 field; }
+
+    @Config{path = "to/my/service"}
+    const MyStruct Baz = MyStruct{field=30};
+
+    @cpp.Adapter{name="MyAdapter"}
+    const i32 Foo2 = 10;
+
+    @cpp.Adapter{name="MyAdapter"}
+    const string Bar2 = "20";
+
+    @cpp.Adapter{name="MyAdapter"}
+    const MyStruct Baz2 = MyStruct{field=30};
+  )");
+}
+
+TEST(CompilerTest, reserved_ids) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    @thrift.ReserveIds{ids = [3, 8]}
+      # expected-error@-1: Fields in IdList cannot use reserved ids: 3
+    struct IdList {
+      1: i64 a;
+      3: string bad_field;
+    }
+
+    @thrift.ReserveIds{ids = [2], id_ranges = {5: 10, 15: 20}}
+      # expected-error@-1: Fields in IdRanges cannot use reserved ids: 9
+    struct IdRanges {
+      1: i64 a;
+      9: string bad_field;
+    }
+
+    @thrift.ReserveIds{ids = [3, 8]}
+      # expected-error@-1: Enum values in EnumWithBadId cannot use reserved ids: 3
+    enum EnumWithBadId {
+      A = 0,
+      B = 3,
+    }
+
+    @thrift.ReserveIds{ids = [3, 8]}
+      # expected-error@-1: Fields in UnionWithBadId cannot use reserved ids: 3
+    union UnionWithBadId {
+      1: i64 a;
+      3: string bad_field;
+    }
+
+    @thrift.ReserveIds{ids = [3, 8]}
+      # expected-error@-1: Fields in ExceptionWithBadId cannot use reserved ids: 3
+    safe exception ExceptionWithBadId {
+      1: i64 a;
+      3: string bad_field;
+    }
+
+    @thrift.ReserveIds{id_ranges = {5: 3}}
+      # expected-error@-1: For each (start: end) in id_ranges, we must have start < end. Got (5: 3), annotated on InvalidIdRange
+    struct InvalidIdRange {
+      1: i64 a;
+      2: string bad_field;
+    }
+
+    @thrift.ReserveIds{id_ranges = {5: 10}}
+    struct OkStruct {
+      1: i64 a;
+      10: string b;
+    }
+
+    @thrift.ReserveIds{ids = [-40000, 40000], id_ranges = {-50001: -50000, 50000: 50001}}
+      # expected-error@-1: Struct `Message` cannot have reserved id that is out of range: -50001
+      # expected-error@-2: Struct `Message` cannot have reserved id that is out of range: -40000
+      # expected-error@-3: Struct `Message` cannot have reserved id that is out of range: 40000
+      # expected-error@-4: Struct `Message` cannot have reserved id that is out of range: 50000
+    struct Message {
+      1: string msg;
+    }
+  )");
+}
+
+TEST(CompilerTest, required_key_specified_in_structured_annotation) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+
+    struct Foo {
+      @cpp.FieldInterceptor{name = "MyFieldInterceptor"}
+      1: i32 field1;
+      @cpp.FieldInterceptor
+        # expected-error@-1: `@cpp.FieldInterceptor` cannot be used without `name` specified in `field2`.
+      2: i32 field2;
+    }
+
+    @cpp.EnumType
+      # expected-error@-1: `@cpp.EnumType` cannot be used without `type` specified in `MyEnum1`.
+    enum MyEnum1 {
+      ZERO = 0,
+    }
+
+    @cpp.EnumType{type = cpp.EnumUnderlyingType.I16}
+    enum MyEnum2 {
+      ZERO = 0,
+    }
+  )");
+}
+
+TEST(CompilerTest, nonexist_type_in_variable) {
+  check_compile(R"(
+    const map<i8, string> foo = {1: "str"}
+      # expected-error@-1: Type `test.i8` not defined.
+  )");
+}
+
+TEST(CompilerTest, terse_write_outside_experimental_mode) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    package "meta.com/thrift/test"
+
+    struct MyStruct {
+        @thrift.TerseWrite
+        1: i32 field1 = 1;
+          # expected-error@-2: Using @thrift.TerseWrite on field `field1` is only allowed in the experimental mode.
+          # expected-warning@-3: Terse field should not have custom default value: `field1` (in `MyStruct`).
+    }
+  )");
+}
+
+TEST(CompilerTest, cyclic_dependency) {
+  check_compile(R"(
+    # expected-error@-1: Cyclic dependency: A -> B -> A
+    struct A {
+      1: B field;
+    }
+
+    struct B {
+      1: A field;
+    }
+  )");
+}
+
+TEST(CompilerTest, invalid_utf8) {
+  check_compile(
+      "const string s0 = '\x80';\n"
+      "# expected-error@-1: invalid UTF-8 start byte '\\x80'\n"
+      "const string s1 = '\xC2\x42';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x42'\n"
+      "const string s2 = '\xE2\x80\x43';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x43'\n"
+      "const string s3 = '\xF2\x80\x80\x44';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x44'\n"
+      "const string s4 = '\xF4\x90\x80\x80';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x90'\n"
+      // Overlong sequences:
+      "const string over0 = '\xC0';\n"
+      "# expected-error@-1: invalid UTF-8 start byte '\\xc0'\n"
+      "const string over1 = '\xC1';\n"
+      "# expected-error@-1: invalid UTF-8 start byte '\\xc1'\n"
+      "const string over2 = '\xE0\x9F\x80';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x9f'\n"
+      "const string over3 = '\xF0\x8F\x80\x80';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\x8f'\n"
+      // Invalid surrogates:
+      "const string sur = '\xED\xA0\x80';\n"
+      "# expected-error@-1: invalid UTF-8 continuation byte '\\xa0'\n");
+}
+
+TEST(CompilerTest, invalid_hex_escape) {
+  check_compile(R"(
+    const string s = "\x";
+      # expected-error@-1: invalid `\x` escape sequence
+  )");
+}
+
+TEST(CompilerTest, invalid_unicode_escape) {
+  check_compile(R"(
+    const string s = "\u";
+      # expected-error@-1: invalid `\u` escape sequence
+  )");
+}
+
+TEST(CompilerTest, invalid_escape) {
+  check_compile(R"(
+    const string s = "\*";
+      # expected-error@-1: invalid escape sequence `\*`
+  )");
+}
+
+TEST(CompilerTest, surrogate_in_unicode_escape) {
+  check_compile(R"(
+    const string s = "\ud800";
+      # expected-error@-1: surrogate in `\u` escape sequence
+  )");
+}
+
+TEST(CompilerTest, qualified_interaction_name) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = "interaction I {}";
+  name_contents_map["bar.thrift"] = R"(
+    include "foo.thrift"
+    service S {
+      foo.I createI();
+    }
+  )";
+  check_compile(name_contents_map, "bar.thrift");
+}
+
+TEST(CompilerTest, py3_enum_invalid_value_names) {
+  check_compile(
+      R"(
+    enum Foo {
+      name = 1,
+        # expected-error@-1: 'name' should not be used as an enum/union field name in thrift-py3. Use a different name or annotate the field with `(py3.name="<new_py_name>")` [enum-member-union-field-names-rule]
+      value = 2 (py3.name = "value_"),
+        # expected-warning@-1: The annotation py3.name is deprecated. Please use @python.Name instead.
+    }
+
+    enum Bar {
+      name = 1 (py3.name = "name_"),
+        # expected-warning@-1: The annotation py3.name is deprecated. Please use @python.Name instead.
+      value = 2,
+        # expected-error@-1: 'value' should not be used as an enum/union field name in thrift-py3. Use a different name or annotate the field with `(py3.name="<new_py_name>")` [enum-member-union-field-names-rule]
+    }
+  )",
+      {"--gen", "mstch_py3"});
+}
+
+TEST(CompilerTest, py3_invalid_field_names) {
+  check_compile(
+      R"(
+    union Foo {
+      1: string name;
+        # expected-error@-1: 'name' should not be used as an enum/union field name in thrift-py3. Use a different name or annotate the field with `(py3.name="<new_py_name>")` [enum-member-union-field-names-rule]
+      2: i32 value (py3.name = "value_");
+        # expected-warning@-1: The annotation py3.name is deprecated. Please use @python.Name instead.
+    }
+
+    union Bar {
+      1: string name (py3.name = "name_");
+        # expected-warning@-1: The annotation py3.name is deprecated. Please use @python.Name instead.
+      2: i32 value;
+        # expected-error@-1: 'value' should not be used as an enum/union field name in thrift-py3. Use a different name or annotate the field with `(py3.name="<new_py_name>")` [enum-member-union-field-names-rule]
+    }
+  )",
+      {"--gen", "mstch_py3"});
+}
+
+TEST(CompilerTest, warn_on_non_explicit_includes) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["path/to/upstream.thrift"] = R"(
+    struct TransitiveStruct {}
+    enum TransitiveEnum {
+      BLAH = 2,
+    }
+    union TransitiveUnion {
+      1: i64 a;
+      2: double b;
+    }
+    typedef TransitiveStruct TransitiveTypedef
+
+    service TransitiveService {}
+    exception TransitiveException {}
+    interaction TransitiveInteraction {}
+  )";
+
+  name_contents_map["path/to/direct.thrift"] = R"(
+    include "path/to/upstream.thrift"
+
+    struct IncludedStruct {}
+    enum IncludedEnum {
+      BLAH = 2,
+    }
+    union IncludedUnion {
+      1: i64 a;
+      2: double b;
+    }
+    typedef IncludedStruct IncludedTypedef
+  )";
+
+  name_contents_map["path/to/transitive_struct_field.thrift"] = R"(
+    # expected-error@3#original[]#replacement[include "path/to/upstream.thrift"\n]@5: Your thrift file depends on a type that it did not include. Please add the following include. [implicit-include]
+    include "path/to/direct.thrift"
+
+    struct A {
+      1: i64 a;
+      2: string b;
+      3: binary c;
+      4: list<i64> la;
+      5: set<double> sd;
+      6: map<binary, byte> mbb;
+    }
+
+    enum TransitiveEnum {
+      E1 = 1,
+      E2 = 2,
+      E3 = 4,
+    }
+
+    struct B {
+      1: A a;
+      2: TransitiveEnum e;
+    }
+
+    struct TransitiveStruct {
+      1: upstream.TransitiveStruct c;
+      2: direct.IncludedUnion d;
+      3: B b;
+      4: upstream.TransitiveEnum e;
+      5: TransitiveEnum te;
+      6: list<upstream.TransitiveEnum> lte;
+      7: set<TransitiveEnum> ste;
+      8: set<upstream.TransitiveEnum> sute;
+      11: map<i64, direct.IncludedEnum> mdie;
+      12: map<i64, upstream.TransitiveStruct> muts;
+      @upstream.TransitiveStruct
+      42: i32 annotated;
+    }
+
+    union TransitiveUnion {
+      1: upstream.TransitiveUnion u;
+      2: direct.IncludedUnion d;
+      3: upstream.TransitiveTypedef utt;
+      4: direct.IncludedEnum e;
+      5: list<upstream.TransitiveTypedef> lutt;
+      6: set<direct.IncludedTypedef> sdit;
+    }
+
+    typedef B bprime
+    typedef map<TransitiveEnum, B> map_te_b
+    typedef upstream.TransitiveTypedef utt_prime
+    typedef direct.IncludedTypedef dtt_prime
+    typedef set<upstream.TransitiveTypedef> sutt_prime
+
+    const upstream.TransitiveStruct c = upstream.TransitiveStruct{};
+
+    service TransitiveService extends upstream.TransitiveService {
+      upstream.TransitiveStruct foo(1: upstream.TransitiveStruct x) throws (1: upstream.TransitiveException ex);
+      upstream.TransitiveInteraction, stream<upstream.TransitiveStruct> bar();
+    }
+  )";
+  check_compile(name_contents_map, "path/to/transitive_struct_field.thrift");
+}
+
+TEST(CompilerTest, include_module_name_collision) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["path/to/dep_module.thrift"] = R"(
+    struct A {}
+  )";
+  name_contents_map["other_path/to/dep_module.thrift"] = R"(
+    struct B {}
+  )";
+  name_contents_map["path/to/my_module.thrift"] = R"(
+    include "path/to/dep_module.thrift"
+    include "other_path/to/dep_module.thrift"
+    struct C {
+      1: dep_module.A a;
+      2: dep_module.B b;
+    }
+  )";
+  check_compile(name_contents_map, "path/to/my_module.thrift");
+}
+
+TEST(CompilerTest, alias_enum) {
+  check_compile(R"(
+    typedef Enum MyEnum
+    enum Enum {
+      ONE = 1,
+    }
+    struct MyStruct {
+      1: MyEnum field = MyEnum.ONE;
+    }
+  )");
+}
+
+TEST(CompilerTest, alias_enum_in_external_const) {
+  std::map<std::string, std::string> name_contents_map;
+  name_contents_map["foo.thrift"] = "enum E {Val = 0}";
+  name_contents_map["bar.thrift"] = R"(
+    include "foo.thrift"
+    typedef foo.E MyEnum
+    const MyEnum val = MyEnum.Val;
+  )";
+  name_contents_map["baz.thrift"] = R"(
+    include "bar.thrift"
+    const bar.MyEnum val = bar.val;
+  )";
+  check_compile(name_contents_map, "baz.thrift");
+}
+
+TEST(CompilerTest, same_named_field) {
+  check_compile(R"(
+    struct S {
+      1: i32 S;
+      # expected-warning@-1: Field 'S' has the same name as the containing struct.
+    }
+    union U {
+      1: i32 U;
+      # expected-warning@-1: Field 'U' has the same name as the containing union.
+    }
+    exception E {
+      1: i32 E;
+      # expected-warning@-1: Field 'E' has the same name as the containing exception.
+    }
+  )");
+}
+
+TEST(CompilerTest, cursor_serialization_adapter) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+
+    struct Regular {
+      @cpp.Adapter{name = "::apache::thrift::CursorSerializationAdapter"} # expected-error: CursorSerializationAdapter is not supported on fields. Place it on the top-level struct/union instead.
+      1: i32 field;
+      2: Adapted adapted; # expected-error: CursorSerializationAdapter is not supported on fields. Place it on the top-level struct/union instead.
+      3: set<Adapted> container; # expected-error: CursorSerializationAdapter is not supported inside containers.
+    }
+
+    @cpp.UseCursorSerialization
+    struct Adapted {}
+
+    service Service {
+      Adapted allowed(1: Adapted adapted);
+      Regular not_allowed(
+        1: Regular regular,
+        2: Adapted adapted # expected-error: CursorSerializationAdapter only supports single-argument functions.
+      );
+    }
+  )");
+}
+
+TEST(CompilerTest, exception_invalid_use) {
+  check_compile(R"(
+    exception E {}
+    struct S {
+      1: E field; # TODO (T191018859)
+    }
+
+    service Svc {
+      E return(); # expected-error: Exceptions cannot be used as function return types
+      void param(1: E e); # expected-error: Exceptions cannot be used as function arguments
+    }
+
+    const E e = E{}; # expected-error: Exceptions cannot be used as const types
+  )");
+}
+
+TEST(CompilerTest, duplicate_include) {
+  check_compile(R"(
+    include "thrift/annotation/cpp.thrift"
+    include "thrift/annotation/thrift.thrift"
+    include "thrift/annotation/cpp.thrift" # expected-warning: Duplicate include of `thrift/annotation/cpp.thrift`
+  )");
+}
+
+TEST(CompilerTest, not_bundled_annotation) {
+  auto options = check_compile_options();
+  options.add_standard_includes = false;
+  disable_relative_includes();
+  check_compile(
+      R"(
+      include "thrift/annotation/baz.thrift"
+      # expected-error-1: Could not find include file thrift/annotation/baz.thrift
+      )",
+      {},
+      options);
+}
+
+TEST(CompilerTest, circular_typedef) {
+  check_compile(R"(
+    typedef Foo Bar # expected-error: Circular typedef: Foo --> Bar --> Foo
+    typedef Bar Foo
+  )");
+}
+
+TEST(CompilerTest, combining_unstructured_annotations) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    @thrift.DeprecatedUnvalidatedAnnotations{items = {"foo": "bar"}}
+    struct Foo {} (hs.foo)
+
+    @thrift.DeprecatedUnvalidatedAnnotations{items = {"foo": "bar"}}
+    struct Bar {} (rust.foo) 
+    # expected-error@-2: Cannot combine @thrift.DeprecatedUnvalidatedAnnotations with legacy annotation syntax.
+  )");
+}
+
+TEST(Compilertest, custom_default_values) {
+  check_compile(R"(
+    include "thrift/annotation/thrift.thrift"
+
+    union TestUnion {}
+
+    struct TestStruct {}
+
+    exception TestException {}
+
+
+    struct Widget {
+      1: i32 a = 42;
+
+      2: bool b = false;
+        # expected-warning@-1: Explicit default value is redundant for field: `b` (in `Widget`).
+
+      3: i32 c = 0;
+        # expected-warning@-1: Explicit default value is redundant for field: `c` (in `Widget`).
+
+      4: optional bool d = true;
+        # expected-warning@-1: Optional field should not have custom default value: `d` (in `Widget`).
+
+      @thrift.Experimental
+      @thrift.TerseWrite
+      5: i32 e = 43;
+        # expected-warning@-3: Terse field should not have custom default value: `e` (in `Widget`).
+
+      6: TestUnion f = {};
+        # expected-warning@-1: Explicit default value is redundant for field: `f` (in `Widget`).
+
+      7: TestStruct g = {};
+        # expected-warning@-1: Explicit default value is redundant for field: `g` (in `Widget`).
+
+      8: TestException h = {};
+        # expected-warning@-1: Explicit default value is redundant for field: `h` (in `Widget`).
     }
   )");
 }

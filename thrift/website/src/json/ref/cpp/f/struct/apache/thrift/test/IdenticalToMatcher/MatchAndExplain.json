@@ -20,6 +20,7 @@
       "definition_html": "bool apache::thrift::test::IdenticalToMatcher&lt; Tag, T &gt;::MatchAndExplain",
       "argsstring_html": "(const U &amp;actual, ::testing::MatchResultListener *) const",
       "name_html": "MatchAndExplain",
+      "qualifiedname_html": "apache::thrift::test::IdenticalToMatcher::MatchAndExplain",
       "param": [
         {
           "type_html": "const U &amp;",
@@ -31,11 +32,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "line": "40",
-        "column": "1",
+        "line": "39",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Testing.h",
-        "bodystart": "40",
-        "bodyend": "42"
+        "bodystart": "39",
+        "bodyend": "41"
       },
       "definition": {
         "simple_html": "template &lt;typename U&gt;\nbool MatchAndExplain(const U&amp; actual, ::testing::MatchResultListener*) const",
@@ -57,5 +58,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/struct/apache/thrift/test/IdenticalToMatcher/MatchAndExplain",
-  "refid": "/ref/cpp/f/struct/apache/thrift/test/IdenticalToMatcher/MatchAndExplain"
+  "refid": "/ref/cpp/f/struct/apache/thrift/test/IdenticalToMatcher/MatchAndExplain",
+  "parent_links": [
+    {
+      "text_html": "IdenticalToMatcher",
+      "href": "/ref/cpp/struct/apache/thrift/test/IdenticalToMatcher"
+    }
+  ]
 }

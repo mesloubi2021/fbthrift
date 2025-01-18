@@ -20,8 +20,7 @@
 #include <thrift/lib/cpp2/Thrift.h>
 #include <thrift/lib/cpp2/op/Clear.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 namespace adapt_detail {
 
 // Used to detect if an adapted type has a reset method.
@@ -97,6 +96,11 @@ struct InlineAdapter {
     return u.encode(prot_);
   }
 
+  template <typename Tag, typename Protocol, typename U>
+  static auto decode(Protocol& prot_, U& u) -> decltype(u.decode(prot_)) {
+    u.decode(prot_);
+  }
+
   template <typename U>
   static adapt_detail::if_has_no_reset<U> clear(U& value) {
     static_assert(
@@ -116,5 +120,4 @@ struct InlineAdapter {
   }
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

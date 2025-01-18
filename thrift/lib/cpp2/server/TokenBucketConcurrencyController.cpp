@@ -29,18 +29,31 @@ namespace apache::thrift {
       !request.request()->getShouldStartProcessing();
 }
 
-/*static*/ void TokenBucketConcurrencyController::release(
-    ServerRequest&& request) {
+void TokenBucketConcurrencyController::release(ServerRequest&& request) {
+  if (onExpireFunction_) {
+    onExpireFunction_(request);
+  }
   auto eb = ServerRequestHelper::eventBase(request);
   auto req = ServerRequestHelper::request(std::move(request));
   HandlerCallbackBase::releaseRequest(std::move(req), eb);
 }
 
 void TokenBucketConcurrencyController::execute(ServerRequest&& request) {
+  if (onExecuteFunction_) {
+    onExecuteFunction_(request);
+  }
   request.requestData().setRequestExecutionBegin();
   AsyncProcessorHelper::executeRequest(std::move(request));
   request.requestData().setRequestExecutionEnd();
   notifyOnFinishExecution(request);
+}
+
+serverdbginfo::ConcurrencyControllerDbgInfo
+TokenBucketConcurrencyController::getDbgInfo() const {
+  serverdbginfo::ConcurrencyControllerDbgInfo info;
+  info.name() = folly::demangle(typeid(*this));
+  info.qpsLimit() = qpsLimit_.load();
+  return info;
 }
 
 } // namespace apache::thrift

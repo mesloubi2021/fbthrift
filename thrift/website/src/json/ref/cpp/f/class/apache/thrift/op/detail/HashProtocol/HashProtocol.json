@@ -15,6 +15,7 @@
       "definition_html": "apache::thrift::op::detail::HashProtocol&lt; Accumulator &gt;::HashProtocol",
       "argsstring_html": "(Accumulator &amp;accumulator)",
       "name_html": "HashProtocol",
+      "qualifiedname_html": "apache::thrift::op::detail::HashProtocol::HashProtocol",
       "param": [
         {
           "type_html": "Accumulator &amp;",
@@ -24,7 +25,7 @@
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "line": "118",
-        "column": "1",
+        "column": "12",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/HashProtocol.h",
         "bodystart": "118",
         "bodyend": "118"
@@ -50,5 +51,11 @@
   "brief_html": "Constructs the HashProtocol.",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/HashProtocol/HashProtocol",
+  "parent_links": [
+    {
+      "text_html": "HashProtocol",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/HashProtocol"
+    }
+  ]
 }

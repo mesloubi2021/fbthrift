@@ -112,6 +112,33 @@ public class RSocketThriftClientTest {
   }
 
   @Test
+  public void testZeroPort() {
+    RpcServerHandler serverHandler =
+        new PingServiceRpcServerHandler(new BlockingPingService(), Collections.emptyList());
+
+    RSocketServerTransportFactory transportFactory =
+        new RSocketServerTransportFactory(new ThriftServerConfig().setEnableJdkSsl(false));
+    RSocketServerTransport transport =
+        transportFactory.createServerTransport(new InetSocketAddress(0), serverHandler).block();
+    InetSocketAddress address = (InetSocketAddress) transport.getAddress();
+
+    RpcClientFactory factory =
+        RpcClientFactory.builder()
+            .setDisableLoadBalancing(true)
+            .setDisableRSocket(false)
+            .setThriftClientConfig(
+                new ThriftClientConfig()
+                    .setDisableSSL(true)
+                    .setRequestTimeout(Duration.succinctDuration(1, TimeUnit.DAYS)))
+            .build();
+
+    PingService client =
+        PingService.clientBuilder().setProtocolId(ProtocolId.BINARY).build(factory, address);
+
+    client.pingVoid(new PingRequest.Builder().setRequest("ping").build());
+  }
+
+  @Test
   public void testPingVoidAsync() throws Exception {
     System.out.println("create server handler");
     RpcServerHandler serverHandler =
@@ -171,6 +198,96 @@ public class RSocketThriftClientTest {
             .setProtocolId(ProtocolId.BINARY)
             .build(factory, address);
     client.pingVoid(new PingRequest.Builder().setRequest("ping").build()).block();
+  }
+
+  // Set 50000 to global constant so it's easier to maintain.
+
+  private static final int EXHUAUST_CLIENT_CALL_THRESHOLD = 50000;
+
+  @Test
+  public void testSocketExhaustWhenDestExist() {
+    System.out.println("create server handler");
+    RpcServerHandler serverHandler =
+        new PingServiceRpcServerHandler(new BlockingPingService(), Collections.emptyList());
+
+    System.out.println("starting server");
+    RSocketServerTransportFactory transportFactory =
+        new RSocketServerTransportFactory(new ThriftServerConfig().setEnableJdkSsl(false));
+    RSocketServerTransport transport =
+        transportFactory.createServerTransport(serverHandler).block();
+    InetSocketAddress address = (InetSocketAddress) transport.getAddress();
+
+    System.out.println("creating client");
+
+    RpcClientFactory factory =
+        RpcClientFactory.builder()
+            .setDisableLoadBalancing(true)
+            .setDisableRSocket(false)
+            .setDisableReconnectingClient(true)
+            .setThriftClientConfig(
+                new ThriftClientConfig()
+                    .setDisableSSL(true)
+                    .setRequestTimeout(Duration.succinctDuration(1, TimeUnit.DAYS)))
+            .build();
+    PingService.Reactive client =
+        PingService.Reactive.clientBuilder()
+            .setProtocolId(ProtocolId.BINARY)
+            .build(factory, address);
+
+    for (int i = 0; i < EXHUAUST_CLIENT_CALL_THRESHOLD; i++) {
+      client.ping(new PingRequest.Builder().setRequest("ping").build()).block();
+      System.out.println("Sent call " + i);
+    }
+  }
+
+  @Test
+  public void testSocketExhaustWhenDestComesUp() {
+    //  Create Client factory
+    RpcClientFactory factory =
+        RpcClientFactory.builder()
+            .setDisableLoadBalancing(true)
+            .setDisableRSocket(false)
+            .setDisableReconnectingClient(true)
+            .setThriftClientConfig(
+                new ThriftClientConfig()
+                    .setDisableSSL(true)
+                    .setRequestTimeout(Duration.succinctDuration(1, TimeUnit.DAYS)))
+            .build();
+    InetSocketAddress address = new InetSocketAddress(12345);
+    PingService.Reactive client =
+        PingService.Reactive.clientBuilder()
+            .setProtocolId(ProtocolId.BINARY)
+            .build(factory, address);
+
+    for (int i = 0; i < EXHUAUST_CLIENT_CALL_THRESHOLD; i++) {
+      try {
+        client.ping(new PingRequest.Builder().setRequest("ping").build()).block();
+      } catch (Exception e) {
+      }
+    }
+
+    System.out.println("create server handler");
+    RpcServerHandler serverHandler =
+        new PingServiceRpcServerHandler(new BlockingPingService(), Collections.emptyList());
+
+    System.out.println("starting server");
+    RSocketServerTransportFactory transportFactory =
+        new RSocketServerTransportFactory(new ThriftServerConfig().setEnableJdkSsl(false));
+    RSocketServerTransport transport =
+        transportFactory.createServerTransport(serverHandler).block();
+    address = (InetSocketAddress) transport.getAddress();
+
+    System.out.println("creating client");
+    client =
+        PingService.Reactive.clientBuilder()
+            .setProtocolId(ProtocolId.BINARY)
+            .build(factory, address);
+
+    // These calls should succeed.
+    for (int i = 0; i < EXHUAUST_CLIENT_CALL_THRESHOLD; i++) {
+      client.ping(new PingRequest.Builder().setRequest("ping").build()).block();
+      System.out.println("Sent call " + i);
+    }
   }
 
   @Test

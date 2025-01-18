@@ -40,8 +40,7 @@
 #include <thrift/lib/cpp2/transport/core/RpcMetadataUtil.h>
 #include <thrift/lib/cpp2/transport/core/ThriftClientCallback.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 using apache::thrift::transport::TTransportException;
 using folly::EventBase;
@@ -388,7 +387,8 @@ void SingleRpcChannel::onThriftRequest() noexcept {
       nullptr,
       nullptr,
       nullptr,
-      worker_.get());
+      worker_.get(),
+      worker_->getServer()->getServiceInterceptors().size());
   processor_->onThriftRequest(
       std::move(metadata),
       std::move(contents_),
@@ -501,5 +501,4 @@ void SingleRpcChannel::sendThriftErrorResponse(
   receivedThriftRPC_ = true;
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

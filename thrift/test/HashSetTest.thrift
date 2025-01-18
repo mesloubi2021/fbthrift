@@ -16,7 +16,15 @@
 
 namespace cpp2 apache.thrift.test
 
+include "thrift/annotation/cpp.thrift"
+
 struct foo {
-  1: set<i32> (cpp.template = 'std::unordered_set') bar;
-  2: set<string> (cpp.template = 'std::unordered_set') baz;
+  1: set_i32_4564 bar;
+  2: set_string_8797 baz;
 }
+
+// The following were automatically generated and may benefit from renaming.
+@cpp.Type{template = "std::unordered_set"}
+typedef set<i32> set_i32_4564
+@cpp.Type{template = "std::unordered_set"}
+typedef set<string> set_string_8797

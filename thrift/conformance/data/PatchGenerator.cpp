@@ -387,27 +387,23 @@ PatchOpTestCase makeContainerRemoveTC(
   return tascase;
 }
 
-template <typename ContainerTag, typename TT, typename PatchTag = ContainerTag>
-PatchOpTestCase makeValueContainerPrependTC(
+template <typename ContainerTag, typename TT>
+PatchOpTestCase makeContainerInsertTC(
     const AnyRegistry& registry, const Protocol& protocol, auto value) {
   PatchOpTestCase tascase;
   PatchOpRequest req;
 
   using Container = type::native_type<ContainerTag>;
-  using PatchContainer = type::standard_type<PatchTag>;
 
   auto patchValue = value.value;
   op::clear<TT>(patchValue);
   Container initial = {value.value};
   Container expected = {patchValue, value.value};
-  if (patchValue == value.value && !std::is_same_v<PatchTag, ContainerTag>) {
-    expected = initial;
-  }
-  PatchContainer patchData = {patchValue};
+  Container patchData = {patchValue};
 
   req.value() = registry.store(asValueStruct<ContainerTag>(initial), protocol);
   req.patch() = registry.store(
-      makePatchValue<PatchTag>(op::PatchOp::Add, patchData), protocol);
+      makePatchValue<ContainerTag>(op::PatchOp::Add, patchData), protocol);
   tascase.request() = req;
   tascase.result() =
       registry.store(asValueStruct<ContainerTag>(expected), protocol);
@@ -519,29 +515,20 @@ Test createListSetPatchTest(
         removeCase.test().emplace().objectPatch_ref() =
             makeContainerRemoveTC<ContainerTag, TT>(
                 registry, protocol, value.value, value.value);
-      }
 
-      auto& prependCase = test.testCases()->emplace_back();
-      prependCase.name() = makeTestName(value, "prepend");
-      prependCase.test().emplace().objectPatch_ref() =
-          makeValueContainerPrependTC<ContainerTag, TT>(
-              registry, protocol, value);
-
-      if constexpr (std::is_same_v<CC, type::list_c>) {
         auto& prependSetCase = test.testCases()->emplace_back();
-        prependSetCase.name() = makeTestName(value, "prepend_set");
+        prependSetCase.name() = makeTestName(value, "insert");
         prependSetCase.test().emplace().objectPatch_ref() =
-            makeValueContainerPrependTC<ContainerTag, TT, type::set<TT>>(
-                registry, protocol, value);
+            makeContainerInsertTC<ContainerTag, TT>(registry, protocol, value);
+      } else {
+        auto patchValue = value.value;
+        op::clear<TT>(patchValue);
+        auto& appendCase = test.testCases()->emplace_back();
+        appendCase.name() = makeTestName(value, "append");
+        appendCase.test().emplace().objectPatch_ref() =
+            makeContainerAppendTC<ContainerTag>(
+                registry, protocol, value.value, patchValue);
       }
-
-      auto patchValue = value.value;
-      op::clear<TT>(patchValue);
-      auto& appendCase = test.testCases()->emplace_back();
-      appendCase.name() = makeTestName(value, "append");
-      appendCase.test().emplace().objectPatch_ref() =
-          makeContainerAppendTC<ContainerTag>(
-              registry, protocol, value.value, patchValue);
     }
   });
 

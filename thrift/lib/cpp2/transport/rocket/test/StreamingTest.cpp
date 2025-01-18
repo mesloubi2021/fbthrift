@@ -21,7 +21,7 @@
 #include <thread>
 
 #include <folly/Portability.h>
-#include <folly/experimental/coro/BlockingWait.h>
+#include <folly/coro/BlockingWait.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
@@ -34,8 +34,7 @@
 #include <thrift/lib/cpp2/transport/rocket/test/util/TestServiceMock.h>
 #include <thrift/lib/cpp2/transport/rocket/test/util/TestUtil.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace {
 void waitNoLeak(StreamServiceAsyncClient* client) {
@@ -1105,5 +1104,4 @@ TEST_F(StreamingTest, ConnectionEgressBufferBackpressure) {
   });
 }
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

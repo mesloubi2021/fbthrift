@@ -176,6 +176,23 @@ TEST(AllocationColocatorTest, Alignment) {
   EXPECT_EQ(cursor.object<FatInt>()->value, 1);
 }
 
+TEST(AllocationColocator, Void) {
+  AllocationColocator<void> alloc;
+  auto ptr = alloc.allocate(
+      [&, i = alloc.object<int>(), s = alloc.string(2)](auto make) mutable {
+        make(std::move(i), 42);
+        make(std::move(s), "hi");
+      });
+
+  auto cursor = AllocationColocator<void>::unsafeCursor(ptr.get());
+  auto i = cursor.object<int>();
+  EXPECT_EQ(*i, 42);
+  EXPECT_EQ(cursor.string(2), "hi");
+
+  // No memory should be allocated for the root object
+  EXPECT_EQ(std::uintptr_t(ptr.get()), std::uintptr_t(i));
+}
+
 TEST(AllocationColocatorTest, NonTrivialDestructor) {
   struct Foo {
     struct NonTrivial {
@@ -207,4 +224,109 @@ TEST(AllocationColocatorTest, NonTrivialDestructor) {
 
   foo.reset();
   EXPECT_EQ(ref, 42);
+}
+
+TEST(AllocationColocatorTest, NonTrivialDestructorArray) {
+  struct Foo {
+    struct NonTrivial {
+      int& destructorCount;
+
+      NonTrivial(int& constructorCount, int& destructorCount)
+          : destructorCount(destructorCount) {
+        constructorCount++;
+      }
+      ~NonTrivial() noexcept { ++destructorCount; }
+    };
+    AllocationColocator<>::ArrayPtr<NonTrivial> nonTrivials;
+  };
+
+  int constructorCount = 0;
+  int destructorCount = 0;
+  AllocationColocator<Foo> alloc;
+  auto foo = alloc.allocate(
+      [&, nonTrivial = alloc.array<Foo::NonTrivial>(2)](auto make) mutable {
+        Foo foo;
+        foo.nonTrivials = make(std::move(nonTrivial), [&] {
+          return Foo::NonTrivial(constructorCount, destructorCount);
+        });
+        return foo;
+      });
+
+  EXPECT_EQ(constructorCount, 2);
+  EXPECT_EQ(destructorCount, 0);
+  EXPECT_EQ(&destructorCount, &foo->nonTrivials[0].destructorCount);
+  EXPECT_EQ(&destructorCount, &foo->nonTrivials[1].destructorCount);
+
+  auto cursor = AllocationColocator<Foo>::unsafeCursor(
+      static_cast<const Foo*>(foo.get()));
+  EXPECT_EQ(
+      &cursor.object<Foo::NonTrivial>()->destructorCount, &destructorCount);
+  EXPECT_EQ(
+      &cursor.object<Foo::NonTrivial>()->destructorCount, &destructorCount);
+
+  foo.reset();
+  EXPECT_EQ(constructorCount, 2);
+  EXPECT_EQ(destructorCount, 2);
+}
+
+TEST(AllocationColocatorTest, NonTrivialDestructorArrayWithException) {
+  struct Foo {
+    struct NonTrivial {
+      int& destructorCount;
+
+      NonTrivial(int& constructorCount, int& destructorCount)
+          : destructorCount(destructorCount) {
+        constructorCount++;
+        if (constructorCount == 3) {
+          throw std::runtime_error("this is the third object!");
+        }
+      }
+      ~NonTrivial() noexcept { ++destructorCount; }
+    };
+    AllocationColocator<>::ArrayPtr<NonTrivial> nonTrivials;
+  };
+
+  int constructorCount = 0;
+  int destructorCount = 0;
+  AllocationColocator<Foo> alloc;
+  EXPECT_THROW(
+      {
+        auto foo =
+            alloc.allocate([&, nonTrivial = alloc.array<Foo::NonTrivial>(3)](
+                               auto make) mutable {
+              Foo foo;
+              foo.nonTrivials = make(std::move(nonTrivial), [&] {
+                return Foo::NonTrivial(constructorCount, destructorCount);
+              });
+              return foo;
+            });
+      },
+      std::runtime_error);
+
+  EXPECT_EQ(constructorCount, 3);
+  EXPECT_EQ(destructorCount, 2);
+}
+
+TEST(AllocationColocatorTest, ArrayZeroSize) {
+  struct Foo {
+    AllocationColocator<>::ArrayPtr<std::string> array1;
+    AllocationColocator<>::ArrayPtr<std::string> array2;
+  };
+
+  AllocationColocator<Foo> alloc;
+  auto foo =
+      alloc.allocate([&,
+                      array1 = alloc.array<std::string>(0),
+                      array2 = alloc.array<std::string>(0)](auto make) mutable {
+        Foo foo;
+        auto generator = []() -> std::string {
+          throw std::runtime_error("Should never be called!");
+        };
+        foo.array1 = make(std::move(array1), generator);
+        foo.array2 = make(std::move(array2), generator);
+        return foo;
+      });
+
+  EXPECT_NE(foo->array1.get(), nullptr);
+  EXPECT_EQ(foo->array1.get(), foo->array2.get());
 }

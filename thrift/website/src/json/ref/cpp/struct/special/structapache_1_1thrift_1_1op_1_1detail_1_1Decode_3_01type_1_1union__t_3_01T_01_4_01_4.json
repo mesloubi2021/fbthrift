@@ -32,6 +32,7 @@
       "definition_html": "void apache::thrift::op::detail::Decode&lt; type::union_t&lt; T &gt; &gt;::operator()",
       "argsstring_html": "(Protocol &amp;prot, T &amp;s) const",
       "name_html": "operator()",
+      "qualifiedname_html": "apache::thrift::op::detail::Decode&lt; type::union_t&lt; T &gt; &gt;::operator()",
       "param": [
         {
           "type_html": "Protocol &amp;",
@@ -44,11 +45,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "line": "649",
-        "column": "1",
+        "line": "805",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-        "bodystart": "649",
-        "bodyend": "651"
+        "bodystart": "805",
+        "bodyend": "807"
       },
       "definition": {
         "simple_html": "template &lt;typename Protocol&gt;\nvoid operator()(Protocol&amp; prot, T&amp; s) const",
@@ -64,11 +65,11 @@
   ],
   "location": {
     "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "line": "647",
+    "line": "803",
     "column": "1",
     "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-    "bodystart": "647",
-    "bodyend": "652"
+    "bodystart": "803",
+    "bodyend": "808"
   },
   "namespacednames_html": [
     "apache",
@@ -85,7 +86,6 @@
   "declaration_html": "template &lt; typename T &gt;\nstruct Decode&lt; type::union_t&lt; T &gt; &gt;;",
   "filepath": "struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4",
   "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4",
-  "specializes": "structapache_1_1thrift_1_1op_1_1detail_1_1Decode",
   "overloadgroups": [
     {
       "groupname_html": "",
@@ -112,6 +112,7 @@
               "definition_html": "void apache::thrift::op::detail::Decode&lt; type::union_t&lt; T &gt; &gt;::operator()",
               "argsstring_html": "(Protocol &amp;prot, T &amp;s) const",
               "name_html": "operator()",
+              "qualifiedname_html": "apache::thrift::op::detail::Decode&lt; type::union_t&lt; T &gt; &gt;::operator()",
               "param": [
                 {
                   "type_html": "Protocol &amp;",
@@ -124,11 +125,11 @@
               ],
               "location": {
                 "file": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "line": "649",
-                "column": "1",
+                "line": "805",
+                "column": "8",
                 "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/Encode.h",
-                "bodystart": "649",
-                "bodyend": "651"
+                "bodystart": "805",
+                "bodyend": "807"
               },
               "definition": {
                 "simple_html": "template &lt;typename Protocol&gt;\nvoid operator()(Protocol&amp; prot, T&amp; s) const",
@@ -150,7 +151,13 @@
           "brief_html": "",
           "groupname_html": "",
           "href": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4/operator.call",
-          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4/operator.call"
+          "refid": "/ref/cpp/f/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4/operator.call",
+          "parent_links": [
+            {
+              "text_html": "Decode&lt; type::union_t&lt; T &gt; &gt;",
+              "href": "/ref/cpp/struct/special/structapache_1_1thrift_1_1op_1_1detail_1_1Decode_3_01type_1_1union__t_3_01T_01_4_01_4"
+            }
+          ]
         }
       ]
     }

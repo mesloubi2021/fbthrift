@@ -1,6 +1,6 @@
 {{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
   limitations under the License.
 
 }}{{#type:typedef?}}{{!
-    }}{{type:package}}::types::{{type:rust_name}}{{!
+  }}{{#type:type_annotation?}}{{> lib/rawtype}}{{/type:type_annotation?}}{{!
+  }}{{^type:type_annotation?}}{{type:package}}::{{type:rust_name}}{{/type:type_annotation?}}{{!
 }}{{/type:typedef?}}{{!
 }}{{^type:typedef?}}{{!
-}}{{>lib/rawtype}}{{!
+}}{{> lib/rawtype}}{{!
 }}{{/type:typedef?}}{{!
 }}

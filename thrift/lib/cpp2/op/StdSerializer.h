@@ -27,9 +27,7 @@
 #include <thrift/lib/cpp2/type/Protocol.h>
 #include <thrift/lib/cpp2/type/TypeRegistry.h>
 
-namespace apache {
-namespace thrift {
-namespace op {
+namespace apache::thrift::op {
 
 namespace detail {
 template <type::StandardProtocol protocol>
@@ -64,17 +62,16 @@ class StdSerializer : public ProtocolSerializer<
 };
 
 template <typename Tag, type::StandardProtocol... Ps>
-void registerStdSerializers(type::TypeRegistry& registry) {
+void registerStdSerializers(
+    type::TypeRegistry& registry, bool skipDuplicates = false) {
   for (auto result :
        std::array<bool, sizeof...(Ps)>{{registry.registerSerializer(
            std::make_unique<StdSerializer<Tag, Ps>>(),
            type::Type::get<Tag>())...}}) {
-    if (!result) {
+    if (!result && !skipDuplicates) {
       folly::throw_exception<std::runtime_error>("Could not register type.");
     }
   }
 }
 
-} // namespace op
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::op

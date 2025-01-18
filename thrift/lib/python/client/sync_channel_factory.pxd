@@ -17,7 +17,7 @@ from thrift.python.client.request_channel cimport (
     ClientType as cClientType,
     RequestChannel,
 )
-from thrift.python.serializer cimport Protocol as cProtocol
+from thrift.python.protocol cimport Protocol as cProtocol
 
 cdef RequestChannel create_channel(
     object host,

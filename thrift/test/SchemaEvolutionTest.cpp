@@ -15,8 +15,9 @@
  */
 
 #include <folly/portability/GTest.h>
+#include <thrift/lib/cpp2/op/Get.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include <thrift/test/gen-cpp2/schema_evolution_test_for_each_field.h>
+#include <thrift/test/gen-cpp2/schema_evolution_test_types.h>
 
 using namespace apache::thrift;
 
@@ -33,7 +34,9 @@ TYPED_TEST_CASE(EvolutionTest, Serializers);
 TYPED_TEST(EvolutionTest, evolution) {
   using Serializer = typename TestFixture::Serializer;
   cpp2::Old oldObj;
-  for_each_field(oldObj, [](auto& meta, auto ref) { ref = *meta.name_ref(); });
+  op::for_each_field_id<cpp2::Old>([&oldObj]<typename Id>(Id) {
+    op::get<Id>(oldObj) = op::get_name_v<cpp2::Old, Id>;
+  });
 
   cpp2::New newObj;
   Serializer::deserialize(
@@ -57,6 +60,8 @@ TYPED_TEST(EvolutionTest, evolution) {
   EXPECT_EQ(newObj.required_to_optional(), *oldObj.required_to_optional());
   EXPECT_EQ(newObj.required_to_required(), *oldObj.required_to_required());
 
+  // SimpleJSON: This protocol doesn't output verbose field types and uses field
+  // names instead of IDs (which affects schema evolution).
   if (std::is_same_v<Serializer, SimpleJSONSerializer>) {
     EXPECT_EQ(newObj.unqualified_new(), "");
     EXPECT_EQ(newObj.required_new(), "");
@@ -76,4 +81,39 @@ TYPED_TEST(EvolutionTest, evolution) {
   EXPECT_FALSE(newObj.unqualified_added().is_set());
   EXPECT_FALSE(newObj.optional_added().has_value());
   EXPECT_TRUE(newObj.required_added().has_value());
+}
+
+TYPED_TEST(EvolutionTest, union_evolution) {
+  using Serializer = typename TestFixture::Serializer;
+
+  cpp2::MyUnion_V2 myUnion_v2;
+  myUnion_v2.set_string_field("string_field");
+
+  cpp2::MyUnion_V1 myUnion_v1;
+  Serializer::deserialize(
+      Serializer::template serialize<std::string>(myUnion_v2), myUnion_v1);
+
+  // We should be able to deserialize the v2 union to v1 union, even if the v2
+  // union has a new field that is not present in the v1 union. In this case,
+  // we expect the deserialized v1 union to be empty.
+  EXPECT_EQ(cpp2::MyUnion_V1::Type::__EMPTY__, myUnion_v1.getType());
+}
+
+TYPED_TEST(EvolutionTest, struct_union_evolution) {
+  using Serializer = typename TestFixture::Serializer;
+
+  cpp2::MyStruct_V2 myStruct_v2;
+  myStruct_v2.i32_field() = 11;
+  myStruct_v2.union_field()->set_string_field("string_field");
+
+  cpp2::MyStruct_V1 myStruct_v1;
+  Serializer::deserialize(
+      Serializer::template serialize<std::string>(myStruct_v2), myStruct_v1);
+
+  EXPECT_EQ(11, myStruct_v1.i32_field());
+  // We should be able to deserialize the v2 struct to v1 struct, even if the
+  // v2 union has a new field that is not present in the v1 union. In this case,
+  // we expect the deserialized v1 struct to have an empty v1 union.
+  EXPECT_EQ(
+      cpp2::MyUnion_V1::Type::__EMPTY__, myStruct_v1.union_field()->getType());
 }

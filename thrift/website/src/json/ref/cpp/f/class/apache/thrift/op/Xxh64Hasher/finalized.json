@@ -15,10 +15,11 @@
       "definition_html": "bool apache::thrift::op::Xxh64Hasher::finalized",
       "argsstring_html": "() const",
       "name_html": "finalized",
+      "qualifiedname_html": "apache::thrift::op::Xxh64Hasher::finalized",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/Xxh64Hasher.h",
         "line": "73",
-        "column": "1",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/Xxh64Hasher.h",
         "bodystart": "73",
         "bodyend": "73"
@@ -43,5 +44,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/Xxh64Hasher/finalized",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/Xxh64Hasher/finalized"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/Xxh64Hasher/finalized",
+  "parent_links": [
+    {
+      "text_html": "Xxh64Hasher",
+      "href": "/ref/cpp/class/apache/thrift/op/Xxh64Hasher"
+    }
+  ]
 }

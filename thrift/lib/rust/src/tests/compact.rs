@@ -15,7 +15,6 @@
  */
 
 use std::io::Cursor;
-use std::u8;
 
 use bytes::Buf;
 use bytes::Bytes;
@@ -439,8 +438,6 @@ fn serializer_overflow() {
     let buf = serialize!(CompactProtocol, |p| for i in 0..u8::MAX {
         let _ = p.write_byte(i as i8);
     });
-
-    let buf = buf;
 
     assert_eq!(vec, buf);
 }

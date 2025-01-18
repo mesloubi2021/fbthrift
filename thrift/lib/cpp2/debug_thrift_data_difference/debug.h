@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include <folly/Range.h>
 
@@ -26,8 +27,7 @@
 
 #include <thrift/lib/cpp2/type/NativeType.h>
 
-namespace facebook {
-namespace thrift {
+namespace facebook::thrift {
 
 /**
  * Compares two objects for difference of underlying Thrift data,
@@ -42,8 +42,8 @@ namespace thrift {
  *  void operator ()(
  *    T const* lhs,
  *    T const* rhs,
- *    folly::StringPiece path,
- *    folly::StringPiece message
+ *    std::string_view path,
+ *    std::string_view message
  *  ) const;
  *
  *  lhs: the left-hand side mismatched field or nullptr if the field is not
@@ -81,7 +81,7 @@ bool debug_thrift_data_difference(
 template <typename Output>
 struct debug_output_callback {
   explicit debug_output_callback(
-      Output& out, folly::StringPiece lhs, folly::StringPiece rhs)
+      Output& out, std::string_view lhs, std::string_view rhs)
       : out_(out), lhs_(lhs), rhs_(rhs) {}
 
   template <typename Tag, typename T>
@@ -89,26 +89,30 @@ struct debug_output_callback {
       Tag,
       T const* lhs,
       T const* rhs,
-      folly::StringPiece path,
-      folly::StringPiece message) const {
-    out_ << path << ": " << message;
+      std::string_view path,
+      std::string_view message) const {
+    out_ << path << ": " << message << '\n';
+    out_ << "  " << lhs_ << ":\n";
     if (lhs) {
-      out_ << "\n"
-           << "  " << lhs_ << ":\n";
-      pretty_print<Tag>(out_, *lhs, "  ", "    ");
+      facebook::thrift::pretty_print<Tag>(out_, *lhs, "  ", "    ");
+      out_ << '\n';
+    } else {
+      out_ << "    <unset>\n";
     }
+
+    out_ << "  " << rhs_ << ":\n";
     if (rhs) {
-      out_ << "\n"
-           << "  " << rhs_ << ":\n";
-      pretty_print<Tag>(out_, *rhs, "  ", "    ");
+      facebook::thrift::pretty_print<Tag>(out_, *rhs, "  ", "    ");
+      out_ << '\n';
+    } else {
+      out_ << "    <unset>\n";
     }
-    out_ << "\n";
   }
 
  private:
   Output& out_;
-  folly::StringPiece lhs_;
-  folly::StringPiece rhs_;
+  std::string_view lhs_;
+  std::string_view rhs_;
 };
 
 /**
@@ -136,12 +140,11 @@ struct debug_output_callback {
 template <typename Output>
 debug_output_callback<Output> make_debug_output_callback(
     Output& output,
-    folly::StringPiece lhs = "lhs",
-    folly::StringPiece rhs = "rhs") {
+    std::string_view lhs = "lhs",
+    std::string_view rhs = "rhs") {
   return debug_output_callback<Output>(output, lhs, rhs);
 }
 
-} // namespace thrift
-} // namespace facebook
+} // namespace facebook::thrift
 
 #include <thrift/lib/cpp2/debug_thrift_data_difference/detail/debug-inl-post.h>

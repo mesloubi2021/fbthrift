@@ -23,9 +23,7 @@
 #include <thrift/compiler/ast/t_program.h>
 #include <thrift/compiler/ast/t_scope.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 namespace {
 
 std::string join_strings_by_commas(
@@ -56,20 +54,12 @@ std::vector<std::string> split_string_by_periods(const std::string& str) {
 } // namespace
 
 t_type_ref t_scope::ref_type(
-    const t_program& program,
-    const std::string& name,
-    const source_range& range) {
+    t_program& program, const std::string& name, const source_range& range) {
   std::string scoped_name = name.find_first_of('.') != std::string::npos
       ? name
       : program.scope_name(name);
   // Try to resolve the type.
-  const t_type* type = find_type(scoped_name);
-  // TODO(afuller): Why are interactions special? They should just be another
-  // declared type.
-  if (type == nullptr) {
-    type = find_interaction(scoped_name);
-  }
-  if (type != nullptr) {
+  if (const t_type* type = find<t_type>(scoped_name)) {
     return {*type, range}; // We found the type!
   }
 
@@ -83,8 +73,7 @@ t_type_ref t_scope::ref_type(
   // However, this actually breaks dynamic casts.
   // TODO(afuller): Merge t_placeholder_typedef into t_type_ref and remove const
   // cast.
-  auto ph = std::make_unique<t_placeholder_typedef>(
-      const_cast<t_program*>(&program), scoped_name);
+  auto ph = std::make_unique<t_placeholder_typedef>(&program, scoped_name);
   ph->set_src_range(range);
   return add_placeholder_typedef(std::move(ph));
 }
@@ -116,17 +105,14 @@ void t_scope::add_enum_value(std::string name, const t_const* constant) {
 }
 
 std::string t_scope::get_fully_qualified_enum_value_names(
-    const std::string& name) {
+    const std::string& name) const {
   // Get just the enum value name from name, which is
   // PROGRAM_NAME.ENUM_VALUE_NAME.
   auto name_split = split_string_by_periods(name);
   if (name_split.empty()) {
     return "";
   }
-  return join_strings_by_commas(
-      enum_values_[name_split[name_split.size() - 1]]);
+  return join_strings_by_commas(enum_values_.at(name_split.back()));
 }
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

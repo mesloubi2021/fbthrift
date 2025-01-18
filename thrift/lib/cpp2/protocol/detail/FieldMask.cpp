@@ -23,8 +23,9 @@
 
 #include <folly/lang/Exception.h>
 #include <thrift/lib/cpp2/protocol/detail/FieldMask.h>
+#include <thrift/lib/cpp2/protocol/detail/Object.h>
 
-using apache::thrift::protocol::field_mask_constants;
+namespace field_mask_constants = apache::thrift::protocol::field_mask_constants;
 
 namespace apache::thrift::protocol::detail {
 
@@ -59,6 +60,19 @@ const MapStringToMask* FOLLY_NULLABLE getStringMapMask(const Mask& mask) {
 
   if (mask.excludes_string_map_ref()) {
     return &*mask.excludes_string_map_ref();
+  }
+
+  return nullptr;
+}
+
+[[nodiscard]] const MapTypeToMask* FOLLY_NULLABLE
+getTypeMask(const Mask& mask) {
+  if (mask.includes_type_ref()) {
+    return &*mask.includes_type_ref();
+  }
+
+  if (mask.excludes_type_ref()) {
+    return &*mask.excludes_type_ref();
   }
 
   return nullptr;
@@ -103,14 +117,62 @@ std::string getStringFromValue(const Value& v) {
       "Value contains a non-string key.");
 }
 
+Value getValueAs(MapId id, const Value& as) {
+  auto key = static_cast<int64_t>(id);
+  if (as.is_byte()) {
+    if (key > std::numeric_limits<int8_t>::max() ||
+        key < std::numeric_limits<int8_t>::min()) {
+      folly::throw_exception<std::runtime_error>(
+          "MapId overflows the provided type.");
+    }
+    return asValueStruct<type::byte_t>(key);
+  }
+  if (as.is_i16()) {
+    if (key > std::numeric_limits<int16_t>::max() ||
+        key < std::numeric_limits<int16_t>::min()) {
+      folly::throw_exception<std::runtime_error>(
+          "MapId overflows the provided type.");
+    }
+    return asValueStruct<type::i16_t>(key);
+  }
+  if (as.is_i32()) {
+    if (key > std::numeric_limits<int32_t>::max() ||
+        key < std::numeric_limits<int32_t>::min()) {
+      folly::throw_exception<std::runtime_error>(
+          "MapId overflows the provided type.");
+    }
+    return asValueStruct<type::i32_t>(key);
+  }
+  if (as.is_i64()) {
+    return asValueStruct<type::i64_t>(key);
+  }
+  folly::throw_exception<std::runtime_error>(
+      "Provided value contains a non-integer.");
+}
+
+Value getValueAs(std::string key, const Value& as) {
+  if (as.is_binary()) {
+    return asValueStruct<type::binary_t>(key);
+  }
+  if (as.is_string()) {
+    return asValueStruct<type::string_t>(key);
+  }
+  folly::throw_exception<std::runtime_error>(
+      "Provided value contains a non-string.");
+}
+
 void throwIfContainsMapMask(const Mask& mask) {
   if (mask.includes_map_ref() || mask.excludes_map_ref() ||
       mask.includes_string_map_ref() || mask.excludes_string_map_ref()) {
     folly::throw_exception<std::runtime_error>("map mask is not implemented");
   }
-  const FieldIdToMask& map = mask.includes_ref() ? mask.includes_ref().value()
-                                                 : mask.excludes_ref().value();
-  for (auto& [_, nestedMask] : map) {
+  if (auto* typeMapPtr = getTypeMask(mask)) {
+    for (const auto& [_, nestedMask] : *typeMapPtr) {
+      throwIfContainsMapMask(nestedMask);
+    }
+    return;
+  }
+  for (const auto& [_, nestedMask] : *CHECK_NOTNULL(getFieldMask(mask))) {
     throwIfContainsMapMask(nestedMask);
   }
 }
@@ -128,4 +190,55 @@ MapId findMapIdByValueAddress(const Mask& mask, const Value& newKey) {
       });
   return it == mapIdToMask.end() ? mapId : MapId{it->first};
 }
+
+MapId getMapIdValueAddressFromIndex(
+    const ValueIndex& index, const Value& newKey) {
+  if (auto it = index.find(newKey); it != index.end()) {
+    return MapId{reinterpret_cast<int64_t>(&(it->get()))};
+  }
+  return MapId{reinterpret_cast<int64_t>(&newKey)};
+}
+
+ValueIndex buildValueIndex(const Mask& mask) {
+  ValueIndex index;
+  const auto* mapIdToMask = getIntegerMapMask(mask);
+  if (!mapIdToMask) {
+    return index;
+  }
+  index.reserve(mapIdToMask->size());
+  for (auto& [key, _] : *mapIdToMask) {
+    index.insert(std::cref(*reinterpret_cast<Value*>(key)));
+  }
+  return index;
+}
+
+void validateSinglePath(const Mask& mask) {
+  if (isAllMask(mask)) {
+    return;
+  }
+  if (isExclusive(mask)) {
+    folly::throw_exception<std::runtime_error>(
+        "Field mask should not contain any exclusive mask.");
+  }
+  op::invoke_by_field_id<Mask>(
+      static_cast<FieldId>(mask.getType()),
+      [&](auto id) {
+        using Id = decltype(id);
+        auto& m = op::get<Id>(mask).value();
+        if (m.size() > 1) {
+          folly::throw_exception<std::runtime_error>(
+              "Field mask expresses more than one path.");
+        }
+        if (m.size() == 0) {
+          folly::throw_exception<std::runtime_error>(
+              "The terminal path is not indicated with allMask.");
+        }
+        validateSinglePath(m.begin()->second);
+      },
+      [] {
+        folly::throw_exception<std::runtime_error>(
+            "Invalid mask to represent a single path.");
+      });
+}
+
 } // namespace apache::thrift::protocol::detail

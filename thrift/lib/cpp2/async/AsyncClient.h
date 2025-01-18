@@ -21,9 +21,12 @@
 #include <thrift/lib/cpp2/async/Interaction.h>
 #include <thrift/lib/cpp2/async/RequestChannel.h>
 
-namespace apache {
-namespace thrift {
+#include <variant>
+
+namespace apache::thrift {
+
 class InteractionHandle;
+class ClientInterceptorBase;
 
 class GeneratedAsyncClient : public TClientBase {
  public:
@@ -34,13 +37,13 @@ class GeneratedAsyncClient : public TClientBase {
    public:
     Options() {}
 
-    Options& includeGlobalEventHandlers(bool include) {
-      clientBaseOptions_.includeGlobalEventHandlers = include;
+    Options& includeGlobalLegacyEventHandlers(bool include) {
+      clientBaseOptions_.includeGlobalLegacyClientHandlers = include;
       return *this;
     }
 
     static Options zeroDependency() {
-      return Options().includeGlobalEventHandlers(false);
+      return Options().includeGlobalLegacyEventHandlers(false);
     }
 
    private:
@@ -49,9 +52,27 @@ class GeneratedAsyncClient : public TClientBase {
     friend class GeneratedAsyncClient;
   };
 
+  using UseGlobalInterceptors = std::monostate;
+  using InterceptorList =
+      std::shared_ptr<std::vector<std::shared_ptr<ClientInterceptorBase>>>;
+
+  using InterceptorSpecification = std::variant<
+      // Use the globally registered set of ClientInterceptors via
+      // apache::thrift::runtime::init()
+      UseGlobalInterceptors,
+      // Use the specified set of ClientInterceptors. This variant implies that
+      // the globally registered set of ClientInterceptors will be ignored.
+      // nullptr is a valid value, and will result in no ClientInterceptors
+      // being used.
+      InterceptorList>;
+
   GeneratedAsyncClient(std::shared_ptr<RequestChannel> channel);
   GeneratedAsyncClient(
       std::shared_ptr<RequestChannel> channel, Options options);
+  GeneratedAsyncClient(
+      std::shared_ptr<RequestChannel> channel,
+      InterceptorSpecification interceptors,
+      Options options = Options());
 
   virtual const char* getServiceName() const noexcept = 0;
 
@@ -69,14 +90,37 @@ class GeneratedAsyncClient : public TClientBase {
   static void setInteraction(
       const InteractionHandle& handle, RpcOptions& rpcOptions);
 
+  template <bool IsOneWay>
+  std::pair<RequestClientCallback::Ptr, ContextStack*>
+  prepareRequestClientCallback(
+      std::unique_ptr<RequestCallback> callback,
+      ContextStack::UniquePtr&& contextStack) {
+    RequestCallback::Context callbackContext;
+    callbackContext.oneWay = IsOneWay;
+    callbackContext.protocolId = this->getChannel()->getProtocolId();
+    auto* ctx = contextStack.get();
+    if (callback) {
+      callbackContext.ctx = std::move(contextStack);
+    }
+    auto wrappedCallback = apache::thrift::toRequestClientCallbackPtr(
+        std::move(callback), std::move(callbackContext));
+    return std::make_pair(std::move(wrappedCallback), ctx);
+  }
+
   std::shared_ptr<RequestChannel> channel_;
+  InterceptorList interceptors_;
 };
 
 class InteractionHandle : public GeneratedAsyncClient {
  public:
   InteractionHandle(
-      std::shared_ptr<RequestChannel> channel, folly::StringPiece methodName);
-  InteractionHandle(std::shared_ptr<RequestChannel> channel, InteractionId id);
+      std::shared_ptr<RequestChannel> channel,
+      folly::StringPiece methodName,
+      InterceptorList interceptors);
+  InteractionHandle(
+      std::shared_ptr<RequestChannel> channel,
+      InteractionId id,
+      InterceptorList interceptors);
   ~InteractionHandle() override;
   InteractionHandle(InteractionHandle&&) noexcept = default;
   InteractionHandle& operator=(InteractionHandle&&);
@@ -95,5 +139,4 @@ class InteractionHandle : public GeneratedAsyncClient {
   friend class GeneratedAsyncClient;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

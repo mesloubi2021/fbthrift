@@ -10,18 +10,20 @@
       "const": "yes",
       "explicit": "no",
       "inline": "yes",
+      "noexcept": "yes",
       "virtual": "non-virtual",
       "type_html": "FOLLY_ERASE <code>reference_type</code>",
       "definition_html": "FOLLY_ERASE reference_type apache::thrift::terse_field_ref&lt; T &gt;::value",
       "argsstring_html": "() const noexcept",
       "name_html": "value",
+      "qualifiedname_html": "apache::thrift::terse_field_ref::value",
       "location": {
         "file": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "line": "2303",
-        "column": "1",
+        "line": "2368",
+        "column": "30",
         "bodyfile": "fbcode/thrift/lib/cpp2/FieldRef.h",
-        "bodystart": "2303",
-        "bodyend": "2305"
+        "bodystart": "2368",
+        "bodyend": "2370"
       },
       "definition": {
         "simple_html": "FOLLY_ERASE reference_type value() const",
@@ -43,5 +45,11 @@
   "brief_html": "",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value",
-  "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value"
+  "refid": "/ref/cpp/f/class/apache/thrift/terse_field_ref/value",
+  "parent_links": [
+    {
+      "text_html": "terse_field_ref",
+      "href": "/ref/cpp/class/apache/thrift/terse_field_ref"
+    }
+  ]
 }

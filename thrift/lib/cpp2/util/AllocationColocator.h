@@ -105,18 +105,18 @@
  * when `RootObject` is destroyed.
  *
  * For any Locator type, the `Builder` can be used to retrieve uninitialized
- * memory by caling `uninitialized(Locator)`.
- *
- * To avoid initialization complexity, `array<T>(N)` only provides uninitialized
- * access. This makes dealing with non-trivial typed arrays very cumbersome so
- * only trivially constructible and destructible types are allowed. The backdoor
- * for managing arrays of complex objects is to use `uninitialized` and manually
- * manage the memory.
+ * memory by calling `uninitialized(Locator)`.
  *
  * `object<T>` produces T* for trivially destructible types. For other types, it
- * returns a AllocationColocator<>::Ptr<T> which will call the destructor but
+ * returns an AllocationColocator<>::Ptr<T> which will call the destructor but
  * won't free the underlying memory. This pattern works nicely if `RootObject`
  * stores this smart pointer as a data member.
+ *
+ * `array<T>` similarly produces T* for trivially constructible + destructible
+ * types. For other types, a generator function must be provided which will be
+ * called to initialize each element in the array, and an
+ * `AllocationColocator<>::ArrayPtr<T>` will be produced. The generator function
+ * has the same requirements as std::generate.
  *
  * It may not always be possible to store pointers to colocated objects, for
  * example, to preserve memory. For such cases, the colocated objects can be
@@ -137,13 +137,24 @@
  * Ideally, the cursor API should be avoided, especially when used with
  * non-trivial types.
  *
+ * If a "root" object is not desirable, then `AllocationColocator<void>` can be
+ * used instead. Note that this is inherently unsafe because accessing the
+ * colocated objects must happen via the cursor API.
+ *
+ *   AllocationColocator<void> alloc;
+ *   auto ptr = alloc.allocate(
+ *       [&, i = alloc.object<int>(), s = alloc.string(2)](auto make) mutable {
+ *         make(std::move(i), 42);
+ *         make(std::move(s), "hi");
+ *       });
+ *   auto cursor = AllocationColocator<void>::unsafeCursor(ptr.get());
+ *   EXPECT_EQ(cursor.object<int>(), 42);
+ *   EXPECT_EQ(cursor.string(2), "hi");
+ *
  * A few important details to keep in mind when using this API:
  *   - The reservation methods reserve space in the order in which they are
  *     called.
  *   - Locator objects can only be used to access objects once.
- *   - array<T> is only allowed if T is trivially constructible and
- *     destructible. This is not a fundamental limitation but it simplifies the
- *     access API.
  *   - allocate() returns a smart pointer (AllocationColocator<Root>::Ptr) which
  *     will call operator delete[] correctly.
  *   - strings are always null-terminated.
@@ -173,7 +184,7 @@ constexpr T align(T value, std::align_val_t alignment) {
 
 struct LocatorBase {
   std::ptrdiff_t offset;
-  explicit LocatorBase(std::ptrdiff_t offset) : offset(offset) {}
+  explicit LocatorBase(std::ptrdiff_t offsetValue) : offset(offsetValue) {}
 
   LocatorBase(const LocatorBase&) = delete;
   LocatorBase& operator=(const LocatorBase&) = delete;
@@ -182,8 +193,8 @@ struct LocatorBase {
 };
 
 template <typename T>
-static constexpr bool IsValidColocatedArrayType =
-    std::is_trivially_constructible_v<T>&& std::is_trivially_destructible_v<T>;
+static constexpr bool IsTrivialColocatedArrayType =
+    std::is_trivially_constructible_v<T> && std::is_trivially_destructible_v<T>;
 
 template <bool kIsConst>
 class UnsafeCursorBase {
@@ -221,16 +232,35 @@ class UnsafeCursorBase {
   MaybeConstByte* buffer_;
 };
 
+template <typename T>
+constexpr std::size_t sizeof_voidIs0() {
+  if constexpr (std::is_void_v<T>) {
+    return 0;
+  } else {
+    return sizeof(T);
+  }
+}
+
+template <typename T>
+constexpr std::size_t alignof_voidIs0() {
+  if constexpr (std::is_void_v<T>) {
+    return 0;
+  } else {
+    return alignof(T);
+  }
+}
+
 // For testing access only
 class AllocationColocatorInternals;
 
 } // namespace detail
 
-template <typename Root = void>
+template <typename Root = detail::AllocationColocatorInternals>
 class AllocationColocator;
 
+// This class contains common types shared across all AllocationColocator<T>
 template <>
-class AllocationColocator<void> {
+class AllocationColocator<detail::AllocationColocatorInternals> {
  public:
   template <typename T>
   struct ObjectLocator : public detail::LocatorBase {
@@ -239,12 +269,14 @@ class AllocationColocator<void> {
 
   template <typename T>
   struct ArrayLocator : public detail::LocatorBase {
-    using detail::LocatorBase::LocatorBase;
+    ArrayLocator(std::ptrdiff_t offset, std::size_t countValue)
+        : LocatorBase(offset), count(countValue) {}
+    std::size_t count;
   };
 
   struct StringLocator : public detail::LocatorBase {
-    StringLocator(std::ptrdiff_t offset, std::size_t length)
-        : LocatorBase(offset), length(length) {}
+    StringLocator(std::ptrdiff_t offset, std::size_t lengthValue)
+        : LocatorBase(offset), length(lengthValue) {}
     std::size_t length;
   };
 
@@ -257,8 +289,45 @@ class AllocationColocator<void> {
       }
     }
   };
+  /**
+   * A "managed" pointer to a colocated (non-root) object. This effectively
+   * functions like any other `unique_ptr` except that it does not deallocate
+   * the underlying memory.
+   *
+   * In this context, "managed" means that the destructor
+   * of the contained object will be invoked when this object goes out of scope.
+   */
   template <typename T>
   using Ptr = std::unique_ptr<T, Deleter<T>>;
+
+  template <typename T>
+  struct ArrayDeleter {
+    static_assert(std::is_nothrow_destructible_v<T>);
+
+    void operator()(T* pointer) const noexcept {
+      if (pointer) {
+        // In C++, objects in an array are... first constructed, last destructed
+        for (auto i = std::ptrdiff_t(size) - 1; i >= 0; --i) {
+          pointer[i].~T();
+        }
+      }
+    }
+
+    std::size_t size = 0;
+  };
+  /**
+   * A "managed" pointer to a colocated (non-root) array of objects. This
+   * effectively functions like any other `unique_ptr` except that it does not
+   * deallocate the underlying memory.
+   *
+   * In this context, "managed" means that the destructor
+   * of the contained object will be invoked when this object goes out of scope.
+   *
+   * To limit complexity of implementation, noexcept(false) destructors are not
+   * supported.
+   */
+  template <typename T>
+  using ArrayPtr = std::unique_ptr<T[], ArrayDeleter<T>>;
 
   class Builder {
    public:
@@ -272,9 +341,36 @@ class AllocationColocator<void> {
 
     template <
         typename T,
-        typename = std::enable_if_t<detail::IsValidColocatedArrayType<T>>>
+        typename = std::enable_if_t<detail::IsTrivialColocatedArrayType<T>>>
     T* array(ArrayLocator<T> locator) const noexcept {
       return reinterpret_cast<T*>(this->uninitialized(std::move(locator)));
+    }
+
+    template <
+        typename T,
+        typename GeneratorFunc,
+        typename = std::enable_if_t<!detail::IsTrivialColocatedArrayType<T>>>
+    AllocationColocator<>::ArrayPtr<T> array(
+        ArrayLocator<T> locator, GeneratorFunc&& generator) const {
+      static_assert(std::is_nothrow_destructible_v<T>);
+      auto size = locator.count;
+      T* array = reinterpret_cast<T*>(this->uninitialized(std::move(locator)));
+
+      for (std::ptrdiff_t i = 0; i < std::ptrdiff_t(size); ++i) {
+        try {
+          new (array + i) T(generator());
+        } catch (...) {
+          // Destroy any objects that were successfully constructed. Since we
+          // require that destructors are noexcept, we can assume that our
+          // "catch" will not throw again and cause std::terminate().
+          while (--i >= 0) {
+            array[i].~T();
+          }
+          throw;
+        }
+      }
+
+      return AllocationColocator<>::ArrayPtr<T>(array, {size});
     }
 
     template <
@@ -317,9 +413,16 @@ class AllocationColocator<void> {
       return this->object(std::move(locator), std::forward<Args>(args)...);
     }
 
-    template <typename T, typename... Args>
+    template <typename T>
     decltype(auto) operator()(ArrayLocator<T>&& locator) const noexcept {
       return this->array(std::move(locator));
+    }
+
+    template <typename T, typename GeneratorFunc>
+    decltype(auto) operator()(
+        ArrayLocator<T>&& locator, GeneratorFunc&& generator) const {
+      return this->array(
+          std::move(locator), std::forward<GeneratorFunc>(generator));
     }
 
     decltype(auto) operator()(
@@ -386,13 +489,11 @@ class AllocationColocator {
     bytes_ = detail::align(bytes_, std::align_val_t(alignof(T)));
     auto offset = std::ptrdiff_t(bytes_);
     bytes_ += sizeof(T) * count;
-    return ArrayLocator<T>(offset);
+    return ArrayLocator<T>(offset, count);
   }
 
  public:
-  template <
-      typename T,
-      typename = std::enable_if_t<detail::IsValidColocatedArrayType<T>>>
+  template <typename T>
   ArrayLocator<T> array(std::size_t count) noexcept {
     return arrayImpl<T>(count);
   }
@@ -409,7 +510,9 @@ class AllocationColocator {
   struct Deleter {
     void operator()(Root* pointer) const {
       if (pointer) {
-        pointer->~Root();
+        if constexpr (!std::is_void_v<Root>) {
+          pointer->~Root();
+        }
         delete[] reinterpret_cast<std::byte*>(pointer);
       }
     }
@@ -417,7 +520,29 @@ class AllocationColocator {
   using Ptr = std::unique_ptr<Root, Deleter>;
   static_assert(sizeof(Ptr) == sizeof(Root*));
 
-  template <typename F>
+  template <
+      typename F,
+      typename TRoot = Root,
+      std::enable_if_t<std::is_void_v<TRoot>, int> = 0>
+  Ptr allocate(F&& build) const {
+    auto buffer = new std::byte[bytes_];
+    FOLLY_SAFE_DCHECK(
+        (std::uintptr_t(buffer) % __STDCPP_DEFAULT_NEW_ALIGNMENT__) == 0,
+        "Allocated buffer is under-aligned");
+
+    try {
+      build(Builder(buffer));
+      return Ptr(reinterpret_cast<void*>(buffer), Deleter());
+    } catch (...) {
+      delete[] buffer;
+      throw;
+    }
+  }
+
+  template <
+      typename F,
+      typename TRoot = Root,
+      std::enable_if_t<!std::is_void_v<TRoot>, int> = 0>
   Ptr allocate(F&& build) const {
     auto buffer = new std::byte[bytes_];
     FOLLY_SAFE_DCHECK(
@@ -434,12 +559,14 @@ class AllocationColocator {
   }
 
   static AllocationColocator<>::UnsafeCursor unsafeCursor(Root* root) {
-    auto colocationBegin = reinterpret_cast<std::byte*>(root + 1);
+    auto colocationBegin =
+        reinterpret_cast<std::byte*>(root) + detail::sizeof_voidIs0<Root>();
     return AllocationColocator<>::UnsafeCursor(colocationBegin);
   }
   static AllocationColocator<>::ConstUnsafeCursor unsafeCursor(
       const Root* root) {
-    auto colocationBegin = reinterpret_cast<const std::byte*>(root + 1);
+    auto colocationBegin = reinterpret_cast<const std::byte*>(root) +
+        detail::sizeof_voidIs0<Root>();
     return AllocationColocator<>::ConstUnsafeCursor(colocationBegin);
   }
   static AllocationColocator<>::UnsafeCursor unsafeCursor(const Ptr& root) {
@@ -447,7 +574,7 @@ class AllocationColocator {
   }
 
  private:
-  std::size_t bytes_ = sizeof(Root);
+  std::size_t bytes_ = detail::sizeof_voidIs0<Root>();
 
   friend class detail::AllocationColocatorInternals;
 };

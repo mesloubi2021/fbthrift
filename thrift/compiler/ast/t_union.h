@@ -18,9 +18,7 @@
 
 #include <thrift/compiler/ast/t_struct.h>
 
-namespace apache {
-namespace thrift {
-namespace compiler {
+namespace apache::thrift::compiler {
 
 /**
  * Represents a union definition.
@@ -30,6 +28,7 @@ class t_union : public t_struct {
  public:
   using t_struct::t_struct;
 
+  ~t_union() override;
   // TODO(afuller): Remove everything below this comment. It is only provided
   // for backwards compatibility.
  public:
@@ -44,6 +43,4 @@ class t_union : public t_struct {
   }
 };
 
-} // namespace compiler
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::compiler

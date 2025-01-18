@@ -16,22 +16,57 @@
 
 package thrift
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"net"
+	"runtime"
+
+	thriftstats "github.com/facebook/fbthrift/thrift/lib/go/thrift/stats"
+)
 
 // Server is a thrift server
 type Server interface {
-	ProcessorFactoryContext() ProcessorFactoryContext
-	ServerTransport() ServerTransport
-	InputTransportFactory() TransportFactory
-	OutputTransportFactory() TransportFactory
-	InputProtocolFactory() ProtocolFactory
-	OutputProtocolFactory() ProtocolFactory
-
-	// Serve starts the server
-	Serve() error
 	// ServeContext starts the server, and stops it when the context is cancelled
 	ServeContext(ctx context.Context) error
-	// Stop stops the server. This is optional on a per-implementation basis. Not
-	// all servers are required to be cleanly stoppable.
-	Stop() error
 }
+
+// NewServer creates a new thrift server. It includes:
+// * load shedding support
+// * load balancing compatible with high QPS services
+// * pipelining of incoming requests on same connection
+// * out of order responses (for clients that support it!)
+// * and statstics that you can export to your favorite monitoring system
+func NewServer(processor Processor, listener net.Listener, transportType TransportID, options ...ServerOption) Server {
+	serverOptions := newServerOptions(options...)
+	switch transportType {
+	case TransportIDHeader:
+		return newHeaderServer(processor, listener, serverOptions)
+	case TransportIDRocket:
+		return newRocketServer(processor, listener, serverOptions)
+	case TransportIDUpgradeToRocket:
+		return newUpgradeToRocketServer(processor, listener, serverOptions)
+	default:
+		panic(fmt.Sprintf("Server does not support: %v", transportType))
+	}
+}
+
+// This counter is what powers client side load balancing.
+// loadFn is a function that reports system load.  It must report the
+// server load as an unsigned integer.  Higher numbers mean the server
+// is more loaded.  Clients choose the servers that report the lowest
+// load.
+// NOTE: if you run multiple servers with different capacities, you
+// should ensure your load numbers are comparable and account for this
+// (i.e. divide by NumCPU)
+// NOTE: loadFn is called on every single response.  it should be fast.
+func loadFn(stats *thriftstats.ServerStats) uint {
+	working := stats.WorkingCount.Get() + stats.SchedulingWorkCount.Get()
+	denominator := float64(runtime.NumCPU())
+	return uint(1000. * float64(working) / denominator)
+}
+
+var tooBusyResponse ApplicationException = NewApplicationException(
+	UNKNOWN_APPLICATION_EXCEPTION,
+	"server is too busy",
+)

@@ -18,11 +18,10 @@
 
 #include <thrift/lib/cpp2/protocol/BinaryProtocol.h>
 #include <thrift/lib/cpp2/protocol/CompactProtocol.h>
+#include <thrift/lib/cpp2/protocol/JSONProtocol.h>
 #include <thrift/lib/cpp2/protocol/SimpleJSONProtocol.h>
 
-namespace apache {
-namespace thrift {
-namespace detail {
+namespace apache::thrift::detail {
 
 #define THRIFT_DEFINE_PRIMITIVE_TYPE_TO_INFO(                          \
     TypeClass, Type, ThriftType, TTypeValue)                           \
@@ -96,7 +95,11 @@ template size_t write<SimpleJSONProtocolWriter>(
     SimpleJSONProtocolWriter* iprot,
     const StructInfo& structInfo,
     const void* object);
+template void read<JSONProtocolReader>(
+    JSONProtocolReader* iprot, const StructInfo& structInfo, void* object);
+template size_t write<JSONProtocolWriter>(
+    JSONProtocolWriter* iprot,
+    const StructInfo& structInfo,
+    const void* object);
 
-} // namespace detail
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::detail

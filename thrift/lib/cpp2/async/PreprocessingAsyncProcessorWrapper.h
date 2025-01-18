@@ -20,8 +20,7 @@
 #include <folly/CppAttributes.h>
 #include <thrift/lib/cpp2/async/AsyncProcessor.h>
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 /**
  * PreprocessingAsyncProcessorWrapper should be considered whenever you need to
@@ -45,7 +44,7 @@ class PreprocessingAsyncProcessorWrapper : public AsyncProcessor {
       std::unique_ptr<AsyncProcessor> innerProcessor);
 
   void addEventHandler(
-      const std::shared_ptr<TProcessorEventHandler>& handler) override final;
+      const std::shared_ptr<TProcessorEventHandler>& handler) final;
 
   AsyncProcessor* FOLLY_NONNULL inner() const noexcept;
 
@@ -56,14 +55,19 @@ class PreprocessingAsyncProcessorWrapper : public AsyncProcessor {
       protocol::PROTOCOL_TYPES prot_type,
       Cpp2RequestContext* context,
       folly::EventBase* eb,
-      concurrency::ThreadManager* tm) override final;
+      concurrency::ThreadManager* tm) final;
 
   void executeRequest(
       ServerRequest&& request,
-      const AsyncProcessorFactory::MethodMetadata& methodMetadata)
-      override final;
+      const AsyncProcessorFactory::MethodMetadata& methodMetadata) final;
 
-  const char* getServiceName() override final;
+  const char* getServiceName() final;
+
+  void processInteraction(ServerRequest&&) override {
+    LOG(FATAL)
+        << "This AsyncProcessor doesn't support Thrift interactions. "
+        << "Please implement processInteraction to support interactions.";
+  }
 
  protected:
   using ProcessSerializedCompressedRequestReturnT = std::
@@ -87,5 +91,4 @@ class PreprocessingAsyncProcessorWrapper : public AsyncProcessor {
   std::unique_ptr<AsyncProcessor> innerProcessor_;
 };
 
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

@@ -33,6 +33,7 @@
 #include <thrift/lib/cpp2/PluggableFunction.h>
 #include <thrift/lib/cpp2/async/RpcOptions.h>
 #include <thrift/lib/cpp2/transport/rocket/Types.h>
+#include <thrift/lib/cpp2/transport/rocket/client/KeepAliveWatcher.h>
 #include <thrift/lib/cpp2/transport/rocket/client/RequestContext.h>
 #include <thrift/lib/cpp2/transport/rocket/client/RequestContextQueue.h>
 #include <thrift/lib/cpp2/transport/rocket/client/RocketStreamServerCallback.h>
@@ -41,12 +42,13 @@
 #include <thrift/lib/cpp2/transport/rocket/framing/Parser.h>
 #include <thrift/lib/thrift/gen-cpp2/RpcMetadata_types.h>
 
+THRIFT_FLAG_DECLARE_bool(rocket_client_binary_rpc_metadata_encoding);
+
 namespace folly {
 class IOBuf;
 } // namespace folly
 
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 namespace detail {
 THRIFT_PLUGGABLE_FUNC_DECLARE(
@@ -75,7 +77,9 @@ class RocketClient : public virtual folly::DelayedDestruction,
   static Ptr create(
       folly::EventBase& evb,
       folly::AsyncTransport::UniquePtr socket,
-      std::unique_ptr<SetupFrame> setupFrame);
+      std::unique_ptr<SetupFrame> setupFrame,
+      int32_t keepAliveTimeoutMs = 0,
+      std::shared_ptr<rocket::ParserAllocatorType> allocatorPtr = nullptr);
 
   using WriteSuccessCallback = RequestContext::WriteSuccessCallback;
   class RequestResponseCallback : public WriteSuccessCallback {
@@ -170,7 +174,7 @@ class RocketClient : public virtual folly::DelayedDestruction,
     // inflight writes of its own.
     return !writeLoopCallback_.isLoopCallbackScheduled() && !requests_ &&
         streams_.empty() && (!socket_ || socket_->isDetachable()) &&
-        parser_.getReadBufLength() == 0 && !interactions_;
+        !interactions_;
   }
 
   void attachEventBase(folly::EventBase& evb);
@@ -302,7 +306,7 @@ class RocketClient : public virtual folly::DelayedDestruction,
               storage_ & kPointerMask));
         default:
           folly::assume_unreachable();
-      };
+      }
     }
 
     ServerCallbackUniquePtr& operator=(
@@ -370,7 +374,8 @@ class RocketClient : public virtual folly::DelayedDestruction,
   folly::AsyncTransport::UniquePtr socket_;
   folly::Function<void()> onDetachable_;
   folly::exception_wrapper error_;
-
+  std::unique_ptr<KeepAliveWatcher, folly::DelayedDestruction::Destructor>
+      keepAliveWatcher_;
   class FirstResponseTimeout : public folly::HHWheelTimer::Callback {
    public:
     FirstResponseTimeout(RocketClient& client, StreamId streamId)
@@ -424,7 +429,7 @@ class RocketClient : public virtual folly::DelayedDestruction,
     explicit OnEventBaseDestructionCallback(RocketClient& client)
         : client_(client) {}
 
-    void onEventBaseDestruction() noexcept override final;
+    void onEventBaseDestruction() noexcept final;
 
    private:
     RocketClient& client_;
@@ -434,12 +439,17 @@ class RocketClient : public virtual folly::DelayedDestruction,
 
   size_t interactions_{0};
   std::unique_ptr<SetupFrame> setupFrame_;
+  const bool encodeMetadataUsingBinary_;
 
  protected:
   RocketClient(
       folly::EventBase& evb,
       folly::AsyncTransport::UniquePtr socket,
-      std::unique_ptr<SetupFrame> setupFrame);
+      std::unique_ptr<SetupFrame> setupFrame,
+      int32_t keepAliveTimeoutMs = 0,
+      std::shared_ptr<rocket::ParserAllocatorType> allocatorPtr = nullptr);
+
+  bool encodeMetadataUsingBinary() const { return encodeMetadataUsingBinary_; }
 
  private:
   template <class OnError>
@@ -601,5 +611,4 @@ class RocketClient : public virtual folly::DelayedDestruction,
 };
 
 } // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift

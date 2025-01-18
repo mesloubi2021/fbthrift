@@ -21,6 +21,7 @@
       "definition_html": "void apache::thrift::op::detail::SetPatch&lt; Patch &gt;::remove",
       "argsstring_html": "(C &amp;&amp;keys)",
       "name_html": "remove",
+      "qualifiedname_html": "apache::thrift::op::detail::SetPatch::remove",
       "param": [
         {
           "type_html": "C &amp;&amp;",
@@ -29,11 +30,11 @@
       ],
       "location": {
         "file": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "line": "213",
-        "column": "1",
+        "line": "200",
+        "column": "8",
         "bodyfile": "fbcode/thrift/lib/cpp2/op/detail/ContainerPatch.h",
-        "bodystart": "213",
-        "bodyend": "220"
+        "bodystart": "200",
+        "bodyend": "207"
       },
       "definition": {
         "simple_html": "template &lt;typename C = T&gt;\nvoid remove(C&amp;&amp; keys)",
@@ -58,5 +59,11 @@
   "brief_html": "<p>Removes keys. </p>",
   "groupname_html": "",
   "href": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/remove",
-  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/remove"
+  "refid": "/ref/cpp/f/class/apache/thrift/op/detail/SetPatch/remove",
+  "parent_links": [
+    {
+      "text_html": "SetPatch",
+      "href": "/ref/cpp/class/apache/thrift/op/detail/SetPatch"
+    }
+  ]
 }

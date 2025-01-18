@@ -20,10 +20,7 @@
 
 #include "FdUtils.h"
 
-namespace apache {
-namespace thrift {
-namespace rocket {
-namespace test {
+namespace apache::thrift::rocket::test {
 
 std::string abbrevStr(const std::string& s, size_t maxLen) {
   constexpr std::string_view infix = "...";
@@ -69,7 +66,9 @@ void InterceptedAsyncFdSocket::writeChainWithFds(
   CHECK_EQ(checkFdStr, fdStr);
 
   regexFromWriteChainWithFds_ = *checkRe;
-  SCOPE_EXIT { regexFromWriteChainWithFds_.reset(); };
+  SCOPE_EXIT {
+    regexFromWriteChainWithFds_.reset();
+  };
   return folly::AsyncFdSocket::writeChainWithFds(
       callback, std::move(buf), std::move(fds), flags);
 }
@@ -100,7 +99,4 @@ void InterceptedAsyncFdSocket::writeChain(
   return folly::AsyncFdSocket::writeChain(callback, std::move(buf), flags);
 }
 
-} // namespace test
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket::test

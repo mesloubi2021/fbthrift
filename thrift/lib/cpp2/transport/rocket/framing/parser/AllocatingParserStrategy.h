@@ -18,15 +18,21 @@
 
 #include <memory>
 #include <folly/io/IOBuf.h>
+#include <folly/memory/MemoryResource.h>
 #include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Serializer.h>
 #include <thrift/lib/cpp2/transport/rocket/framing/Util.h>
 
 THRIFT_FLAG_DECLARE_int64(rocket_allocating_parser_min_buffer_size);
 
-namespace apache {
-namespace thrift {
-namespace rocket {
+namespace apache::thrift::rocket {
+
+#if FOLLY_HAS_MEMORY_RESOURCE
+using ParserAllocatorType =
+    folly::detail::std_pmr::polymorphic_allocator<std::uint8_t>;
+#else
+using ParserAllocatorType = std::allocator<std::uint8_t>;
+#endif
 
 /**
  * An extension to ParserStrategy that allocates a buffer using a std::allocator
@@ -36,16 +42,14 @@ namespace rocket {
  * `RocketServerConnection`. Their corresponding `handleFrame` methods take care
  * the rest of rocket frame parsing.
  */
-template <class T, class Allocator = std::allocator<std::uint8_t>>
+
+template <class T, class Allocator = ParserAllocatorType>
 class AllocatingParserStrategy {
   using Traits = std::allocator_traits<Allocator>;
-  using ElemType = typename Traits::value_type;
-  static_assert(
-      sizeof(ElemType) == sizeof(std::uint8_t),
-      "Passed in Allocator doesn't operate on bytes");
+  using ElemType = std::uint8_t;
 
  public:
-  explicit AllocatingParserStrategy(T& owner, Allocator allocator = Allocator())
+  explicit AllocatingParserStrategy(T& owner, Allocator& allocator)
       : owner_(owner),
         allocator_(allocator),
         minBufferSize_(THRIFT_FLAG(rocket_allocating_parser_min_buffer_size)) {
@@ -147,7 +151,7 @@ class AllocatingParserStrategy {
 
  private:
   T& owner_;
-  FOLLY_ATTR_NO_UNIQUE_ADDRESS Allocator allocator_;
+  Allocator& allocator_;
 
   // size_ is number of bytes already written into currently allocated buffer.
   // size_ will be incremented when readDataAvailable(nbytes) is called.
@@ -203,6 +207,4 @@ class AllocatingParserStrategy {
   }
 };
 
-} // namespace rocket
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift::rocket

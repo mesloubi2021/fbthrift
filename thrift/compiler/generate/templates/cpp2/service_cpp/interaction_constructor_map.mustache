@@ -1,6 +1,6 @@
-<%!
+{{!
 
-  Copyright (c) Meta Platforms, Inc. and its affiliates.
+  Copyright (c) Meta Platforms, Inc. and affiliates.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -14,17 +14,17 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 
-%>const <%service:cpp_name%>AsyncProcessor::InteractionConstructorMap& <%service:cpp_name%>AsyncProcessor::getInteractionConstructorMap() {
+}}const {{service:cpp_name}}AsyncProcessor::InteractionConstructorMap& {{service:cpp_name}}AsyncProcessor::getInteractionConstructorMap() {
   return interactionConstructorMap_;
 }
 
-const <%service:cpp_name%>AsyncProcessor::InteractionConstructorMap <%service:cpp_name%>AsyncProcessor::interactionConstructorMap_ {
-<%#service:functions%><%#function:return_type%><%#function:starts_interaction?%>
-  {"<%type:name%>", &<%service:cpp_name%>AsyncProcessor::<%function:name%>},
-<%/function:starts_interaction?%><%/function:return_type%><%/service:functions%>
+const {{service:cpp_name}}AsyncProcessor::InteractionConstructorMap {{service:cpp_name}}AsyncProcessor::interactionConstructorMap_ {
+{{#service:functions}}{{#function:return_type}}{{#function:starts_interaction?}}
+  {"{{type:name}}", &{{service:cpp_name}}AsyncProcessor::{{function:name}}},
+{{/function:starts_interaction?}}{{/function:return_type}}{{/service:functions}}
 };
 
-std::unique_ptr<apache::thrift::Tile> <%service:cpp_name%>AsyncProcessor::createInteractionImpl(const std::string& name) {
+std::unique_ptr<apache::thrift::Tile> {{service:cpp_name}}AsyncProcessor::createInteractionImpl(const std::string& name, int16_t) {
   auto fn = getInteractionConstructorMap().at(name);
   return (this->*fn)();
 }

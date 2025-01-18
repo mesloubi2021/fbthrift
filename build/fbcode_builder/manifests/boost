@@ -2,11 +2,11 @@
 name = boost
 
 [download.not(os=windows)]
-url = https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.gz
+url = https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.gz
 sha256 = c0685b68dd44cc46574cce86c4e17c0f611b15e195be9848dfd0769a0a207628
 
 [download.os=windows]
-url = https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.zip
+url = https://archives.boost.io/release/1.83.0/source/boost_1_83_0.zip
 sha256 = c86bd9d9eef795b4b0d3802279419fde5221922805b073b9bd822edecb1ca28e
 
 [preinstalled.env]
@@ -21,6 +21,9 @@ libboost-all-dev
 boost
 # Boost cmake detection on homebrew adds this as requirement: https://github.com/Homebrew/homebrew-core/issues/67427#issuecomment-754187345
 icu4c
+
+[pps]
+boost
 
 [rpms.all(distro=centos_stream,distro_vers=8)]
 boost169
@@ -55,13 +58,14 @@ boost169-python3
 boost169-serialization
 boost169-program-options
 
-[rpms.not(all(distro=centos_stream,distro_vers=8))]
+[rpms.distro=fedora]
 boost-devel
 boost-static
 
 [build]
 builder = boost
 job_weight_mib = 512
+patchfile = boost_comparator_operator_fix.patch
 
 [b2.args]
 --with-atomic
@@ -105,6 +109,8 @@ pch=off
 
 [b2.args.os=darwin]
 toolset=clang
+# Since Xcode 15.3 std::piecewise_construct is only visible in C++17 and later modes
+cxxflags="-DBOOST_UNORDERED_HAVE_PIECEWISE_CONSTRUCT=0"
 
 [b2.args.all(os=windows,fb=on)]
 toolset=msvc-14.2

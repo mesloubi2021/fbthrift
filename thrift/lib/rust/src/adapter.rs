@@ -100,8 +100,8 @@ pub trait ThriftAdapter {
 // NOTE: we define where bounds on the structs themselves here to improve error messaging during
 // the Thrift compilation process.
 
-//// Layers multiple [ThriftTypeAdapter] together. Used when multiple Thrift typedefs with adapters
-//// are layered on each other.
+/// Layers multiple [ThriftTypeAdapter] together. Used when multiple Thrift typedefs with adapters
+/// are layered on each other.
 pub struct LayeredThriftAdapter<Fst, Snd>
 where
     Fst: ThriftAdapter,
@@ -453,11 +453,15 @@ where
 /// struct MyInt(i64);
 ///
 /// impl From<MyInt> for i64 {
-///     fn from(v: MyInt) -> Self { v.0 }
+///     fn from(v: MyInt) -> Self {
+///         v.0
+///     }
 /// }
 ///
 /// impl From<i64> for MyInt {
-///     fn from(v: i64) -> Self { Self(v) }
+///     fn from(v: i64) -> Self {
+///         Self(v)
+///     }
 /// }
 ///
 /// struct MyIntAdapter;
@@ -489,7 +493,7 @@ where
     }
 
     fn from_thrift(value: Self::StandardType) -> Result<Self::AdaptedType, Self::Error> {
-        Self::AdaptedType::try_from(value)
+        Ok(Self::AdaptedType::from(value))
     }
 }
 

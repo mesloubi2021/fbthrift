@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
+#include <thrift/lib/cpp2/Flags.h>
 #include <thrift/lib/cpp2/async/ClientChannel.h>
 
 #ifdef __linux__
 #include <sys/utsname.h>
 #endif
 
-#include <thrift/lib/cpp2/Flags.h>
-
-THRIFT_FLAG_DEFINE_int64(thrift_client_checksum_sampling_rate, 0);
-
-namespace apache {
-namespace thrift {
+namespace apache::thrift {
 
 ClientChannel::ClientChannel() {
   setChecksumSamplingRate(THRIFT_FLAG(thrift_client_checksum_sampling_rate));
@@ -54,5 +50,4 @@ ClientChannel::getHostMetadata() {
       *new std::optional<ClientHostMetadata>{detail::getClientHostMetadata()};
   return hostMetadata;
 }
-} // namespace thrift
-} // namespace apache
+} // namespace apache::thrift
